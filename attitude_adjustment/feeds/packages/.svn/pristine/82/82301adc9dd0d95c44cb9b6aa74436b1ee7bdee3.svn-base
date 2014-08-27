@@ -1,0 +1,34 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2007-2012 OpenWrt.org
+
+START=60
+RUN_D=/var/empty
+PID_F=$RUN_D/darkstat.pid
+
+start() {
+	mkdir -p $RUN_D
+	. /lib/functions/network.sh
+	config_load darkstat
+	config_foreach start_darkstat darkstat
+}
+
+start_darkstat() {
+	local cfg="$1"
+	config_get interface "$cfg" interface
+	config_get httpaddr "$cfg" httpaddr
+	config_get httpport "$cfg" httpport
+
+	network_get_device ifname "$interface" && {
+		/usr/sbin/darkstat --verbose \
+			-i "$ifname" \
+			${httpaddr:+-b "$httpaddr"} \
+			${httpport:+-p "$httpport"} \
+			--chroot $RUN_D \
+			--pidfile $PID_F
+	}
+}
+
+stop() {
+	service_kill darkstat $PID_F
+	rm -f $PID_F
+}

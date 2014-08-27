@@ -1,0 +1,41 @@
+From ed258765f8ac200d75094a75914181bf1d091390 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Thu, 19 Jul 2012 15:21:11 +0300
+Subject: [PATCH 232/609] AXP fix for double printing of "Booted secondary
+ processor"
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/kernel/smp.c |    9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/kernel/smp.c b/arch/arm/kernel/smp.c
+index c4ad54f..1037114 100644
+--- a/arch/arm/kernel/smp.c
++++ b/arch/arm/kernel/smp.c
+@@ -311,9 +311,6 @@ asmlinkage void __cpuinit secondary_start_kernel(void)
+ 
+ 	__asm__ __volatile__("mrc p15, 1, %0, c0, c0, 7   @ read CPU ID reg\n"
+ 		: "=r" (cpurev) :: "memory");
+-	printk("CPU%u: FPGA Booted secondary processor (ID 0x%04x)\n", cpu, (cpurev & 0xFFFF));
+-#else
+-	printk("CPU%u: Booted secondary processor\n", cpu);
+ #endif
+ 
+ 	/*
+@@ -325,7 +322,11 @@ asmlinkage void __cpuinit secondary_start_kernel(void)
+ 	current->active_mm = mm;
+ 	cpumask_set_cpu(cpu, mm_cpumask(mm));
+ 
+-	printk("CPU%u: Booted secondary processor\n", cpu);
++#ifdef CONFIG_MACH_ARMADA_XP_FPGA
++        printk("CPU%u: FPGA Booted secondary processor (ID 0x%04x)\n", cpu, (cpurev & 0xFFFF));
++#else
++        printk("CPU%u: Booted secondary processor\n", cpu);
++#endif
+ 
+ 	cpu_init();
+ 	preempt_disable();
+-- 
+1.7.9.5
+

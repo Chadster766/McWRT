@@ -1,0 +1,53 @@
+From c54acf51e5b0da8d2b701374450225358867ecec Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 2 Dec 2012 11:54:51 +0200
+Subject: [PATCH 355/609] Removed L2_PT_WALK changes for PJ4B V7
+
+	Disabling the L2 PT WALK in PJ4B V7 causes
+	a bad configuration of TTBR that causes kernel to crash.
+	Since this feature is relevant only to V6 it changes to
+	V7 code were removed.
+
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mm/proc-sheeva_pj4bv7.S |   10 +---------
+ 1 file changed, 1 insertion(+), 9 deletions(-)
+
+diff --git a/arch/arm/mm/proc-sheeva_pj4bv7.S b/arch/arm/mm/proc-sheeva_pj4bv7.S
+index 16cb20c..4465388 100644
+--- a/arch/arm/mm/proc-sheeva_pj4bv7.S
++++ b/arch/arm/mm/proc-sheeva_pj4bv7.S
+@@ -138,12 +138,8 @@ ENTRY(cpu_pj4bv7_switch_mm)
+ #ifdef CONFIG_MMU
+ 	mov	r2, #0
+ 	ldr	r1, [r1, #MM_CONTEXT_ID]	@ get mm->context.id
+-#ifdef CONFIG_AURORA_L2_PT_WALK 
+ 	ALT_SMP(orr	r0, r0, #TTB_FLAGS_SMP)
+ 	ALT_UP(orr	r0, r0, #TTB_FLAGS_UP)
+-#else
+-	bic     r0, r0, #0x18                   @ DONOT Cache the page table in L2
+-#endif
+ #ifdef CONFIG_ARM_ERRATA_430973
+ 	mcr	p15, 0, r2, c7, c5, 6		@ flush BTAC/BTB
+ #endif
+@@ -560,15 +556,11 @@ adr	r12, __pj4bv7_setup_stack		@ the local stack
+ 	mcr	p15, 0, r10, c8, c7, 0		@ invalidate I + D TLBs
+ 	mcr	p15, 0, r10, c2, c0, 2		@ TTB control register
+ 			
+-#ifdef CONFIG_AURORA_L2_PT_WALK
+ 	ALT_SMP(orr	r4, r4, #TTB_FLAGS_SMP)
+ 	ALT_UP(orr	r4, r4, #TTB_FLAGS_UP)
+ 	ALT_SMP(orr	r8, r8, #TTB_FLAGS_SMP)
+ 	ALT_UP(orr	r8, r8, #TTB_FLAGS_UP)
+-#else
+-						@ OC bits in TTB1 register
+-	bic	r4, r4, #0x18                   @ DONOT Cache the page table in L2
+-#endif
++
+ 	mcr	p15, 0, r8, c2, c0, 1		@ load TTB1
+ 	
+ 	ldr	r5, =PRRR			@ PRRR
+-- 
+1.7.9.5
+

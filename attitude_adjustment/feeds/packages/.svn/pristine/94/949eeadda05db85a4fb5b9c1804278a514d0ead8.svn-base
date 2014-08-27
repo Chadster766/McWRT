@@ -1,0 +1,135 @@
+#!/bin/sh
+
+# Copyright (c) 2012, Roberto Riggio
+#
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+#   - Redistributions of source code must retain the above copyright
+#     notice, this list of conditions and the following disclaimer.
+#   - Redistributions in binary form must reproduce the above copyright
+#     notice, this list of conditions and the following disclaimer in
+#     the documentation and/or other materials provided with the
+#     distribution.
+#   - Neither the name of the CREATE-NET nor the names of its
+#     contributors may be used to endorse or promote products derived
+#     from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+ROUTES=0
+STATIC=0
+HOSTS=0
+LINKS=0
+ARP=0
+GATEWAY=0
+PROBES=0
+INTERFACES=0
+
+show_status() {
+
+	[ $ROUTES = 1 ] && {
+		printf "Routes:\n"
+		write_handler lt.dijkstra true
+		read_handler lt.routes
+	}
+
+	[ $STATIC = 1 ] && {
+		printf "\nStatic Routes:\n"
+		read_handler wr/querier.static_routes
+	}
+
+	[ $HOSTS = 1 ] && {
+		printf "\nIP:\n"
+		read_handler lt.ip
+		printf "\nHosts:\n"
+		read_handler lt.hosts
+	}
+
+	[ $INTERFACES = 1 ] && {
+		printf "\nInterfaces:\n"
+		read_handler lt.interfaces
+	}
+
+	[ $LINKS = 1 ] && {
+		printf "\nLinks:\n"
+		read_handler lt.links
+	}
+
+	[ $ARP = 1 ] && {
+		printf "\nARP Table:\n"
+		read_handler arp.table
+	}
+
+	[ $GATEWAY = 1 ] && {
+		printf "\nBest gateway:\n"
+		read_handler wr/set_gateway.gateway
+		printf "\nGateways:\n"
+		read_handler wr/gw.gateway_stats
+		printf "\nHNAs:\n"
+		read_handler wr/gw.hnas
+	}
+
+	[ $PROBES = 1 ] && {
+		interfaces=$(read_handler lt.interfaces)
+		for interface in $interfaces; do
+			printf "\nBroadcast statistics ($interface):\n"
+			read_handler wr/es/es_$interface.bcast_stats
+			printf "\nBroadcast statistics HT ($interface):\n"
+			read_handler wr/es/es_$interface.bcast_stats_ht
+		done
+	}
+
+	exit 0
+
+}
+
+if [ $# -eq 0 ]; then
+	ROUTES=1
+	STATIC=1
+	HOSTS=1
+	LINKS=1
+	ARP=1
+	GATEWAY=1
+	PROBES=1
+	INTERFACES=1
+fi
+
+while getopts "rshlagpi" OPTVAL
+do
+	case $OPTVAL in
+	r) ROUTES=1
+	  ;;
+	r) STATIC=1
+	  ;;
+	h) HOSTS=1
+	  ;;
+	l) LINKS=1
+	  ;;
+	i) INTERFACES=1
+	  ;;
+	a) ARP=1
+	  ;;
+	g) GATEWAY=1
+	  ;;
+	p) PROBES=1
+	  ;;
+	*) ROUTES=1; STATIC=1; HOSTS=1; LINKS=1; ARP=1; GATEWAY=1; PROBES=1
+	  ;;
+	esac
+done
+
+show_status

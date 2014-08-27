@@ -1,0 +1,14 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006 OpenWrt.org
+
+START=99
+start() {
+	[ -d /tmp/.shell-fm ] || mkdir /tmp/.shell-fm
+	[ -L /tmp/.shell-fm/shell-fm.rc ] || ln -s /etc/shell-fm.rc /tmp/.shell-fm/shell-fm.rc
+	[ -L /tmp/.libao ] || ln -s /etc/libao.conf /tmp/.libao
+	HOME=/tmp shell-fm -d
+}
+
+stop() {
+	echo "quit" | telnet localhost 54311
+}

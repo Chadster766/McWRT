@@ -1,0 +1,261 @@
+From 4d02928ead5c9c38e8a6cfd673589cc32aecd8db Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Thu, 29 Nov 2012 02:00:00 -0500
+Subject: [PATCH 356/609] Fix TXQ TOS mapping - Change format of "txq_tos"
+ sysfs command, tos is hex number. - Change
+ prototype of mv_eth_txq_tos_map_set() function -
+ Update help for "neta/gbe" sysfs menu
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c  |   84 ++++++++++++++------
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |   24 +++---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h     |    2 +-
+ 3 files changed, 71 insertions(+), 39 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
+index 92dd921..a984470 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
+@@ -40,10 +40,14 @@ static ssize_t mv_eth_help(char *buf)
+ {
+ 	int off = 0;
+ 
++	off += mvOsSPrintf(buf+off, "p, txp, txq, rxq, cpu, prio, gr, d, t, l, s - are dec numbers\n");
++	off += mvOsSPrintf(buf+off, "v, tos, mask                                - are hex numbers\n");
++	off += mvOsSPrintf(buf+off, "\n");
++
+ 	off += sprintf(buf+off, "cat                ports           - show all ports info\n");
+ 	off += sprintf(buf+off, "echo p             > port          - show a port info\n");
+ 	off += sprintf(buf+off, "echo p             > stats         - show a port statistics\n");
+-	off += sprintf(buf+off, "echo p mib         > cntrs         - show a port counters\n");
++	off += sprintf(buf+off, "echo p txp         > cntrs         - show a port counters\n");
+ 	off += sprintf(buf+off, "echo p             > tos           - show RX and TX TOS map for port <p>\n");
+ 	off += sprintf(buf+off, "echo p             > mac           - show MAC info for port <p>\n");
+ 	off += sprintf(buf+off, "echo p             > vprio         - show VLAN priority map for port <p>\n");
+@@ -56,42 +60,42 @@ static ssize_t mv_eth_help(char *buf)
+ 	off += sprintf(buf+off, "echo p txp         > wrr_regs      - show WRR registers for <p/txp>\n");
+ 	off += sprintf(buf+off, "echo p txp         > txp_regs      - show TX registers for <p/txp>\n");
+ 	off += sprintf(buf+off, "echo p txp txq     > txq_regs      - show TXQ registers for <p/txp/txq>\n");
+-	off += sprintf(buf+off, "echo p rxq v       > rxq           - show RXQ descriptors ring for <p/rxq>. v=0-brief, v=1-full\n");
+-	off += sprintf(buf+off, "echo p txp txq v   > txq           - show TXQ descriptors ring for <p/txp/txq>. v=0-brief, v=1-full\n");
++	off += sprintf(buf+off, "echo p rxq d       > rxq           - show RXQ descriptors ring for <p/rxq>. d=0-brief, d=1-full\n");
++	off += sprintf(buf+off, "echo p txp txq d   > txq           - show TXQ descriptors ring for <p/txp/txq>. d=0-brief, d=1-full\n");
+ #ifdef CONFIG_MV_ETH_PNC
+ 	off += sprintf(buf+off, "echo {0|1}         > pnc           - enable / disable PNC access\n");
+ #endif /* CONFIG_MV_ETH_PNC */
+ 	off += sprintf(buf+off, "echo {0|1}         > skb           - enable / disable SKB recycle\n");
+ 	off += sprintf(buf+off, "echo p {0|1}       > mh_en         - enable Marvell Header\n");
+ 	off += sprintf(buf+off, "echo p {0|1}       > tx_nopad      - disable zero padding\n");
+-	off += sprintf(buf+off, "echo p hex         > mh_2B         - set 2 bytes of Marvell Header\n");
+-	off += sprintf(buf+off, "echo p hex         > tx_cmd        - set 4 bytes of TX descriptor offset 0xc\n");
+-	off += sprintf(buf+off, "echo p hex         > debug         - bit0:rx, bit1:tx, bit2:isr, bit3:poll, bit4:dump\n");
++	off += sprintf(buf+off, "echo p v           > mh_2B         - set 2 bytes of Marvell Header\n");
++	off += sprintf(buf+off, "echo p v           > tx_cmd        - set 4 bytes of TX descriptor offset 0xc\n");
++	off += sprintf(buf+off, "echo p v           > debug         - bit0:rx, bit1:tx, bit2:isr, bit3:poll, bit4:dump\n");
+ 	off += sprintf(buf+off, "echo p l s         > buf_num       - set number of long <l> and short <s> buffers allocated for port <p>\n");
+ 	off += sprintf(buf+off, "echo p rxq tos     > rxq_tos       - set <rxq> for incoming IP packets with <tos>\n");
+-	off += sprintf(buf+off, "echo p group cpus  > cpu_group     - set <cpus mask>  for <port/napi group>.\n");
+-	off += sprintf(buf+off, "echo p group rxqs  > rxq_group     - set  <rxqs mask> for <port/napi group>.\n");
++	off += sprintf(buf+off, "echo p gr mask     > cpu_group     - set <cpus mask>  for <port/napi group>.\n");
++	off += sprintf(buf+off, "echo p gr mask     > rxq_group     - set  <rxqs mask> for <port/napi group>.\n");
+ 	off += sprintf(buf+off, "echo p rxq prio    > rxq_vlan      - set <rxq> for incoming VLAN packets with <prio>\n");
+-	off += sprintf(buf+off, "echo p rxq v       > rxq_size      - set number of descriptors <v> for <port/rxq>.\n");
+-	off += sprintf(buf+off, "echo p rxq v       > rxq_pkts_coal - set RXQ interrupt coalesing. <v> - number of received packets\n");
+-	off += sprintf(buf+off, "echo p rxq v       > rxq_time_coal - set RXQ interrupt coalesing. <v> - time in microseconds\n");
++	off += sprintf(buf+off, "echo p rxq d       > rxq_size      - set number of descriptors <d> for <port/rxq>.\n");
++	off += sprintf(buf+off, "echo p rxq d       > rxq_pkts_coal - set RXQ interrupt coalesing. <d> - number of received packets\n");
++	off += sprintf(buf+off, "echo p rxq d       > rxq_time_coal - set RXQ interrupt coalesing. <d> - time in microseconds\n");
+ 	off += sprintf(buf+off, "echo p rxq t       > rxq_type      - set RXQ for different packet types. t=0-bpdu, 1-arp, 2-tcp, 3-udp\n");
+ 	off += sprintf(buf+off, "echo p             > rx_reset      - reset RX part of the port <p>\n");
+ 	off += sprintf(buf+off, "echo p txp         > txp_reset     - reset TX part of the port <p/txp>\n");
+-	off += sprintf(buf+off, "echo p txq tos cpu > txq_tos       - set <txq> for outgoing IP packets with <tos> handeled by <cpu>\n");
++	off += sprintf(buf+off, "echo p txq cpu tos > txq_tos       - set <txq> for outgoing IP packets with <tos> handeled by <cpu>\n");
+ 	off += sprintf(buf+off, "echo p txp txq cpu > txq_def       - set default <txp/txq> for packets sent to port <p> by <cpu>\n");
+ 	off += sprintf(buf+off, "echo p txp {0|1}   > ejp           - enable/disable EJP mode for <port/txp>\n");
+-	off += sprintf(buf+off, "echo p txp v       > txp_rate      - set outgoing rate <v> in [kbps] for <port/txp>\n");
+-	off += sprintf(buf+off, "echo p txp v       > txp_burst     - set maximum burst <v> in [Bytes] for <port/txp>\n");
+-	off += sprintf(buf+off, "echo p txp txq v   > txq_rate      - set outgoing rate <v> in [kbps] for <port/txp/txq>\n");
+-	off += sprintf(buf+off, "echo p txp txq v   > txq_burst     - set maximum burst <v> in [Bytes] for <port/txp/txq>\n");
+-	off += sprintf(buf+off, "echo p txp txq v   > txq_wrr       - set outgoing WRR weight for <port/txp/txq>. <v=0> - fixed\n");
+-	off += sprintf(buf+off, "echo p txp txq v   > txq_size      - set number of descriptors <v> for <port/txp/txq>.\n");
+-	off += sprintf(buf+off, "echo p txp txq v   > txq_coal      - set TXP/TXQ interrupt coalesing. <v> - number of sent packets\n");
+-	off += sprintf(buf+off, "echo v             > tx_done       - set threshold to start tx_done operations\n");
+-	off += sprintf(buf+off, "echo p v           > rx_weight     - set weight for the poll function; <v> - new weight, max val: 255\n");
+-	off += sprintf(buf+off, "echo p cpu txqs    > txq_mask      - set cpu <cpu> accessible txq bitmap <txqs>.\n");
+-	off += sprintf(buf+off, "echo p txp txqs v  > txq_shared    - set/reset shared bit for <port/txp/txq>. <v> - 1/0 for set/reset.\n");
++	off += sprintf(buf+off, "echo p txp d       > txp_rate      - set outgoing rate <d> in [kbps] for <port/txp>\n");
++	off += sprintf(buf+off, "echo p txp d       > txp_burst     - set maximum burst <d> in [Bytes] for <port/txp>\n");
++	off += sprintf(buf+off, "echo p txp txq d   > txq_rate      - set outgoing rate <d> in [kbps] for <port/txp/txq>\n");
++	off += sprintf(buf+off, "echo p txp txq d   > txq_burst     - set maximum burst <d> in [Bytes] for <port/txp/txq>\n");
++	off += sprintf(buf+off, "echo p txp txq d   > txq_wrr       - set outgoing WRR weight for <port/txp/txq>. <d=0> - fixed\n");
++	off += sprintf(buf+off, "echo p txp txq d   > txq_size      - set number of descriptors <d> for <port/txp/txq>.\n");
++	off += sprintf(buf+off, "echo p txp txq d   > txq_coal      - set TXP/TXQ interrupt coalesing. <d> - number of sent packets\n");
++	off += sprintf(buf+off, "echo d             > tx_done       - set threshold <d> to start tx_done operations\n");
++	off += sprintf(buf+off, "echo p d           > rx_weight     - set weight for the poll function; <d> - new weight, max val: 255\n");
++	off += sprintf(buf+off, "echo p cpu mask    > txq_mask      - set cpu <cpu> accessible txq bitmap <mask>.\n");
++	off += sprintf(buf+off, "echo p txp txq d   > txq_shared    - set/reset shared bit for <port/txp/txq>. <d> - 1/0 for set/reset.\n");
+ 	off += sprintf(buf+off, "echo p {0|1|2}     > pm_mode       - set port <p> pm mode. 0 wol, 1 clock, 2 disabled.\n");
+ 	return off;
+ }
+@@ -345,6 +349,36 @@ static ssize_t mv_eth_3_store(struct device *dev,
+ 	return err ? -EINVAL : len;
+ }
+ 
++static ssize_t mv_eth_4_hex_store(struct device *dev,
++				struct device_attribute *attr, const char *buf, size_t len)
++{
++	const char      *name = attr->attr.name;
++	int             err;
++	unsigned int    p, cpu, txq, v;
++	unsigned long   flags;
++
++	if (!capable(CAP_NET_ADMIN))
++		return -EPERM;
++
++	err = p = cpu = txq = v = 0;
++	sscanf(buf, "%d %d %d %x", &p, &txq, &cpu, &v);
++
++	local_irq_save(flags);
++
++	if (!strcmp(name, "txq_tos")) {
++		err = mv_eth_txq_tos_map_set(p, txq, cpu, v);
++	} else {
++		err = 1;
++		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
++	}
++	local_irq_restore(flags);
++
++	if (err)
++		printk(KERN_ERR "%s: error %d\n", __func__, err);
++
++	return err ? -EINVAL : len;
++}
++
+ static ssize_t mv_eth_4_store(struct device *dev,
+ 				   struct device_attribute *attr, const char *buf, size_t len)
+ {
+@@ -387,8 +421,6 @@ static ssize_t mv_eth_4_store(struct device *dev,
+ 		mvNetaTxqShow(p, txp, txq, v);
+ 	} else if (!strcmp(name, "txq_regs")) {
+ 		mvNetaTxqRegs(p, txp, txq);
+-	} else if (!strcmp(name, "txq_tos")) {
+-		err = mv_eth_txq_tos_map_set(p, txp, txq, v); /* port , txq , tos ,cpu */
+ 	} else if (!strcmp(name, "txq_shared")) {
+ 		err = mv_eth_shared_set(p, txp, txq, v);
+ 	} else {
+@@ -422,7 +454,7 @@ static DEVICE_ATTR(ejp,         S_IWUSR, mv_eth_show, mv_eth_3_store);
+ static DEVICE_ATTR(buf_num,     S_IWUSR, mv_eth_show, mv_eth_3_store);
+ static DEVICE_ATTR(rxq_tos,     S_IWUSR, mv_eth_show, mv_eth_3_hex_store);
+ static DEVICE_ATTR(rxq_vlan,    S_IWUSR, mv_eth_show, mv_eth_3_hex_store);
+-static DEVICE_ATTR(txq_tos,     S_IWUSR, mv_eth_show, mv_eth_4_store);
++static DEVICE_ATTR(txq_tos,     S_IWUSR, mv_eth_show, mv_eth_4_hex_store);
+ static DEVICE_ATTR(mh_en,       S_IWUSR, mv_eth_show, mv_eth_port_store);
+ static DEVICE_ATTR(mh_2B,       S_IWUSR, mv_eth_show, mv_eth_port_store);
+ static DEVICE_ATTR(tx_cmd,      S_IWUSR, mv_eth_show, mv_eth_port_store);
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 05759a9..3cebbda 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -1931,9 +1931,8 @@ out:
+ 	}
+ #endif /* CONFIG_MV_ETH_TXDONE_ISR */
+ 
+-	if (txq_ctrl) {
++	if (txq_ctrl)
+ 		mv_eth_unlock(txq_ctrl, flags);
+-	}
+ 
+ 	return NETDEV_TX_OK;
+ }
+@@ -4922,29 +4921,29 @@ void mv_eth_tos_map_show(int port)
+ 
+ #ifdef CONFIG_MV_ETH_PNC
+ 	if (mv_eth_pnc_ctrl_en) {
+-		mvOsPrintf("PnC TOS to RXQs Mapping Rules - port #%d:\n", port);
++		mvOsPrintf("PnC    TOS (DSCP) => RXQ Mapping Rules - port #%d:\n", port);
+ 		pnc_ipv4_dscp_show(port);
+ 	} else
+ 		mvOsPrintf("%s: PNC control is disabled\n", __func__);
+ #else
+-	mvOsPrintf("Legacy TOS to RXQs Mapping Rules - port #%d:\n", port);
++	mvOsPrintf("Legacy TOS (DSCP) => RXQ Mapping Rules - port #%d:\n", port);
+ 	for (tos = 0; tos < 0xFF; tos += 0x4) {
+ 		int rxq;
+ 
+ 		rxq = mvNetaTosToRxqGet(port, tos);
+ 		if (rxq > 0)
+-			printk(KERN_ERR "tos=0x%02x: codepoint=0x%02x, rxq=%d\n",
++			printk(KERN_ERR "      0x%02x (0x%02x) => %d\n",
+ 					tos, tos >> 2, rxq);
+ 	}
+ #endif /* CONFIG_MV_ETH_PNC */
+ 	for_each_possible_cpu(cpu) {
+ 		printk(KERN_ERR "\n");
+-		printk(KERN_ERR " TOS <=> TXQ map for port #%d cpu #%d\n\n", port, cpu);
++		printk(KERN_ERR " TOS => TXQ map for port #%d cpu #%d\n", port, cpu);
+ 		cpuCtrl = pp->cpu_config[cpu];
+ 		for (tos = 0; tos < sizeof(cpuCtrl->txq_tos_map); tos++) {
+ 			txq = cpuCtrl->txq_tos_map[tos];
+ 			if (txq != MV_ETH_TXQ_INVALID)
+-				printk(KERN_ERR "0x%02x <=> %d\n", tos, txq);
++				printk(KERN_ERR "0x%02x => %d\n", tos, txq);
+ 		}
+ 	}
+ }
+@@ -5002,7 +5001,7 @@ int mv_eth_rxq_vlan_prio_set(int port, int rxq, unsigned char prio)
+ }
+ 
+ /* Set TXQ for special TOS value. txq=-1 - use default TXQ for this port */
+-int mv_eth_txq_tos_map_set(int port, int txq, unsigned char tos, unsigned char cpu)
++int mv_eth_txq_tos_map_set(int port, int txq, int cpu, unsigned int tos)
+ {
+ 	MV_U8 old_txq;
+ 	struct cpu_ctrl	*cpuCtrl;
+@@ -5024,10 +5023,10 @@ int mv_eth_txq_tos_map_set(int port, int txq, unsigned char tos, unsigned char c
+ 		printk(KERN_ERR "%s:Error, cpu #%d is masked \n", __func__, cpu);
+ 		return -EINVAL;
+ 	}
+-
+-	if (mvNetaMaxCheck(tos, MV_ETH_TXQ_INVALID))
++	if ((tos > 0xFF) || (tos < 0)) {
++		printk(KERN_ERR "TOS 0x%x is out of range: from 0 to 0xFF\n", tos);
+ 		return -EINVAL;
+-
++	}
+ 	cpuCtrl = pp->cpu_config[cpu];
+ 	old_txq = cpuCtrl->txq_tos_map[tos];
+ 
+@@ -5041,6 +5040,7 @@ int mv_eth_txq_tos_map_set(int port, int txq, unsigned char tos, unsigned char c
+ 			return -EINVAL;
+ 
+ 		cpuCtrl->txq_tos_map[tos] = MV_ETH_TXQ_INVALID;
++		printk(KERN_ERR "Successfully deleted\n");
+ 		return 0;
+ 	}
+ 
+@@ -5057,7 +5057,7 @@ int mv_eth_txq_tos_map_set(int port, int txq, unsigned char tos, unsigned char c
+ 		return -EINVAL;
+ 
+ 	cpuCtrl->txq_tos_map[tos] = (MV_U8) txq;
+-
++	printk(KERN_ERR "Successfully added\n");
+ 	return 0;
+ }
+ 
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+index 1f9ed9f..955e9d1 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+@@ -768,7 +768,7 @@ bool                 mv_eth_netdev_find(unsigned int if_index);
+ void        mv_eth_mac_show(int port);
+ void        mv_eth_tos_map_show(int port);
+ int         mv_eth_rxq_tos_map_set(int port, int rxq, unsigned char tos);
+-int         mv_eth_txq_tos_map_set(int port, int txq, unsigned char tos, unsigned char cpu);
++int         mv_eth_txq_tos_map_set(int port, int txq, int cpu, unsigned int tos);
+ int         mv_eth_napi_set_cpu_affinity(int port, int group, int affinity);
+ int         mv_eth_napi_set_rxq_affinity(int port, int group, int rxq);
+ void        mv_eth_napi_group_show(int port);
+-- 
+1.7.9.5
+

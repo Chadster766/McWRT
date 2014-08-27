@@ -1,0 +1,329 @@
+From 637265891bf451bc85f96bf4250f7cc8fd3fcbbb Mon Sep 17 00:00:00 2001
+From: Uri Eliyahu <uriel@marvell.com>
+Date: Mon, 10 Dec 2012 13:30:13 +0200
+Subject: [PATCH 460/609] l2fw + l2sec compilation fix
+
+Change-Id: Idc66f13af568a9094c9c648732c10330e02d92e7
+Signed-off-by: Uri Eliyahu <uriel@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/l2fw/l2fw_sysfs.c       |   28 +++++++++++-
+ .../mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c      |   46 ++++++++++++++++----
+ .../mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h      |   28 +++++++++++-
+ .../mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.c     |   45 +++++++++++++++----
+ .../mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.h     |   29 +++++++++++-
+ 5 files changed, 157 insertions(+), 19 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/l2fw_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/l2fw_sysfs.c
+index 4e8c2b7..cddfac5 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/l2fw_sysfs.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/l2fw_sysfs.c
+@@ -1,4 +1,30 @@
+-/* l2fw_sysfs.c */
++/*******************************************************************************
++Copyright (C) Marvell International Ltd. and its affiliates
++
++This software file (the "File") is owned and distributed by Marvell
++International Ltd. and/or its affiliates ("Marvell") under the following
++alternative licensing terms.  Once you have made an election to distribute the
++File under one of the following license alternatives, please (i) delete this
++introductory statement regarding license alternatives, (ii) delete the two
++license alternatives that you have not elected to use and (iii) preserve the
++Marvell copyright notice above.
++
++
++********************************************************************************
++Marvell GPL License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File in accordance with the terms and conditions of the General
++Public License Version 2, June 1991 (the "GPL License"), a copy of which is
++available along with the File in the license.txt file or by writing to the Free
++Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
++on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++
++THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
++DISCLAIMED.  The GPL License provides additional details about this warranty
++disclaimer.
++*******************************************************************************/
+ #include <linux/module.h>
+ #include <linux/kernel.h>
+ #include <linux/types.h>
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c
+index 3a51ff9..4439578 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c
+@@ -1,5 +1,33 @@
+-/* mv_eth_l2fw.c */
++/*******************************************************************************
++Copyright (C) Marvell International Ltd. and its affiliates
++
++This software file (the "File") is owned and distributed by Marvell
++International Ltd. and/or its affiliates ("Marvell") under the following
++alternative licensing terms.  Once you have made an election to distribute the
++File under one of the following license alternatives, please (i) delete this
++introductory statement regarding license alternatives, (ii) delete the two
++license alternatives that you have not elected to use and (iii) preserve the
++Marvell copyright notice above.
++
++
++********************************************************************************
++Marvell GPL License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File in accordance with the terms and conditions of the General
++Public License Version 2, June 1991 (the "GPL License"), a copy of which is
++available along with the File in the license.txt file or by writing to the Free
++Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
++on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++
++THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
++DISCLAIMED.  The GPL License provides additional details about this warranty
++disclaimer.
++*******************************************************************************/
++
+ #include <linux/ctype.h>
++#include <linux/module.h>
+ 
+ #include "xor/mvXor.h"
+ #include "xor/mvXorRegs.h"
+@@ -373,7 +401,7 @@ static int mv_eth_poll_l2fw(struct napi_struct *napi, int budget)
+ 		MV_REG_WRITE(NETA_INTR_MISC_CAUSE_REG(pp->port), 0);
+ 	}
+ 
+-	causeRxTx |= pp->causeRxTx[smp_processor_id()];
++	causeRxTx |= pp->cpu_config[smp_processor_id()]->causeRxTx;
+ #ifdef CONFIG_MV_ETH_TXDONE_ISR
+ 	if (causeRxTx & MV_ETH_TXDONE_INTR_MASK) {
+ 		/* TX_DONE process */
+@@ -420,7 +448,7 @@ static int mv_eth_poll_l2fw(struct napi_struct *napi, int budget)
+ 
+ 		local_irq_restore(flags);
+ 	}
+-	pp->causeRxTx[smp_processor_id()] = causeRxTx;
++	pp->cpu_config[smp_processor_id()]->causeRxTx = causeRxTx;
+ 
+ 	read_unlock(&pp->rwlock);
+ 
+@@ -666,14 +694,16 @@ static inline MV_STATUS mv_eth_l2fw_tx(struct eth_pbuf *pkt, struct eth_port *pp
+ 	struct neta_tx_desc *tx_desc;
+ 	u32 tx_cmd = 0;
+ 	struct tx_queue *txq_ctrl;
++	unsigned long flags = 0;
++
+ 	/* assigning different txq for each rx port , to avoid waiting on the
+ 	same txq lock when traffic on several rx ports are destined to the same
+ 	outgoing interface */
+-	int txq = pp->txq[smp_processor_id()];
++	int txq = pp->cpu_config[smp_processor_id()]->txq;
+ 	read_lock(&pp->rwlock);
+ 	txq_ctrl = &pp->txq_ctrl[pp->txp * CONFIG_MV_ETH_TXQ + txq];
+ 
+-	mv_eth_lock(txq_ctrl, pp);
++	mv_eth_lock(txq_ctrl, flags);
+ 
+ 	if (txq_ctrl->txq_count >= mv_ctrl_txdone)
+ 		mv_eth_txq_done(pp, txq_ctrl);
+@@ -681,7 +711,7 @@ static inline MV_STATUS mv_eth_l2fw_tx(struct eth_pbuf *pkt, struct eth_port *pp
+ 	tx_desc = mv_eth_tx_desc_get(txq_ctrl, 1);
+ 	if (tx_desc == NULL) {
+ 
+-		mv_eth_unlock(txq_ctrl, pp);
++		mv_eth_unlock(txq_ctrl, flags);
+ 
+ 		read_unlock(&pp->rwlock);
+ 		/* No resources: Drop */
+@@ -710,7 +740,7 @@ static inline MV_STATUS mv_eth_l2fw_tx(struct eth_pbuf *pkt, struct eth_port *pp
+ 		if (!xorReady()) {
+ 			mvOsPrintf("MV_DROPPED in %s\n", __func__);
+ 
+-			mv_eth_unlock(txq_ctrl, pp);
++			mv_eth_unlock(txq_ctrl, flags);
+ 
+ 			read_unlock(&pp->rwlock);
+ 			return MV_DROPPED;
+@@ -718,7 +748,7 @@ static inline MV_STATUS mv_eth_l2fw_tx(struct eth_pbuf *pkt, struct eth_port *pp
+ 	}
+ 	mvNetaTxqPendDescAdd(pp->port, pp->txp, txq, 1);
+ 
+-	mv_eth_unlock(txq_ctrl, pp);
++	mv_eth_unlock(txq_ctrl, flags);
+ 
+ 	read_unlock(&pp->rwlock);
+ 
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h
+index c25ef58..f2836ce 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h
+@@ -1,4 +1,30 @@
+-/* l2fw/mv_eth_l2fw.h */
++/*******************************************************************************
++Copyright (C) Marvell International Ltd. and its affiliates
++
++This software file (the "File") is owned and distributed by Marvell
++International Ltd. and/or its affiliates ("Marvell") under the following
++alternative licensing terms.  Once you have made an election to distribute the
++File under one of the following license alternatives, please (i) delete this
++introductory statement regarding license alternatives, (ii) delete the two
++license alternatives that you have not elected to use and (iii) preserve the
++Marvell copyright notice above.
++
++
++********************************************************************************
++Marvell GPL License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File in accordance with the terms and conditions of the General
++Public License Version 2, June 1991 (the "GPL License"), a copy of which is
++available along with the File in the license.txt file or by writing to the Free
++Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
++on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++
++THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
++DISCLAIMED.  The GPL License provides additional details about this warranty
++disclaimer.
++*******************************************************************************/
+ 
+ #ifndef L2FW_MV_ETH_L2FW_H
+ #define L2FW_MV_ETH_L2FW_H
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.c
+index 09ab2e7..09148eb 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.c
+@@ -1,4 +1,30 @@
+-/* mv_eth_l2sec.c */
++/*******************************************************************************
++Copyright (C) Marvell International Ltd. and its affiliates
++
++This software file (the "File") is owned and distributed by Marvell
++International Ltd. and/or its affiliates ("Marvell") under the following
++alternative licensing terms.  Once you have made an election to distribute the
++File under one of the following license alternatives, please (i) delete this
++introductory statement regarding license alternatives, (ii) delete the two
++license alternatives that you have not elected to use and (iii) preserve the
++Marvell copyright notice above.
++
++
++********************************************************************************
++Marvell GPL License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File in accordance with the terms and conditions of the General
++Public License Version 2, June 1991 (the "GPL License"), a copy of which is
++available along with the File in the license.txt file or by writing to the Free
++Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
++on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++
++THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
++DISCLAIMED.  The GPL License provides additional details about this warranty
++disclaimer.
++*******************************************************************************/
+ 
+ #include "mv_eth_l2sec.h"
+ 
+@@ -7,6 +33,7 @@ static inline MV_STATUS mv_eth_cesa_l2fw_tx(struct eth_pbuf *pkt, struct eth_por
+ 	struct neta_tx_desc *tx_desc;
+ 	u32 tx_cmd = 0;
+ 	struct tx_queue *txq_ctrl;
++	unsigned long flags = 0;
+ 
+ 	/* assigning different txq for each rx port , to avoid waiting on the
+ 	same txq lock when traffic on several rx ports are destined to the same
+@@ -14,7 +41,7 @@ static inline MV_STATUS mv_eth_cesa_l2fw_tx(struct eth_pbuf *pkt, struct eth_por
+ 	int txq = 0;
+ 	txq_ctrl = &pp->txq_ctrl[pp->txp * CONFIG_MV_ETH_TXQ + txq];
+ 
+-	mv_eth_lock(txq_ctrl, pp);
++	mv_eth_lock(txq_ctrl, flags);
+ 
+ 	if (txq_ctrl->txq_count >= mv_ctrl_txdone)
+ 		mv_eth_txq_done(pp, txq_ctrl);
+@@ -23,7 +50,7 @@ static inline MV_STATUS mv_eth_cesa_l2fw_tx(struct eth_pbuf *pkt, struct eth_por
+ 	if (tx_desc == NULL) {
+ 		/* printk("tx_desc == NULL pp->port=%d in %s\n", pp->port, ,__func__); */
+ 
+-		mv_eth_unlock(txq_ctrl, pp);
++		mv_eth_unlock(txq_ctrl, flags);
+ 
+ 		/* No resources: Drop */
+ 		pp->dev->stats.tx_dropped++;
+@@ -45,7 +72,7 @@ static inline MV_STATUS mv_eth_cesa_l2fw_tx(struct eth_pbuf *pkt, struct eth_por
+ 	mv_eth_tx_desc_flush(tx_desc);
+ 	mvNetaTxqPendDescAdd(pp->port, pp->txp, 0, 1);
+ 
+-	mv_eth_unlock(txq_ctrl, pp);
++	mv_eth_unlock(txq_ctrl, flags);
+ 
+ 	return MV_OK;
+ }
+@@ -98,15 +125,17 @@ static inline void nfp_sec_complete_out(unsigned long data)
+ 
+ int l2fw_set_cesa_chan(int port, int cesaChan)
+ {
+-//	struct eth_port *pp;
++	/*struct eth_port *pp;*/
+ 	printk(KERN_INFO "setting cesaChan to %d for port=%d \n", cesaChan, port);
+ 	if ((cesaChan != CESA_0) && (cesaChan != CESA_1))  {
+ 		printk(KERN_INFO "non permitted value for CESA channel \n");
+ 		return -EINVAL;
+ 	}
+-//	pp = mv_eth_ports[port];
+-//	if (pp)
+-//		pp->cesaChan = cesaChan;
++/*
++	pp = mv_eth_ports[port];
++	if (pp)
++		pp->cesaChan = cesaChan;
++*/
+ 	cesaChanPort[port] = cesaChan;
+ 	return 0;
+ }
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.h
+index f77e7fe..81b0ec2 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.h
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.h
+@@ -1,9 +1,36 @@
+-/* l2sec/mv_eth_l2sec.h */
++/*******************************************************************************
++Copyright (C) Marvell International Ltd. and its affiliates
++
++This software file (the "File") is owned and distributed by Marvell
++International Ltd. and/or its affiliates ("Marvell") under the following
++alternative licensing terms.  Once you have made an election to distribute the
++File under one of the following license alternatives, please (i) delete this
++introductory statement regarding license alternatives, (ii) delete the two
++license alternatives that you have not elected to use and (iii) preserve the
++Marvell copyright notice above.
++
++
++********************************************************************************
++Marvell GPL License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File in accordance with the terms and conditions of the General
++Public License Version 2, June 1991 (the "GPL License"), a copy of which is
++available along with the File in the license.txt file or by writing to the Free
++Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
++on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++
++THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
++DISCLAIMED.  The GPL License provides additional details about this warranty
++disclaimer.
++*******************************************************************************/
+ 
+ #ifndef L2SEC_MV_ETH_L2SEC_H
+ #define L2SEC_MV_ETH_L2SEC_H
+ 
+ #include "mvOs.h"
++#include  <linux/interrupt.h>
+ #include "cesa/mvCesa.h"
+ 
+ #include "mv_neta/l2fw/mv_eth_l2fw.h"
+-- 
+1.7.9.5
+

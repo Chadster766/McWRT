@@ -1,0 +1,1444 @@
+--- a/configure
++++ b/configure
+@@ -902,10 +902,6 @@ plugin_blackhole_static_target
+ plugin_blackhole_shared_target
+ plugin_archive_static_target
+ plugin_archive_shared_target
+-plugin_ftexample_static_target
+-plugin_ftexample_shared_target
+-plugin_daemon_example_static_target
+-plugin_daemon_example_shared_target
+ plugin_partition_shared_target
+ plugin_partition_static_target
+ HAVE_YASSL_FALSE
+@@ -1946,10 +1942,9 @@ Optional Packages:
+                           list of plugins.
+                           Available configurations are: none max max-no-ndb
+                           all.
+-                          Available plugins are: partition daemon_example
+-                          ftexample archive blackhole csv example federated
+-                          heap ibmdb2i innobase innodb_plugin myisam myisammrg
+-                          ndbcluster.
++                          Available plugins are: partition archive blackhole
++                          csv example federated heap ibmdb2i innobase
++                          innodb_plugin myisam myisammrg ndbcluster.
+   --without-plugin-PLUGIN Disable the named plugin from being built.
+                           Otherwise, for plugins which are not selected for
+                           inclusion in mysqld will be built dynamically (if
+@@ -2013,16 +2008,6 @@ Description of plugins:
+   Supports build:   static
+   Configurations:   max, max-no-ndb
+ 
+-   === Daemon Example Plugin ===
+-  Plugin Name:      daemon_example
+-  Description:      This is an example plugin daemon.
+-  Supports build:   dynamic
+-
+-   === Simple Parser ===
+-  Plugin Name:      ftexample
+-  Description:      Simple full-text parser plugin
+-  Supports build:   dynamic
+-
+    === Archive Storage Engine ===
+   Plugin Name:      archive
+   Description:      Archive Storage Engine
+@@ -4965,13 +4950,13 @@ if test "${lt_cv_nm_interface+set}" = se
+ else
+   lt_cv_nm_interface="BSD nm"
+   echo "int some_variable = 0;" > conftest.$ac_ext
+-  (eval echo "\"\$as_me:4968: $ac_compile\"" >&5)
++  (eval echo "\"\$as_me:4953: $ac_compile\"" >&5)
+   (eval "$ac_compile" 2>conftest.err)
+   cat conftest.err >&5
+-  (eval echo "\"\$as_me:4971: $NM \\\"conftest.$ac_objext\\\"\"" >&5)
++  (eval echo "\"\$as_me:4956: $NM \\\"conftest.$ac_objext\\\"\"" >&5)
+   (eval "$NM \"conftest.$ac_objext\"" 2>conftest.err > conftest.out)
+   cat conftest.err >&5
+-  (eval echo "\"\$as_me:4974: output\"" >&5)
++  (eval echo "\"\$as_me:4959: output\"" >&5)
+   cat conftest.out >&5
+   if $GREP 'External.*some_variable' conftest.out > /dev/null; then
+     lt_cv_nm_interface="MS dumpbin"
+@@ -6177,7 +6162,7 @@ ia64-*-hpux*)
+   ;;
+ *-*-irix6*)
+   # Find out which ABI we are using.
+-  echo '#line 6180 "configure"' > conftest.$ac_ext
++  echo '#line 6165 "configure"' > conftest.$ac_ext
+   if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+   (eval $ac_compile) 2>&5
+   ac_status=$?
+@@ -8030,11 +8015,11 @@ else
+    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
+    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
+    -e 's:$: $lt_compiler_flag:'`
+-   (eval echo "\"\$as_me:8033: $lt_compile\"" >&5)
++   (eval echo "\"\$as_me:8018: $lt_compile\"" >&5)
+    (eval "$lt_compile" 2>conftest.err)
+    ac_status=$?
+    cat conftest.err >&5
+-   echo "$as_me:8037: \$? = $ac_status" >&5
++   echo "$as_me:8022: \$? = $ac_status" >&5
+    if (exit $ac_status) && test -s "$ac_outfile"; then
+      # The compiler can only warn and ignore the option if not recognized
+      # So say no if there are warnings other than the usual output.
+@@ -8369,11 +8354,11 @@ else
+    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
+    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
+    -e 's:$: $lt_compiler_flag:'`
+-   (eval echo "\"\$as_me:8372: $lt_compile\"" >&5)
++   (eval echo "\"\$as_me:8357: $lt_compile\"" >&5)
+    (eval "$lt_compile" 2>conftest.err)
+    ac_status=$?
+    cat conftest.err >&5
+-   echo "$as_me:8376: \$? = $ac_status" >&5
++   echo "$as_me:8361: \$? = $ac_status" >&5
+    if (exit $ac_status) && test -s "$ac_outfile"; then
+      # The compiler can only warn and ignore the option if not recognized
+      # So say no if there are warnings other than the usual output.
+@@ -8474,11 +8459,11 @@ else
+    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
+    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
+    -e 's:$: $lt_compiler_flag:'`
+-   (eval echo "\"\$as_me:8477: $lt_compile\"" >&5)
++   (eval echo "\"\$as_me:8462: $lt_compile\"" >&5)
+    (eval "$lt_compile" 2>out/conftest.err)
+    ac_status=$?
+    cat out/conftest.err >&5
+-   echo "$as_me:8481: \$? = $ac_status" >&5
++   echo "$as_me:8466: \$? = $ac_status" >&5
+    if (exit $ac_status) && test -s out/conftest2.$ac_objext
+    then
+      # The compiler can only warn and ignore the option if not recognized
+@@ -8529,11 +8514,11 @@ else
+    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
+    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
+    -e 's:$: $lt_compiler_flag:'`
+-   (eval echo "\"\$as_me:8532: $lt_compile\"" >&5)
++   (eval echo "\"\$as_me:8517: $lt_compile\"" >&5)
+    (eval "$lt_compile" 2>out/conftest.err)
+    ac_status=$?
+    cat out/conftest.err >&5
+-   echo "$as_me:8536: \$? = $ac_status" >&5
++   echo "$as_me:8521: \$? = $ac_status" >&5
+    if (exit $ac_status) && test -s out/conftest2.$ac_objext
+    then
+      # The compiler can only warn and ignore the option if not recognized
+@@ -11329,7 +11314,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 11332 "configure"
++#line 11317 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -11425,7 +11410,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 11428 "configure"
++#line 11413 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -16938,11 +16923,11 @@ else
+    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
+    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
+    -e 's:$: $lt_compiler_flag:'`
+-   (eval echo "\"\$as_me:16941: $lt_compile\"" >&5)
++   (eval echo "\"\$as_me:16926: $lt_compile\"" >&5)
+    (eval "$lt_compile" 2>conftest.err)
+    ac_status=$?
+    cat conftest.err >&5
+-   echo "$as_me:16945: \$? = $ac_status" >&5
++   echo "$as_me:16930: \$? = $ac_status" >&5
+    if (exit $ac_status) && test -s "$ac_outfile"; then
+      # The compiler can only warn and ignore the option if not recognized
+      # So say no if there are warnings other than the usual output.
+@@ -17037,11 +17022,11 @@ else
+    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
+    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
+    -e 's:$: $lt_compiler_flag:'`
+-   (eval echo "\"\$as_me:17040: $lt_compile\"" >&5)
++   (eval echo "\"\$as_me:17025: $lt_compile\"" >&5)
+    (eval "$lt_compile" 2>out/conftest.err)
+    ac_status=$?
+    cat out/conftest.err >&5
+-   echo "$as_me:17044: \$? = $ac_status" >&5
++   echo "$as_me:17029: \$? = $ac_status" >&5
+    if (exit $ac_status) && test -s out/conftest2.$ac_objext
+    then
+      # The compiler can only warn and ignore the option if not recognized
+@@ -17089,11 +17074,11 @@ else
+    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
+    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
+    -e 's:$: $lt_compiler_flag:'`
+-   (eval echo "\"\$as_me:17092: $lt_compile\"" >&5)
++   (eval echo "\"\$as_me:17077: $lt_compile\"" >&5)
+    (eval "$lt_compile" 2>out/conftest.err)
+    ac_status=$?
+    cat out/conftest.err >&5
+-   echo "$as_me:17096: \$? = $ac_status" >&5
++   echo "$as_me:17081: \$? = $ac_status" >&5
+    if (exit $ac_status) && test -s out/conftest2.$ac_objext
+    then
+      # The compiler can only warn and ignore the option if not recognized
+@@ -26456,120 +26441,6 @@ done
+ esac
+ 
+ 
+-# System characteristics
+-case $SYSTEM_TYPE in
+-  *netware*) ;;
+-  *)
+-{ $as_echo "$as_me:$LINENO: checking for restartable system calls" >&5
+-$as_echo_n "checking for restartable system calls... " >&6; }
+-if test "${ac_cv_sys_restartable_syscalls+set}" = set; then
+-  $as_echo_n "(cached) " >&6
+-else
+-  if test "$cross_compiling" = yes; then
+-  { { $as_echo "$as_me:$LINENO: error: in \`$ac_pwd':" >&5
+-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+-{ { $as_echo "$as_me:$LINENO: error: cannot run test program while cross compiling
+-See \`config.log' for more details." >&5
+-$as_echo "$as_me: error: cannot run test program while cross compiling
+-See \`config.log' for more details." >&2;}
+-   { (exit 1); exit 1; }; }; }
+-else
+-  cat >conftest.$ac_ext <<_ACEOF
+-/* confdefs.h.  */
+-_ACEOF
+-cat confdefs.h >>conftest.$ac_ext
+-cat >>conftest.$ac_ext <<_ACEOF
+-/* end confdefs.h.  */
+-/* Exit 0 (true) if wait returns something other than -1,
+-   i.e. the pid of the child, which means that wait was restarted
+-   after getting the signal.  */
+-
+-$ac_includes_default
+-#include <signal.h>
+-#ifdef HAVE_SYS_WAIT_H
+-# include <sys/wait.h>
+-#endif
+-
+-/* Some platforms explicitly require an extern "C" signal handler
+-   when using C++. */
+-#ifdef __cplusplus
+-extern "C" void ucatch (int dummy) { }
+-#else
+-void ucatch (dummy) int dummy; { }
+-#endif
+-
+-int
+-main ()
+-{
+-  int i = fork (), status;
+-
+-  if (i == 0)
+-    {
+-      sleep (3);
+-      kill (getppid (), SIGINT);
+-      sleep (3);
+-      return 0;
+-    }
+-
+-  signal (SIGINT, ucatch);
+-
+-  status = wait (&i);
+-  if (status == -1)
+-    wait (&i);
+-
+-  return status == -1;
+-}
+-_ACEOF
+-rm -f conftest$ac_exeext
+-if { (ac_try="$ac_link"
+-case "(($ac_try" in
+-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+-  *) ac_try_echo=$ac_try;;
+-esac
+-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+-$as_echo "$ac_try_echo") >&5
+-  (eval "$ac_link") 2>&5
+-  ac_status=$?
+-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
+-  { (case "(($ac_try" in
+-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+-  *) ac_try_echo=$ac_try;;
+-esac
+-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+-$as_echo "$ac_try_echo") >&5
+-  (eval "$ac_try") 2>&5
+-  ac_status=$?
+-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); }; }; then
+-  ac_cv_sys_restartable_syscalls=yes
+-else
+-  $as_echo "$as_me: program exited with status $ac_status" >&5
+-$as_echo "$as_me: failed program was:" >&5
+-sed 's/^/| /' conftest.$ac_ext >&5
+-
+-( exit $ac_status )
+-ac_cv_sys_restartable_syscalls=no
+-fi
+-rm -rf conftest.dSYM
+-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
+-fi
+-
+-
+-fi
+-{ $as_echo "$as_me:$LINENO: result: $ac_cv_sys_restartable_syscalls" >&5
+-$as_echo "$ac_cv_sys_restartable_syscalls" >&6; }
+-if test $ac_cv_sys_restartable_syscalls = yes; then
+-
+-cat >>confdefs.h <<\_ACEOF
+-#define HAVE_RESTARTABLE_SYSCALLS 1
+-_ACEOF
+-
+-fi
+-
+-    ;;
+-esac
+-
+ # Build optimized or debug version ?
+ # First check for gcc and g++
+ if test "$GCC" = "yes"
+@@ -26923,84 +26794,6 @@ $as_echo "$as_me: error: \"$with_atomic_
+    { (exit 1); exit 1; }; } ;;
+ esac
+ 
+-{ $as_echo "$as_me:$LINENO: checking whether the compiler provides atomic builtins" >&5
+-$as_echo_n "checking whether the compiler provides atomic builtins... " >&6; }
+-if test "${mysql_cv_gcc_atomic_builtins+set}" = set; then
+-  $as_echo_n "(cached) " >&6
+-else
+-  if test "$cross_compiling" = yes; then
+-  mysql_cv_gcc_atomic_builtins=no
+-else
+-  cat >conftest.$ac_ext <<_ACEOF
+-/* confdefs.h.  */
+-_ACEOF
+-cat confdefs.h >>conftest.$ac_ext
+-cat >>conftest.$ac_ext <<_ACEOF
+-/* end confdefs.h.  */
+-
+-  int main()
+-  {
+-    int foo= -10; int bar= 10;
+-    if (!__sync_fetch_and_add(&foo, bar) || foo)
+-      return -1;
+-    bar= __sync_lock_test_and_set(&foo, bar);
+-    if (bar || foo != 10)
+-      return -1;
+-    bar= __sync_val_compare_and_swap(&bar, foo, 15);
+-    if (bar)
+-      return -1;
+-    return 0;
+-  }
+-
+-_ACEOF
+-rm -f conftest$ac_exeext
+-if { (ac_try="$ac_link"
+-case "(($ac_try" in
+-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+-  *) ac_try_echo=$ac_try;;
+-esac
+-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+-$as_echo "$ac_try_echo") >&5
+-  (eval "$ac_link") 2>&5
+-  ac_status=$?
+-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
+-  { (case "(($ac_try" in
+-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+-  *) ac_try_echo=$ac_try;;
+-esac
+-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+-$as_echo "$ac_try_echo") >&5
+-  (eval "$ac_try") 2>&5
+-  ac_status=$?
+-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); }; }; then
+-  mysql_cv_gcc_atomic_builtins=yes
+-else
+-  $as_echo "$as_me: program exited with status $ac_status" >&5
+-$as_echo "$as_me: failed program was:" >&5
+-sed 's/^/| /' conftest.$ac_ext >&5
+-
+-( exit $ac_status )
+-mysql_cv_gcc_atomic_builtins=no
+-fi
+-rm -rf conftest.dSYM
+-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
+-fi
+-
+-
+-fi
+-{ $as_echo "$as_me:$LINENO: result: $mysql_cv_gcc_atomic_builtins" >&5
+-$as_echo "$mysql_cv_gcc_atomic_builtins" >&6; }
+-
+-if test "x$mysql_cv_gcc_atomic_builtins" = xyes; then
+-
+-cat >>confdefs.h <<\_ACEOF
+-#define HAVE_GCC_ATOMIC_BUILTINS 1
+-_ACEOF
+-
+-fi
+-
+ # Force static compilation to avoid linking problems/get more speed
+ 
+ # Check whether --with-mysqld-ldflags was given.
+@@ -40520,100 +40313,6 @@ fi
+ 
+ 
+ 
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+ if test "${with_archive_storage_engine+set}" = set; then
+   with_plugin_archive="$with_archive_storage_engine"
+ fi
+@@ -42056,10 +41755,6 @@ fi
+ 
+ 
+ 
+-
+-
+-
+-
+ # Check whether --with-plugins was given.
+ if test "${with_plugins+set}" = set; then
+   withval=$with_plugins; mysql_plugins="`echo $withval | tr ',.:;*' '       '`"
+@@ -42072,7 +41767,7 @@ fi
+ 
+   case "$mysql_plugins" in
+   all )
+-    mysql_plugins='partition daemon_example ftexample archive blackhole csv example federated heap ibmdb2i innobase innodb_plugin myisam myisammrg ndbcluster'
++    mysql_plugins='partition archive blackhole csv example federated heap ibmdb2i innobase innodb_plugin myisam myisammrg ndbcluster'
+     ;;
+   none )
+     mysql_plugins=''
+@@ -42124,36 +41819,6 @@ $as_echo "$as_me: error: bad plugin name
+ 
+ 
+ 
+-    daemon_example )
+-
+-
+-
+-      { $as_echo "$as_me:$LINENO: WARNING: Daemon Example Plugin can only be built as a plugin" >&5
+-$as_echo "$as_me: WARNING: Daemon Example Plugin can only be built as a plugin" >&2;}
+-
+-
+-
+-      ;;
+-
+-
+-
+-
+-
+-    ftexample )
+-
+-
+-
+-      { $as_echo "$as_me:$LINENO: WARNING: Simple Parser can only be built as a plugin" >&5
+-$as_echo "$as_me: WARNING: Simple Parser can only be built as a plugin" >&2;}
+-
+-
+-
+-      ;;
+-
+-
+-
+-
+-
+     archive )
+ 
+ 
+@@ -42343,10 +42008,6 @@ $as_echo "$as_me: WARNING: InnoDB Storag
+ 
+ 
+ 
+-
+-
+-
+-
+     * )
+       { { $as_echo "$as_me:$LINENO: error: unknown plugin: $plugin" >&5
+ $as_echo "$as_me: error: unknown plugin: $plugin" >&2;}
+@@ -42419,16 +42080,6 @@ $as_echo "$as_me: error: unknown plugin:
+ 
+ 
+ 
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+    if test "X$mysql_plugin_ndbcluster" = Xyes -a \
+            "X$with_plugin_ndbcluster" != Xno -o \
+            "X$with_plugin_ndbcluster" = Xyes; then
+@@ -42489,10 +42140,6 @@ $as_echo "$as_me: error: depends upon di
+ 
+ 
+ 
+-
+-
+-
+-
+  { $as_echo "$as_me:$LINENO: checking whether to use Partition Support" >&5
+ $as_echo_n "checking whether to use Partition Support... " >&6; }
+  mysql_use_plugin_dir=""
+@@ -42561,236 +42208,6 @@ $as_echo "yes" >&6; }
+ 
+ 
+ 
+- { $as_echo "$as_me:$LINENO: checking whether to use Daemon Example Plugin" >&5
+-$as_echo_n "checking whether to use Daemon Example Plugin... " >&6; }
+- mysql_use_plugin_dir=""
+-
+-
+-  # Plugin is not disabled, determine if it should be built,
+-  # or only distributed
+-
+-
+-    if test ! -d "$srcdir/plugin/daemon_example"; then
+-      # Plugin directory was removed after autoconf was run; treat
+-      # this as a disabled plugin
+-      if test "X$with_plugin_daemon_example" = Xyes; then
+-        { $as_echo "$as_me:$LINENO: result: error" >&5
+-$as_echo "error" >&6; }
+-        { { $as_echo "$as_me:$LINENO: error: disabled" >&5
+-$as_echo "$as_me: error: disabled" >&2;}
+-   { (exit 1); exit 1; }; }
+-      fi
+-
+-      # The result message will be printed below
+-      with_plugin_daemon_example=no
+-    fi
+-
+-
+-
+-   case "$with_mysqld_ldflags " in
+-     *"-all-static "*)
+-       # No need to build shared plugins when mysqld is linked with
+-       # -all-static as it won't be able to load them.
+-       if test "X$mysql_plugin_daemon_example" != Xyes -a \
+-               "X$with_plugin_daemon_example" != Xyes; then
+-	     with_plugin_daemon_example=no
+-	   fi
+-     ;;
+-   esac
+-
+-
+-
+-  if test "X$with_plugin_daemon_example" = Xno; then
+-    { $as_echo "$as_me:$LINENO: result: no" >&5
+-$as_echo "no" >&6; }
+-  else
+-    with_plugin_daemon_example=''
+-    if test "X$mysql_plugin_daemon_example" != Xyes -a \
+-            "X$with_plugin_daemon_example" != Xyes; then
+-
+-
+-         if test -d "$srcdir/plugin/daemon_example" ; then
+-           mysql_use_plugin_dir="plugin/daemon_example"
+-
+-       plugin_daemon_example_shared_target="libdaemon_example.la"
+-
+-       plugin_daemon_example_static_target=""
+-
+-       with_plugin_daemon_example=yes
+-       { $as_echo "$as_me:$LINENO: result: plugin" >&5
+-$as_echo "plugin" >&6; }
+-
+-         else
+-           mysql_plugin_daemon_example=no
+-           { $as_echo "$as_me:$LINENO: result: no" >&5
+-$as_echo "no" >&6; }
+-         fi
+-
+-
+-    else
+-
+-
+-        { $as_echo "$as_me:$LINENO: result: error" >&5
+-$as_echo "error" >&6; }
+-        { { $as_echo "$as_me:$LINENO: error: Plugin daemon_example does not support static linking" >&5
+-$as_echo "$as_me: error: Plugin daemon_example does not support static linking" >&2;}
+-   { (exit 1); exit 1; }; }
+-
+-
+-      mysql_plugin_defs="$mysql_plugin_defs, builtin_daemon_example_plugin"
+-      with_plugin_daemon_example=yes
+-      { $as_echo "$as_me:$LINENO: result: yes" >&5
+-$as_echo "yes" >&6; }
+-
+-    fi
+-  fi
+-
+-
+-    if test -d "$srcdir/plugin/daemon_example"; then
+-      # Even if we don't build a plugin, we bundle its source into the dist
+-      # file.  So its Makefile (and Makefiles for any subdirs) must be
+-      # generated for 'make dist' to work.
+-
+-
+-          # autoconf doesn't provide an automatic way to configure DIST_SUBDIRS of
+-          # a subdir; for our purposes, it's enough to just check for existing
+-          # Makefile.am files and add them in here
+-          ac_config_files="$ac_config_files plugin/daemon_example/Makefile"
+-
+-
+-
+-
+-
+-          mysql_pg_distdirs="$mysql_pg_distdirs daemon_example"
+-          if test -n "$mysql_use_plugin_dir" ; then
+-            mysql_pg_dirs="$mysql_pg_dirs daemon_example"
+-            mysql_pg_unittest_dirs="$mysql_pg_unittest_dirs ../plugin/daemon_example"
+-          fi
+-    fi
+-
+-
+-
+-
+-
+-
+-
+-
+-
+- { $as_echo "$as_me:$LINENO: checking whether to use Simple Parser" >&5
+-$as_echo_n "checking whether to use Simple Parser... " >&6; }
+- mysql_use_plugin_dir=""
+-
+-
+-  # Plugin is not disabled, determine if it should be built,
+-  # or only distributed
+-
+-
+-    if test ! -d "$srcdir/plugin/fulltext"; then
+-      # Plugin directory was removed after autoconf was run; treat
+-      # this as a disabled plugin
+-      if test "X$with_plugin_ftexample" = Xyes; then
+-        { $as_echo "$as_me:$LINENO: result: error" >&5
+-$as_echo "error" >&6; }
+-        { { $as_echo "$as_me:$LINENO: error: disabled" >&5
+-$as_echo "$as_me: error: disabled" >&2;}
+-   { (exit 1); exit 1; }; }
+-      fi
+-
+-      # The result message will be printed below
+-      with_plugin_ftexample=no
+-    fi
+-
+-
+-
+-   case "$with_mysqld_ldflags " in
+-     *"-all-static "*)
+-       # No need to build shared plugins when mysqld is linked with
+-       # -all-static as it won't be able to load them.
+-       if test "X$mysql_plugin_ftexample" != Xyes -a \
+-               "X$with_plugin_ftexample" != Xyes; then
+-	     with_plugin_ftexample=no
+-	   fi
+-     ;;
+-   esac
+-
+-
+-
+-  if test "X$with_plugin_ftexample" = Xno; then
+-    { $as_echo "$as_me:$LINENO: result: no" >&5
+-$as_echo "no" >&6; }
+-  else
+-    with_plugin_ftexample=''
+-    if test "X$mysql_plugin_ftexample" != Xyes -a \
+-            "X$with_plugin_ftexample" != Xyes; then
+-
+-
+-         if test -d "$srcdir/plugin/fulltext" ; then
+-           mysql_use_plugin_dir="plugin/fulltext"
+-
+-       plugin_ftexample_shared_target="mypluglib.la"
+-
+-       plugin_ftexample_static_target=""
+-
+-       with_plugin_ftexample=yes
+-       { $as_echo "$as_me:$LINENO: result: plugin" >&5
+-$as_echo "plugin" >&6; }
+-
+-         else
+-           mysql_plugin_ftexample=no
+-           { $as_echo "$as_me:$LINENO: result: no" >&5
+-$as_echo "no" >&6; }
+-         fi
+-
+-
+-    else
+-
+-
+-        { $as_echo "$as_me:$LINENO: result: error" >&5
+-$as_echo "error" >&6; }
+-        { { $as_echo "$as_me:$LINENO: error: Plugin ftexample does not support static linking" >&5
+-$as_echo "$as_me: error: Plugin ftexample does not support static linking" >&2;}
+-   { (exit 1); exit 1; }; }
+-
+-
+-      mysql_plugin_defs="$mysql_plugin_defs, builtin_ftexample_plugin"
+-      with_plugin_ftexample=yes
+-      { $as_echo "$as_me:$LINENO: result: yes" >&5
+-$as_echo "yes" >&6; }
+-
+-    fi
+-  fi
+-
+-
+-    if test -d "$srcdir/plugin/fulltext"; then
+-      # Even if we don't build a plugin, we bundle its source into the dist
+-      # file.  So its Makefile (and Makefiles for any subdirs) must be
+-      # generated for 'make dist' to work.
+-
+-
+-          # autoconf doesn't provide an automatic way to configure DIST_SUBDIRS of
+-          # a subdir; for our purposes, it's enough to just check for existing
+-          # Makefile.am files and add them in here
+-          ac_config_files="$ac_config_files plugin/fulltext/Makefile"
+-
+-
+-
+-
+-
+-          mysql_pg_distdirs="$mysql_pg_distdirs fulltext"
+-          if test -n "$mysql_use_plugin_dir" ; then
+-            mysql_pg_dirs="$mysql_pg_dirs fulltext"
+-            mysql_pg_unittest_dirs="$mysql_pg_unittest_dirs ../plugin/fulltext"
+-          fi
+-    fi
+-
+-
+-
+-
+-
+-
+-
+-
+-
+ 
+ 
+ 
+@@ -44204,7 +43621,7 @@ $as_echo "yes" >&6; }
+           # autoconf doesn't provide an automatic way to configure DIST_SUBDIRS of
+           # a subdir; for our purposes, it's enough to just check for existing
+           # Makefile.am files and add them in here
+-          ac_config_files="$ac_config_files storage/ndb/docs/Makefile storage/ndb/include/Makefile storage/ndb/src/common/debugger/signaldata/Makefile storage/ndb/src/common/debugger/Makefile storage/ndb/src/common/logger/Makefile storage/ndb/src/common/mgmcommon/Makefile storage/ndb/src/common/portlib/Makefile storage/ndb/src/common/transporter/Makefile storage/ndb/src/common/util/Makefile storage/ndb/src/common/Makefile storage/ndb/src/cw/cpcd/Makefile storage/ndb/src/cw/Makefile storage/ndb/src/kernel/blocks/backup/Makefile storage/ndb/src/kernel/blocks/dbdict/Makefile storage/ndb/src/kernel/blocks/dbdih/Makefile storage/ndb/src/kernel/blocks/dblqh/Makefile storage/ndb/src/kernel/blocks/dbtup/Makefile storage/ndb/src/kernel/blocks/Makefile storage/ndb/src/kernel/error/Makefile storage/ndb/src/kernel/vm/Makefile storage/ndb/src/kernel/Makefile storage/ndb/src/mgmapi/Makefile storage/ndb/src/mgmclient/Makefile storage/ndb/src/mgmsrv/Makefile storage/ndb/src/ndbapi/Makefile storage/ndb/src/Makefile storage/ndb/test/ndbapi/bank/Makefile storage/ndb/test/ndbapi/Makefile storage/ndb/test/run-test/Makefile storage/ndb/test/src/Makefile storage/ndb/test/tools/Makefile storage/ndb/test/Makefile storage/ndb/tools/Makefile storage/ndb/Makefile"
++          ac_config_files="$ac_config_files storage/ndb/Makefile storage/ndb/test/Makefile storage/ndb/test/run-test/Makefile storage/ndb/test/tools/Makefile storage/ndb/test/src/Makefile storage/ndb/test/ndbapi/Makefile storage/ndb/test/ndbapi/bank/Makefile storage/ndb/docs/Makefile storage/ndb/tools/Makefile storage/ndb/include/Makefile storage/ndb/src/Makefile storage/ndb/src/mgmsrv/Makefile storage/ndb/src/cw/Makefile storage/ndb/src/cw/cpcd/Makefile storage/ndb/src/mgmclient/Makefile storage/ndb/src/mgmapi/Makefile storage/ndb/src/common/Makefile storage/ndb/src/common/mgmcommon/Makefile storage/ndb/src/common/portlib/Makefile storage/ndb/src/common/debugger/Makefile storage/ndb/src/common/debugger/signaldata/Makefile storage/ndb/src/common/logger/Makefile storage/ndb/src/common/util/Makefile storage/ndb/src/common/transporter/Makefile storage/ndb/src/kernel/Makefile storage/ndb/src/kernel/blocks/Makefile storage/ndb/src/kernel/blocks/dbdict/Makefile storage/ndb/src/kernel/blocks/dbtup/Makefile storage/ndb/src/kernel/blocks/dbdih/Makefile storage/ndb/src/kernel/blocks/dblqh/Makefile storage/ndb/src/kernel/blocks/backup/Makefile storage/ndb/src/kernel/error/Makefile storage/ndb/src/kernel/vm/Makefile storage/ndb/src/ndbapi/Makefile"
+ 
+ 
+ 
+@@ -44251,10 +43668,6 @@ $as_echo "yes" >&6; }
+ 
+ 
+ 
+-
+-
+-
+-
+   if test "X$with_plugin_partition" = Xyes; then
+     if test "X$plugin_partition_static_target" = X -a \
+             "X$plugin_partition_shared_target" = X; then
+@@ -44273,42 +43686,6 @@ $as_echo "$as_me: error: that's strange,
+ 
+ 
+ 
+-  if test "X$with_plugin_daemon_example" = Xyes; then
+-    if test "X$plugin_daemon_example_static_target" = X -a \
+-            "X$plugin_daemon_example_shared_target" = X; then
+-      { { $as_echo "$as_me:$LINENO: error: that's strange, daemon_example failed sanity check" >&5
+-$as_echo "$as_me: error: that's strange, daemon_example failed sanity check" >&2;}
+-   { (exit 1); exit 1; }; }
+-    fi
+-
+-
+-  fi
+-
+-
+-
+-
+-
+-
+-
+-
+-  if test "X$with_plugin_ftexample" = Xyes; then
+-    if test "X$plugin_ftexample_static_target" = X -a \
+-            "X$plugin_ftexample_shared_target" = X; then
+-      { { $as_echo "$as_me:$LINENO: error: that's strange, ftexample failed sanity check" >&5
+-$as_echo "$as_me: error: that's strange, ftexample failed sanity check" >&2;}
+-   { (exit 1); exit 1; }; }
+-    fi
+-
+-
+-  fi
+-
+-
+-
+-
+-
+-
+-
+-
+   if test "X$with_plugin_archive" = Xyes; then
+     if test "X$plugin_archive_static_target" = X -a \
+             "X$plugin_archive_shared_target" = X; then
+@@ -48250,198 +47627,6 @@ $as_echo "$as_me: error: unknown endiann
+   esac
+ 
+ 
+-  { $as_echo "$as_me:$LINENO: checking whether GCC atomic builtins are available" >&5
+-$as_echo_n "checking whether GCC atomic builtins are available... " >&6; }
+-  # either define HAVE_IB_GCC_ATOMIC_BUILTINS or not
+-  if test "$cross_compiling" = yes; then
+-  { { $as_echo "$as_me:$LINENO: error: in \`$ac_pwd':" >&5
+-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+-{ { $as_echo "$as_me:$LINENO: error: cannot run test program while cross compiling
+-See \`config.log' for more details." >&5
+-$as_echo "$as_me: error: cannot run test program while cross compiling
+-See \`config.log' for more details." >&2;}
+-   { (exit 1); exit 1; }; }; }
+-else
+-  cat >conftest.$ac_ext <<_ACEOF
+-/* confdefs.h.  */
+-_ACEOF
+-cat confdefs.h >>conftest.$ac_ext
+-cat >>conftest.$ac_ext <<_ACEOF
+-/* end confdefs.h.  */
+-
+-      int main()
+-      {
+-	long	x;
+-	long	y;
+-	long	res;
+-	char	c;
+-
+-	x = 10;
+-	y = 123;
+-	res = __sync_bool_compare_and_swap(&x, x, y);
+-	if (!res || x != y) {
+-          return(1);
+-        }
+-
+-	x = 10;
+-	y = 123;
+-	res = __sync_bool_compare_and_swap(&x, x + 1, y);
+-	if (res || x != 10) {
+-          return(1);
+-        }
+-
+-	x = 10;
+-	y = 123;
+-	res = __sync_add_and_fetch(&x, y);
+-	if (res != 123 + 10 || x != 123 + 10) {
+-	  return(1);
+-	}
+-
+-	c = 10;
+-	res = __sync_lock_test_and_set(&c, 123);
+-	if (res != 10 || c != 123) {
+-	  return(1);
+-	}
+-
+-	return(0);
+-      }
+-
+-_ACEOF
+-rm -f conftest$ac_exeext
+-if { (ac_try="$ac_link"
+-case "(($ac_try" in
+-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+-  *) ac_try_echo=$ac_try;;
+-esac
+-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+-$as_echo "$ac_try_echo") >&5
+-  (eval "$ac_link") 2>&5
+-  ac_status=$?
+-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
+-  { (case "(($ac_try" in
+-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+-  *) ac_try_echo=$ac_try;;
+-esac
+-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+-$as_echo "$ac_try_echo") >&5
+-  (eval "$ac_try") 2>&5
+-  ac_status=$?
+-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); }; }; then
+-
+-
+-cat >>confdefs.h <<\_ACEOF
+-#define HAVE_IB_GCC_ATOMIC_BUILTINS 1
+-_ACEOF
+-
+-      { $as_echo "$as_me:$LINENO: result: yes" >&5
+-$as_echo "yes" >&6; }
+-
+-else
+-  $as_echo "$as_me: program exited with status $ac_status" >&5
+-$as_echo "$as_me: failed program was:" >&5
+-sed 's/^/| /' conftest.$ac_ext >&5
+-
+-( exit $ac_status )
+-
+-      { $as_echo "$as_me:$LINENO: result: no" >&5
+-$as_echo "no" >&6; }
+-
+-
+-fi
+-rm -rf conftest.dSYM
+-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
+-fi
+-
+-
+-
+-  { $as_echo "$as_me:$LINENO: checking whether pthread_t can be used by GCC atomic builtins" >&5
+-$as_echo_n "checking whether pthread_t can be used by GCC atomic builtins... " >&6; }
+-  # either define HAVE_IB_ATOMIC_PTHREAD_T_GCC or not
+-  if test "$cross_compiling" = yes; then
+-  { { $as_echo "$as_me:$LINENO: error: in \`$ac_pwd':" >&5
+-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+-{ { $as_echo "$as_me:$LINENO: error: cannot run test program while cross compiling
+-See \`config.log' for more details." >&5
+-$as_echo "$as_me: error: cannot run test program while cross compiling
+-See \`config.log' for more details." >&2;}
+-   { (exit 1); exit 1; }; }; }
+-else
+-  cat >conftest.$ac_ext <<_ACEOF
+-/* confdefs.h.  */
+-_ACEOF
+-cat confdefs.h >>conftest.$ac_ext
+-cat >>conftest.$ac_ext <<_ACEOF
+-/* end confdefs.h.  */
+-
+-      #include <pthread.h>
+-      #include <string.h>
+-
+-      int main(int argc, char** argv) {
+-        pthread_t       x1;
+-        pthread_t       x2;
+-        pthread_t       x3;
+-
+-	memset(&x1, 0x0, sizeof(x1));
+-	memset(&x2, 0x0, sizeof(x2));
+-	memset(&x3, 0x0, sizeof(x3));
+-
+-        __sync_bool_compare_and_swap(&x1, x2, x3);
+-
+-        return(0);
+-      }
+-
+-_ACEOF
+-rm -f conftest$ac_exeext
+-if { (ac_try="$ac_link"
+-case "(($ac_try" in
+-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+-  *) ac_try_echo=$ac_try;;
+-esac
+-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+-$as_echo "$ac_try_echo") >&5
+-  (eval "$ac_link") 2>&5
+-  ac_status=$?
+-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
+-  { (case "(($ac_try" in
+-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+-  *) ac_try_echo=$ac_try;;
+-esac
+-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+-$as_echo "$ac_try_echo") >&5
+-  (eval "$ac_try") 2>&5
+-  ac_status=$?
+-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); }; }; then
+-
+-
+-cat >>confdefs.h <<\_ACEOF
+-#define HAVE_IB_ATOMIC_PTHREAD_T_GCC 1
+-_ACEOF
+-
+-      { $as_echo "$as_me:$LINENO: result: yes" >&5
+-$as_echo "yes" >&6; }
+-
+-else
+-  $as_echo "$as_me: program exited with status $ac_status" >&5
+-$as_echo "$as_me: failed program was:" >&5
+-sed 's/^/| /' conftest.$ac_ext >&5
+-
+-( exit $ac_status )
+-
+-      { $as_echo "$as_me:$LINENO: result: no" >&5
+-$as_echo "no" >&6; }
+-
+-
+-fi
+-rm -rf conftest.dSYM
+-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
+-fi
+-
+-
+-
+   { $as_echo "$as_me:$LINENO: checking whether Solaris libc atomic functions are available" >&5
+ $as_echo_n "checking whether Solaris libc atomic functions are available... " >&6; }
+   # either define HAVE_IB_SOLARIS_ATOMICS or not
+@@ -48560,103 +47745,6 @@ fi
+ done
+ 
+ 
+-  { $as_echo "$as_me:$LINENO: checking whether pthread_t can be used by Solaris libc atomic functions" >&5
+-$as_echo_n "checking whether pthread_t can be used by Solaris libc atomic functions... " >&6; }
+-  # either define HAVE_IB_ATOMIC_PTHREAD_T_SOLARIS or not
+-  if test "$cross_compiling" = yes; then
+-  { { $as_echo "$as_me:$LINENO: error: in \`$ac_pwd':" >&5
+-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+-{ { $as_echo "$as_me:$LINENO: error: cannot run test program while cross compiling
+-See \`config.log' for more details." >&5
+-$as_echo "$as_me: error: cannot run test program while cross compiling
+-See \`config.log' for more details." >&2;}
+-   { (exit 1); exit 1; }; }; }
+-else
+-  cat >conftest.$ac_ext <<_ACEOF
+-/* confdefs.h.  */
+-_ACEOF
+-cat confdefs.h >>conftest.$ac_ext
+-cat >>conftest.$ac_ext <<_ACEOF
+-/* end confdefs.h.  */
+-
+-      #include <pthread.h>
+-      #include <string.h>
+-
+-      int main(int argc, char** argv) {
+-        pthread_t       x1;
+-        pthread_t       x2;
+-        pthread_t       x3;
+-
+-        memset(&x1, 0x0, sizeof(x1));
+-        memset(&x2, 0x0, sizeof(x2));
+-        memset(&x3, 0x0, sizeof(x3));
+-
+-        if (sizeof(pthread_t) == 4) {
+-
+-          atomic_cas_32(&x1, x2, x3);
+-
+-        } else if (sizeof(pthread_t) == 8) {
+-
+-          atomic_cas_64(&x1, x2, x3);
+-
+-        } else {
+-
+-          return(1);
+-        }
+-
+-	return(0);
+-      }
+-
+-_ACEOF
+-rm -f conftest$ac_exeext
+-if { (ac_try="$ac_link"
+-case "(($ac_try" in
+-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+-  *) ac_try_echo=$ac_try;;
+-esac
+-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+-$as_echo "$ac_try_echo") >&5
+-  (eval "$ac_link") 2>&5
+-  ac_status=$?
+-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
+-  { (case "(($ac_try" in
+-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+-  *) ac_try_echo=$ac_try;;
+-esac
+-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+-$as_echo "$ac_try_echo") >&5
+-  (eval "$ac_try") 2>&5
+-  ac_status=$?
+-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); }; }; then
+-
+-
+-cat >>confdefs.h <<\_ACEOF
+-#define HAVE_IB_ATOMIC_PTHREAD_T_SOLARIS 1
+-_ACEOF
+-
+-      { $as_echo "$as_me:$LINENO: result: yes" >&5
+-$as_echo "yes" >&6; }
+-
+-else
+-  $as_echo "$as_me: program exited with status $ac_status" >&5
+-$as_echo "$as_me: failed program was:" >&5
+-sed 's/^/| /' conftest.$ac_ext >&5
+-
+-( exit $ac_status )
+-
+-      { $as_echo "$as_me:$LINENO: result: no" >&5
+-$as_echo "no" >&6; }
+-
+-
+-fi
+-rm -rf conftest.dSYM
+-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
+-fi
+-
+-
+-
+   # this is needed to know which one of atomic_cas_32() or atomic_cas_64()
+   # to use in the source
+   # The cast to long int works around a bug in the HP C Compiler
+@@ -49573,10 +48661,6 @@ _ACEOF
+ 
+ 
+ 
+-
+-
+-
+-
+ # Only build client code?
+ 
+ # Check whether --with-server was given.
+@@ -51544,8 +50628,6 @@ do
+     "extra/yassl/taocrypt/test/Makefile") CONFIG_FILES="$CONFIG_FILES extra/yassl/taocrypt/test/Makefile" ;;
+     "extra/yassl/src/Makefile") CONFIG_FILES="$CONFIG_FILES extra/yassl/src/Makefile" ;;
+     "extra/yassl/testsuite/Makefile") CONFIG_FILES="$CONFIG_FILES extra/yassl/testsuite/Makefile" ;;
+-    "plugin/daemon_example/Makefile") CONFIG_FILES="$CONFIG_FILES plugin/daemon_example/Makefile" ;;
+-    "plugin/fulltext/Makefile") CONFIG_FILES="$CONFIG_FILES plugin/fulltext/Makefile" ;;
+     "storage/archive/Makefile") CONFIG_FILES="$CONFIG_FILES storage/archive/Makefile" ;;
+     "storage/blackhole/Makefile") CONFIG_FILES="$CONFIG_FILES storage/blackhole/Makefile" ;;
+     "storage/csv/Makefile") CONFIG_FILES="$CONFIG_FILES storage/csv/Makefile" ;;
+@@ -51557,40 +50639,40 @@ do
+     "storage/innodb_plugin/Makefile") CONFIG_FILES="$CONFIG_FILES storage/innodb_plugin/Makefile" ;;
+     "storage/myisam/Makefile") CONFIG_FILES="$CONFIG_FILES storage/myisam/Makefile" ;;
+     "storage/myisammrg/Makefile") CONFIG_FILES="$CONFIG_FILES storage/myisammrg/Makefile" ;;
++    "storage/ndb/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/Makefile" ;;
++    "storage/ndb/test/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/test/Makefile" ;;
++    "storage/ndb/test/run-test/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/test/run-test/Makefile" ;;
++    "storage/ndb/test/tools/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/test/tools/Makefile" ;;
++    "storage/ndb/test/src/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/test/src/Makefile" ;;
++    "storage/ndb/test/ndbapi/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/test/ndbapi/Makefile" ;;
++    "storage/ndb/test/ndbapi/bank/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/test/ndbapi/bank/Makefile" ;;
+     "storage/ndb/docs/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/docs/Makefile" ;;
++    "storage/ndb/tools/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/tools/Makefile" ;;
+     "storage/ndb/include/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/include/Makefile" ;;
+-    "storage/ndb/src/common/debugger/signaldata/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/common/debugger/signaldata/Makefile" ;;
+-    "storage/ndb/src/common/debugger/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/common/debugger/Makefile" ;;
+-    "storage/ndb/src/common/logger/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/common/logger/Makefile" ;;
++    "storage/ndb/src/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/Makefile" ;;
++    "storage/ndb/src/mgmsrv/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/mgmsrv/Makefile" ;;
++    "storage/ndb/src/cw/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/cw/Makefile" ;;
++    "storage/ndb/src/cw/cpcd/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/cw/cpcd/Makefile" ;;
++    "storage/ndb/src/mgmclient/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/mgmclient/Makefile" ;;
++    "storage/ndb/src/mgmapi/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/mgmapi/Makefile" ;;
++    "storage/ndb/src/common/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/common/Makefile" ;;
+     "storage/ndb/src/common/mgmcommon/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/common/mgmcommon/Makefile" ;;
+     "storage/ndb/src/common/portlib/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/common/portlib/Makefile" ;;
+-    "storage/ndb/src/common/transporter/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/common/transporter/Makefile" ;;
++    "storage/ndb/src/common/debugger/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/common/debugger/Makefile" ;;
++    "storage/ndb/src/common/debugger/signaldata/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/common/debugger/signaldata/Makefile" ;;
++    "storage/ndb/src/common/logger/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/common/logger/Makefile" ;;
+     "storage/ndb/src/common/util/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/common/util/Makefile" ;;
+-    "storage/ndb/src/common/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/common/Makefile" ;;
+-    "storage/ndb/src/cw/cpcd/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/cw/cpcd/Makefile" ;;
+-    "storage/ndb/src/cw/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/cw/Makefile" ;;
+-    "storage/ndb/src/kernel/blocks/backup/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/kernel/blocks/backup/Makefile" ;;
++    "storage/ndb/src/common/transporter/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/common/transporter/Makefile" ;;
++    "storage/ndb/src/kernel/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/kernel/Makefile" ;;
++    "storage/ndb/src/kernel/blocks/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/kernel/blocks/Makefile" ;;
+     "storage/ndb/src/kernel/blocks/dbdict/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/kernel/blocks/dbdict/Makefile" ;;
++    "storage/ndb/src/kernel/blocks/dbtup/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/kernel/blocks/dbtup/Makefile" ;;
+     "storage/ndb/src/kernel/blocks/dbdih/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/kernel/blocks/dbdih/Makefile" ;;
+     "storage/ndb/src/kernel/blocks/dblqh/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/kernel/blocks/dblqh/Makefile" ;;
+-    "storage/ndb/src/kernel/blocks/dbtup/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/kernel/blocks/dbtup/Makefile" ;;
+-    "storage/ndb/src/kernel/blocks/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/kernel/blocks/Makefile" ;;
++    "storage/ndb/src/kernel/blocks/backup/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/kernel/blocks/backup/Makefile" ;;
+     "storage/ndb/src/kernel/error/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/kernel/error/Makefile" ;;
+     "storage/ndb/src/kernel/vm/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/kernel/vm/Makefile" ;;
+-    "storage/ndb/src/kernel/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/kernel/Makefile" ;;
+-    "storage/ndb/src/mgmapi/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/mgmapi/Makefile" ;;
+-    "storage/ndb/src/mgmclient/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/mgmclient/Makefile" ;;
+-    "storage/ndb/src/mgmsrv/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/mgmsrv/Makefile" ;;
+     "storage/ndb/src/ndbapi/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/ndbapi/Makefile" ;;
+-    "storage/ndb/src/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/Makefile" ;;
+-    "storage/ndb/test/ndbapi/bank/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/test/ndbapi/bank/Makefile" ;;
+-    "storage/ndb/test/ndbapi/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/test/ndbapi/Makefile" ;;
+-    "storage/ndb/test/run-test/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/test/run-test/Makefile" ;;
+-    "storage/ndb/test/src/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/test/src/Makefile" ;;
+-    "storage/ndb/test/tools/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/test/tools/Makefile" ;;
+-    "storage/ndb/test/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/test/Makefile" ;;
+-    "storage/ndb/tools/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/tools/Makefile" ;;
+-    "storage/ndb/Makefile") CONFIG_FILES="$CONFIG_FILES storage/ndb/Makefile" ;;
+     "storage/ndb/src/libndb.ver") CONFIG_FILES="$CONFIG_FILES storage/ndb/src/libndb.ver" ;;
+     "storage/ndb/include/ndb_version.h") CONFIG_FILES="$CONFIG_FILES storage/ndb/include/ndb_version.h" ;;
+     "storage/ndb/include/ndb_global.h") CONFIG_FILES="$CONFIG_FILES storage/ndb/include/ndb_global.h" ;;
+--- a/configure.in
++++ b/configure.in
+@@ -1611,14 +1611,6 @@ case "$with_mysqld_ldflags " in
+ esac
+ 
+ 
+-# System characteristics
+-case $SYSTEM_TYPE in
+-  *netware*) ;;
+-  *)
+-AC_SYS_RESTARTABLE_SYSCALLS
+-    ;;
+-esac
+-
+ # Build optimized or debug version ?
+ # First check for gcc and g++
+ if test "$GCC" = "yes"
+--- a/storage/innodb_plugin/plug.in
++++ b/storage/innodb_plugin/plug.in
+@@ -53,88 +53,6 @@ MYSQL_PLUGIN_ACTIONS(innodb_plugin,  [
+   esac
+   AC_SUBST(INNODB_DYNAMIC_CFLAGS)
+ 
+-  AC_MSG_CHECKING(whether GCC atomic builtins are available)
+-  # either define HAVE_IB_GCC_ATOMIC_BUILTINS or not
+-  AC_TRY_RUN(
+-    [
+-      int main()
+-      {
+-	long	x;
+-	long	y;
+-	long	res;
+-	char	c;
+-
+-	x = 10;
+-	y = 123;
+-	res = __sync_bool_compare_and_swap(&x, x, y);
+-	if (!res || x != y) {
+-          return(1);
+-        }
+-
+-	x = 10;
+-	y = 123;
+-	res = __sync_bool_compare_and_swap(&x, x + 1, y);
+-	if (res || x != 10) {
+-          return(1);
+-        }
+-
+-	x = 10;
+-	y = 123;
+-	res = __sync_add_and_fetch(&x, y);
+-	if (res != 123 + 10 || x != 123 + 10) {
+-	  return(1);
+-	}
+-
+-	c = 10;
+-	res = __sync_lock_test_and_set(&c, 123);
+-	if (res != 10 || c != 123) {
+-	  return(1);
+-	}
+-
+-	return(0);
+-      }
+-    ],
+-    [
+-      AC_DEFINE([HAVE_IB_GCC_ATOMIC_BUILTINS], [1],
+-                [GCC atomic builtins are available])
+-      AC_MSG_RESULT(yes)
+-    ],
+-    [
+-      AC_MSG_RESULT(no)
+-    ]
+-  )
+-
+-  AC_MSG_CHECKING(whether pthread_t can be used by GCC atomic builtins)
+-  # either define HAVE_IB_ATOMIC_PTHREAD_T_GCC or not
+-  AC_TRY_RUN(
+-    [
+-      #include <pthread.h>
+-      #include <string.h>
+-
+-      int main(int argc, char** argv) {
+-        pthread_t       x1;
+-        pthread_t       x2;
+-        pthread_t       x3;
+-
+-	memset(&x1, 0x0, sizeof(x1));
+-	memset(&x2, 0x0, sizeof(x2));
+-	memset(&x3, 0x0, sizeof(x3));
+-
+-        __sync_bool_compare_and_swap(&x1, x2, x3);
+-
+-        return(0);
+-      }
+-    ],
+-    [
+-      AC_DEFINE([HAVE_IB_ATOMIC_PTHREAD_T_GCC], [1],
+-                [pthread_t can be used by GCC atomic builtins])
+-      AC_MSG_RESULT(yes)
+-    ],
+-    [
+-      AC_MSG_RESULT(no)
+-    ]
+-  )
+-
+   AC_MSG_CHECKING(whether Solaris libc atomic functions are available)
+   # either define HAVE_IB_SOLARIS_ATOMICS or not
+   AC_CHECK_FUNCS(atomic_cas_ulong \
+@@ -148,48 +66,6 @@ MYSQL_PLUGIN_ACTIONS(innodb_plugin,  [
+ 			    are available])
+   )
+ 
+-  AC_MSG_CHECKING(whether pthread_t can be used by Solaris libc atomic functions)
+-  # either define HAVE_IB_ATOMIC_PTHREAD_T_SOLARIS or not
+-  AC_TRY_RUN(
+-    [
+-      #include <pthread.h>
+-      #include <string.h>
+-
+-      int main(int argc, char** argv) {
+-        pthread_t       x1;
+-        pthread_t       x2;
+-        pthread_t       x3;
+-
+-        memset(&x1, 0x0, sizeof(x1));
+-        memset(&x2, 0x0, sizeof(x2));
+-        memset(&x3, 0x0, sizeof(x3));
+-
+-        if (sizeof(pthread_t) == 4) {
+-        
+-          atomic_cas_32(&x1, x2, x3);
+-        
+-        } else if (sizeof(pthread_t) == 8) {
+-        
+-          atomic_cas_64(&x1, x2, x3);
+-        
+-        } else {
+-        
+-          return(1);
+-        }
+-
+-	return(0);
+-      }
+-    ],
+-    [
+-      AC_DEFINE([HAVE_IB_ATOMIC_PTHREAD_T_SOLARIS], [1],
+-                [pthread_t can be used by solaris atomics])
+-      AC_MSG_RESULT(yes)
+-    ],
+-    [
+-      AC_MSG_RESULT(no)
+-    ]
+-  )
+-
+   # this is needed to know which one of atomic_cas_32() or atomic_cas_64()
+   # to use in the source
+   AC_CHECK_SIZEOF([pthread_t], [], [#include <pthread.h>])
+--- a/libmysql/Makefile.in
++++ b/libmysql/Makefile.in
+@@ -626,7 +626,7 @@ clean-noinstPROGRAMS:
+ 	done
+ conf_to_src$(EXEEXT): $(conf_to_src_OBJECTS) $(conf_to_src_DEPENDENCIES) 
+ 	@rm -f conf_to_src$(EXEEXT)
+-	$(conf_to_src_LINK) $(conf_to_src_OBJECTS) $(conf_to_src_LDADD) $(LIBS)
++	$(conf_to_src_LINK) $(conf_to_src_OBJECTS) $(conf_to_src_LDADD)
+ 
+ mostlyclean-compile:
+ 	-rm -f *.$(OBJEXT)

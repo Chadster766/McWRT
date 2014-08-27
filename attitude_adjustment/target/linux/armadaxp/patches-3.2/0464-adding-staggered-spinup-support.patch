@@ -1,0 +1,50 @@
+From cd3c22c45d7b371ea2ec985df022b9d1f165c55b Mon Sep 17 00:00:00 2001
+From: Lior Amsalem <alior@marvell.com>
+Date: Wed, 26 Dec 2012 13:35:07 +0200
+Subject: [PATCH 464/609] adding staggered spinup support
+
+Change-Id: I093898c396479f1770187e3a72bfdc9283d260a8
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_hal/sata/CoreDriver/mvStorageDev.h          |   10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvStorageDev.h b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvStorageDev.h
+index 2780a9b..aab2da4 100644
+--- a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvStorageDev.h
++++ b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvStorageDev.h
+@@ -161,6 +161,7 @@ extern "C" {
+ 
+ #define MV_ATA_SET_FEATURES_ENABLE_WCACHE       0x02	/* Enable write cache */
+ #define MV_ATA_SET_FEATURES_TRANSFER            0x03	/* Set transfer mode  */
++#define MV_ATA_SET_FEATURES_SPIN_UP             0x07    /* Wake up drive and spin-it up from POWERUP_TO_STANDBY mode */
+ #define MV_ATA_TRANSFER_UDMA_0                  0x40
+ #define MV_ATA_TRANSFER_UDMA_1                  0x41
+ #define MV_ATA_TRANSFER_UDMA_2                  0x42
+@@ -219,6 +220,7 @@ extern "C" {
+ 
+ /* Defines for parsing the IDENTIFY command results*/
+ #define IDEN_ID_CONFIG                          0
++#define IDEN_UNIQUE_CONFIG                      2
+ #define IDEN_SERIAL_NUM_OFFSET                  10
+ #define IDEN_SERIAL_NUM_SIZE                    (20 - 10)
+ #define IDEN_FIRMWARE_OFFSET                    23
+@@ -243,6 +245,14 @@ extern "C" {
+ #define IDEN_UDMA_MODE                          88
+ #define IDEN_CFA_MODES                          163
+ 
++/*
++ * Reference:
++ * Proposal for Power-up in Standby Feature Set
++ * T13/D97150R2
++ */
++#define IDEN_UNIQUE_INCOMPLETE                  0x37C8
++#define IDEN_UNIQUE_COMPLETE                    0x738C
++
+ /* Typedefs    */
+ 
+ /* Structures  */
+-- 
+1.7.9.5
+

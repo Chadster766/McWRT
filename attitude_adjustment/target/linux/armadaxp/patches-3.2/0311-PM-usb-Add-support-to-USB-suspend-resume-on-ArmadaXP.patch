@@ -1,0 +1,113 @@
+From 622632c6cd920afd11d3fe8a4dffb1f41f7f53cc Mon Sep 17 00:00:00 2001
+From: Piotr Nowak <pn@semihalf.com>
+Date: Tue, 25 Sep 2012 11:01:25 +0200
+Subject: [PATCH 311/609] PM, usb: Add support to USB suspend/resume on
+ ArmadaXP-B0.
+
+Firstly mvUsbPllInit routine has to be called because on
+resume from suspend to mem U-Boot does not init USB PLL's.
+After this each USB port has resume routine in ehci_marvell driver.
+This routine initialize USB decoding windows and set registers.
+
+Signed-off-by: Piotr Nowak <pn@semihalf.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/core.c   |    8 ++++++++
+ arch/arm/mach-armadaxp/usb.c    |   22 ++++++++++++++++++++++
+ drivers/usb/host/ehci_marvell.c |   16 +++++++++++++++-
+ 3 files changed, 45 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index 4d2174c..e4e52f0 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -95,6 +95,11 @@
+ #include "mv_mtd/nand_nfc.h"
+ #endif
+ 
++/* USB */
++#ifdef CONFIG_MV_INCLUDE_USB
++#include "usb/mvUsb.h"
++#endif
++
+ #define MV_COHERENCY_FABRIC_CTRL_REG		(MV_COHERENCY_FABRIC_OFFSET + 0x0)
+ #define MV_COHERENCY_FABRIC_CFG_REG		(MV_COHERENCY_FABRIC_OFFSET + 0x4)
+ 
+@@ -1470,6 +1475,9 @@ void axp_db_restore(void)
+ 		return;
+ 	}
+ 
++#ifdef CONFIG_MV_INCLUDE_USB
++	mvUsbPllInit();
++#endif
+ 	mvSysEthPhyInit();
+ #ifdef CONFIG_MV_INCLUDE_PEX
+ 	/* Reinitialize PEX root complex */
+diff --git a/arch/arm/mach-armadaxp/usb.c b/arch/arm/mach-armadaxp/usb.c
+index 80d8763..8e74eaf 100644
+--- a/arch/arm/mach-armadaxp/usb.c
++++ b/arch/arm/mach-armadaxp/usb.c
+@@ -70,6 +70,28 @@ static void mv_usb_release(struct device *dev)
+     kfree(pdev);
+ } 
+ 
++int mv_usb_resume(int dev)
++{
++	int status, isHost;
++	char *name_ptr;
++
++	if (MV_FALSE == mvCtrlPwrClckGet(USB_UNIT_ID, dev)) {
++		printk(KERN_DEBUG "\nWarning Integrated USB %d is Powered Off\n", dev);
++		return -EINVAL;
++	}
++
++	/* Check if this USB is mapped to this AMP group - YY */
++	if(MV_FALSE == mvUnitMapIsMine(USB0 + dev))
++		return -EINVAL;
++
++	isHost = mvIsUsbHost & (1 << dev);
++	name_ptr = isHost ? usb_host_name : usb_dev_name;
++
++	printk(KERN_DEBUG "registered dev#%d as a %s\n", dev, name_ptr);
++	status = mvSysUsbInit(dev, isHost);
++
++	return status;
++}
+ 
+ static int __init   mv_usb_init(void)
+ {
+diff --git a/drivers/usb/host/ehci_marvell.c b/drivers/usb/host/ehci_marvell.c
+index bad4a76..889d488 100644
+--- a/drivers/usb/host/ehci_marvell.c
++++ b/drivers/usb/host/ehci_marvell.c
+@@ -201,12 +201,26 @@ static int ehci_marvell_remove(struct platform_device *pdev)
+    return 0;
+ } 
+  
+- 
++#if defined(CONFIG_ARCH_ARMADA_XP)
++extern int mv_usb_resume(int dev);
++
++static int ehci_marvell_resume(struct platform_device *pdev)
++{
++	int status = mv_usb_resume(pdev->id);
++
++	return status;
++}
++#endif
++
++
+ static struct platform_driver ehci_marvell_driver =  
+ { 
+     .driver.name = "ehci_marvell", 
+     .probe = ehci_marvell_probe, 
+     .remove = ehci_marvell_remove,
++#if defined(CONFIG_ARCH_ARMADA_XP)
++    .resume = ehci_marvell_resume,
++#endif
+     .shutdown = usb_hcd_platform_shutdown, 
+ };  
+ 
+-- 
+1.7.9.5
+

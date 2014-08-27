@@ -1,0 +1,471 @@
+From 16cee1bbf74cbadcbda5de64cce7c783e9e45d02 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Mon, 20 Aug 2012 14:36:24 +0300
+Subject: [PATCH 254/609] updating nas_init to v3.3, removing old files
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ tools/nas/aff_78260.sh        |   10 ----
+ tools/nas/aff_78460.sh        |    9 ----
+ tools/nas/bond_2link_setup.sh |   23 ---------
+ tools/nas/bond_4link_setup.sh |   22 --------
+ tools/nas/nas_init.sh         |  115 +++++++++++++++++++++++++----------------
+ tools/nas/set_aff.sh          |    1 -
+ 6 files changed, 70 insertions(+), 110 deletions(-)
+ delete mode 100755 tools/nas/aff_78260.sh
+ delete mode 100755 tools/nas/aff_78460.sh
+ delete mode 100755 tools/nas/bond_2link_setup.sh
+ delete mode 100755 tools/nas/bond_4link_setup.sh
+ delete mode 100755 tools/nas/set_aff.sh
+
+diff --git a/tools/nas/aff_78260.sh b/tools/nas/aff_78260.sh
+deleted file mode 100755
+index 7962ca7..0000000
+--- a/tools/nas/aff_78260.sh
++++ /dev/null
+@@ -1,10 +0,0 @@
+-./set_aff.sh 99 2
+-#./set_aff.sh 103 4
+-
+-./set_aff.sh 51 1
+-./set_aff.sh 52 1
+-
+-./set_aff.sh 10 2
+-./set_aff.sh 61 2
+-#./set_aff.sh 12 4
+-#./set_aff.sh 14 8
+diff --git a/tools/nas/aff_78460.sh b/tools/nas/aff_78460.sh
+deleted file mode 100755
+index 2302a76..0000000
+--- a/tools/nas/aff_78460.sh
++++ /dev/null
+@@ -1,9 +0,0 @@
+-./set_aff.sh 99 2
+-./set_aff.sh 103 4
+-
+-./set_aff.sh 51 1
+-./set_aff.sh 52 1
+-
+-./set_aff.sh 10 2
+-./set_aff.sh 12 4
+-./set_aff.sh 14 8
+diff --git a/tools/nas/bond_2link_setup.sh b/tools/nas/bond_2link_setup.sh
+deleted file mode 100755
+index 1fa1104..0000000
+--- a/tools/nas/bond_2link_setup.sh
++++ /dev/null
+@@ -1,23 +0,0 @@
+-#!/bin/sh
+-
+-ifconfig eth0 0.0.0.0 down
+-ifconfig eth1 0.0.0.0 down
+-#ifconfig eth2 0.0.0.0 down
+-#ifconfig eth3 0.0.0.0 down
+-
+-#ifconfig bond0 10.4.53.196 netmask 255.255.255.0 up
+-ifconfig bond0 192.168.0.5 netmask 255.255.255.0 up
+-ifenslave bond0 eth0 eth1
+-#eth2 eth3
+-#eth2 eth3
+-
+-ifconfig bond0 down
+-echo balance-alb > /sys/class/net/bond0/bonding/mode
+-ifconfig bond0 up
+-#ifconfig bond0 10.4.53.196 netmask 255.255.255.0 up
+-
+-#echo +eth1 > /sys/class/net/bond0/bonding/slaves
+-#echo +eth2 > /sys/class/net/bond0/bonding/slaves
+-#echo +eth3 > /sys/class/net/bond0/bonding/slaves
+-
+-#echo 2 > proc/irq/smp_affinity
+diff --git a/tools/nas/bond_4link_setup.sh b/tools/nas/bond_4link_setup.sh
+deleted file mode 100755
+index e990704..0000000
+--- a/tools/nas/bond_4link_setup.sh
++++ /dev/null
+@@ -1,22 +0,0 @@
+-#!/bin/sh
+-
+-ifconfig eth0 0.0.0.0 down
+-ifconfig eth1 0.0.0.0 down
+-ifconfig eth2 0.0.0.0 down
+-ifconfig eth3 0.0.0.0 down
+-
+-#ifconfig bond0 10.4.53.196 netmask 255.255.255.0 up
+-ifconfig bond0 192.168.0.5 netmask 255.255.255.0 up
+-ifenslave bond0 eth0 eth1 eth2 eth3
+-#eth2 eth3
+-
+-ifconfig bond0 down
+-echo balance-alb > /sys/class/net/bond0/bonding/mode
+-ifconfig bond0 up
+-#ifconfig bond0 10.4.53.196 netmask 255.255.255.0 up
+-
+-#echo +eth1 > /sys/class/net/bond0/bonding/slaves
+-#echo +eth2 > /sys/class/net/bond0/bonding/slaves
+-#echo +eth3 > /sys/class/net/bond0/bonding/slaves
+-
+-#echo 2 > proc/irq/smp_affinity
+diff --git a/tools/nas/nas_init.sh b/tools/nas/nas_init.sh
+index 3a06c63..2d21675 100755
+--- a/tools/nas/nas_init.sh
++++ b/tools/nas/nas_init.sh
+@@ -1,8 +1,17 @@
+ #!/bin/bash
+ 
+-echo " * Version: 3.2"
++echo " * Version: 3.3"
+ 
+ # LOG:
++# 3.3:
++#   1. adding support for 5 HDDs RAID5.
++#   2. reverting gso, tso to default state.
++#   3. RD5 changes:
++#      3.1. disk scheduler revert to deafult.
++#      3.2. dirty_ratio, dirty_background_ratio reverted to default.
++#      3.3. md read_ahead changed to 2048.
++#      3.4. disks read_ahead changed to 192.
++#   4. minor cosmetics changes.
+ # 3.2:
+ #   1. adding support for -l 0 to avoid network setup.
+ #   2. updating smb.conf to improve single link performance.
+@@ -23,7 +32,7 @@ echo " * Version: 3.2"
+ #   3. splice enabled for XFS.
+ # 2.4:
+ #   1. support RAID-1
+-#   2. splice enabled by default
++#   2. splice enabled by default 
+ # 2.3:
+ #   1. fixing the mkdir share for loop
+ # 2.2:
+@@ -101,47 +110,47 @@ while getopts "l:pbmzn:sf:t:h:" flag; do
+ 		*)			do_error "Usage: file-system: ext4|xfs|btrfs" ;;
+ 	    esac
+ 	    ;;
+-
++	
+ 	s)	SSD="yes"
+ 	    ;;
+-
++	
+ 	b)	ZAP_ROOTFS="yes"
+ 	    ROOTFS_TARBALL="$OPTARG"
+ 	    ;;
+-
++	
+ 	m)	MKFS="yes"
+ 	    ;;
+ 
+ 	z)	SYSDISKEXIST="yes"
+ 	    ;;
+-
++	
+ 	n)	PARTNUM="$OPTARG"
+ 	    ;;
+-
++	
+ 	p)	PREPARE_HDD="yes"
+ 	    ;;
+-
++	
+ 	l)	LINK_NUM=$OPTARG
+ 	    case "$OPTARG" in
+ 		0|1|2|4) ;;
+ 		*)	do_error "Usage: links options: 0|1|2|4" ;;
+ 	    esac
+ 	    ;;
+-
++	
+ 	t)	TOPOLOGY=$OPTARG
+ 	    case "$OPTARG" in
+ 	sd|rd0|rd1|rd5|rd6) ;;
+ 		*)	do_error "Usage: drive toplogy: sd|rd0|rd1|rd5|rd6" ;;
+ 	    esac
+ 	    ;;
+-
++	
+ 	h)	HDD_NUM=$OPTARG
+ 	    case "$OPTARG" in
+-		4|8) ;;
++		4|5|8) ;;
+ 		*)	do_error "Usage: drive toplogy: 4|8" ;;
+ 	    esac
+ 	    ;;
+-
++	
+ 	*)	echo "Usage: $0"
+ 	    echo "           -f <ext4|xfs|btrfs|fat32>: file system type ext4, xfs, btrfs or fat32"
+ 	    echo "           -t <sd|rd0|rd1|rd5|rd6>: drive topology"
+@@ -259,6 +268,13 @@ elif [ "$TOPOLOGY" == "rd5" ]; then
+ 	    DRIVES="a b c d"
+ 	fi
+ 	PARTSIZE="20GB"
++    elif [ "$HDD_NUM" == "5" ]; then
++	if [ "$SYSDISKEXIST" == "yes" ]; then
++	    DRIVES="b c d e f"
++	else
++	    DRIVES="a b c d e"
++	fi
++	PARTSIZE="20GB"
+     fi
+ elif [ "$TOPOLOGY" == "rd6" ]; then
+     if [ "$HDD_NUM" == "8" ]; then
+@@ -275,11 +291,18 @@ elif [ "$TOPOLOGY" == "rd6" ]; then
+ 	    DRIVES="a b c d"
+ 	fi
+ 	PARTSIZE="20GB"
++    elif [ "$HDD_NUM" == "5" ]; then
++	if [ "$SYSDISKEXIST" == "yes" ]; then
++	    DRIVES="b c d e f"
++	else
++	    DRIVES="a b c d e"
++	fi
++	PARTSIZE="20GB"
+     fi
+ fi
+ 
+-# Checking drives existence
+-#for drive in `echo $DRIVES`; do
++# Checking drives existence 
++#for drive in `echo $DRIVES`; do 
+  #   if [ `fdisk -l |grep "Disk /dev/sd$drive" |grep -v grep |wc -l` == 0 ]; then
+ #	do_error "Drives assigned (/dev/sd$drive) is not persent!"
+  #   fi
+@@ -288,7 +311,7 @@ fi
+ echo -ne " * Preparing disks partitions: "
+ if [ "$PREPARE_HDD" == "yes" ]; then
+     [ ! -e "$(which fdisk)" ] && do_error "missing fdisk in rootfs"
+-
++    
+     set -o verbose
+     if [ "$SSD" == "no" ]; then
+ 	for drive in `echo $DRIVES`; do echo -e "c\no\nn\np\n1\n4096\n+${PARTSIZE}\nt\n83\nw\n" | fdisk -u /dev/sd${drive}; done
+@@ -298,14 +321,14 @@ if [ "$PREPARE_HDD" == "yes" ]; then
+     fi
+     set +o verbose
+     fdisk -ul
+-
++    
+     blockdev --rereadpt /dev/sd${drive} || do_error_reboot "The partition table has been altered, please reboot device and run nas_init again"
+ fi
+ echo -ne "[Done]\n"
+ 
+ if [ "$ZAP_ROOTFS" == "yes" ]; then
+     [ ! -e "$ROOTFS_TARBALL" ] && do_error "missing rootfs tarball, use option -b <rootfs_tarball_path>"
+-
++    
+     mkfs.ext3 ${ROOTFS_DEVICE}
+     mount ${ROOTFS_DEVICE} $MNT_DIR
+     cd $MNT_DIR
+@@ -372,8 +395,8 @@ elif [[ "$ARCH" == "armv6l" || "$ARCH" == "armv7l" ]]; then
+     set -o verbose
+     echo 1 > /sys/devices/platform/neta/gbe/skb
+     for (( j=0; j<$LINK_NUM; j++ )); do
+-	ethtool  --offload eth$j gso on
+-        ethtool  --offload eth$j tso on
++	#ethtool  --offload eth$j gso on
++        #ethtool  --offload eth$j tso on
+ 
+ 	# following offload lower NAS BM, we do not use it
+ 	#ethtool  --offload eth$j gro on
+@@ -382,7 +405,7 @@ elif [[ "$ARCH" == "armv6l" || "$ARCH" == "armv7l" ]]; then
+ 	for (( i=0; i<=$NETQ; i++ )); do
+ 	    echo "$j $i 100" > /sys/devices/platform/neta/gbe/rxq_time_coal
+ 	done
+-
++	    
+ 	ethtool -k eth$j > /dev/null
+     done
+     set +o verbose
+@@ -398,15 +421,13 @@ if [ "$TOPOLOGY" == "rd5" ]; then
+ 
+     set -o verbose
+ 
+-    for drive in `echo $DRIVES`; do echo -e 1024 > /sys/block/sd${drive}/queue/read_ahead_kb; done
+-
+     if [ "$MKFS" == "yes" ]; then
+ 	[ -e /dev/md0 ] && mdadm --manage --stop /dev/md0
+ 
+ 	for partition in `echo $DRIVES`; do mdadm --zero-superblock /dev/sd${partition}1; done
+ 
+ 	if [ "$SSD" == "no" ]; then
+-	    echo "y" | mdadm --create -c 128 /dev/md0 --level=5 -n $HDD_NUM --force $PARTITIONS
++	    echo "y" | mdadm --create -c 64 /dev/md0 --level=5 -n $HDD_NUM --force $PARTITIONS
+ 	else
+ 			# most SSD use eraseblock of 512, so for performance reasons we use it
+ 	    echo "y" | mdadm --create -c 512 /dev/md0 --level=5 -n $HDD_NUM --force $PARTITIONS
+@@ -421,9 +442,11 @@ if [ "$TOPOLOGY" == "rd5" ]; then
+ 	if [ "$FS" == "ext4" ]; then
+ 	    if [ "$SSD" == "no" ]; then
+ 		if [ "$HDD_NUM" == "8" ]; then
+-		    mkfs.ext4 -j -m 0 -T largefile -b 4096 -E stride=32,stripe-width=224 -F /dev/md0
++		    mkfs.ext4 -j -m 0 -T largefile -b 4096 -E stride=16,stripe-width=112 -F /dev/md0
+ 		elif [ "$HDD_NUM" == "4" ]; then
+-		    mkfs.ext4 -j -m 0 -T largefile -b 4096 -E stride=32,stripe-width=96 -F /dev/md0
++		    mkfs.ext4 -j -m 0 -T largefile -b 4096 -E stride=16,stripe-width=48 -F /dev/md0
++		elif [ "$HDD_NUM" == "5" ]; then
++		    mkfs.ext4 -j -m 0 -T largefile -b 4096 -E stride=16,stripe-width=64 -F /dev/md0
+ 		fi
+ 	    else
+ 		mkfs.ext4 -j -m 0 -T largefile -b 4096 -E stride=128,stripe-width=384 -F /dev/md0
+@@ -434,7 +457,7 @@ if [ "$TOPOLOGY" == "rd5" ]; then
+ 	    mkfs.btrfs /dev/md0
+ 	fi
+     else
+-		# need to reassemble the raid
++	# need to reassemble the raid
+ 	mdadm --assemble /dev/md0 --force $PARTITIONS
+ 
+ 	if [ `cat /proc/mdstat  |grep md0 |wc -l` == 0 ]; then
+@@ -457,13 +480,13 @@ if [ "$TOPOLOGY" == "rd5" ]; then
+     if [ "$LARGE_PAGE" == "65536" ]; then
+ 	echo 256 > /sys/block/md0/md/stripe_cache_size
+     else
+-	echo 4096 > /sys/block/md0/md/stripe_cache_size
++	echo 1024 > /sys/block/md0/md/stripe_cache_size
+     fi
+-    /bin/echo -e 4096 > /sys/block/md0/queue/read_ahead_kb
+ 
+-    for drive in `echo $DRIVES`; do echo noop > /sys/block/sd${drive}/queue/scheduler; done
+-    echo 4 > /proc/sys/vm/dirty_ratio
+-    echo 2 > /proc/sys/vm/dirty_background_ratio
++    for drive in `echo $DRIVES`; do echo -e 192 > /sys/block/sd${drive}/queue/read_ahead_kb; done
++
++    /bin/echo -e 2048 > /sys/block/md0/queue/read_ahead_kb
++
+     set +o verbose
+     echo -ne "[Done]\n"
+ 
+@@ -474,7 +497,7 @@ elif [ "$TOPOLOGY" == "rd6" ]; then
+     set -o verbose
+ 
+     for drive in `echo $DRIVES`; do echo -e 1024 > /sys/block/sd${drive}/queue/read_ahead_kb; done
+-
++    
+     if [ "$MKFS" == "yes" ]; then
+ 	[ -e /dev/md0 ] && mdadm --manage --stop /dev/md0
+ 
+@@ -483,7 +506,7 @@ elif [ "$TOPOLOGY" == "rd6" ]; then
+ 	if [ "$SSD" == "no" ]; then
+ 	    echo "y" | mdadm --create -c 128 /dev/md0 --level=6 -n $HDD_NUM --force $PARTITIONS
+ 	else
+-			# most SSD use eraseblock of 512, so for performance reasons we use it
++	    # most SSD use eraseblock of 512, so for performance reasons we use it
+ 	    echo "y" | mdadm --create -c 512 /dev/md0 --level=6 -n $HDD_NUM --force $PARTITIONS
+ 	fi
+ 
+@@ -499,6 +522,8 @@ elif [ "$TOPOLOGY" == "rd6" ]; then
+ 		    mkfs.ext4 -j -m 0 -T largefile -b 4096 -E stride=32,stripe-width=224 -F /dev/md0
+ 		elif [ "$HDD_NUM" == "4" ]; then
+ 		    mkfs.ext4 -j -m 0 -T largefile -b 4096 -E stride=32,stripe-width=96 -F /dev/md0
++		elif [ "$HDD_NUM" == "5" ]; then
++		    mkfs.ext4 -j -m 0 -T largefile -b 4096 -E stride=32,stripe-width=128 -F /dev/md0
+ 		fi
+ 	    else
+ 		mkfs.ext4 -j -m 0 -T largefile -b 4096 -E stride=128,stripe-width=384 -F /dev/md0
+@@ -618,13 +643,13 @@ elif [ "$TOPOLOGY" == "rd0" ]; then
+ 	else
+ 	    echo "y" | mdadm --create -c 256 /dev/md0 --level=0 -n 2 --force $PARTITIONS
+ 	fi
+-
++	    
+ 	sleep 2
+ 
+ 	if [ `cat /proc/mdstat  |grep md0 |wc -l` == 0 ]; then
+ 	    do_error "Unable to create RAID device"
+ 	fi
+-
++	  
+ 	echo 256 > /sys/block/md0/md/stripe_cache_size
+ 	if [ "$FS" == "ext4" ]; then
+ 	    if [ "$SSD" == "no" ]; then
+@@ -637,7 +662,7 @@ elif [ "$TOPOLOGY" == "rd0" ]; then
+ 	fi
+     else
+ 	mdadm --assemble /dev/md0 --force $PARTITIONS
+-
++	
+ 	if [ `cat /proc/mdstat  |grep md0 |wc -l` == 0 ]; then
+ 	    do_error "Unable to create RAID device"
+ 	fi
+@@ -663,7 +688,7 @@ elif [ "$TOPOLOGY" == "sd" ]; then
+     PARTITIONS="/dev/sd${DRIVES}${PARTNUM}"
+     echo -ne " * Starting single disk:       "
+     set -o verbose
+-
++    
+     echo -e 1024 > /sys/block/sd${DRIVES}/queue/read_ahead_kb
+ 
+     if [ "$FS" == "fat32" ]; then
+@@ -677,7 +702,7 @@ elif [ "$TOPOLOGY" == "sd" ]; then
+     elif [ "$FS" == "ext4" ]; then
+ 	if [ "$MKFS" == "yes" ]; then
+ 	    [ -e /dev/md0 ] && mdadm --manage --stop /dev/md0
+-
++	    
+ 	    mkfs.ext4 -j -m 0 -b 4096 -O large_file,extents -F $PARTITIONS
+ 	fi
+ 	mount -t ext4 $PARTITIONS $MNT_DIR -o noatime,data=writeback,barrier=0
+@@ -686,7 +711,7 @@ elif [ "$TOPOLOGY" == "sd" ]; then
+ 	    [ -e /dev/md0 ] && mdadm --manage --stop /dev/md0
+ 	    mkfs.btrfs -m single -d single $PARTITIONS
+ 	fi
+-
++	
+ 	mount -t btrfs $PARTITIONS $MNT_DIR -o noatime
+     else
+ 	if [ "$MKFS" == "yes" ]; then
+@@ -788,7 +813,7 @@ echo -ne " * Setting up affinity:        "
+ if [[ "$ARCH" == "armv6l" || "$ARCH" == "armv7l" ]]; then
+     if [ "$CPU_COUNT" = "4" ]; then
+ 	set -o verbose
+-
++	
+ 	# XOR Engines
+ 	echo 1 > /proc/irq/51/smp_affinity
+ 	echo 2 > /proc/irq/52/smp_affinity
+@@ -800,7 +825,7 @@ if [[ "$ARCH" == "armv6l" || "$ARCH" == "armv7l" ]]; then
+ 	echo 2 > /proc/irq/10/smp_affinity
+ 	echo 4 > /proc/irq/12/smp_affinity
+ 	echo 8 > /proc/irq/14/smp_affinity
+-
++	
+ 	# SATA
+ 	echo 2 > /proc/irq/55/smp_affinity
+ 
+@@ -811,7 +836,7 @@ if [[ "$ARCH" == "armv6l" || "$ARCH" == "armv7l" ]]; then
+ 	set +o verbose
+     elif [ "$CPU_COUNT" == "2" ]; then
+ 	set -o verbose
+-
++	
+ 	# XOR Engines
+ 	echo 1 > /proc/irq/51/smp_affinity
+ 	echo 2 > /proc/irq/52/smp_affinity
+@@ -821,13 +846,13 @@ if [[ "$ARCH" == "armv6l" || "$ARCH" == "armv7l" ]]; then
+ 	# ETH
+ 	echo 1 > /proc/irq/8/smp_affinity
+ 	echo 2 > /proc/irq/10/smp_affinity
+-
++	
+ 	# SATA
+ 	echo 2 > /proc/irq/55/smp_affinity
+-
++	
+ 	# PCI-E SATA controller
+ 	echo 2  > /proc/irq/99/smp_affinity
+-
++	
+ 	set +o verbose
+     fi
+ fi
+diff --git a/tools/nas/set_aff.sh b/tools/nas/set_aff.sh
+deleted file mode 100755
+index e54e7cd..0000000
+--- a/tools/nas/set_aff.sh
++++ /dev/null
+@@ -1 +0,0 @@
+-echo $2 > /proc/irq/$1/smp_affinity
+-- 
+1.7.9.5
+

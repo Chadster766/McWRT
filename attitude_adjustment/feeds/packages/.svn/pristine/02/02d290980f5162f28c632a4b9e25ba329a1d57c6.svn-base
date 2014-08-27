@@ -1,0 +1,165 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2010 Openwrt.org
+
+START=60
+
+ZNC_CONFIG_PATH=/tmp/etc/znc
+PID_FILE=${ZNC_CONFIG_PATH}/znc.pid
+ZNC_CONFIG=${ZNC_CONFIG_PATH}/configs/znc.conf
+
+EXTERNAL_CONFIG=0
+DISABLED=
+
+RUNAS_USER=
+RUNAS_GROUP=
+
+add_param() {
+	echo "$1 = $2" >> $ZNC_CONFIG
+}
+
+add_chan() {
+	chan=${1% *}
+	pass=${1#* }
+	echo "	<Chan $chan>" >> $ZNC_CONFIG
+	[ "$chan" != "$pass" ] && echo "		Key = $pass" >> $ZNC_CONFIG
+	echo "	</Chan>" >> $ZNC_CONFIG
+}
+
+znc_global() {
+	local znc="$1"
+	local anoniplimit
+	local maxbuffersize
+	local connectdelay
+	local serverthrottle
+	local znc_config_path
+	local znc_pem_file
+
+	config_get_bool DISABLED "$znc" disabled 0
+
+	[ "$DISABLED" -eq 0 ] || return 0
+
+	config_get znc_config_path "$znc" znc_config_path
+
+	config_get RUNAS_USER "$znc" runas_user
+	config_get RUNAS_GROUP "$znc" runas_group
+
+	if [ "${znc_config_path}" ]
+	then
+		ZNC_CONFIG_PATH=$znc_config_path
+		EXTERNAL_CONFIG=1
+	else
+		mkdir -p $ZNC_CONFIG_PATH/configs/
+		[ ! -f "$ZNC_CONFIG" ] || rm "$ZNC_CONFIG"
+
+		config_get anoniplimit "$znc" anoniplimit
+		config_get maxbuffersize "$znc" maxbuffersize
+		config_get connectdelay "$znc" connectdelay
+		config_get serverthrottle "$znc" serverthrottle
+		config_get znc_pem_file "$znc" znc_ssl_cert
+
+		[ -z "$znc_pem_file" ] || ln -sf "$znc_pem_file" $ZNC_CONFIG_PATH/znc.pem
+
+		[ -z $anoniplimit ] || echo "AnonIPLimit = $anoniplimit" >> $ZNC_CONFIG
+		[ -z $maxbuffersize ] || echo "MaxBufferSize = $maxbuffersize" >> $ZNC_CONFIG
+		[ -z $connectdelay ] || echo "ConnectDelay = $connectdelay" >> $ZNC_CONFIG
+		[ -z $serverthrottle ] || echo "ServerThrottle = $anoniplimit" >> $ZNC_CONFIG
+
+		echo "PidFile = $PID_FILE" >> $ZNC_CONFIG
+
+		config_list_foreach "$znc" listener "add_param Listener"
+		config_list_foreach "$znc" module "add_param LoadModule"
+
+		add_param LoadModule "droproot ${RUNAS_USER:-nobody} ${RUNAS_GROUP:-nogroup}"
+	fi
+}
+
+add_user() {
+	local user="$1"
+	local password
+	local nick
+	local altnick
+	local ident
+	local realname
+	local buffer
+	local quitmsg
+	local chanmodes
+	local vhost
+
+	config_get password "$user" password
+	config_get nick "$user" nick
+	config_get altnick "$user" altnick
+	config_get ident "$user" ident
+	config_get realname "$user" realname
+	config_get buffer "$user" buffer
+	config_get quitmsg "$user" quitmsg
+	config_get chanmodes "$user" chanmodes
+	config_get vhost "$user" vhost
+
+	echo "<User $user>" >> $ZNC_CONFIG
+
+	case "$password" in
+	"md5#"* | "sha256#"* | "plain#"*)
+		echo "  Pass = $password" >> $ZNC_CONFIG
+		;;
+	*)
+		echo "	Pass = plain#$password" >> $ZNC_CONFIG
+		;;
+	esac
+
+	echo "	Nick = $nick" >> $ZNC_CONFIG
+	echo "	AltNick = ${altnick:-$nick"_"}" >> $ZNC_CONFIG
+	echo "	Ident = ${ident:-$nick}" >> $ZNC_CONFIG
+	echo "	RealName = ${realname:-$nick}" >> $ZNC_CONFIG
+	[ -z "$vhost" ] || echo "	VHost = $vhost" >> $ZNC_CONFIG
+	echo "	Buffer = ${buffer:-50}"  >> $ZNC_CONFIG
+	echo "	KeepBuffer = false" >> $ZNC_CONFIG
+	echo "	ChanModes = ${chanmodes:-"+stn"}" >> $ZNC_CONFIG
+	[ -z "$quitmsg" ] || echo "	QuitMsg = $quitmsg" >> $ZNC_CONFIG
+
+	config_list_foreach "$user" server "add_param \"	Server\""
+	config_list_foreach "$user" module "add_param \"	LoadModule\""
+	config_list_foreach "$user" channel "add_chan"
+	echo "</User>" >> $ZNC_CONFIG
+}
+
+
+start() {
+	config_load znc
+	config_foreach znc_global znc
+
+	if [ "$DISABLED" -eq 1 ]; then
+		return 0
+	fi
+
+	if [ "$EXTERNAL_CONFIG" -eq 0 ]
+	then
+		config_foreach add_listener listener
+		config_foreach add_user user
+
+		chown -hR ${RUNAS_USER:-nobody}:${RUNAS_GROUP:-nogroup} /tmp/etc/znc
+	fi
+
+	if [ "$EXTERNAL_CONFIG" -eq 1 -a "$RUNAS_USER"  ]
+	then
+		local SU=$(which su)
+		if [ "$SU" ]
+		then
+			$SU -c "/usr/bin/znc -d$ZNC_CONFIG_PATH >/dev/null &" $RUNAS_USER
+		else
+			logger -s -t ZNC -p daemon.err "Could not run ZNC as user $RUNAS_USER: su not found."
+			exit 1
+		fi
+	else
+		/usr/bin/znc -d$ZNC_CONFIG_PATH >/dev/null &
+	fi
+}
+
+stop() {
+	if [ -f "$PID_FILE" ]
+	then
+		kill $(cat "$PID_FILE")
+	else
+		killall znc
+	fi
+}
+

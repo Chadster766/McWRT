@@ -1,0 +1,48 @@
+From 7ba82c807fa7c4182af8ecfec4802fe094510ce0 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Wed, 11 Jan 2012 14:19:42 +0200
+Subject: [PATCH 075/609] Power management and HotPlug support
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/kernel/head.S          |   10 ----------
+ arch/arm/mach-armadaxp/sysmap.c |    2 --
+ 2 files changed, 12 deletions(-)
+
+diff --git a/arch/arm/kernel/head.S b/arch/arm/kernel/head.S
+index fad477c..f30a1a8 100644
+--- a/arch/arm/kernel/head.S
++++ b/arch/arm/kernel/head.S
+@@ -338,16 +338,6 @@ ENDPROC(secondary_startup)
+ ENTRY(__secondary_switched)
+ 	ldr	sp, [r7, #4]			@ get secondary_data.stack
+ 	mov	fp, #0
+-/*
+-	movw	r3, #33092
+-	movt	r3, #53249
+-	movt	r3, #64433
+-	movw	r2, #0
+-	movt	r2, #0
+-	str	r2, [r3, #0]
+-*/
+-
+-
+ 	b	secondary_start_kernel
+ ENDPROC(__secondary_switched)
+ 
+diff --git a/arch/arm/mach-armadaxp/sysmap.c b/arch/arm/mach-armadaxp/sysmap.c
+index cfccc54..e51ae53 100644
+--- a/arch/arm/mach-armadaxp/sysmap.c
++++ b/arch/arm/mach-armadaxp/sysmap.c
+@@ -48,8 +48,6 @@ struct map_desc  MEM_TABLE[] =	{
+ #endif
+ 	{ SPI_CS0_VIRT_BASE,		__phys_to_pfn(SPI_CS0_PHYS_BASE),	SPI_CS0_SIZE,		MT_DEVICE},
+ 
+-	{ BOOTROM_VIRT_BASE,		__phys_to_pfn(BOOTROM_PHYS_BASE),	BOOTROM_SIZE,		MT_DEVICE},
+-
+ 	{ CRYPT_ENG_VIRT_BASE(0),	__phys_to_pfn(CRYPT_ENG_PHYS_BASE(0)),	CRYPT_ENG_SIZE,		MT_DEVICE},
+ #if (CONFIG_MV_CESA_CHANNELS > 1)
+ 	{ CRYPT_ENG_VIRT_BASE(1),	__phys_to_pfn(CRYPT_ENG_PHYS_BASE(1)),	CRYPT_ENG_SIZE,		MT_DEVICE},
+-- 
+1.7.9.5
+

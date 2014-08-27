@@ -1,0 +1,15 @@
+--- a/src/mod/codecs/mod_silk/Makefile
++++ b/src/mod/codecs/mod_silk/Makefile
+@@ -1,4 +1,5 @@
+ BASE=../../../..
++include $(BASE)/build/openwrt_rules.mk
+ SILK_DIR=$(switch_srcdir)/libs/silk
+ SILK_BUILDDIR=$(switch_builddir)/libs/silk
+ LOCAL_CFLAGS=-I$(SILK_DIR)/src  -I$(SILK_DIR)/interface
+@@ -7,5 +8,5 @@ LOCAL_LIBADD=$(SILK_LA)
+ include $(BASE)/build/modmake.rules
+ 
+ $(SILK_LA): $(SILK_DIR)/.update	
+-	cd $(SILK_BUILDDIR) && ./configure --disable-shared && make clean && $(MAKE)
++	cd $(SILK_BUILDDIR) && ./configure --host=$(GNU_TARGET_NAME) --disable-shared && make clean && $(MAKE)
+ 	$(TOUCH_TARGET)

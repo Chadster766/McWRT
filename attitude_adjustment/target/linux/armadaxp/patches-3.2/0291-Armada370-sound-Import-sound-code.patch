@@ -1,0 +1,233 @@
+From 06738039df5330cd92cc242bb5b2cf61a1031a91 Mon Sep 17 00:00:00 2001
+From: Piotr Nowak <pn@semihalf.com>
+Date: Tue, 11 Sep 2012 09:43:44 +0200
+Subject: [PATCH 291/609] Armada370, sound: Import sound code.
+
+New files imported from Linux 3.0.6 with support for Armada-370.
+
+Changes applied from diff between Armada-370 and Armada-XP on
+Linux 3.0.6 baseline.
+
+Signed-off-by: Piotr Nowak <pn@semihalf.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ sound/core/pcm_native.c        |    2 +-
+ sound/soc/Kconfig              |   10 ++++
+ sound/soc/Makefile             |    1 +
+ sound/soc/kirkwood/Kconfig     |   10 +++-
+ sound/soc/kirkwood/Makefile    |    2 +
+ sound/soc/kirkwood/armada370.c |  119 ++++++++++++++++++++++++++++++++++++++++
+ 6 files changed, 142 insertions(+), 2 deletions(-)
+ create mode 100644 sound/soc/kirkwood/armada370.c
+
+diff --git a/sound/core/pcm_native.c b/sound/core/pcm_native.c
+index 7ada40e..cfdfe42 100644
+--- a/sound/core/pcm_native.c
++++ b/sound/core/pcm_native.c
+@@ -3166,7 +3166,7 @@ static const struct vm_operations_struct snd_pcm_vm_ops_data_fault = {
+ 
+ #ifndef ARCH_HAS_DMA_MMAP_COHERENT
+ /* This should be defined / handled globally! */
+-#ifdef CONFIG_ARM
++#if defined(CONFIG_ARM) && !defined(CONFIG_AURORA_IO_CACHE_COHERENCY)
+ #define ARCH_HAS_DMA_MMAP_COHERENT
+ #endif
+ #endif
+diff --git a/sound/soc/Kconfig b/sound/soc/Kconfig
+index 1381db8..88521a3 100644
+--- a/sound/soc/Kconfig
++++ b/sound/soc/Kconfig
+@@ -61,6 +61,16 @@ source "sound/soc/sh/Kconfig"
+ source "sound/soc/tegra/Kconfig"
+ source "sound/soc/txx9/Kconfig"
+ 
++config SND_MRVL_AUDIO
++        tristate "Marvell mv88fx Audio ALSA driver"
++        depends on MV_INCLUDE_AUDIO && SND
++        select SND_PCM
++        select SND_SOC_CS42L51
++        ---help---
++          Say Y here to include support for Marvell Audio device
++          To compile this driver as a module, choose M here: the module
++          will be called snd-mrvl-audio.
++
+ # Supported codecs
+ source "sound/soc/codecs/Kconfig"
+ 
+diff --git a/sound/soc/Makefile b/sound/soc/Makefile
+index 9ea8ac8..c84c62d 100644
+--- a/sound/soc/Makefile
++++ b/sound/soc/Makefile
+@@ -22,3 +22,4 @@ obj-$(CONFIG_SND_SOC)	+= s6000/
+ obj-$(CONFIG_SND_SOC)	+= sh/
+ obj-$(CONFIG_SND_SOC)	+= tegra/
+ obj-$(CONFIG_SND_SOC)	+= txx9/
++obj-$(CONFIG_SND_MRVL_AUDIO)  += ../../arch/arm/plat-armada/mv_drivers_lsp/mv_audio_soc/
+diff --git a/sound/soc/kirkwood/Kconfig b/sound/soc/kirkwood/Kconfig
+index c62d715..0d685f4 100644
+--- a/sound/soc/kirkwood/Kconfig
++++ b/sound/soc/kirkwood/Kconfig
+@@ -1,6 +1,6 @@
+ config SND_KIRKWOOD_SOC
+ 	tristate "SoC Audio for the Marvell Kirkwood chip"
+-	depends on ARCH_KIRKWOOD
++	depends on ARCH_KIRKWOOD || ARCH_ARMADA370
+ 	help
+ 	  Say Y or M if you want to add support for codecs attached to
+ 	  the Kirkwood I2S interface. You will also need to select the
+@@ -28,3 +28,11 @@ config SND_KIRKWOOD_SOC_T5325
+ 	  Say Y if you want to add support for SoC audio on
+ 	  the HP t5325 thin client.
+ 
++config SND_ARMADA370_SOC
++        tristate "SoC Audio support for Armada-370 boards"
++        depends on SND_KIRKWOOD_SOC && ARCH_ARMADA370
++        select SND_KIRKWOOD_SOC_I2S
++        select SND_SOC_CS42L51
++        help
++          Say Y if you want to add support for SoC audio on
++          Armada370 DB.
+diff --git a/sound/soc/kirkwood/Makefile b/sound/soc/kirkwood/Makefile
+index 3e62ae9..0f53471 100644
+--- a/sound/soc/kirkwood/Makefile
++++ b/sound/soc/kirkwood/Makefile
+@@ -1,5 +1,6 @@
+ snd-soc-kirkwood-objs := kirkwood-dma.o
+ snd-soc-kirkwood-i2s-objs := kirkwood-i2s.o
++snd-soc-a370-objs := armada370.o
+ 
+ obj-$(CONFIG_SND_KIRKWOOD_SOC) += snd-soc-kirkwood.o
+ obj-$(CONFIG_SND_KIRKWOOD_SOC_I2S) += snd-soc-kirkwood-i2s.o
+@@ -9,3 +10,4 @@ snd-soc-t5325-objs := kirkwood-t5325.o
+ 
+ obj-$(CONFIG_SND_KIRKWOOD_SOC_OPENRD) += snd-soc-openrd.o
+ obj-$(CONFIG_SND_KIRKWOOD_SOC_T5325) += snd-soc-t5325.o
++obj-$(CONFIG_SND_ARMADA370_SOC) += snd-soc-a370.o
+diff --git a/sound/soc/kirkwood/armada370.c b/sound/soc/kirkwood/armada370.c
+new file mode 100644
+index 0000000..1346bd9
+--- /dev/null
++++ b/sound/soc/kirkwood/armada370.c
+@@ -0,0 +1,119 @@
++/*
++ * armada370-db.c
++ *
++ * (c) 2010 Arnaud Patard <apatard@mandriva.com>
++ * (c) 2010 Arnaud Patard <arnaud.patard@rtp-net.org>
++ *
++ *  This program is free software; you can redistribute  it and/or modify it
++ *  under  the terms of  the GNU General  Public License as published by the
++ *  Free Software Foundation;  either version 2 of the  License, or (at your
++ *  option) any later version.
++ */
++
++#include <linux/module.h>
++#include <linux/moduleparam.h>
++#include <linux/interrupt.h>
++#include <linux/platform_device.h>
++#include <linux/slab.h>
++#include <sound/soc.h>
++#include <plat/audio.h>
++#include <asm/mach-types.h>
++#include "../codecs/cs42l51.h"
++
++static int a370_client_hw_params(struct snd_pcm_substream *substream,
++		struct snd_pcm_hw_params *params)
++{
++	struct snd_soc_pcm_runtime *rtd = substream->private_data;
++	struct snd_soc_dai *codec_dai = rtd->codec_dai;
++	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
++	int ret;
++	unsigned int freq, fmt;
++
++	fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_CBS_CFS;
++	ret = snd_soc_dai_set_fmt(cpu_dai, fmt);
++	if (ret < 0)
++		return ret;
++
++	ret = snd_soc_dai_set_fmt(codec_dai, fmt);
++	if (ret < 0)
++		return ret;
++
++	switch (params_rate(params)) {
++	default:
++	case 44100:
++		freq = 11289600;
++		break;
++	case 48000:
++		freq = 12288000;
++		break;
++	case 96000:
++		freq = 24576000;
++		break;
++	}
++
++	return snd_soc_dai_set_sysclk(codec_dai, 0, freq, SND_SOC_CLOCK_IN);
++
++}
++
++static struct snd_soc_ops a370_client_ops = {
++	.hw_params = a370_client_hw_params,
++};
++
++
++static struct snd_soc_dai_link a370_client_dai[] = {
++{
++	.name = "CS42L51",
++	.stream_name = "CS42L51 HiFi",
++	.cpu_dai_name = "kirkwood-i2s",
++	.platform_name = "kirkwood-pcm-audio",
++	.codec_dai_name = "cs42l51-hifi",
++	.codec_name = "cs42l51-codec.0-004a",
++	.ops = &a370_client_ops,
++},
++};
++
++
++static struct snd_soc_card a370_client = {
++	.name = "Armada-370",
++	.dai_link = a370_client_dai,
++	.num_links = ARRAY_SIZE(a370_client_dai),
++};
++
++static struct platform_device *a370_client_snd_device;
++
++static int __init a370_client_init(void)
++{
++	int ret;
++
++	if (!machine_is_armada_370())
++		return 0;
++
++	a370_client_snd_device = platform_device_alloc("soc-audio", -1);
++	if (!a370_client_snd_device)
++		return -ENOMEM;
++
++	platform_set_drvdata(a370_client_snd_device,
++			&a370_client);
++
++	ret = platform_device_add(a370_client_snd_device);
++	if (ret) {
++		printk(KERN_ERR "%s: platform_device_add failed\n", __func__);
++		platform_device_put(a370_client_snd_device);
++	}
++
++	return ret;
++}
++
++static void __exit a370_client_exit(void)
++{
++	platform_device_unregister(a370_client_snd_device);
++}
++
++module_init(a370_client_init);
++module_exit(a370_client_exit);
++
++/* Module information */
++MODULE_AUTHOR("Eran Ben-Avi <benavi@marvell.com>");
++MODULE_DESCRIPTION("ALSA SoC for Armada-370");
++MODULE_LICENSE("GPL");
++MODULE_ALIAS("platform:soc-audio");
+-- 
+1.7.9.5
+

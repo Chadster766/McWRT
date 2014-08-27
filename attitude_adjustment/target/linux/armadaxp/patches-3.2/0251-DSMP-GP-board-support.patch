@@ -1,0 +1,901 @@
+From 0c41fb42d882282c8a5e8c73c4a3e913fd4b14d8 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Sun, 19 Aug 2012 19:06:33 +0300
+Subject: [PATCH 251/609] DSMP GP board support
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/Kconfig                     |    5 +
+ .../armada_xp_family/boardEnv/mvBoardEnvLib.c      |  124 +++++--
+ .../armada_xp_family/boardEnv/mvBoardEnvSpec.c     |  349 +++++++++++++++++++-
+ .../armada_xp_family/boardEnv/mvBoardEnvSpec.h     |   54 ++-
+ arch/arm/mach-armadaxp/core.c                      |  138 ++++++++
+ arch/arm/tools/mach-types                          |    1 +
+ 6 files changed, 639 insertions(+), 32 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/Kconfig b/arch/arm/mach-armadaxp/Kconfig
+index a51d0ff..2a8f51c 100644
+--- a/arch/arm/mach-armadaxp/Kconfig
++++ b/arch/arm/mach-armadaxp/Kconfig
+@@ -66,6 +66,11 @@ config MACH_ARMADA_XP_DB
+ 	default y
+ 	help
+ 
++config MACH_ARMADA_XP_GP
++	bool "Marvell Armada XP General Purpose Board"
++	default y
++	help
++
+ config MACH_ARMADA_XP_RDSRV
+ 	bool "Marvell Armada XP Server Board"
+ 	default y
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+index 169716a..c52b9ba 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+@@ -281,6 +281,7 @@ MV_BOOL mvBoardIsPortInSgmii(MV_U32 ethPortNum)
+ 			return MV_TRUE;
+ 		break;
+ 	case DB_78X60_PCAC_ID:
++	case RD_78460_GP_ID:
+ 	case RD_78460_NAS_ID:
+ 	case RD_78460_CUSTOMER_ID:
+ 	case DB_78X60_PCAC_REV2_ID:
+@@ -1407,6 +1408,8 @@ MV_VOID mvBoardIdSet(MV_VOID)
+ 		gBoardId = DB_78X60_AMC_ID;
+ #elif defined(DB_78X60_PCAC_REV2)
+ 		gBoardId = DB_78X60_PCAC_REV2_ID;
++#elif defined(RD_78460_GP)
++		gBoardId = RD_78460_GP_ID;
+ #elif defined(RD_78460_CUSTOMER)
+ 		gBoardId = RD_78460_CUSTOMER_ID;
+ #else
+@@ -1544,11 +1547,15 @@ MV_U8 mvBoardFabFreqGet(MV_VOID)
+ {
+ 	MV_U8 sar0;
+ 	MV_U8 sar1;
++	MV_U32 boardId = mvBoardIdGet();
+ 
+ 	sar0 = mvBoardTwsiSatRGet(2, 0);
+ 	if ((MV_8)MV_ERROR == (MV_8)sar0)
+ 		return MV_ERROR;
+ 
++	if (RD_78460_GP_ID == boardId)
++		return (sar0 & 0x0f);
++
+ 	sar1 = mvBoardTwsiSatRGet(3, 0);
+ 	if ((MV_8)MV_ERROR == (MV_8)sar1)
+ 		return MV_ERROR;
+@@ -1560,10 +1567,20 @@ MV_U8 mvBoardFabFreqGet(MV_VOID)
+ MV_STATUS mvBoardFabFreqSet(MV_U8 freqVal)
+ {
+ 	MV_U8 sar0;
++	MV_U32 boardId = mvBoardIdGet();
+ 
+ 	sar0 = mvBoardTwsiSatRGet(2, 0);
+ 	if ((MV_8)MV_ERROR == (MV_8)sar0)
+ 		return MV_ERROR;
++	if (RD_78460_GP_ID == boardId) {
++		sar0 &= ~(0x0F);
++		sar0 |= (freqVal & 0xF);
++		if (MV_OK != mvBoardTwsiSatRSet(2, 0, sar0)) {
++			DB1(mvOsPrintf("Board: Write FreqOpt S@R fail\n"));
++			return MV_ERROR;
++		}
++		return MV_OK;
++	}
+ 
+ 	sar0 &= ~(0xF << 1);
+ 	sar0 |= (freqVal & 0xF) << 1;
+@@ -1653,10 +1670,14 @@ MV_U8 mvBoardCpuFreqGet(MV_VOID)
+ {
+ 	MV_U8 sar;
+ 	MV_U8 sarMsb;
++	MV_U32 boardId = mvBoardIdGet();
+ 
+ 	sar = mvBoardTwsiSatRGet(1, 0);
+ 	if ((MV_8)MV_ERROR == (MV_8)sar)
+ 		return MV_ERROR;
++	if (RD_78460_GP_ID == boardId) {
++		return (sar & 0x0f);
++	}
+ 
+ 	sarMsb = mvBoardTwsiSatRGet(2, 0);
+ 	if ((MV_8)MV_ERROR == (MV_8)sar)
+@@ -1669,36 +1690,47 @@ MV_U8 mvBoardCpuFreqGet(MV_VOID)
+ MV_STATUS mvBoardCpuFreqSet(MV_U8 freqVal)
+ {
+ 	MV_U8 sar;
++	MV_U32 boardId = mvBoardIdGet();
+ 
+ 	sar = mvBoardTwsiSatRGet(1, 0);
+ 	if ((MV_8)MV_ERROR == (MV_8)sar)
+ 		return MV_ERROR;
+ 
+-	sar &= ~(0x7 << 2);
+-	sar |= (freqVal & 0x7) << 2;
+-	if (MV_OK != mvBoardTwsiSatRSet(1, 0, sar)) {
+-		DB1(mvOsPrintf("Board: Write CpuFreq S@R fail\n"));
+-		return MV_ERROR;
+-	}
+-	sar = mvBoardTwsiSatRGet(2, 0);
+-	if ((MV_8)MV_ERROR == (MV_8)sar)
+-		return MV_ERROR;
+-	sar &= ~(0x1);
+-	sar |= ( (freqVal >> 3) & 0x1);
+-	if (MV_OK != mvBoardTwsiSatRSet(2, 0, sar)) {
+-		DB1(mvOsPrintf("Board: Write CpuFreq S@R fail\n"));
+-		return MV_ERROR;
++	if (RD_78460_GP_ID == boardId) {
++		sar &= ~0x0f;
++		sar |= (freqVal & 0x0f);
++		if (MV_OK != mvBoardTwsiSatRSet(1, 0, sar)) {
++			DB1(mvOsPrintf("Board: Write CpuFreq S@R fail\n"));
++			return MV_ERROR;
++		}
+ 	}
++	else{
++		sar &= ~(0x7 << 2);
++		sar |= (freqVal & 0x7) << 2;
++		if (MV_OK != mvBoardTwsiSatRSet(1, 0, sar)) {
++			DB1(mvOsPrintf("Board: Write CpuFreq S@R fail\n"));
++			return MV_ERROR;
++		}
++		sar = mvBoardTwsiSatRGet(2, 0);
++		if ((MV_8)MV_ERROR == (MV_8)sar)
++			return MV_ERROR;
++		sar &= ~(0x1);
++		sar |= ( (freqVal >> 3) & 0x1);
++		if (MV_OK != mvBoardTwsiSatRSet(2, 0, sar)) {
++			DB1(mvOsPrintf("Board: Write CpuFreq S@R fail\n"));
++			return MV_ERROR;
++		}
+ 
+-	sar = mvBoardTwsiSatRGet(2, 0);
+-	if ((MV_8)MV_ERROR == (MV_8)sar)
+-		return MV_ERROR;
++		sar = mvBoardTwsiSatRGet(2, 0);
++		if ((MV_8)MV_ERROR == (MV_8)sar)
++			return MV_ERROR;
+ 
+-	sar &= ~(0x1);
+-	sar |= ( (freqVal >> 3) & 0x1);
+-	if (MV_OK != mvBoardTwsiSatRSet(2, 0, sar)) {
+-		DB1(mvOsPrintf("Board: Write CpuFreq S@R fail\n"));
+-		return MV_ERROR;
++		sar &= ~(0x1);
++		sar |= ( (freqVal >> 3) & 0x1);
++		if (MV_OK != mvBoardTwsiSatRSet(2, 0, sar)) {
++			DB1(mvOsPrintf("Board: Write CpuFreq S@R fail\n"));
++			return MV_ERROR;
++		}
+ 	}
+ 
+ 	DB(mvOsPrintf("Board: Write CpuFreq S@R succeeded\n"));
+@@ -1713,6 +1745,8 @@ MV_U8 mvBoardBootDevGet(MV_VOID)
+ 	sar = mvBoardTwsiSatRGet(0, 0);
+ 	if ((MV_8)MV_ERROR == (MV_8)sar)
+ 		return MV_ERROR;
++	if (RD_78460_GP_ID == mvBoardIdGet())
++		sar = (sar >> 1);
+ 
+ 	return (sar & 0x7);
+ }
+@@ -1720,13 +1754,20 @@ MV_U8 mvBoardBootDevGet(MV_VOID)
+ MV_STATUS mvBoardBootDevSet(MV_U8 val)
+ {
+ 	MV_U8 sar;
++	MV_U32 boardId = mvBoardIdGet();
+ 
+ 	sar = mvBoardTwsiSatRGet(0, 0);
+ 	if ((MV_8)MV_ERROR == (MV_8)sar)
+ 		return MV_ERROR;
+ 
+-	sar &= ~(0x7);
+-	sar |= (val & 0x7);
++	if (RD_78460_GP_ID == boardId) {
++		sar &= ~(0x7 << 1);
++		sar |= ((val & 0x7) << 1);
++	}
++	else {
++		sar &= ~(0x7);
++		sar |= (val & 0x7);
++	}
+ 	if (MV_OK != mvBoardTwsiSatRSet(0, 0, sar)) {
+ 		DB1(mvOsPrintf("Board: Write BootDev S@R fail\n"));
+ 		return MV_ERROR;
+@@ -1739,10 +1780,13 @@ MV_STATUS mvBoardBootDevSet(MV_U8 val)
+ MV_U8 mvBoardBootDevWidthGet(MV_VOID)
+ {
+ 	MV_U8 sar;
++	MV_U32 boardId = mvBoardIdGet();
+ 
+ 	sar = mvBoardTwsiSatRGet(0, 0);
+ 	if ((MV_8)MV_ERROR == (MV_8)sar)
+ 		return MV_ERROR;
++	if (RD_78460_GP_ID == boardId)
++		return (sar & 1);
+ 
+ 	return (sar & 0x18) >> 3;
+ }
+@@ -1750,13 +1794,20 @@ MV_U8 mvBoardBootDevWidthGet(MV_VOID)
+ MV_STATUS mvBoardBootDevWidthSet(MV_U8 val)
+ {
+ 	MV_U8 sar;
++	MV_U32 boardId = mvBoardIdGet();
+ 
+ 	sar = mvBoardTwsiSatRGet(0, 0);
+ 	if ((MV_8)MV_ERROR == (MV_8)sar)
+ 		return MV_ERROR;
++	if (RD_78460_GP_ID == boardId) {
++		sar &= ~(1);
++		sar |= (val & 0x1);
++	}
++	else {
++		sar &= ~(0x3 << 3);
++		sar |= ((val & 0x3) << 3);
++	}
+ 
+-	sar &= ~(0x3 << 3);
+-	sar |= ((val & 0x3) << 3);
+ 	if (MV_OK != mvBoardTwsiSatRSet(0, 0, sar)) {
+ 		DB1(mvOsPrintf("Board: Write BootDevWidth S@R fail\n"));
+ 		return MV_ERROR;
+@@ -1814,6 +1865,13 @@ MV_STATUS mvBoardCpu0EndianessSet(MV_U8 val)
+ MV_U8 mvBoardL2SizeGet(MV_VOID)
+ {
+ 	MV_U8 sar;
++	MV_U32 boardId = mvBoardIdGet();
++	if (RD_78460_GP_ID == boardId) {
++		sar = mvBoardTwsiSatRGet(0, 0);
++		if ((MV_8)MV_ERROR == (MV_8)sar)
++			return MV_ERROR;
++		return ((sar & 0x10)>>4);
++	}
+ 
+ 	sar = mvBoardTwsiSatRGet(1, 0);
+ 	if ((MV_8)MV_ERROR == (MV_8)sar)
+@@ -1825,6 +1883,18 @@ MV_U8 mvBoardL2SizeGet(MV_VOID)
+ MV_STATUS mvBoardL2SizeSet(MV_U8 val)
+ {
+ 	MV_U8 sar;
++	if (RD_78460_GP_ID == mvBoardIdGet()) {
++		sar = mvBoardTwsiSatRGet(0, 0);
++		if ((MV_8)MV_ERROR == (MV_8)sar)
++			return MV_ERROR;
++		sar &= ~(0x1 << 4);
++		sar |= ((val & 0x1) << 4);
++		if (MV_OK != mvBoardTwsiSatRSet(0, 0, sar)) {
++			DB1(mvOsPrintf("Board: Write L2Size S@R fail\n"));
++			return MV_ERROR;
++		}
++		return MV_OK;
++	}
+ 
+ 	sar = mvBoardTwsiSatRGet(1, 0);
+ 	if ((MV_8)MV_ERROR == (MV_8)sar)
+@@ -1935,6 +2005,7 @@ MV_U16 mvBoardPexCapabilityGet(MV_VOID)
+ 	switch (boardId) {
+ 	case DB_78X60_PCAC_ID:
+ 	case RD_78460_NAS_ID:
++	case RD_78460_GP_ID:
+ 	case RD_78460_CUSTOMER_ID:
+ 	case DB_78X60_AMC_ID:
+ 	case DB_78X60_PCAC_REV2_ID:
+@@ -2662,6 +2733,7 @@ MV_BOARD_PEX_INFO *mvBoardPexInfoGet(void)
+ 	case FPGA_88F78XX0_ID:
+ 	case DB_88F78XX0_BP_REV2_ID:
+ 	case RD_78460_NAS_ID:
++	case RD_78460_GP_ID:
+ 	case RD_78460_CUSTOMER_ID:
+ 	case DB_78X60_AMC_ID:
+ 	case DB_78X60_PCAC_REV2_ID:
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+index b95fcc1..c1030cc 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+@@ -661,6 +661,106 @@ MV_BOARD_INFO rd78460Info = {
+ };
+ 
+ 
++/*****************************/
++/* ARMADA-XP RD SERVER REV2 BOARD */
++/*****************************/
++#define RD_78460_SERVER_REV2_BOARD_NAND_READ_PARAMS		0x000C0282
++#define RD_78460_SERVER_REV2_BOARD_NAND_WRITE_PARAMS		0x00010305
++/*NAND care support for small page chips*/
++#define RD_78460_SERVER_REV2_BOARD_NAND_CONTROL			0x01c00543
++
++MV_BOARD_MAC_INFO rd78460ServerRev2InfoBoardMacInfo[] = {
++	/* {{MV_BOARD_MAC_SPEED	boardMacSpeed, MV_U8 boardEthSmiAddr}} */
++	{BOARD_MAC_SPEED_1000M, 0x1,0x0},
++	{BOARD_MAC_SPEED_1000M, 0x2,0x0},
++	{BOARD_MAC_SPEED_AUTO, 0x0,0x0},
++	{BOARD_MAC_SPEED_1000M, 0x1B,0x0}
++};
++
++MV_BOARD_MODULE_TYPE_INFO rd78460ServerRev2InfoBoardModTypeInfo[] = {
++	{
++		.boardMppMod		= MV_BOARD_AUTO,
++		.boardOtherMod		= MV_BOARD_NONE
++	}
++};
++
++MV_DEV_CS_INFO rd78460ServerRev2InfoBoardDeCsInfo[] = {
++	/*{deviceCS, params, devType, devWidth}*/
++#if defined(MV_INCLUDE_SPI)
++	{SPI_CS0, N_A, BOARD_DEV_SPI_FLASH, 8} /* SPI DEV */
++#endif
++};
++
++MV_BOARD_MPP_INFO rd78460ServerRev2InfoBoardMppConfigValue[] = {
++	{ {
++		RD_78460_SERVER_REV2_MPP0_7,
++		RD_78460_SERVER_REV2_MPP8_15,
++		RD_78460_SERVER_REV2_MPP16_23,
++		RD_78460_SERVER_REV2_MPP24_31,
++		RD_78460_SERVER_REV2_MPP32_39,
++		RD_78460_SERVER_REV2_MPP40_47,
++		RD_78460_SERVER_REV2_MPP48_55,
++		RD_78460_SERVER_REV2_MPP56_63,
++		RD_78460_SERVER_REV2_MPP64_67,
++	} }
++};
++
++MV_SERDES_CFG rd78460ServerRev2InfoBoardSerdesConfigValue[] = {
++	{MV_TRUE, 0x00321111, 0x00000000, PEX_BUS_MODE_X4, PEX_BUS_DISABLED,PEX_BUS_DISABLED, PEX_BUS_DISABLED, 0x00000010},	/* CPU0 */
++	{MV_TRUE, 0x00321111, 0x00000000, PEX_BUS_MODE_X4, PEX_BUS_DISABLED,PEX_BUS_DISABLED, PEX_BUS_DISABLED, 0x00000010}	/* CPU1-3 */
++};
++
++MV_BOARD_INFO rd78460ServerRev2Info = {
++ .boardName				= "RD-78460-SERVER-REV2",
++ .numBoardMppTypeValue			= ARRSZ(rd78460ServerRev2InfoBoardModTypeInfo),
++ .pBoardModTypeValue			= rd78460ServerRev2InfoBoardModTypeInfo,
++ .numBoardMppConfigValue		= ARRSZ(rd78460ServerRev2InfoBoardMppConfigValue),
++ .pBoardMppConfigValue			= rd78460ServerRev2InfoBoardMppConfigValue,
++ .numBoardSerdesConfigValue		= ARRSZ(rd78460ServerRev2InfoBoardSerdesConfigValue),
++ .pBoardSerdesConfigValue		= rd78460ServerRev2InfoBoardSerdesConfigValue,
++ .intsGppMaskLow			= 0,
++ .intsGppMaskMid			= 0,
++ .intsGppMaskHigh			= 0,
++ .numBoardDeviceIf			= ARRSZ(rd78460ServerRev2InfoBoardDeCsInfo),
++ .pDevCsInfo				= rd78460ServerRev2InfoBoardDeCsInfo,
++ .numBoardTwsiDev			= 0,
++ .pBoardTwsiDev				= NULL,
++ .numBoardMacInfo			= ARRSZ(rd78460ServerRev2InfoBoardMacInfo),
++ .pBoardMacInfo				= rd78460ServerRev2InfoBoardMacInfo,
++ .numBoardGppInfo			= 0,
++ .pBoardGppInfo				= NULL,
++ .activeLedsNumber			= 0,
++ .pLedGppPin				= NULL,
++ .ledsPolarity				= 0,
++
++ /* GPP values */
++ .gppOutEnValLow			= RD_78460_SERVER_REV2_GPP_OUT_ENA_LOW,
++ .gppOutEnValMid			= RD_78460_SERVER_REV2_GPP_OUT_ENA_MID,
++ .gppOutEnValHigh			= RD_78460_SERVER_REV2_GPP_OUT_ENA_HIGH,
++ .gppOutValLow				= RD_78460_SERVER_REV2_GPP_OUT_VAL_LOW,
++ .gppOutValMid				= RD_78460_SERVER_REV2_GPP_OUT_VAL_MID,
++ .gppOutValHigh				= RD_78460_SERVER_REV2_GPP_OUT_VAL_HIGH,
++ .gppPolarityValLow			= RD_78460_SERVER_REV2_GPP_POL_LOW,
++ .gppPolarityValMid			= RD_78460_SERVER_REV2_GPP_POL_MID,
++ .gppPolarityValHigh			= RD_78460_SERVER_REV2_GPP_POL_HIGH,
++
++ /* TDM configuration */
++	/* We hold a different configuration array for each possible slic that
++ ** can be connected to board.
++ ** When modules are scanned, then we select the index of the relevant
++ ** slic's information array.
++ ** For RD and Customers boards we only need to initialize a single
++ ** entry of the arrays below, and set the boardTdmInfoIndex to 0.
++	*/
++ .numBoardTdmInfo			= {},
++ .pBoardTdmInt2CsInfo			= {},
++ .boardTdmInfoIndex			= -1,
++
++ /* NAND init params */
++ .nandFlashReadParams			= RD_78460_SERVER_REV2_BOARD_NAND_READ_PARAMS,
++ .nandFlashWriteParams			= RD_78460_SERVER_REV2_BOARD_NAND_WRITE_PARAMS,
++ .nandFlashControl			= RD_78460_SERVER_REV2_BOARD_NAND_CONTROL
++};
+ /***************************/
+ /* ARMADA-XP DB PCAC BOARD */
+ /***************************/
+@@ -1133,6 +1233,250 @@ MV_BOARD_INFO db78X60amcInfo = {
+ 	.nandFlashControl		= DB_78X60_AMC_BOARD_NAND_CONTROL
+ };
+ 
++//////////////////////////////////////////////////////////////////////////////////
++
++/***************************/
++/* ARMADA-XP RD GP  BOARD */
++/***************************/
++#define RD_78460_GP_BOARD_NAND_READ_PARAMS		0x000C0282
++#define RD_78460_GP_BOARD_NAND_WRITE_PARAMS		0x00010305
++
++#define RD_78460_GP_BOARD_NAND_CONTROL			0x01c00543
++
++#define RD_78460_GP_BOARD_NOR_READ_PARAMS		0x403E07CF
++#define RD_78460_GP_BOARD_NOR_WRITE_PARAMS		0x000F0F0F
++
++
++MV_BOARD_TWSI_INFO   rd78460gpInfoBoardTwsiDev[] = {
++	/* {{MV_BOARD_DEV_CLASS	devClass, MV_U8	twsiDevAddr, MV_U8 twsiDevAddrType}} */
++	{BOARD_DEV_TWSI_SATR, 0x4C, ADDR7_BIT},
++	{BOARD_DEV_TWSI_SATR, 0x4D, ADDR7_BIT},
++	{BOARD_DEV_TWSI_SATR, 0x4E, ADDR7_BIT}
++};
++
++MV_BOARD_MAC_INFO rd78460gpInfoBoardMacInfo[] = {
++	/* {{MV_BOARD_MAC_SPEED	boardMacSpeed, MV_U8 boardEthSmiAddr}} */
++        /* speed will toggle to force link 1000 when SW module detected */
++	{BOARD_MAC_SPEED_AUTO, 0x10,0x0},
++	{BOARD_MAC_SPEED_AUTO, 0x11,0x0},
++	{BOARD_MAC_SPEED_AUTO, 0x12,0x0},
++	{BOARD_MAC_SPEED_AUTO, 0x13,0x0}
++};
++
++MV_BOARD_MODULE_TYPE_INFO rd78460gpInfoBoardModTypeInfo[] = {
++	{
++		.boardMppMod		= MV_BOARD_AUTO,
++		.boardOtherMod		= MV_BOARD_NONE
++	}
++};
++
++MV_BOARD_GPP_INFO rd78460gpInfoBoardGppInfo[] = {
++	/* {{MV_BOARD_GPP_CLASS	devClass, MV_U8	gppPinNum}} */
++	{BOARD_GPP_RESET, 21}
++};
++
++MV_DEV_CS_INFO rd78460gpInfoBoardDeCsInfo[] = {
++	/*{deviceCS, params, devType, devWidth, busWidth }*/
++#if defined(MV_INCLUDE_SPI)
++	{SPI_CS0, N_A, BOARD_DEV_SPI_FLASH, 8, 8} /* SPI DEV */
++#endif
++};
++
++MV_BOARD_MPP_INFO rd78460gpInfoBoardMppConfigValue[] = {
++	{ {
++	RD_78460_GP_MPP0_7,
++	RD_78460_GP_MPP8_15,
++	RD_78460_GP_MPP16_23,
++	RD_78460_GP_MPP24_31,
++	RD_78460_GP_MPP32_39,
++	RD_78460_GP_MPP40_47,
++	RD_78460_GP_MPP48_55,
++	RD_78460_GP_MPP56_63,
++	RD_78460_GP_MPP64_67,
++	} }
++};
++
++MV_SERDES_CFG rd78460gpInfoBoardSerdesConfigValue[] = {
++	{MV_TRUE, 0x00223001, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED,PEX_BUS_MODE_X4, PEX_BUS_MODE_X4, 0x00000030},	/* Default */
++};
++
++MV_BOARD_INFO rd78460gpInfo = {
++	.boardName			= "RD-AXP-GP rev 1.0",
++	.numBoardMppTypeValue		= ARRSZ(rd78460gpInfoBoardModTypeInfo),
++	.pBoardModTypeValue		= rd78460gpInfoBoardModTypeInfo,
++	.numBoardMppConfigValue		= ARRSZ(rd78460gpInfoBoardMppConfigValue),
++	.pBoardMppConfigValue		= rd78460gpInfoBoardMppConfigValue,
++	.numBoardSerdesConfigValue	= ARRSZ(rd78460gpInfoBoardSerdesConfigValue),
++	.pBoardSerdesConfigValue	= rd78460gpInfoBoardSerdesConfigValue,
++	.intsGppMaskLow			= 0,
++	.intsGppMaskMid			= 0,
++	.intsGppMaskHigh		= 0,
++	.numBoardDeviceIf		= ARRSZ(rd78460gpInfoBoardDeCsInfo),
++	.pDevCsInfo				= rd78460gpInfoBoardDeCsInfo,
++	.numBoardTwsiDev		= ARRSZ(rd78460gpInfoBoardTwsiDev),
++	.pBoardTwsiDev			= rd78460gpInfoBoardTwsiDev,
++	.numBoardMacInfo		= ARRSZ(rd78460gpInfoBoardMacInfo),
++	.pBoardMacInfo			= rd78460gpInfoBoardMacInfo,
++	.numBoardGppInfo		= ARRSZ(rd78460gpInfoBoardGppInfo),
++	.pBoardGppInfo			= rd78460gpInfoBoardGppInfo,
++	.activeLedsNumber		= 0,
++	.pLedGppPin			= NULL,
++	.ledsPolarity			= 0,
++
++	/* PMU Power */
++	.pmuPwrUpPolarity		= 0,
++	.pmuPwrUpDelay			= 80000,
++
++	/* GPP values */
++	.gppOutEnValLow			= RD_78460_GP_GPP_OUT_ENA_LOW,
++	.gppOutEnValMid			= RD_78460_GP_GPP_OUT_ENA_MID,
++	.gppOutEnValHigh		= RD_78460_GP_GPP_OUT_ENA_HIGH,
++	.gppOutValLow			= RD_78460_GP_GPP_OUT_VAL_LOW,
++	.gppOutValMid			= RD_78460_GP_GPP_OUT_VAL_MID,
++	.gppOutValHigh			= RD_78460_GP_GPP_OUT_VAL_HIGH,
++	.gppPolarityValLow		= RD_78460_GP_GPP_POL_LOW,
++	.gppPolarityValMid		= RD_78460_GP_GPP_POL_MID,
++	.gppPolarityValHigh		= RD_78460_GP_GPP_POL_HIGH,
++
++	/* TDM configuration */
++	/* We hold a different configuration array for each possible slic that
++	** can be connected to board.
++	** When modules are scanned, then we select the index of the relevant
++	** slic's information array.
++	** For RD and Customers boards we only need to initialize a single
++	** entry of the arrays below, and set the boardTdmInfoIndex to 0.
++	*/
++	.numBoardTdmInfo			= {},
++	.pBoardTdmInt2CsInfo			= {},
++	.boardTdmInfoIndex			= -1,
++
++	/* NAND init params */
++	.nandFlashReadParams		= RD_78460_GP_BOARD_NAND_READ_PARAMS,
++	.nandFlashWriteParams		= RD_78460_GP_BOARD_NAND_WRITE_PARAMS,
++	.nandFlashControl		= RD_78460_GP_BOARD_NAND_CONTROL,
++	/* NOR init params */
++	.norFlashReadParams		= RD_78460_GP_BOARD_NOR_READ_PARAMS,
++	.norFlashWriteParams		= RD_78460_GP_BOARD_NOR_WRITE_PARAMS
++};
++
++/***************************/
++/* ARMADA-XP CUSTOMER BOARD */
++/***************************/
++#define RD_78460_CUSTOMER_BOARD_NAND_READ_PARAMS	0x000C0282
++#define RD_78460_CUSTOMER_BOARD_NAND_WRITE_PARAMS	0x00010305
++/*NAND care support for small page chips*/
++#define RD_78460_CUSTOMER_BOARD_NAND_CONTROL		0x01c00543
++
++#define RD_78460_CUSTOMER_BOARD_NOR_READ_PARAMS	0x403E07CF
++#define RD_78460_CUSTOMER_BOARD_NOR_WRITE_PARAMS	0x000F0F0F
++
++MV_BOARD_MAC_INFO rd78460customerInfoBoardMacInfo[] = {
++	/* {{MV_BOARD_MAC_SPEED	boardMacSpeed, MV_U8 boardEthSmiAddr}} */
++	{BOARD_MAC_SPEED_AUTO, 0x10,0x0},
++	{BOARD_MAC_SPEED_AUTO, 0x11,0x0},
++	{BOARD_MAC_SPEED_AUTO, 0x12,0x0},
++	{BOARD_MAC_SPEED_AUTO, 0x13,0x0}
++};
++
++MV_BOARD_MODULE_TYPE_INFO rd78460customerInfoBoardModTypeInfo[] = {
++	{
++		.boardMppMod		= MV_BOARD_AUTO,
++		.boardOtherMod		= MV_BOARD_NONE
++	}
++};
++//////////////////////////////////////////////////////////////////////////////////
++
++MV_BOARD_GPP_INFO rd78460customerInfoBoardGppInfo[] = {
++	/* {{MV_BOARD_GPP_CLASS	devClass, MV_U8	gppPinNum}} */
++	{BOARD_GPP_RESET, 21}
++};
++
++MV_DEV_CS_INFO rd78460customerInfoBoardDeCsInfo[] = {
++	/*{deviceCS, params, devType, devWidth, busWidth }*/
++#if defined(MV_INCLUDE_SPI)
++	{SPI_CS0, N_A, BOARD_DEV_SPI_FLASH, 8, 8} /* SPI DEV */
++#endif
++};
++
++MV_BOARD_MPP_INFO rd78460customerInfoBoardMppConfigValue[] = {
++	{ {
++	RD_78460_CUSTOMER_MPP0_7,
++	RD_78460_CUSTOMER_MPP8_15,
++	RD_78460_CUSTOMER_MPP16_23,
++	RD_78460_CUSTOMER_MPP24_31,
++	RD_78460_CUSTOMER_MPP32_39,
++	RD_78460_CUSTOMER_MPP40_47,
++	RD_78460_CUSTOMER_MPP48_55,
++	RD_78460_CUSTOMER_MPP56_63,
++	RD_78460_CUSTOMER_MPP64_67,
++	} }
++};
++
++MV_SERDES_CFG rd78460customerInfoBoardSerdesConfigValue[] = {
++	{MV_TRUE, 0x00223001, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED,PEX_BUS_MODE_X4, PEX_BUS_MODE_X4, 0x00000030},	/* Default */
++	{MV_TRUE, 0x33320201, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED,PEX_BUS_MODE_X4, PEX_BUS_MODE_X4, 0x00000030},	/* Switch module */
++};
++
++MV_BOARD_INFO rd78460customerInfo = {
++	.boardName			= "RD-AXP-CUSTOMER",
++	.numBoardMppTypeValue		= ARRSZ(rd78460customerInfoBoardModTypeInfo),
++	.pBoardModTypeValue		= rd78460customerInfoBoardModTypeInfo,
++	.numBoardMppConfigValue		= ARRSZ(rd78460customerInfoBoardMppConfigValue),
++	.pBoardMppConfigValue		= rd78460customerInfoBoardMppConfigValue,
++	.numBoardSerdesConfigValue	= ARRSZ(rd78460customerInfoBoardSerdesConfigValue),
++	.pBoardSerdesConfigValue	= rd78460customerInfoBoardSerdesConfigValue,
++	.intsGppMaskLow			= 0,
++	.intsGppMaskMid			= 0,
++	.intsGppMaskHigh		= 0,
++	.numBoardDeviceIf		= ARRSZ(rd78460customerInfoBoardDeCsInfo),
++	.pDevCsInfo			= rd78460customerInfoBoardDeCsInfo,
++	.numBoardTwsiDev		= 0,
++	.pBoardTwsiDev			= NULL,
++	.numBoardMacInfo		= ARRSZ(rd78460customerInfoBoardMacInfo),
++	.pBoardMacInfo			= rd78460customerInfoBoardMacInfo,
++	.numBoardGppInfo		= ARRSZ(rd78460customerInfoBoardGppInfo),
++	.pBoardGppInfo			= rd78460customerInfoBoardGppInfo,
++	.activeLedsNumber		= 0,
++	.pLedGppPin			= NULL,
++	.ledsPolarity			= 0,
++
++	/* PMU Power */
++	.pmuPwrUpPolarity		= 0,
++	.pmuPwrUpDelay			= 80000,
++
++	/* GPP values */
++	.gppOutEnValLow			= RD_78460_CUSTOMER_GPP_OUT_ENA_LOW,
++	.gppOutEnValMid			= RD_78460_CUSTOMER_GPP_OUT_ENA_MID,
++	.gppOutEnValHigh		= RD_78460_CUSTOMER_GPP_OUT_ENA_HIGH,
++	.gppOutValLow			= RD_78460_CUSTOMER_GPP_OUT_VAL_LOW,
++	.gppOutValMid			= RD_78460_CUSTOMER_GPP_OUT_VAL_MID,
++	.gppOutValHigh			= RD_78460_CUSTOMER_GPP_OUT_VAL_HIGH,
++	.gppPolarityValLow		= RD_78460_CUSTOMER_GPP_POL_LOW,
++	.gppPolarityValMid		= RD_78460_CUSTOMER_GPP_POL_MID,
++	.gppPolarityValHigh		= RD_78460_CUSTOMER_GPP_POL_HIGH,
++
++	/* TDM configuration */
++	/* We hold a different configuration array for each possible slic that
++	** can be connected to board.
++	** When modules are scanned, then we select the index of the relevant
++	** slic's information array.
++	** For RD and Customers boards we only need to initialize a single
++	** entry of the arrays below, and set the boardTdmInfoIndex to 0.
++	*/
++	.numBoardTdmInfo			= {},
++	.pBoardTdmInt2CsInfo			= {},
++	.boardTdmInfoIndex			= -1,
++
++	/* NAND init params */
++	.nandFlashReadParams		= RD_78460_CUSTOMER_BOARD_NAND_READ_PARAMS,
++	.nandFlashWriteParams		= RD_78460_CUSTOMER_BOARD_NAND_WRITE_PARAMS,
++	.nandFlashControl		= RD_78460_CUSTOMER_BOARD_NAND_CONTROL,
++	/* NOR init params */
++	.norFlashReadParams		= RD_78460_CUSTOMER_BOARD_NOR_READ_PARAMS,
++	.norFlashWriteParams		= RD_78460_CUSTOMER_BOARD_NOR_WRITE_PARAMS
++};
++//////////////////////////////////////////////////////////////////////////////////////
++
+ MV_BOARD_INFO *boardInfoTbl[] = {
+ 	&db88f78XX0Info,
+ 	&rd78460Info,
+@@ -1141,5 +1485,8 @@ MV_BOARD_INFO *boardInfoTbl[] = {
+ 	&db88f78XX0rev2Info,
+ 	&rd78460nasInfo,
+ 	&db78X60amcInfo,
+-	&db78X60pcacrev2Info
++	&db78X60pcacrev2Info,
++	&rd78460ServerRev2Info,
++	&rd78460gpInfo,
++	&rd78460customerInfo
+ };
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
+index c2eabfa..12e7c50 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
+@@ -93,12 +93,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define RD_78460_SERVER_ID			(DB_88F78XX0_BP_ID + 1)
+ #define DB_78X60_PCAC_ID			(RD_78460_SERVER_ID + 1)
+ #define FPGA_88F78XX0_ID			(DB_78X60_PCAC_ID + 1)
+-#define DB_88F78XX0_BP_REV2_ID			(FPGA_88F78XX0_ID + 1)
+-#define RD_78460_NAS_ID                         (DB_88F78XX0_BP_REV2_ID + 1)
++#define DB_88F78XX0_BP_REV2_ID		(FPGA_88F78XX0_ID + 1)
++#define RD_78460_NAS_ID				(DB_88F78XX0_BP_REV2_ID + 1)
+ #define DB_78X60_AMC_ID				(RD_78460_NAS_ID + 1)
+-#define DB_78X60_PCAC_REV2_ID			(DB_78X60_AMC_ID + 1)
+-#define RD_78460_SERVER_REV2_ID			(DB_78X60_PCAC_REV2_ID + 1)
+-#define RD_78460_CUSTOMER_ID			(RD_78460_SERVER_REV2_ID + 1)
++#define DB_78X60_PCAC_REV2_ID		(DB_78X60_AMC_ID + 1)
++#define RD_78460_SERVER_REV2_ID		(DB_78X60_PCAC_REV2_ID + 1)
++#define RD_78460_GP_ID				(RD_78460_SERVER_REV2_ID + 1)
++#define RD_78460_CUSTOMER_ID		(RD_78460_GP_ID+ 1)
+ #define MV_MAX_BOARD_ID				(RD_78460_CUSTOMER_ID + 1)
+ #define INVALID_BAORD_ID			0xFFFFFFFF
+ 
+@@ -487,6 +488,49 @@ MPP#	NAME		IN/OUT
+ 
+ 
+ 
++
++/*********************/
++/* DB-AXP-GP         */
++/*********************/
++
++#define RD_78460_GP_MPP0_7			0x00000000
++#define RD_78460_GP_MPP8_15			0x00000000
++#define RD_78460_GP_MPP16_23		0x33000000
++#define RD_78460_GP_MPP24_31		0x11000000
++#define RD_78460_GP_MPP32_39		0x11111111
++#define RD_78460_GP_MPP40_47		0x00221100
++#define RD_78460_GP_MPP48_55		0x00000003
++#define RD_78460_GP_MPP56_63		0x00000000
++#define RD_78460_GP_MPP64_67		0x00000000
++
++/* GPPs
++MPP#	NAME			IN/OUT
++----------------------------------------------
++21	SW_Reset_		OUT
++25      Phy_Int#                IN
++28      SDI_WP                  IN
++29      SDI_Status              IN
++54-61   On GPP Connector        ?
++62      Switch Interrupt        IN
++63-65   Reserved from SW Board  ?
++66      SW_BRD connected        IN
++
++*/
++#define RD_78460_GP_GPP_OUT_ENA_LOW	(~(BIT21))
++#define RD_78460_GP_GPP_OUT_ENA_MID	(~(0x0))
++#define RD_78460_GP_GPP_OUT_ENA_HIGH	(~(0x0))
++
++#define RD_78460_GP_GPP_OUT_VAL_LOW	(BIT21)
++#define RD_78460_GP_GPP_OUT_VAL_MID	0x0
++#define RD_78460_GP_GPP_OUT_VAL_HIGH	0x0
++
++#define RD_78460_GP_GPP_POL_LOW		0x0
++#define RD_78460_GP_GPP_POL_MID		0x0
++#define RD_78460_GP_GPP_POL_HIGH	0x0
++
++
++
++
+ /**********************/
+ /* DB-AXP-CUSTOMER         */
+ /**********************/
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index 24acb3e..de53827 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -1647,6 +1647,144 @@ MACHINE_START(ARMADA_XP_DB, "Marvell Armada XP Development Board")
+ MACHINE_END
+ 
+ /*****************************************************************************
++ * GP BOARD
++ ****************************************************************************/
++static void __init axp_gp_init(void)
++{
++	/* Call Aurora/cpu special configurations */
++	cpu_fabric_common_init();
++
++	/* Select appropriate Board ID for Machine */
++	gBoardId = RD_78460_GP_ID;
++
++	/* Bypass serdes reconfiguration since already done at bootloader */
++        mvBoardSerdesConfigurationEnableSet(MV_FALSE);
++
++	/* init the Board environment */
++	mvBoardEnvInit();
++
++	/* init the controller environment */
++	if( mvCtrlEnvInit() ) {
++		printk( "Controller env initialization failed.\n" );
++		return;
++	}
++
++	armadaxp_setup_cpu_mbus();
++
++	/* Init the CPU windows setting and the access protection windows. */
++	if( mvCpuIfInit(mv_sys_map())) {
++		printk( "Cpu Interface initialization failed.\n" );
++		return;
++	}
++
++	/* Init Tclk & SysClk */
++	mvTclk = mvBoardTclkGet();
++	mvSysclk = mvBoardSysClkGet();
++
++	elf_hwcap &= ~HWCAP_JAVA;
++
++	serial_initialize(0);
++
++	/* At this point, the CPU windows are configured according to default definitions in mvSysHwConfig.h */
++	/* and cpuAddrWinMap table in mvCpuIf.c. Now it's time to change defaults for each platform.         */
++	/*mvCpuIfAddDecShow();*/
++
++	print_board_info();
++
++	mv_gpio_init();
++
++	/* RTC */
++	rtc_init();
++
++	/* SPI */
++	mvSysSpiInit(0, _16M);
++
++	/* ETH-PHY */
++	mvSysEthPhyInit();
++
++	/* Sata */
++#ifdef CONFIG_SATA_MV
++	armadaxp_sata_init(&dbdsmp_sata_data);
++#endif
++#ifdef CONFIG_MTD_NAND_NFC
++	/* NAND */
++	axp_db_nfc_init();
++#endif
++	/* HWMON */
++	armadaxp_hwmon_init();
++
++	/* XOR */
++#ifdef XOR0_ENABLE
++	armadaxp_xor0_init();
++#endif
++	armadaxp_xor1_init();
++
++	/* I2C */
++	platform_device_register(&axp_i2c0);
++
++
++#ifdef CONFIG_FB_DOVE
++      if ((lcd0_enable == 1) && (lcd_panel == 0 ))
++        platform_device_register(&axp_i2c1);
++#endif
++
++
++
++
++#if defined(CONFIG_MV_INCLUDE_SDIO)
++	if (MV_TRUE == mvCtrlPwrClckGet(SDIO_UNIT_ID, 0)) {
++		int irq_detect = mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_DETECT);
++		MV_UNIT_WIN_INFO addrWinMap[MAX_TARGETS + 1];
++
++		if (irq_detect != MV_ERROR) {
++			mvsdio_data.gpio_card_detect = mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_DETECT);
++			irq_int_type[mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_DETECT)+IRQ_AURORA_GPIO_START] = GPP_IRQ_TYPE_CHANGE_LEVEL;
++		}
++
++		if(mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_WP) != MV_ERROR)
++			mvsdio_data.gpio_write_protect = mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_WP);
++
++		if(MV_OK == mvCtrlAddrWinMapBuild(addrWinMap, MAX_TARGETS + 1))
++			if (MV_OK == mvSdmmcWinInit(addrWinMap))
++				mvsdio_data.clock = mvBoardTclkGet();
++		platform_device_register(&mv_sdio_plat);
++       }
++#endif
++
++#ifdef CONFIG_MV_ETHERNET
++	/* Ethernet */
++	eth_init();
++#endif
++
++#ifdef CONFIG_FB_DOVE
++	kw_lcd0_dmi.dram = &armadaxp_mbus_dram_info;
++	if (lcd_panel) {
++		kw_lcd0_dmi.lvds_info.enabled = 1;
++		kw_lcd0_dmi.fixed_full_div = 1;
++		kw_lcd0_dmi.full_div_val = 7;
++//		kw_lcd0_dmi.lcd_ref_clk = 27000000;
++		printk(KERN_INFO "LCD Panel enabled.\n");
++	}
++	clcd_platform_init(&kw_lcd0_dmi, &kw_lcd0_vid_dmi, &dsmp_backlight_data);
++#endif
++
++	return;
++}
++
++MACHINE_START(ARMADA_XP_GP, "Marvell Armada XP GP Board")
++	/* MAINTAINER("MARVELL") */
++	.atag_offset	= 0x00000100,
++	.map_io		= axp_map_io,
++	.init_irq	= axp_init_irq,
++	.timer		= &axp_timer,
++	.init_machine	= axp_gp_init,
++#ifdef CONFIG_FB_DOVE
++	/* reserve memory for LCD */
++	.fixup		= axp_tag_fixup_mem32,
++#endif /* CONFIG_FB_DOVE */
++MACHINE_END
++
++/*****************************************************************************
+  * RD NAS BOARD
+  ****************************************************************************/
+ static void __init axp_rd_nas_init(void)
+diff --git a/arch/arm/tools/mach-types b/arch/arm/tools/mach-types
+index 66ed848..2b3987a 100644
+--- a/arch/arm/tools/mach-types
++++ b/arch/arm/tools/mach-types
+@@ -3002,6 +3002,7 @@ remus			MACH_REMUS		REMUS			3031
+ at91cap7xdk		MACH_AT91CAP7XDK	AT91CAP7XDK		3032
+ at91cap7stk		MACH_AT91CAP7STK	AT91CAP7STK		3033
+ kt_sbc_sam9_1		MACH_KT_SBC_SAM9_1	KT_SBC_SAM9_1		3034
++armada_xp_gp		MACH_ARMADA_XP_GP	ARMADA_XP_GP		3035
+ armada_xp_db		MACH_ARMADA_XP_DB	ARMADA_XP_DB		3036
+ armada_xp_rd_nas	MACH_ARMADA_XP_RD_NAS	ARMADA_XP_RD_NAS	3500
+ armada_xp_rdsrv         MACH_ARMADA_XP_RDSRV    ARMADA_XP_RDSRV         3037
+-- 
+1.7.9.5
+

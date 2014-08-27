@@ -1,0 +1,87 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2012 OpenWrt.org
+
+START=50
+
+append_list_item() {
+	local val="$1"
+	local var="$2"
+	append "$var" "$val"
+}
+
+append_bool() {
+	local var="$1"
+	local section="$2"
+	local option="$3"
+	local value="$4"
+	local _val
+	config_get_bool _val "$section" "$option" 0
+	[ $_val -gt 0 ] && append "$var" "$value"
+}
+
+append_string() {
+	local var="$1"
+	local section="$2"
+	local option="$3"
+	local val="$4"
+	local _val
+	config_get _val "$section" "$option"
+	[ -n "$_val" ] && append "$var" "$val $_val"
+}
+
+section_enabled() {
+	local enabled
+	config_get_bool enabled "$1" 'enabled' 0
+	[ $enabled -gt 0 ]
+}
+
+start_instance() {
+	local section="$1"
+	local id
+	local if
+	local dev
+	local args
+
+	section_enabled "$section" || return 1
+
+	config_get id "$section" 'virtual_id' '1'
+	config_get if "$section" 'interface' 'lan'
+	network_get_device dev "$if" && {
+		args="-v $id -i $dev"
+		append_string args "$section" 'delay' '-d'
+		append_string args "$section" 'priority' '-p'
+		append_bool args "$section" 'no_virtual_mac' '-n'
+		config_list_foreach "$section" 'virtual_ip' append_list_item args
+
+		SERVICE_PID_FILE="/var/run/vrrpd_${dev}_${id}.pid"
+		service_start /usr/sbin/vrrpd $args
+	}
+}
+
+stop_instance() {
+	local section="$1"
+	local id
+	local if
+	local dev
+
+	section_enabled "$section" || return 1
+
+	config_get id "$section" 'virtual_id' '1'
+	config_get if "$section" 'interface' 'lan'
+	network_get_device dev "$if"
+
+	SERVICE_PID_FILE="/var/run/vrrpd_${dev}_${id}.pid"
+	service_stop /usr/sbin/vrrpd
+}
+
+start() {
+	. /lib/functions/network.sh
+	config_load 'vrrpd'
+	config_foreach start_instance 'vrrpd'
+}
+
+stop() {
+	. /lib/functions/network.sh
+	config_load 'vrrpd'
+	config_foreach stop_instance 'vrrpd'
+}

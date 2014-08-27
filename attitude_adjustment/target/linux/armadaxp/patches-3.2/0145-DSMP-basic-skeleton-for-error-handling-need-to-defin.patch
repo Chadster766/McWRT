@@ -1,0 +1,110 @@
+From f77bd6d6b52ac088cc96cec0fbf4808192b1c05b Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Mon, 9 Apr 2012 11:19:42 +0300
+Subject: [PATCH 145/609] DSMP - basic skeleton for error handling - need to
+ define / decide what is our goal with this ?
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/Makefile         |    1 +
+ arch/arm/plat-armada/error_handling.c |   79 +++++++++++++++++++++++++++++++++
+ 2 files changed, 80 insertions(+)
+ create mode 100644 arch/arm/plat-armada/error_handling.c
+
+diff --git a/arch/arm/plat-armada/Makefile b/arch/arm/plat-armada/Makefile
+index 0f4132c..40eb44e 100644
+--- a/arch/arm/plat-armada/Makefile
++++ b/arch/arm/plat-armada/Makefile
+@@ -13,3 +13,4 @@ obj-$(CONFIG_SHEEVA_DEEP_IDLE)		+= cpuidle.o armadaxp_suspend.o
+ obj-$(CONFIG_HOTPLUG_CPU)               += hotplug.o cpuidle.o armadaxp_suspend.o
+ obj-$(CONFIG_ARCH_ARMADA_XP)		+= pmu.o
+ obj-$(CONFIG_PCI_MSI)			+= msi.o
++obj-y					+=error_handling.o
+diff --git a/arch/arm/plat-armada/error_handling.c b/arch/arm/plat-armada/error_handling.c
+new file mode 100644
+index 0000000..c541f2c
+--- /dev/null
++++ b/arch/arm/plat-armada/error_handling.c
+@@ -0,0 +1,79 @@
++/*
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ */
++
++#include <linux/irq.h>
++#include <linux/notifier.h>
++#include <linux/module.h>
++#include <asm/io.h>
++#include <linux/interrupt.h>
++
++
++
++ATOMIC_NOTIFIER_HEAD(armadaxp_error_notifier_chain);
++
++EXPORT_SYMBOL(armadaxp_error_notifier_chain);
++
++static irqreturn_t armadaxp_error_event_isr(int irq, void *arg)
++{
++	 printk("seif %s %d\n",__func__,__LINE__);
++	/*TODO had  cording the register and mask value for now*/
++	if((readl(/*INTER_REGS_BASE*/0xFBB00000 | 0x20A20)) & 0x3EFEFF ) {
++		writel(0x0,0xFBB00000 | 0xFBB00000 | 0x908c8);
++	/*TODO need to work on an ack later */
++		atomic_notifier_call_chain(&armadaxp_error_notifier_chain, 0/*readl((INTER_REGS_BASE | 0x20A20) & 0x3EFEFF )*/,NULL);
++		 printk("seif %s %d\n",__func__,__LINE__);
++	}
++	return IRQ_HANDLED;
++}
++
++
++
++static int armadaxp_error_event(struct notifier_block *this, unsigned long event,
++         void *ptr)
++{
++
++	printk(KERN_ERR "%s Error happend, and the SOC error mapping register read is %ld ",__func__,event/* readl((INTER_REGS_BASE | 0x20A20) & 0x3EFEFF )*/);
++
++        return NOTIFY_DONE;
++
++}
++
++static struct notifier_block error_handling_block = {
++        .notifier_call  = armadaxp_error_event,
++};
++
++static int __init errorhandling_notification_setup(void)
++{
++	int err;
++
++	/*
++		nothing specal is need to enabling error handling first
++	*/
++
++	/*TODO: fix the interrupt number*/
++	err = request_irq(IRQ_AURORA_SOC_ERROR, armadaxp_error_event_isr,IRQF_DISABLED, "Armada Error Handler", NULL );
++	if(err)
++	{
++		printk("opps: request_irq failed in errorhandling_notification_setup ....returning now ! \n");
++		return err;
++	}
++        /* Setup notifier */
++        atomic_notifier_chain_register(&armadaxp_error_notifier_chain, &error_handling_block);
++
++	printk("ARMADA XP error handling module was loaded \n");
++        return 0;
++}
++postcore_initcall(errorhandling_notification_setup);
+-- 
+1.7.9.5
+

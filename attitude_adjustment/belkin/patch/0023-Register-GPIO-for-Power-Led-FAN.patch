@@ -1,0 +1,68 @@
+From 3bab8646e855a5dc7cbf912cb0fe4d868dc418f2 Mon Sep 17 00:00:00 2001
+From: Matthew Fatheree <Matthew.Fatheree@belkin.com>
+Date: Wed, 14 May 2014 14:16:53 +0700
+Subject: [PATCH 23/31] Register GPIO for Power Led & FAN
+
+Signed-off-by: Matthew Fatheree <Matthew.Fatheree@belkin.com>
+---
+ .../patches-3.2/1009-register_gpio_power_led.patch |   20 ++++++++++++++++++++
+ .../patches-3.2/1010-register_fan_gpio.patch       |   20 ++++++++++++++++++++
+ 2 files changed, 40 insertions(+)
+ create mode 100644 target/linux/armadaxp/patches-3.2/1009-register_gpio_power_led.patch
+ create mode 100644 target/linux/armadaxp/patches-3.2/1010-register_fan_gpio.patch
+
+diff --git a/target/linux/armadaxp/patches-3.2/1009-register_gpio_power_led.patch b/target/linux/armadaxp/patches-3.2/1009-register_gpio_power_led.patch
+new file mode 100644
+index 0000000..b0647e8
+--- /dev/null
++++ b/target/linux/armadaxp/patches-3.2/1009-register_gpio_power_led.patch
+@@ -0,0 +1,20 @@
++diff --git a/arch/arm/mach-armadaxp/board_mamba.c b/arch/arm/mach-armadaxp/board_mamba.c
++index d806612..2692684 100644
++--- a/arch/arm/mach-armadaxp/board_mamba.c
+++++ b/arch/arm/mach-armadaxp/board_mamba.c
++@@ -44,6 +44,7 @@ disclaimer.
++  * */
++ #define	MAMBA_GPIO_WPS_BUTTON	32
++ #define MAMBA_GPIO_RST_BUTTON	33
+++#define MAMBA_GPIO_POWER_LED	40
++ 
++ static struct gpio_keys_button mv_ev_buttons[] = {
++         {
++@@ -186,6 +187,7 @@ static int __init mamba_ev_init(void)
++ 
++ 	orion_gpio_set_valid(MAMBA_GPIO_WPS_BUTTON, 1);
++ 	orion_gpio_set_valid(MAMBA_GPIO_RST_BUTTON, 1);
+++	orion_gpio_set_valid(MAMBA_GPIO_POWER_LED, 1);
++ 
++ 	/* register device */
++ 	status = platform_device_register(&mamba_ev_device);
+diff --git a/target/linux/armadaxp/patches-3.2/1010-register_fan_gpio.patch b/target/linux/armadaxp/patches-3.2/1010-register_fan_gpio.patch
+new file mode 100644
+index 0000000..b6be6f1
+--- /dev/null
++++ b/target/linux/armadaxp/patches-3.2/1010-register_fan_gpio.patch
+@@ -0,0 +1,20 @@
++diff --git a/arch/arm/mach-armadaxp/board_mamba.c b/arch/arm/mach-armadaxp/board_mamba.c
++index 2692684..5b817d6 100644
++--- a/arch/arm/mach-armadaxp/board_mamba.c
+++++ b/arch/arm/mach-armadaxp/board_mamba.c
++@@ -45,6 +45,7 @@ disclaimer.
++ #define	MAMBA_GPIO_WPS_BUTTON	32
++ #define MAMBA_GPIO_RST_BUTTON	33
++ #define MAMBA_GPIO_POWER_LED	40
+++#define MAMBA_GPIO_FAN		24
++ 
++ static struct gpio_keys_button mv_ev_buttons[] = {
++         {
++@@ -188,6 +189,7 @@ static int __init mamba_ev_init(void)
++ 	orion_gpio_set_valid(MAMBA_GPIO_WPS_BUTTON, 1);
++ 	orion_gpio_set_valid(MAMBA_GPIO_RST_BUTTON, 1);
++ 	orion_gpio_set_valid(MAMBA_GPIO_POWER_LED, 1);
+++	orion_gpio_set_valid(MAMBA_GPIO_FAN, 1);
++ 
++ 	/* register device */
++ 	status = platform_device_register(&mamba_ev_device);
+-- 
+1.7.9.5
+

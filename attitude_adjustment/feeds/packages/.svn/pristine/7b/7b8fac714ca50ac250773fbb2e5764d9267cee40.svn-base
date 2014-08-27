@@ -1,0 +1,23 @@
+Index: miredo-1.2.4/src/Makefile.am
+===================================================================
+--- miredo-1.2.4.orig/src/Makefile.am	2012-04-17 01:15:14.000000000 +0300
++++ miredo-1.2.4/src/Makefile.am	2012-04-17 01:17:45.000000000 +0300
+@@ -32,7 +32,8 @@
+ 	-DPKGLIBDIR=\"$(pkglibdir)\"
+ 
+ sbin_PROGRAMS = miredo miredo-server miredo-checkconf
+-pkglib_PROGRAMS =
++programfilesdir = $(pkglibdir)
++programfiles_PROGRAMS =
+ EXTRA_PROGRAMS = privproc
+ noinst_LTLIBRARIES = libmiredo.la
+ TESTS =
+@@ -59,7 +60,7 @@
+ miredo_privproc_SOURCES = privproc.c privproc.h
+ miredo_privproc_LDADD = ../libteredo/libteredo.la $(LIBCAP)
+ if TEREDO_CLIENT
+-pkglib_PROGRAMS += miredo-privproc
++programfiles_PROGRAMS += miredo-privproc
+ TESTS += miredo-checkconf
+ endif
+ 

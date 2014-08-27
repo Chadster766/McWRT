@@ -1,0 +1,45 @@
+From b30dd7a1aa6c3e630ee0b9193d68b6349eb92990 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Mon, 22 Oct 2012 18:22:28 +0200
+Subject: [PATCH 413/609] twsi hal : aligned define between AXP-A370
+ (CPU_INT_SOURCE_CONTROL_IRQ_OFFS)
+
+Change-Id: I9f00a94d0db863e2e1d6e98f2c8ae76a37bb9b54
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h     |    4 ++--
+ arch/arm/plat-armada/mv_hal/twsi/mvTwsi.c          |    2 +-
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
+index 38c566d..b140f8c 100755
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
+@@ -310,8 +310,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define CPU_CF_LOCAL_MASK_PMU_MASK_OFFS		18
+ #define CPU_INT_SOURCE_CONTROL_REG(i)		(MV_CPUIF_SHARED_REGS_BASE + 0xB00 + (i * 0x4))
+ 
+-#define CPU_INT_SOURCE_CONTROL_ENA_OFFS		28
+-#define CPU_INT_SOURCE_CONTROL_ENA_MASK		(1 << CPU_INT_SOURCE_CONTROL_ENA_OFFS)
++#define CPU_INT_SOURCE_CONTROL_IRQ_OFFS		28
++#define CPU_INT_SOURCE_CONTROL_IRQ_MASK		(1 << CPU_INT_SOURCE_CONTROL_IRQ_OFFS )
+ 
+ #define CPU_INT_SET_ENABLE_REG			(MV_CPUIF_SHARED_REGS_BASE + 0xA30)
+ #define CPU_INT_CLEAR_ENABLE_REG		(MV_CPUIF_SHARED_REGS_BASE + 0xA34)
+diff --git a/arch/arm/plat-armada/mv_hal/twsi/mvTwsi.c b/arch/arm/plat-armada/mv_hal/twsi/mvTwsi.c
+index 80af82a..cb9835e 100755
+--- a/arch/arm/plat-armada/mv_hal/twsi/mvTwsi.c
++++ b/arch/arm/plat-armada/mv_hal/twsi/mvTwsi.c
+@@ -412,7 +412,7 @@ MV_U32 mvTwsiInit(MV_U8 chanNum, MV_HZ frequancy, MV_U32 Tclk, MV_TWSI_ADDR *pTw
+ 
+ 	/* unmask twsi int in Interrupt source control register */
+ 	val = (MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(CPU_MAIN_INT_CAUSE_TWSI(chanNum))) |
+-							(1<<CPU_INT_SOURCE_CONTROL_ENA_OFFS));
++							(1<<CPU_INT_SOURCE_CONTROL_IRQ_OFFS));
+ 	MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(CPU_MAIN_INT_CAUSE_TWSI(chanNum)), val);
+ 
+ 	/* Add delay of 1ms */
+-- 
+1.7.9.5
+

@@ -1,0 +1,45 @@
+--- a/bwm.c
++++ b/bwm.c
+@@ -57,7 +57,8 @@ int main(int argc, char *argv[])
+   char buffer[256];
+   char *buffer_pointer;
+ 
+-  int inum;
++  int inum = -1;
++  int oldinum = -1;
+   int field_number;
+   int total_counter;
+   int sleep_time = 2;
+@@ -90,7 +91,13 @@ int main(int argc, char *argv[])
+ 
+   while(1)
+   {
+-    printf("%c[H",27);
++    if (inum==oldinum)
++    {
++      printf("%c[H",27);
++    } else {
++      printf("%c[H%c[J",27,27);
++      oldinum = inum;
++    }
+     printf("Bandwidth Monitor 1.1.0\n\n");
+     printf("       Iface        RX(KB/sec)   TX(KB/sec)   Total(KB/sec)\n\n");
+ 
+@@ -138,7 +145,7 @@ int main(int argc, char *argv[])
+ 
+               interface[inum].rx_kbytes_dif =
+                (interface[inum].rx_bytes_new -
+-                interface[inum].rx_bytes_old) * 1000 / 1024;
++                interface[inum].rx_bytes_old) / 1024 * 1000;
+ 
+               interface[inum].rx_rate_whole = 
+                interface[inum].rx_kbytes_dif / 
+@@ -157,7 +164,7 @@ int main(int argc, char *argv[])
+ 
+               interface[inum].tx_kbytes_dif =
+                (interface[inum].tx_bytes_new -
+-                interface[inum].tx_bytes_old) * 1000 / 1024;
++                interface[inum].tx_bytes_old) / 1024 * 1000;
+ 
+               interface[inum].tx_rate_whole = 
+                interface[inum].tx_kbytes_dif / 

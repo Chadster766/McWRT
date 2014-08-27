@@ -1,0 +1,123 @@
+From fbea8109f489152266ffa286bcc24e61947fac34 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 27 Sep 2012 12:45:41 +0200
+Subject: [PATCH 309/609] Added suspend resume support to XOR engine
+
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ drivers/dma/mv_xor.c |   60 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ drivers/dma/mv_xor.h |    6 +++++
+ 2 files changed, 66 insertions(+)
+
+diff --git a/drivers/dma/mv_xor.c b/drivers/dma/mv_xor.c
+index 3343b7a..159d099 100644
+--- a/drivers/dma/mv_xor.c
++++ b/drivers/dma/mv_xor.c
+@@ -33,6 +33,7 @@ static void mv_xor_issue_pending(struct dma_chan *chan);
+ unsigned int dummy1[MV_XOR_MIN_BYTE_COUNT];
+ unsigned int dummy2[MV_XOR_MIN_BYTE_COUNT];
+ dma_addr_t dummy1_addr, dummy2_addr;
++static struct mv_xor_save_regs saved_regs;
+ 
+ #define to_mv_xor_chan(chan)		\
+ 	container_of(chan, struct mv_xor_chan, common)
+@@ -1260,9 +1261,49 @@ mv_xor_conf_mbus_windows(struct mv_xor_shared_private *msp,
+ 	writel(win_enable, base + WINDOW_BAR_ENABLE(1));
+ }
+ 
++#ifdef CONFIG_PM
++static int mv_xor_suspend(struct platform_device *dev, pm_message_t state)
++{
++	struct mv_xor_device *device = platform_get_drvdata(dev);
++	struct dma_chan *dma_chan;
++	struct mv_xor_chan *mv_chan;
++
++	/* Practicly this list holds always one channel */
++	dma_chan = container_of(device->common.channels.next, struct dma_chan,
++				device_node);
++
++	mv_chan = to_mv_xor_chan(dma_chan);
++	saved_regs.xor_config 	  = __raw_readl(XOR_CONFIG(mv_chan));
++	saved_regs.interrupt_mask = __raw_readl(XOR_INTR_MASK(mv_chan));
++
++	return 0;
++}
++
++static int mv_xor_resume(struct platform_device *dev)
++{
++	struct mv_xor_device *device = platform_get_drvdata(dev);
++	struct dma_chan *dma_chan;
++	struct mv_xor_chan *mv_chan;
++
++	/* Practicly this list holds always one channel */
++	dma_chan = container_of(device->common.channels.next, struct dma_chan,
++				device_node);
++
++	mv_chan = to_mv_xor_chan(dma_chan);
++	__raw_writel(saved_regs.xor_config, XOR_CONFIG(mv_chan));
++	__raw_writel(saved_regs.interrupt_mask, XOR_INTR_MASK(mv_chan));
++
++	return 0;
++}
++#endif /* CONFIG_PM*/
++
+ static struct platform_driver mv_xor_driver = {
+ 	.probe		= mv_xor_probe,
+ 	.remove		= __devexit_p(mv_xor_remove),
++#ifdef CONFIG_PM
++	.suspend	= mv_xor_suspend,
++	.resume		= mv_xor_resume,
++#endif
+ 	.driver		= {
+ 		.owner	= THIS_MODULE,
+ 		.name	= MV_XOR_NAME,
+@@ -1315,9 +1356,28 @@ static int mv_xor_shared_remove(struct platform_device *pdev)
+ 	return 0;
+ }
+ 
++#ifdef CONFIG_PM
++static int mv_xor_shared_resume(struct platform_device *dev)
++{
++	struct mv_xor_platform_shared_data *msd = dev->dev.platform_data;
++	struct mv_xor_shared_private *msp;
++
++	msp = (struct mv_xor_shared_private *)platform_get_drvdata(dev);
++
++	/* Restore address decode windows */
++	if (msd != NULL && msd->dram != NULL)
++		mv_xor_conf_mbus_windows(msp, msd->dram);
++
++	return 0;
++}
++#endif
++
+ static struct platform_driver mv_xor_shared_driver = {
+ 	.probe		= mv_xor_shared_probe,
+ 	.remove		= mv_xor_shared_remove,
++#ifdef CONFIG_PM
++	.resume		= mv_xor_shared_resume,
++#endif
+ 	.driver		= {
+ 		.owner	= THIS_MODULE,
+ 		.name	= MV_XOR_SHARED_NAME,
+diff --git a/drivers/dma/mv_xor.h b/drivers/dma/mv_xor.h
+index 47b3c04..b16fa87 100644
+--- a/drivers/dma/mv_xor.h
++++ b/drivers/dma/mv_xor.h
+@@ -163,6 +163,12 @@ struct mv_xor_desc {
+ 	u32 reserved1;
+ };
+ 
++/* Stores certain registers during suspend to RAM */
++struct mv_xor_save_regs {
++	int xor_config;
++	int interrupt_mask;
++};
++
+ #define to_mv_sw_desc(addr_hw_desc)		\
+ 	container_of(addr_hw_desc, struct mv_xor_desc_slot, hw_desc)
+ 
+-- 
+1.7.9.5
+

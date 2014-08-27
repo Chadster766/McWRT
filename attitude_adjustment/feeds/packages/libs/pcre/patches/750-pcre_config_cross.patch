@@ -1,0 +1,26 @@
+--- a/pcre-config.in
++++ b/pcre-config.in
+@@ -24,6 +24,10 @@ case `uname -s` in
+   libR=" -Wl,-R@libdir@"
+   ;;
+ esac
++libS=
++if test @libdir@ != /usr/lib ; then
++  libS=-L@libdir@
++fi
+ 
+ while test $# -gt 0; do
+   case "$1" in
+@@ -58,10 +62,10 @@ while test $# -gt 0; do
+       echo $includes @PCRE_STATIC_CFLAG@
+       ;;
+     --libs-posix)
+-      echo -L@libdir@$libR -lpcreposix -lpcre
++      echo $libS$libR -lpcreposix -lpcre
+       ;;
+     --libs)
+-      echo -L@libdir@$libR -lpcre
++      echo $libS$libR -lpcre
+       ;;
+     --libs-cpp)
+       if test @enable_cpp@ = yes ; then

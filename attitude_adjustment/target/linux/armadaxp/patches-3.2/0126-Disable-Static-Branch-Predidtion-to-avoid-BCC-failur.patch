@@ -1,0 +1,26 @@
+From 2bcbc0cdc243105a5e42a042ded870f9ed7a5377 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Thu, 12 Apr 2012 09:16:45 +0300
+Subject: [PATCH 126/609] Disable Static Branch Predidtion to avoid BCC
+ failure
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mm/proc-sheeva_pj4bv7.S |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm/mm/proc-sheeva_pj4bv7.S b/arch/arm/mm/proc-sheeva_pj4bv7.S
+index dc638a4..5335b95 100644
+--- a/arch/arm/mm/proc-sheeva_pj4bv7.S
++++ b/arch/arm/mm/proc-sheeva_pj4bv7.S
+@@ -350,6 +350,7 @@ defined(CONFIG_SMP)
+ 	mrc        p15, 1, r0, c15, c1, 1                         /* Read */
+ 	orr        r0, r0, #0x00020                                /* BIT5 STREX backoff_disable--> '1' enable the back off of STREX instr */
+ 	orr	   r0, r0, #0x00100                                /* BIT8 Internal Parity Handling Disable--> '1' Disable Internal Parity Handling */
++	bic        r0, r0, #0x4                                 /* Disable Static BP */
+ 	mcr        p15, 1, r0, c15, c1, 1                         /* Write */
+ /* Auxiliary Functional Modes Control Register 0 */
+ 	mrc        p15, 1, r0, c15, c2, 0                         /* Read */
+-- 
+1.7.9.5
+

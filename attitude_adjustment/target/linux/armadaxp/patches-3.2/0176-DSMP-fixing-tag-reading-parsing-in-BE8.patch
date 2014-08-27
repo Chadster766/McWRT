@@ -1,0 +1,31 @@
+From 2cbbeff59efe902ce969ac40f055fca03ed7bfa9 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Tue, 8 May 2012 16:04:38 +0300
+Subject: [PATCH 176/609] DSMP fixing tag reading / parsing in BE8
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/core.c |    6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index 33d4698..afb64b1 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -1578,10 +1578,10 @@ void __init axp_tag_fixup_mem32(struct machine_desc *mdesc, struct tag *t,
+ 	int total_size = PAGE_ALIGN(DEFAULT_FB_SIZE*4) * 2;
+ 	uint32_t memory_start;
+ 
+-	for (; t->hdr.size; t = tag_next(t))
+-		if ((t->hdr.tag == ATAG_MEM) && (t->u.mem.size >= total_size)) {
++	for (; read_tag(t->hdr.size); t = tag_next(t))
++		if ((read_tag(t->hdr.tag) == ATAG_MEM) && ( read_tag(t->u.mem.size) >= total_size)) {
+ 			if ((last_tag == NULL) ||
+-			    (t->u.mem.start > last_tag->u.mem.start))
++			    (read_tag(t->u.mem.start) > last_tag->u.mem.start))
+ 				last_tag = t;
+ 		}
+ 
+-- 
+1.7.9.5
+

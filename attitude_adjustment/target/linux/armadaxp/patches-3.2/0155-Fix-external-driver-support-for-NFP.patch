@@ -1,0 +1,53 @@
+From 9993340df73928a4e9cdc787fce08ba306228d36 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Tue, 3 Apr 2012 03:01:04 -0400
+Subject: [PATCH 155/609] Fix external driver support for NFP
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ net/core/dev.c |   22 ++++++++++++++++++++++
+ 1 file changed, 22 insertions(+)
+
+diff --git a/net/core/dev.c b/net/core/dev.c
+index 2aac4ec..e9fe395 100644
+--- a/net/core/dev.c
++++ b/net/core/dev.c
+@@ -3217,6 +3217,22 @@ void netdev_rx_handler_unregister(struct net_device *dev)
+ }
+ EXPORT_SYMBOL_GPL(netdev_rx_handler_unregister);
+ 
++#ifdef CONFIG_MV_ETH_NFP_EXT
++static struct sk_buff *handle_nfp_extrcv(struct sk_buff *skb, struct net_device *dev)
++{
++	MV_EXT_PKT_INFO *pktInfo;
++
++	pktInfo = (MV_EXT_PKT_INFO *)&skb->cb;
++	if (pktInfo->flags == 0)
++		pktInfo = NULL;
++
++	if (!mv_eth_nfp_ext(skb->dev, skb, pktInfo))
++		return NULL;
++
++	return skb;
++}
++#endif /* CONFIG_MV_ETH_NFP_EXT */
++
+ static int __netif_receive_skb(struct sk_buff *skb)
+ {
+ 	struct packet_type *ptype, *pt_prev;
+@@ -3265,6 +3281,12 @@ another_round:
+ 	}
+ #endif
+ 
++#ifdef CONFIG_MV_ETH_NFP_EXT
++	skb = handle_nfp_extrcv(skb, orig_dev);
++	if (!skb)
++		goto out;
++#endif /* CONFIG_MV_ETH_NFP_EXT */
++
+ 	list_for_each_entry_rcu(ptype, &ptype_all, list) {
+ 		if (!ptype->dev || ptype->dev == skb->dev) {
+ 			if (pt_prev)
+-- 
+1.7.9.5
+

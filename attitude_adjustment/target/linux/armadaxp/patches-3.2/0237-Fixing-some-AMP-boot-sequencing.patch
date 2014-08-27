@@ -1,0 +1,47 @@
+From 97f40299bd783e992cb5130f380f853c35d50287 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Sun, 22 Jul 2012 17:01:59 +0300
+Subject: [PATCH 237/609] Fixing some AMP boot sequencing.
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/platsmp.c |   18 +++++++-----------
+ 1 file changed, 7 insertions(+), 11 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/platsmp.c b/arch/arm/mach-armadaxp/platsmp.c
+index 48feb4f..e82bf48 100644
+--- a/arch/arm/mach-armadaxp/platsmp.c
++++ b/arch/arm/mach-armadaxp/platsmp.c
+@@ -363,22 +363,18 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
+ 	if (max_cpus > ncores)
+ 		max_cpus = ncores;
+ 
+-#ifdef CONFIG_LOCAL_TIMERS
+-	/*
+-	 * Enable the local timer for primary CPU. If the device is
+-	 * dummy (!CONFIG_LOCAL_TIMERS), it was already registers in
+-	 * aurora_time_init
+-	 */
+-//	local_timer_setup();
+-#endif
+-
++	for (i = 0; i < NR_CPUS; i++){
++                set_cpu_possible(i, false);
++		set_cpu_present (i, false);
++	}
+ 	/*
+ 	 * Initialise the present map, which describes the set of CPUs
+ 	 * actually populated at the present time.
+ 	 */
+-	for (i = 0; i < max_cpus; i++)
++	for (i = 0; i < max_cpus; i++){
++		set_cpu_possible(i, true);
+ 		set_cpu_present(i, true);
+-
++	}
+ 	if (max_cpus > 1) {	
+ 		flush_cache_all();
+ 		wakeup_cpus();		
+-- 
+1.7.9.5
+

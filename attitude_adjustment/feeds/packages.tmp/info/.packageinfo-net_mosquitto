@@ -1,0 +1,58 @@
+Source-Makefile: feeds/packages/net/mosquitto/Makefile
+Package: mosquitto
+Version: 0.15-1
+Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
+Menu-Depends: 
+Provides: 
+Section: net
+Category: Network
+Title: mosquitto - an MQTT message broker
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: mosquitto-0.15.tar.gz
+Type: ipkg
+Description:  mosquitto is a message broker that supports v3.1 of the MQ Telemetry
+Transport protocol. MQTT provides a lightweight method for
+messaging using a publish/subscribe model.
+http://www.mosquitto.org/
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+
+Package: libmosquitto
+Version: 0.15-1
+Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
+Menu-Depends: 
+Provides: 
+Section: libs
+Category: Libraries
+Title: mosquitto - client library
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: mosquitto-0.15.tar.gz
+Type: ipkg
+Description:  Library required for mosquitto's command line client tools, also for
+use by any third party software that wants to communicate with a
+mosquitto server.
+
+Should be useable for communicating with any MQTT v3.1 compatible
+server, such as IBM's RSMB, in addition to Mosquitto
+http://www.mosquitto.org/
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+
+Package: mosquitto-client
+Version: 0.15-1
+Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +libmosquitto
+Menu-Depends: 
+Provides: 
+Section: net
+Category: Network
+Title: mosquitto - client tools
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: mosquitto-0.15.tar.gz
+Type: ipkg
+Description:  Command line client tools for publishing messages to MQTT servers
+and subscribing to topics.
+http://www.mosquitto.org/
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+
+

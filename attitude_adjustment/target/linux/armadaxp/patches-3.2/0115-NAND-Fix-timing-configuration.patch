@@ -1,0 +1,640 @@
+From 546298d96f4aad5ca531b3eb0cee9a2fad14b9ac Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Wed, 1 Feb 2012 18:21:22 +0200
+Subject: [PATCH 115/609] NAND: Fix timing configuration
+
+Signed-off-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/configs/armada_xp_defconfig          |    1 -
+ arch/arm/mach-armadaxp/config/mvSysHwConfig.h |   15 ++
+ arch/arm/plat-armada/Kconfig                  |    8 +
+ arch/arm/plat-armada/mv_hal/nfc/mvNfc.c       |  246 ++++++++++++++++++++-----
+ arch/arm/plat-armada/mv_hal/nfc/mvNfcRegs.h   |   10 +-
+ 5 files changed, 225 insertions(+), 55 deletions(-)
+
+diff --git a/arch/arm/configs/armada_xp_defconfig b/arch/arm/configs/armada_xp_defconfig
+index 5616a7f..fedba3f 100644
+--- a/arch/arm/configs/armada_xp_defconfig
++++ b/arch/arm/configs/armada_xp_defconfig
+@@ -299,7 +299,6 @@ CONFIG_MV_INCLUDE_SDIO=y
+ #
+ # Armada AMP options
+ #
+-# CONFIG_MV_AMP_ENABLE is not set
+ CONFIG_MV_GPP_MAX_PINS=67
+ CONFIG_MV_DCACHE_SIZE=0x8000
+ 
+diff --git a/arch/arm/mach-armadaxp/config/mvSysHwConfig.h b/arch/arm/mach-armadaxp/config/mvSysHwConfig.h
+index 8d245ca..caf7774 100644
+--- a/arch/arm/mach-armadaxp/config/mvSysHwConfig.h
++++ b/arch/arm/mach-armadaxp/config/mvSysHwConfig.h
+@@ -163,6 +163,21 @@ disclaimer.
+ #ifdef CONFIG_MTD_NAND_NFC
+ #define MTD_NAND_NFC
+ #endif
++#ifdef CONFIG_MTD_NAND_NFC_INIT_RESET
++#define MTD_NAND_NFC_INIT_RESET
++#endif
++#ifdef CONFIG_MTD_NAND_NFC_GANG_SUPPORT
++#define MTD_NAND_NFC_GANG_SUPPORT
++#endif
++#ifdef CONFIG_MTD_NAND_NFC_MLC_SUPPORT
++#define MTD_NAND_NFC_MLC_SUPPORT
++#endif
++#ifdef CONFIG_MTD_NAND_NFC_INIT_RESET
++#define MTD_NAND_NFC_INIT_RESET
++#endif
++#ifdef CONFIG_MTD_NAND_NFC_NEGLECT_RNB
++#define MTD_NAND_NFC_NEGLECT_RNB
++#endif
+ #ifdef CONFIG_MV_INCLUDE_PDMA
+ #define MV_INCLUDE_PDMA
+ #endif
+diff --git a/arch/arm/plat-armada/Kconfig b/arch/arm/plat-armada/Kconfig
+index 75efd2c..8def98e 100644
+--- a/arch/arm/plat-armada/Kconfig
++++ b/arch/arm/plat-armada/Kconfig
+@@ -337,6 +337,14 @@ config MTD_NAND_NFC_INIT_RESET
+           This option forces NAND reset command on initialization. This
+ 	  is required by certain NAND vendors (Micron).
+ 
++config MTD_NAND_NFC_NEGLECT_RNB
++	bool "NAND Neglect Read/Busy Signal"
++        depends on MTD_NAND_NFC
++	default n
++	help
++          This option forces allows operation withou the RnBx signal. In this
++	  mode, tR taken as worst case in every operation
++
+ endmenu
+ 
+ choice
+diff --git a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
+index 4979573..ee5c19c 100644
+--- a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
++++ b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
+@@ -98,7 +98,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ /* NAND special features bitmask definition.	*/
+ #define NFC_FLAGS_NONE			0x0
+ #define NFC_FLAGS_ONFI_MODE_3_SET	0x1
+-#define NFC_CLOCK_UPSCALE_250M		0x2
++#define NFC_CLOCK_UPSCALE_200M		0x2
+ 
+ /* End of NAND special features definitions.	*/
+ 
+@@ -135,6 +135,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ /* Macros */
+ /**********/
+ #define ns_clk(ns, ns2clk)	((ns % ns2clk) ? (MV_U32)((ns/ns2clk)+1) : (MV_U32)(ns/ns2clk))
++#define maxx(a, b)		((a > b) ? a : b)
++#define check_limit(val, pwr)	((val > ((1 << pwr)-1)) ? ((1 << pwr)-1) : val)
+ 
+ #define DBGPRINT(x) 	printk x
+ #define DBGLVL	 	KERN_INFO
+@@ -149,8 +151,10 @@ typedef struct {
+ 	MV_U32 tADL;		/* Address to write data delay */
+ 	MV_U32 tCH;		/* Enable signal hold time */
+ 	MV_U32 tCS;		/* Enable signal setup time */
++	MV_U32 tWC;		/* ND_nWS cycle duration */
+ 	MV_U32 tWH;		/* ND_nWE high duration */
+ 	MV_U32 tWP;		/* ND_nWE pulse time */
++	MV_U32 tRC;		/* ND_nRE cycle duration */
+ 	MV_U32 tRH;		/* ND_nRE high duration */
+ 	MV_U32 tRP;		/* ND_nRE pulse width */
+ 	MV_U32 tR;		/* ND_nWE high to ND_nRE low for read */
+@@ -207,8 +211,10 @@ MV_NFC_FLASH_INFO flashDeviceInfo[] = {
+ 	.tADL = 100,		/* tADL, Address to write data delay */
+ 	.tCH = 5,		/* tCH, Enable signal hold time */
+ 	.tCS = 20,		/* tCS, Enable signal setup time */
++	.tWC = 30,		/* tWC, ND_nWE cycle duration */
+ 	.tWH = 10,		/* tWH, ND_nWE high duration */
+ 	.tWP = 15,		/* tWP, ND_nWE pulse time */
++	.tRC = 25,		/* tWC, ND_nRE cycle duration */
+ 	.tRH = 10,		/* tRH, ND_nRE high duration */
+ 	.tRP = 15,		/* tRP, ND_nRE pulse width */
+ 	.tR = 25000, 		/* tR = tR+tRR+tWB+1, ND_nWE high to ND_nRE low for read - 25000+20+100+1 */
+@@ -222,15 +228,17 @@ MV_NFC_FLASH_INFO flashDeviceInfo[] = {
+ 	.id = 0xF120,		/* Device ID 0xDevice,Vendor */
+ 	.model = "ST 1Gb 8bit",
+ 	.bb_page = 63,		/* Manufacturer Bad block marking page in block */
+-	.flags = NFC_CLOCK_UPSCALE_250M
++	.flags = NFC_CLOCK_UPSCALE_200M
+ 	},
+ 
+ 	{			/* ST 8Gb */
+ 	 .tADL = 0,		/* tADL, Address to write data delay */
+ 	 .tCH = 5,		/* tCH, Enable signal hold time */
+ 	 .tCS = 20,		/* tCS, Enable signal setup time */
++	 .tWC = 24,		/* tWC, ND_nWE cycle duration */
+ 	 .tWH = 12,		/* tWH, ND_nWE high duration */
+ 	 .tWP = 12,		/* tWP, ND_nWE pulse time */
++	 .tRC = 24,		/* tWC, ND_nRE cycle duration */
+ 	 .tRH = 12,		/* tRH, ND_nRE high duration */
+ 	 .tRP = 12,		/* tRP, ND_nRE pulse width */
+ 	 .tR = 25121,		/* tR = tR+tRR+tWB+1, ND_nWE high to ND_nRE low for read - 25000+20+100+1 */
+@@ -244,14 +252,16 @@ MV_NFC_FLASH_INFO flashDeviceInfo[] = {
+ 	 .id = 0xD320,		/* Device ID 0xDevice,Vendor */
+ 	 .model = "ST 8Gb 8bit",
+ 	 .bb_page = 63,		/* Manufacturer Bad block marking page in block */
+-	 .flags = NFC_CLOCK_UPSCALE_250M
++	 .flags = NFC_CLOCK_UPSCALE_200M
+ 	 },
+ 	{			/* ST 4Gb */
+ 	 .tADL = 70,		/* tADL, Address to write data delay */
+ 	 .tCH = 5,		/* tCH, Enable signal hold time */
+ 	 .tCS = 20,		/* tCS, Enable signal setup time */
++	 .tWC = 22,		/* tWC, ND_nWE cycle duration */
+ 	 .tWH = 10,		/* tWH, ND_nWE high duration */
+ 	 .tWP = 12,		/* tWP, ND_nWE pulse time */
++	 .tRC = 24,		/* tWC, ND_nRE cycle duration */
+ 	 .tRH = 12,		/* tRH, ND_nRE high duration */
+ 	 .tRP = 12,		/* tRP, ND_nRE pulse width */
+ 	 .tR = 25121,		/* tR = tR+tRR+tWB+1, ND_nWE high to ND_nRE low for read - 25000+20+100+1 */
+@@ -265,14 +275,16 @@ MV_NFC_FLASH_INFO flashDeviceInfo[] = {
+ 	 .id = 0xDC20,		/* Device ID 0xDevice,Vendor */
+ 	 .model = "NM 4Gb 8bit",
+ 	 .bb_page = 0,		/* Manufacturer Bad block marking page in block */
+-	 .flags = NFC_CLOCK_UPSCALE_250M
++	 .flags = NFC_CLOCK_UPSCALE_200M
+ 	 },
+ 	{			/* ST 32Gb */
+ 	 .tADL = 0,		/* tADL, Address to write data delay */
+ 	 .tCH = 5,		/* tCH, Enable signal hold time */
+ 	 .tCS = 20,		/* tCS, Enable signal setup time */
++	 .tWC = 22,		/* tWC, ND_nWE cycle duration */
+ 	 .tWH = 10,		/* tWH, ND_nWE high duration */
+ 	 .tWP = 12,		/* tWP, ND_nWE pulse time */
++	 .tRC = 22,		/* tWC, ND_nRE cycle duration */
+ 	 .tRH = 10,		/* tRH, ND_nRE high duration */
+ 	 .tRP = 12,		/* tRP, ND_nRE pulse width */
+ 	 .tR = 25121,		/* tR = tR+tRR+tWB+1, ND_nWE high to ND_nRE low for read - 25000+20+100+1 */
+@@ -286,15 +298,17 @@ MV_NFC_FLASH_INFO flashDeviceInfo[] = {
+ 	 .id = 0xD520,		/* Device ID 0xVendor,device */
+ 	 .model = "ST 32Gb 8bit",
+ 	 .bb_page = 63,		/* Manufacturer Bad block marking page in block */
+-	 .flags = NFC_CLOCK_UPSCALE_250M
++	 .flags = NFC_CLOCK_UPSCALE_200M
+ 	 },
+ 
+ 	{			/* Samsung 16Gb */
+ 	 .tADL = 90,		/* tADL, Address to write data delay */
+ 	 .tCH = 0,		/* tCH, Enable signal hold time */
+ 	 .tCS = 5,		/* tCS, Enable signal setup time */
++	 .tWC = 22,		/* tWC, ND_nWE cycle duration */
+ 	 .tWH = 10,		/* tWH, ND_nWE high duration */
+ 	 .tWP = 12,		/* tWP, ND_nWE pulse time */
++	 .tRC = 24,		/* tWC, ND_nRE cycle duration */
+ 	 .tRH = 12,		/* tRH, ND_nRE high duration */
+ 	 .tRP = 12,		/* tRP, ND_nRE pulse width */
+ 	 .tR = 49146,		/* tR = data transfer from cell to register, maximum 60,000ns */
+@@ -308,15 +322,17 @@ MV_NFC_FLASH_INFO flashDeviceInfo[] = {
+ 	 .id = 0xD5EC,		/* Device ID 0xDevice,Vendor */
+ 	 .model = "Samsung 16Gb 8bit",
+ 	 .bb_page = 127,	/* Manufacturer Bad block marking page in block */
+-	 .flags = NFC_CLOCK_UPSCALE_250M
++	 .flags = NFC_CLOCK_UPSCALE_200M
+ 	 },
+ 
+ 	{			/* Samsung 2Gb */
+ 	.tADL = 90,		/* tADL, Address to write data delay */
+ 	.tCH = 10,		/* tCH, Enable signal hold time */
+ 	.tCS = 0,		/* tCS, Enable signal setup time */
++	.tWC = 40,		/* tWC, ND_nWE cycle duration */
+ 	.tWH = 15,		/* tWH, ND_nWE high duration */
+ 	.tWP = 25,		/* tWP, ND_nWE pulse time */
++	.tRC = 40,		/* tWC, ND_nRE cycle duration */
+ 	.tRH = 15,		/* tRH, ND_nRE high duration */
+ 	.tRP = 25,		/* tRP, ND_nRE pulse width */
+ 	.tR = 25000, 		/* tR = data transfer from cell to register, maximum 60,000ns */
+@@ -330,15 +346,17 @@ MV_NFC_FLASH_INFO flashDeviceInfo[] = {
+ 	.id = 0xDAEC,		/* Device ID 0xDevice,Vendor */ /* 0x9AA8 when run through JTAG */
+ 	.model = "Samsung 2Gb 8bit",
+ 	.bb_page = 0,		/* Manufacturer Bad block marking page in block */
+-	 .flags = NFC_CLOCK_UPSCALE_250M
++	 .flags = NFC_CLOCK_UPSCALE_200M
+ 	},
+ 
+  	{			/* Samsung 8Gb */
+ 	.tADL = 100,		/* tADL, Address to write data delay */
+ 	.tCH = 5,		/* tCH, Enable signal hold time */
+ 	.tCS = 20,		/* tCS, Enable signal setup time */
++	.tWC = 22,		/* tWC, ND_nWE cycle duration */
+ 	.tWH = 10,		/* tWH, ND_nWE high duration */
+ 	.tWP = 12,		/* tWP, ND_nWE pulse time */
++	.tRC = 22,		/* tWC, ND_nRE cycle duration */
+ 	.tRH = 10,		/* tRH, ND_nRE high duration */
+ 	.tRP = 12,		/* tRP, ND_nRE pulse width */
+ 	.tR = 25000, 		/* tR = data transfer from cell to register, maximum 60,000ns */
+@@ -352,15 +370,17 @@ MV_NFC_FLASH_INFO flashDeviceInfo[] = {
+ 	.id = 0xD3EC,		/* Device ID 0xDevice,Vendor */ /* 0x9AA8 when run through JTAG */
+ 	.model = "Samsung 8Gb 8bit",
+ 	.bb_page = 0,		/* Manufacturer Bad block marking page in block */
+-	 .flags = NFC_CLOCK_UPSCALE_250M
++	 .flags = NFC_CLOCK_UPSCALE_200M
+ 	},
+ 
+  	{			/* Samsung 4Gb */
+ 	.tADL = 70,		/* tADL, Address to write data delay */
+ 	.tCH = 5,		/* tCH, Enable signal hold time */
+ 	.tCS = 20,		/* tCS, Enable signal setup time */
++	.tWC = 22,		/* tWC, ND_nWE cycle duration */
+ 	.tWH = 10,		/* tWH, ND_nWE high duration */
+ 	.tWP = 12,		/* tWP, ND_nWE pulse time */
++	.tRC = 22,		/* tWC, ND_nRE cycle duration */
+ 	.tRH = 10,		/* tRH, ND_nRE high duration */
+ 	.tRP = 12,		/* tRP, ND_nRE pulse width */
+ 	.tR = 25000, 		/* tR = data transfer from cell to register, maximum 60,000ns */
+@@ -374,15 +394,17 @@ MV_NFC_FLASH_INFO flashDeviceInfo[] = {
+ 	.id = 0xDCEC,		/* Device ID 0xDevice,Vendor */ /* 0x9AA8 when run through JTAG */
+ 	.model = "Samsung 4Gb 8bit",
+ 	.bb_page = 0,		/* Manufacturer Bad block marking page in block */
+-	.flags = NFC_CLOCK_UPSCALE_250M
++	.flags = NFC_CLOCK_UPSCALE_200M
+ 	},
+ 
+ 	{			/* Samsung 32Gb */
+ 	 .tADL = 0,		/* tADL, Address to write data delay */
+ 	 .tCH = 5,		/* tCH, Enable signal hold time */
+ 	 .tCS = 20,		/* tCS, Enable signal setup time */
++	 .tWC = 25,		/* tWC, ND_nWE cycle duration */
+ 	 .tWH = 10,		/* tWH, ND_nWE high duration */
+ 	 .tWP = 15,		/* tWP, ND_nWE pulse time */
++	 .tRC = 30,		/* tWC, ND_nRE cycle duration */
+ 	 .tRH = 15,		/* tRH, ND_nRE high duration */
+ 	 .tRP = 15,		/* tRP, ND_nRE pulse width */
+ 	 .tR = 60000,		/* tR = data transfer from cell to register, maximum 60,000ns */
+@@ -396,14 +418,16 @@ MV_NFC_FLASH_INFO flashDeviceInfo[] = {
+ 	 .id = 0xD7EC,		/* Device ID 0xDevice,Vendor */
+ 	 .model = "Samsung 32Gb 8bit",
+ 	 .bb_page = 127,	/* Manufacturer Bad block marking page in block */
+-	 .flags = NFC_CLOCK_UPSCALE_250M
++	 .flags = NFC_CLOCK_UPSCALE_200M
+ 	 },
+ 	{			/* Micron 64Gb */
+ 	 .tADL = 0,		/* tADL, Address to write data delay */
+ 	 .tCH = 20,		/* tCH, Enable signal hold time */
+ 	 .tCS = 20,		/* tCS, Enable signal setup time */
++	 .tWC = 90,		/* tWC, ND_nWE cycle duration */
+ 	 .tWH = 45,		/* tWH, ND_nWE high duration */
+ 	 .tWP = 45,		/* tWP, ND_nWE pulse time */
++	 .tRC = 90,		/* tWC, ND_nRE cycle duration */
+ 	 .tRH = 45,		/* tRH, ND_nRE high duration */
+ 	 .tRP = 45,		/* tRP, ND_nRE pulse width */
+ 	 .tR = 0,		/* tR = data transfer from cell to register */
+@@ -417,14 +441,16 @@ MV_NFC_FLASH_INFO flashDeviceInfo[] = {
+ 	 .id = 0x882C,		/* Device ID 0xDevice,Vendor */
+ 	 .model = "Micron 64Gb 8bit",
+ 	 .bb_page = 0,		/* Manufacturer Bad block marking page in block */
+-	 .flags = NFC_CLOCK_UPSCALE_250M	
++	 .flags = NFC_CLOCK_UPSCALE_200M
+ 	 },
+ 	{			/* Hinyx 8Gb */
+ 	.tADL = 0,		/* tADL, Address to write data delay */
+ 	.tCH = 5,		/* tCH, Enable signal hold time */
+ 	.tCS = 20,		/* tCS, Enable signal setup time */
++	.tWC = 22,		/* tWC, ND_nWE cycle duration */
+ 	.tWH = 10,		/* tWH, ND_nWE high duration */
+ 	.tWP = 12,		/* tWP, ND_nWE pulse time */
++	.tRC = 22,		/* tWC, ND_nRE cycle duration */
+ 	.tRH = 10,		/* tRH, ND_nRE high duration */
+ 	.tRP = 12,		/* tRP, ND_nRE pulse width */
+ 	.tR = 25,		/* tR = data transfer from cell to register */
+@@ -438,16 +464,19 @@ MV_NFC_FLASH_INFO flashDeviceInfo[] = {
+ 	.id = 0xDCAD,		/* Device ID 0xDevice,Vendor */
+ 	.model = "Hynix 8Gb 8bit",
+ 	.bb_page = 0,		/* Manufacturer Bad block marking page in block */
+-	 .flags = NFC_CLOCK_UPSCALE_250M
++	 .flags = NFC_CLOCK_UPSCALE_200M
+ 	},
++	/* Timing used is ONFI Mode 2 (28Mhz) */
+ 	{			/* Micron 8Gb */
+ 	.tADL = 100,		/* tADL, Address to write data delay */
+-	.tCH = 5,		/* tCH, Enable signal hold time */
++	.tCH = 10,		/* tCH, Enable signal hold time */
+ 	.tCS = 25,		/* tCS, Enable signal setup time */
+-	.tWH = 10,		/* tWH, ND_nWE high duration */
+-	.tWP = 15,		/* tWP, ND_nWE pulse time */
+-	.tRH = 10,		/* tRH, ND_nRE high duration */
+-	.tRP = 15,		/* tRP, ND_nRE pulse width */
++	.tWC = 35,		/* tWC, ND_nWE cycle duration */
++	.tWH = 15,		/* tWH, ND_nWE high duration */
++	.tWP = 20,		/* tWP, ND_nWE pulse time */
++	.tRC = 35,		/* tWC, ND_nRE cycle duration */
++	.tRH = 15,		/* tRH, ND_nRE high duration */
++	.tRP = 17,		/* tRP, ND_nRE pulse width */
+ 	.tR = 25241,		/* tR = data transfer from cell to register tR = tR+tRR+tWB+1 */
+ 	.tWHR = 60,		/* tWHR, ND_nWE high to ND_nRE low delay for status read */
+ 	.tAR = 10,		/* tAR, ND_ALE low to ND_nRE low delay */
+@@ -459,7 +488,7 @@ MV_NFC_FLASH_INFO flashDeviceInfo[] = {
+ 	.id = 0x382C,		/* Device ID 0xDevice,Vendor */
+ 		.model = "Micron 8Gb 8bit",
+ 	.bb_page = 0,		/* Manufacturer Bad block marking page in block */
+-	.flags = (NFC_CLOCK_UPSCALE_250M | NFC_FLAGS_ONFI_MODE_3_SET)
++	.flags = (NFC_CLOCK_UPSCALE_200M | NFC_FLAGS_ONFI_MODE_3_SET)
+ 	}
+ };
+ 
+@@ -504,7 +533,7 @@ MV_U32 mvNfcDbgFlag = 1;
+ 
+ MV_U32 nfc_dbg_read(MV_U32 addr)
+ {
+-	MV_U32 reg = MV_MEMIO_LE32_READ((addr));
++	MV_U32 reg = MV_MEMIO_LE32_READ((INTER_REGS_BASE | addr));
+ 	if (mvNfcDbgFlag)
+ 		mvOsPrintf("NFC read  0x%08x = %08x\n", addr, reg);
+ 	return reg;
+@@ -512,7 +541,7 @@ MV_U32 nfc_dbg_read(MV_U32 addr)
+ 
+ MV_VOID nfc_dbg_write(MV_U32 addr, MV_U32 val)
+ {
+-	MV_MEMIO_LE32_WRITE((addr), (val));
++	MV_MEMIO_LE32_WRITE((INTER_REGS_BASE | addr), (val));
+ 
+ 	if (mvNfcDbgFlag)
+ 		mvOsPrintf("NFC write 0x%08x = %08x\n", addr, val);
+@@ -531,9 +560,6 @@ static MV_STATUS mvDfcWait4Complete(MV_U32 statMask, MV_U32 usec);
+ static MV_STATUS mvNfcReadIdNative(MV_NFC_CHIP_SEL cs, MV_U16 *id);
+ static MV_STATUS mvNfcTimingSet(MV_U32 tclk, MV_NFC_FLASH_INFO *flInfo);
+ static MV_U32 mvNfcColBits(MV_U32 pg_size);
+-/* #ifdef CONFIG_MTD_NAND_NFC_INIT_RESET */
+-/*static MV_STATUS mvNfcReset(void);*/
+-/* #endif */
+ static MV_STATUS mvNfcDeviceFeatureSet(MV_NFC_CTRL *nfcCtrl, MV_U8 cmd, MV_U8 addr, MV_U32 data0, MV_U32 data1);
+ static MV_STATUS mvNfcDeviceFeatureGet(MV_NFC_CTRL *nfcCtrl, MV_U8 cmd, MV_U8 addr, MV_U32 *data0, MV_U32 *data1);
+ static MV_STATUS mvNfcDeviceModeSet(MV_NFC_CTRL *nfcCtrl, MV_NFC_ONFI_MODE mode);
+@@ -598,6 +624,10 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo, MV_NFC_CTRL *nfcCtrl)
+ 	setNANDClock(8); /* Go down to 125MHz */
+ 	nand_clock = 125000000;
+ 
++	/* Relax Timing configurations to avoid timing violations after flash reset */
++	MV_REG_WRITE(NFC_TIMING_0_REG, 0xFC3F3F7F);
++	MV_REG_WRITE(NFC_TIMING_1_REG, 0x00FF83FF);
++
+ 	/* make sure ECC is disabled at this point - will be enabled only when issuing certain commands */
+ 	MV_REG_BIT_RESET(NFC_CONTROL_REG, NFC_CTRL_ECC_EN_MASK);
+ 	if (nfcInfo->eccMode != MV_NFC_ECC_HAMMING)
+@@ -636,12 +666,12 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo, MV_NFC_CTRL *nfcCtrl)
+ 	/* Write registers before device detection */
+ 	MV_REG_WRITE(NFC_CONTROL_REG, ctrl_reg);
+ 
+-/* #ifdef CONFIG_MTD_NAND_NFC_INIT_RESET */
++#ifdef MTD_NAND_NFC_INIT_RESET
+ 	/* reset the device */
+ 	ret = mvNfcReset();
+ 	if (ret != MV_OK)
+ 		return ret;
+-/* #endif */
++#endif
+ 
+ 	/* Read the device ID */
+ 	ret = mvNfcReadIdNative(nfcCtrl->currCs, &read_id);
+@@ -666,9 +696,9 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo, MV_NFC_CTRL *nfcCtrl)
+ 	}
+ 
+ 	/* Critical Initialization done. Raise NFC clock if needed */
+-	if (flashDeviceInfo[i].flags & NFC_CLOCK_UPSCALE_250M) {
+-		setNANDClock(4);
+-		nand_clock = 250000000;
++	if (flashDeviceInfo[i].flags & NFC_CLOCK_UPSCALE_200M) {
++		setNANDClock(5);
++		nand_clock = 200000000;
+ 	}
+ 
+ 	/* Configure the command set based on page size */
+@@ -2450,7 +2480,7 @@ static MV_STATUS mvNfcDeviceModeSet(MV_NFC_CTRL *nfcCtrl, MV_NFC_ONFI_MODE mode)
+ 
+ 	if (mode == MV_NFC_ONFI_MODE_3) {
+ 		/* Switch to faster mode */
+-		ret = mvNfcDeviceFeatureSet(nfcCtrl, 0xEF, 0x01, 0x00000013, 0);
++		ret = mvNfcDeviceFeatureSet(nfcCtrl, 0xEF, 0x01, 0x03, 0);
+ 		if (ret != MV_OK)
+ 			return ret;
+ 
+@@ -2465,7 +2495,7 @@ static MV_STATUS mvNfcDeviceModeSet(MV_NFC_CTRL *nfcCtrl, MV_NFC_ONFI_MODE mode)
+ }
+ 
+ 
+-/* #ifdef CONFIG_MTD_NAND_NFC_INIT_RESET */
++#ifdef MTD_NAND_NFC_INIT_RESET
+ MV_STATUS mvNfcReset(void)
+ {
+ 	MV_U32 reg;
+@@ -2509,7 +2539,7 @@ MV_STATUS mvNfcReset(void)
+ Error:
+ 	return errCode;
+ }
+-/* #endif */
++#endif
+ /*******************************************************************************
+ * mvNfcReadIdNative
+ *
+@@ -2598,8 +2628,13 @@ static MV_STATUS mvNfcReadIdNative(MV_NFC_CHIP_SEL cs, MV_U16 *id)
+ *******************************************************************************/
+ static MV_STATUS mvNfcTimingSet(MV_U32 tclk, MV_NFC_FLASH_INFO *flInfo)
+ {
+-	MV_U32 reg;
++	MV_U32 reg, i;
+ 	MV_U32 clk2ns;
++	MV_U32 trc, trp, trh, twc, twp, twh;
++	MV_U32 tadl_nfc, tch_nfc, tcs_nfc, twh_nfc, twp_nfc, trh_nfc, trp_nfc;
++	MV_U32 tr_nfc, trhw_nfc, twhr_nfc, tar_nfc;
++	MV_U32 tr_pre_nfc = 0;
++	MV_U32 ret = MV_OK;
+ 
+ 	switch (tclk) {
+ 	case 125000000:
+@@ -2618,25 +2653,138 @@ static MV_STATUS mvNfcTimingSet(MV_U32 tclk, MV_NFC_FLASH_INFO *flInfo)
+ 		return MV_FAIL;
+ 	};
+ 
+-	/* Configure the Timing-0 register */
+-	reg = 0;
+-	reg |= NFC_TMNG0_SEL_CNTR_MASK;
+-	reg |= ((ns_clk(flInfo->tADL, clk2ns) << NFC_TMNG0_TADL_OFFS) & NFC_TMNG0_TADL_MASK);
+-	reg |= ((ns_clk(flInfo->tCH, clk2ns) << NFC_TMNG0_TCH_OFFS) & NFC_TMNG0_TCH_MASK);
+-	reg |= ((ns_clk(flInfo->tCS, clk2ns) << NFC_TMNG0_TCS_OFFS) & NFC_TMNG0_TCS_MASK);
+-	reg |= ((ns_clk(flInfo->tWH, clk2ns) << NFC_TMNG0_TWH_OFFS) & NFC_TMNG0_TWH_MASK);
+-	reg |= ((ns_clk(flInfo->tWP, clk2ns) << NFC_TMNG0_TWP_OFFS) & NFC_TMNG0_TWP_MASK);
+-	reg |= ((ns_clk(flInfo->tRH, clk2ns) << NFC_TMNG0_TRH_OFFS) & NFC_TMNG0_TRH_MASK);
+-	reg |= ((ns_clk(flInfo->tRP, clk2ns) << NFC_TMNG0_TRP_OFFS) & NFC_TMNG0_TRP_MASK);
++	/* Calculate legal read timing */
++	trc = ns_clk(flInfo->tRC, clk2ns);
++	trp = ns_clk(flInfo->tRP, clk2ns);
++	trh = ns_clk(flInfo->tRH, clk2ns);
++	if (trc > (trp + trh))
++		trh = (trc - trp);
++
++	/* Calculate legal write timing */
++	twc = ns_clk(flInfo->tWC, clk2ns);
++	twp = ns_clk(flInfo->tWP, clk2ns);
++	twh = ns_clk(flInfo->tWH, clk2ns);
++	if (twc > (twp + twh))
++		twh = (twc - twp);
++
++	/* Calculate the timing configurations for register0 */
++	tadl_nfc = (ns_clk(flInfo->tADL, clk2ns) - maxx(ns_clk(flInfo->tCH, clk2ns), twh));
++	tch_nfc = (ns_clk(flInfo->tCH, clk2ns) - 1);
++	tcs_nfc = (ns_clk(flInfo->tCS, clk2ns) - twp - 1);
++	twh_nfc = (twh - 1);
++	twp_nfc = (twp - 1);
++	trh_nfc = (trh - 1);
++	trp_nfc = (trp - 1);
++
++	if (check_limit(tadl_nfc, 5) != tadl_nfc) {
++		ret = MV_OUT_OF_RANGE;
++		tadl_nfc = check_limit(tadl_nfc, 5);
++	}
++
++	if (check_limit(tch_nfc, 3) != tch_nfc) {
++		ret = MV_OUT_OF_RANGE;
++		tch_nfc = check_limit(tch_nfc, 3);
++	}
++
++	if (check_limit(tcs_nfc, 3) != tcs_nfc) {
++		ret = MV_OUT_OF_RANGE;
++		tcs_nfc = check_limit(tcs_nfc, 3);
++	}
++
++	if (check_limit(twh_nfc, 3) != twh_nfc) {
++		ret = MV_OUT_OF_RANGE;
++		twh_nfc = check_limit(twh_nfc, 3);
++	}
++
++	if (check_limit(twp_nfc, 3) != twp_nfc) {
++		ret = MV_OUT_OF_RANGE;
++		twp_nfc = check_limit(twp_nfc, 3);
++	}
++
++	if (check_limit(trh_nfc, 3) != trh_nfc) {
++		ret = MV_OUT_OF_RANGE;
++		trh_nfc = check_limit(trh_nfc, 3);
++	}
++
++	if (check_limit(trp_nfc, 4) != trp_nfc) {
++		ret = MV_OUT_OF_RANGE;
++		trp_nfc = check_limit(trp_nfc, 4);
++	}
++
++	reg =  ((tadl_nfc << NFC_TMNG0_TADL_OFFS) | \
++		(0x1 << NFC_TMNG0_SEL_CNTR_OFFS) | \
++		(0x4 << NFC_TMNG0_RD_CNT_DEL_OFFS) | \
++		(tch_nfc << NFC_TMNG0_TCH_OFFS) | \
++		(tcs_nfc << NFC_TMNG0_TCS_OFFS) | \
++		(twh_nfc << NFC_TMNG0_TWH_OFFS) | \
++		(twp_nfc << NFC_TMNG0_TWP_OFFS) | \
++		(0x0 << NFC_TMNG0_SEL_NRE_EDGE_OFFS) | \
++		((trp_nfc >> 3) << NFC_TMNG0_ETRP_OFFS) | \
++		(trh_nfc << NFC_TMNG0_TRH_OFFS) | \
++		((trp_nfc & 0x7) << NFC_TMNG0_TRP_OFFS));
+ 	MV_REG_WRITE(NFC_TIMING_0_REG, reg);
+ 
+-	/* Configure the Timing-1 register */
+-	reg = 0;
+-	reg |= ((ns_clk(flInfo->tR, clk2ns) << NFC_TMNG1_TR_OFFS) & NFC_TMNG1_TR_MASK);
+-	reg |= ((ns_clk(flInfo->tWHR, clk2ns) << NFC_TMNG1_TWHR_OFFS) & NFC_TMNG1_TWHR_MASK);
+-	reg |= ((ns_clk(flInfo->tAR, clk2ns) << NFC_TMNG1_TAR_OFFS) & NFC_TMNG1_TAR_MASK);
+-	reg |= (((flInfo->tRHW / 16) << NFC_TMNG1_TRHW_OFFS) & NFC_TMNG1_TRHW_MASK);
+-	reg |= NFC_TMNG1_WAIT_MODE_MASK;
++	/* Calculate the timing configurations for register1 */
++	tr_nfc = (ns_clk(flInfo->tR, clk2ns) - tch_nfc - 3);
++	trhw_nfc = (ns_clk(flInfo->tRHW, clk2ns) % 16) ? ((ns_clk(flInfo->tRHW, clk2ns) / 16) + 1) : (ns_clk(flInfo->tRHW, clk2ns) / 16);
++
++	/*
++	 * For simplicity Assuming that tar == twhr
++	 * loop over all 16 possible values of tWHR_NFC and find smallest possible value (if possible!!!)
++	 */
++	twhr_nfc = 17; /* big number */
++	for (i=0; i<16; i++) {
++		if ( (maxx(twh_nfc, tch_nfc) + maxx (i, maxx(0, i - maxx(twh_nfc, tch_nfc))) + 2) >= ns_clk(flInfo->tWHR, clk2ns))
++			if (twhr_nfc > i)
++				twhr_nfc = i;
++	}
++
++	if (twhr_nfc >= 16) {
++		twhr_nfc = 15; /* worst case - best we can do */
++		ret = MV_OUT_OF_RANGE;
++	}
++
++	tar_nfc = twhr_nfc; /* our initial assumption */
++
++	if (tr_nfc > 0xFFFF) {
++		tr_pre_nfc = 1;
++		tr_nfc = ((tr_nfc % 16) ? ((tr_nfc/16) + 1) : (tr_nfc/16));
++	}
++
++#ifndef MTD_NAND_NFC_NEGLECT_RNB
++	/* If RnBx signal is used, then override tR to a very small and legal value */
++	tr_nfc = 0xFF;
++	tr_pre_nfc = 0;
++#endif
++
++	if (check_limit(tr_nfc, 16) != tr_nfc) {
++		ret = MV_OUT_OF_RANGE;
++		tr_nfc = check_limit(tr_nfc, 16);
++	}
++
++	if (check_limit(trhw_nfc, 2) != trhw_nfc) {
++		ret = MV_OUT_OF_RANGE;
++		trhw_nfc = check_limit(trhw_nfc, 2);
++	}
++
++	if (check_limit(twhr_nfc, 4) != twhr_nfc) {
++		ret = MV_OUT_OF_RANGE;
++		twhr_nfc = check_limit(twhr_nfc, 4);
++	}
++
++	if (check_limit(tar_nfc, 4) != tar_nfc) {
++		ret = MV_OUT_OF_RANGE;
++		tar_nfc = check_limit(tar_nfc, 5);
++	}
++
++	reg = ((tr_nfc << NFC_TMNG1_TR_OFFS) | \
++		(tr_pre_nfc << NFC_TMNG1_PRESCALE_OFFS) | \
++		(trhw_nfc << NFC_TMNG1_TRHW_OFFS) | \
++		(twhr_nfc << NFC_TMNG1_TWHR_OFFS) | \
++		(tar_nfc << NFC_TMNG1_TAR_OFFS));
++#ifndef MTD_NAND_NFC_NEGLECT_RNB
++	reg |= (0x1 << NFC_TMNG1_WAIT_MODE_OFFS);
++#endif
+ 	MV_REG_WRITE(NFC_TIMING_1_REG, reg);
+ 
+ 	return MV_OK;
+diff --git a/arch/arm/plat-armada/mv_hal/nfc/mvNfcRegs.h b/arch/arm/plat-armada/mv_hal/nfc/mvNfcRegs.h
+index c3a9d10..213b0ce 100644
+--- a/arch/arm/plat-armada/mv_hal/nfc/mvNfcRegs.h
++++ b/arch/arm/plat-armada/mv_hal/nfc/mvNfcRegs.h
+@@ -118,8 +118,8 @@ extern "C" {
+ #define NFC_TMNG0_TRP_MASK		(0x7 << NFC_TMNG0_TRP_OFFS)
+ #define NFC_TMNG0_TRH_OFFS		3
+ #define NFC_TMNG0_TRH_MASK		(0x7 << NFC_TMNG0_TRH_OFFS)
+-#define NFC_TMNG0_ETRP_MASK		(0x1 << 6)
+-#define NFC_TMNG0_SEL_NRE_EDGE_MASK	(0x1 << 7)
++#define NFC_TMNG0_ETRP_OFFS		6
++#define NFC_TMNG0_SEL_NRE_EDGE_OFFS	7
+ #define NFC_TMNG0_TWP_OFFS		8
+ #define NFC_TMNG0_TWP_MASK		(0x7 << NFC_TMNG0_TWP_OFFS)
+ #define NFC_TMNG0_TWH_OFFS		11
+@@ -130,7 +130,7 @@ extern "C" {
+ #define NFC_TMNG0_TCH_MASK		(0x7 << NFC_TMNG0_TCH_OFFS)
+ #define NFC_TMNG0_RD_CNT_DEL_OFFS	22
+ #define NFC_TMNG0_RD_CNT_DEL_MASK	(0xF << NFC_TMNG0_RD_CNT_DEL_OFFS)
+-#define NFC_TMNG0_SEL_CNTR_MASK		(0x1 << 26)
++#define NFC_TMNG0_SEL_CNTR_OFFS		26
+ #define NFC_TMNG0_TADL_OFFS		27
+ #define NFC_TMNG0_TADL_MASK		(0x1F << NFC_TMNG0_TADL_OFFS)
+ 
+@@ -142,8 +142,8 @@ extern "C" {
+ #define NFC_TMNG1_TWHR_MASK		(0xF << NFC_TMNG1_TWHR_OFFS)
+ #define NFC_TMNG1_TRHW_OFFS		8
+ #define NFC_TMNG1_TRHW_MASK		(0x3 << NFC_TMNG1_TRHW_OFFS)
+-#define NFC_TMNG1_PRESCALE_MASK		(0x1 << 14)
+-#define NFC_TMNG1_WAIT_MODE_MASK	(0x1 << 15)
++#define NFC_TMNG1_PRESCALE_OFFS		14
++#define NFC_TMNG1_WAIT_MODE_OFFS	15
+ #define NFC_TMNG1_TR_OFFS		16
+ #define NFC_TMNG1_TR_MASK		(0xFFFF << NFC_TMNG1_TR_OFFS)
+ 
+-- 
+1.7.9.5
+

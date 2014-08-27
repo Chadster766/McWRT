@@ -1,0 +1,22 @@
+--- a/src/socketlib.c
++++ b/src/socketlib.c
+@@ -392,17 +392,15 @@ int socket_is_data_readable(int s, int t
+ wput_socket * socket_timeout_connect(wput_socket * sock, struct sockaddr *remote_addr, size_t size, int timeout) {
+   int c = 0;
+   printout(vDEBUG, "initiating timeout connect (%d)\n", timeout);
+-#ifdef WIN32
+   /* reset errno before connecting. otherwise connection might "fail" for:
+    * no such file or directory ;) */
+   errno = 0;
+-#endif
+-  socket_set_blocking(sock->fd, 0);
++  socket_set_blocking(sock->fd, 1);
+   c = connect(sock->fd,remote_addr,size);
+   /* here was a check also for errno != 36 (FILENAMETOOLONG)
+    * maybe this was EINPROGRESS on another system? */
+   if(errno > 0 && errno != EINPROGRESS) {
+-	printout(vMORE, "[%s]", strerror(errno));
++	printout(vMORE, "[%d:%s] ", errno, strerror(errno));
+ 	return NULL;
+   }
+   /* DEBUG if(c == -1) perror("connect"); */

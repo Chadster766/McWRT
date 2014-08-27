@@ -1,0 +1,55 @@
+--- a/linux.c
++++ b/linux.c
+@@ -16,10 +16,11 @@
+ #include <string.h>
+ #include <sys/ioctl.h>
+ 
++#ifdef WITH_PARPORT
+ /* ieee1284.h uses HAVE_IEEE1284_H, so we undefine it */
+ #undef HAVE_IEEE1284_H
+ #include <ieee1284.h>
+-
++#endif
+ #include "internal.h"
+ #include "inklevel.h"
+ #include "platform_specific.h"
+@@ -32,7 +33,9 @@
+ 
+ int get_device_id(const int port, const char *device_file, 
+                   const int portnumber, char *device_id) {
++#ifdef WITH_PARPORT
+   struct parport_list parports;
++#endif
+   char tmp[BUFLEN];
+   char device_file1[256];
+   char device_file2[256];
+@@ -41,6 +44,7 @@ int get_device_id(const int port, const 
+   char *c;
+   int realsize;
+ 
++#ifdef WITH_PARPORT
+   if (port == PARPORT ) {
+     /* check if we have appropiate permissions */
+ 
+@@ -73,7 +77,9 @@ int get_device_id(const int port, const 
+ 
+     return COULD_NOT_GET_DEVICE_ID;
+ 
+-  } else if (port == USB || port == CUSTOM_USB) {
++  } else
++#endif
++  if (port == USB || port == CUSTOM_USB) {
+ 
+     if (port == USB) {
+       sprintf(device_file1, "/dev/usb/lp%d", portnumber);
+@@ -138,8 +144,10 @@ int open_printer_device(const int port, 
+   if (port == USB) {
+     sprintf(device_file1, "/dev/usb/lp%d", portnumber);
+     sprintf(device_file2, "/dev/usblp%d", portnumber);
++#ifdef WITH_PARPORT
+   } else if (port == PARPORT) {
+     sprintf(device_file1, "/dev/lp%d", portnumber);
++#endif
+   } else if (port == CUSTOM_USB) {
+     strncpy(device_file1, device_file, 255);
+     device_file1[255] = '\0';

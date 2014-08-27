@@ -1,0 +1,45 @@
+--- a/configure.ac
++++ b/configure.ac
+@@ -62,12 +62,7 @@ GP_REFERENCES()dnl
+ dnl ---------------------------------------------------------------------------
+ dnl i18n support
+ dnl ---------------------------------------------------------------------------
+-GP_GETTEXT_HACK([],[Lutz Müller and others],[${MAIL_GPHOTO_TRANSLATION}])
+-ALL_LINGUAS="az cs da de en_GB es eu fi fr hu id it ja nl pa pl pt_BR ro ru rw sk sr sv uk vi zh_CN zh_TW"
+-AM_GNU_GETTEXT_VERSION([0.14.1])
+-AM_GNU_GETTEXT([external])
+ AM_ICONV()
+-GP_GETTEXT_FLAGS()
+ 
+ dnl We cannot use AC_DEFINE_UNQUOTED() for these definitions, as
+ dnl we require make to do insert the proper $(datadir) value
+@@ -352,11 +347,9 @@ AC_SUBST([AM_LDFLAGS])
+ # Create output files
+ # ---------------------------------------------------------------------------
+ AC_CONFIG_FILES([
+-po/Makefile.in 
+ Makefile
+ gphoto2/Makefile
+ m4m/Makefile
+-doc/Makefile
+ contrib/Makefile
+ packaging/Makefile
+ packaging/rpm/Makefile
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -1,3 +1,3 @@
+-SUBDIRS = m4m contrib doc gphoto2 packaging po
++SUBDIRS = m4m contrib gphoto2 packaging
+ 
+ ACLOCAL_AMFLAGS = -I auto-m4 -I m4m
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -278,7 +278,7 @@ target_alias = @target_alias@
+ top_build_prefix = @top_build_prefix@
+ top_builddir = @top_builddir@
+ top_srcdir = @top_srcdir@
+-SUBDIRS = m4m contrib doc gphoto2 packaging po
++SUBDIRS = m4m contrib gphoto2 packaging
+ ACLOCAL_AMFLAGS = -I auto-m4 -I m4m
+ all: config.h
+ 	$(MAKE) $(AM_MAKEFLAGS) all-recursive

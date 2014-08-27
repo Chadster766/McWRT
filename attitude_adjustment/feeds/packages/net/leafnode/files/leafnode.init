@@ -1,0 +1,13 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2011 OpenWrt.org
+
+START=49
+
+start() {
+	user_exists news 31 || user_add news 31 "" /var/spool/news
+	group_exists news 31 || group_add news 31
+	[ -d /var/spool/news ] || {
+		mkdir -m 0755 -p /var/spool/news
+		chown news:news /var/spool/news
+	}
+}

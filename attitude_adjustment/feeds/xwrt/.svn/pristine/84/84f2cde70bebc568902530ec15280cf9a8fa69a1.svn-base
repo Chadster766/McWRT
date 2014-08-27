@@ -1,0 +1,29 @@
+#!/bin/sh /etc/rc.common
+# backup dmesg
+#
+START=99
+
+dmesgbackup_config() {
+	local cfg="$1"
+	local enabled file gzip GZIP_CMD
+	local DEFAULT_enabled=0
+	local DEFAULT_file="/var/log/dmesg"
+	local DEFAULT_gzip=1
+
+	config_get_bool enabled "$cfg" enabled "$DEFAULT_enabled"
+	[ "$enabled" -eq 1 ] && {
+		config_get file "$cfg" file
+		file=${file:-$DEFAULT_file}
+		config_get_bool gzip "$cfg" gzip "$DEFAULT_gzip"
+		[ "$gzip" -eq 1 ] && {
+			dmesg 2>/dev/null | gzip -c - >"$file.gz"
+		} || {
+			dmesg 2>/dev/null >"$file"
+		}
+	}
+}
+
+start() {
+	config_load system
+	config_foreach dmesgbackup_config dmesgbackup
+}

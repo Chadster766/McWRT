@@ -1,0 +1,1383 @@
+From bfb00efc3141821b682f3148801c09f8681d5879 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Mon, 9 Jul 2012 10:05:14 -0400
+Subject: [PATCH 163/609] Network stack changes to support NFP modules from
+ Rami
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/Makefile                    |   12 ++-
+ .../arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig |   17 +++--
+ drivers/net/ppp/ppp_generic.c                      |   12 +--
+ drivers/net/ppp/pppoe.c                            |   31 +++-----
+ include/linux/mv_nfp.h                             |   54 +++++++++++++
+ include/net/ip6_fib.h                              |    8 +-
+ include/net/neighbour.h                            |    4 +-
+ include/net/netfilter/nf_conntrack_tuple.h         |    6 +-
+ include/net/route.h                                |    2 +-
+ net/8021q/vlan.c                                   |   37 ++++-----
+ net/bridge/br_fdb.c                                |   49 ++++++------
+ net/bridge/br_if.c                                 |   27 ++++---
+ net/bridge/br_private.h                            |    2 +-
+ net/core/Makefile                                  |    7 ++
+ net/core/dev.c                                     |    5 +-
+ net/core/mv_nfp.c                                  |   40 ++++++++++
+ net/core/neighbour.c                               |   48 ++++++------
+ net/ipv4/route.c                                   |   59 +++++++--------
+ net/ipv6/ip6_fib.c                                 |   43 +++++------
+ net/ipv6/netfilter/Kconfig                         |    2 +-
+ net/netfilter/nf_conntrack_core.c                  |   79 +++++++++++---------
+ 21 files changed, 321 insertions(+), 223 deletions(-)
+ create mode 100644 include/linux/mv_nfp.h
+ create mode 100644 net/core/mv_nfp.c
+
+diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
+index 6df4c8a..bf3ebdf 100644
+--- a/arch/arm/mach-armadaxp/Makefile
++++ b/arch/arm/mach-armadaxp/Makefile
+@@ -16,7 +16,7 @@
+ include 	  $(srctree)/arch/arm/mach-armadaxp/config/mvRules.mk
+ 
+ ifdef CONFIG_MV_ETH_NFP
+-	NFPOBJS += $(LSP_NFP_MGR_DIR)/mv_nfp_mgr.o $(LSP_NFP_MGR_DIR)/nfp_sysfs.o  $(LSP_NFP_MGR_DIR)/mv_nfp_hooks.o \
++	NFPOBJS += $(LSP_NFP_MGR_DIR)/mv_nfp_mgr.o $(LSP_NFP_MGR_DIR)/nfp_sysfs.o \
+ 		$(LSP_NET_DEV_DIR)/mv_eth_nfp.o
+ endif
+ 
+@@ -27,6 +27,10 @@ ifdef CONFIG_IPV6
+ endif
+ endif
+ 
++ifeq ($(CONFIG_MV_ETH_NFP_LEARN),y)
++	NFPOBJS += $(LSP_NFP_MGR_DIR)/mv_nfp_hooks.o
++endif
++
+ ifdef CONFIG_MV_ETH_NFP_CT
+ 	NFPOBJS += $(LSP_NFP_MGR_DIR)/nfp_ct_sysfs.o
+ ifdef CONFIG_IPV6
+@@ -76,6 +80,12 @@ nfp-objs = $(NFPOBJS)
+ obj-m := nfp.o
+ endif
+ 
++ifeq ($(CONFIG_MV_ETH_NFP_LEARN),m)
++nfp_learn-objs = $(LSP_NFP_MGR_DIR)/mv_nfp_hooks.o
++obj-m += nfp_learn.o
++endif
++
++
+ # Objects list
+ COMMON_OBJS	= $(COMMON_DIR)/mvDebug.o $(COMMON_DIR)/mvCommon.o $(COMMON_DIR)/mvStack.o $(COMMON_DIR)/mvList.o $(COMMON_DIR)/mvIpc.o
+ 
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
+index 976c6c8..519591b 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
+@@ -688,8 +688,13 @@ config MV_ETH_NFP_DEF
+         depends on MV_ETH_NFP
+         int "Default value for NFP state:  0 - OFF, 1 - ON"
+         default 0
+-	range 0 1
++
++config MV_ETH_NFP_LEARN
++        tristate "NFP Dynamic Learning"
++		depends on MV_ETH_NFP
++	default n
+         ---help---
++        Choosing this option will enable NFP Dynamic Learning.
+ 
+ config MV_ETH_NFP_MODE_DEF
+         depends on MV_ETH_NFP
+@@ -739,7 +744,7 @@ config  MV_ETH_NFP_BRIDGE_MODE
+ endchoice
+ 
+ config	MV_ETH_NFP_FDB_LEARN
+-	depends on MV_ETH_NFP_BRIDGE && MV_ETH_NFP_FDB_MODE && BRIDGE && MV_ETH_NFP!=m
++	depends on MV_ETH_NFP_BRIDGE && MV_ETH_NFP_FDB_MODE && BRIDGE && MV_ETH_NFP_LEARN
+ 	bool "Support NFP FDB Dynamic Learning"
+ 	default y
+ 	---help---
+@@ -760,7 +765,7 @@ config MV_ETH_NFP_VLAN
+         Choosing this option will enable NFP VLANs support.
+ 
+ config MV_ETH_NFP_VLAN_LEARN
+-        depends on MV_ETH_NFP_VLAN && VLAN_8021Q && MV_ETH_NFP!=m
++        depends on MV_ETH_NFP_VLAN && VLAN_8021Q && MV_ETH_NFP_LEARN
+         bool "Support NFP VLAN Dynamic Learning"
+         default y
+         ---help---
+@@ -782,7 +787,7 @@ config MV_ETH_NFP_FIB
+         Choosing this option will enable NFP routing support.
+ 
+ config MV_ETH_NFP_FIB_LEARN
+-        depends on MV_ETH_NFP_FIB && MV_ETH_NFP!=m
++        depends on MV_ETH_NFP_FIB && MV_ETH_NFP_LEARN
+         bool "Support NFP Routing Dynamic Learning"
+         default y
+         ---help---
+@@ -804,7 +809,7 @@ config MV_ETH_NFP_CT
+         Choosing this option will enable NFP 5 Tuple Rules support.
+ 
+ config MV_ETH_NFP_CT_LEARN
+-        depends on MV_ETH_NFP_CT && NF_CONNTRACK && MV_ETH_NFP!=m
++        depends on MV_ETH_NFP_CT && NF_CONNTRACK && MV_ETH_NFP_LEARN
+         bool "Support NFP 5 Tuple Dynamic Learning"
+         default y
+         ---help---
+@@ -847,7 +852,7 @@ config  MV_ETH_NFP_PPP
+ 	Choosing this option will enable NFP PPPoE protocol.
+ 
+ config MV_ETH_NFP_PPP_LEARN
+-        depends on MV_ETH_NFP_PPP && PPPOE && MV_ETH_NFP!=m
++        depends on MV_ETH_NFP_PPP && PPPOE && MV_ETH_NFP_LEARN
+         bool "Support NFP PPPoE Dynamic Learning"
+         default y
+         ---help---
+diff --git a/drivers/net/ppp/ppp_generic.c b/drivers/net/ppp/ppp_generic.c
+index 3178c73..5bf7b72 100644
+--- a/drivers/net/ppp/ppp_generic.c
++++ b/drivers/net/ppp/ppp_generic.c
+@@ -55,9 +55,6 @@
+ #include <net/netns/generic.h>
+ 
+ #define PPP_VERSION	"2.4.2"
+-#if defined(CONFIG_MV_ETH_NFP_PPP_LEARN)
+-exte int nfp_hook_ppp_compnete(u32 chan, struct net_device *ppp_dev);
+-#endif /* defined(CONFIG_MV_ETH_NFP_PPP_LEARN) */
+ 
+ /*
+  * Network protocols we support.
+@@ -2843,9 +2840,12 @@ ppp_connect_channel(struct channel *pch, int unit)
+ 	atomic_inc(&ppp->file.refcnt);
+ 	ppp_unlock(ppp);
+ 	ret = 0;
+-#if defined(CONFIG_MV_ETH_NFP_PPP_LEARN)
+-	nfp_hook_ppp_complete((u32)pch->chan, ppp->dev);
+-#endif /* defined(CONFIG_MV_ETH_NFP_PPP_LEARN) */
++
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++	if (nfp_mgr_p->nfp_hook_ppp_complete)
++		nfp_mgr_p->nfp_hook_ppp_complete((u32)pch->chan, ppp->dev);
++#endif /* CONFIG_MV_ETH_NFP_LEARN || CONFIG_MV_ETH_NFP_LEARN_MODULE */
++
+ outl:
+ 	write_unlock_bh(&pch->upl);
+  out:
+diff --git a/drivers/net/ppp/pppoe.c b/drivers/net/ppp/pppoe.c
+index 3e4f28e..daff053 100644
+--- a/drivers/net/ppp/pppoe.c
++++ b/drivers/net/ppp/pppoe.c
+@@ -84,13 +84,6 @@
+ #include <net/sock.h>
+ 
+ #include <asm/uaccess.h>
+-#if defined(CONFIG_MV_ETH_NFP_PPP_LEARN)
+-extern int nfp_ppp_db_init(void);
+-extern int nfp_hook_ppp_info_del(u32 channel);
+-extern int nfp_hook_ppp_half_set(u16 sid, u32 chan, struct net_device *eth_dev, char *remoteMac);
+-extern int nfp_ppp_db_clear(void);
+-#endif /* defined(CONFIG_MV_ETH_NFP_PPP_LEARN) */
+-
+ 
+ #define PPPOE_HASH_BITS 4
+ #define PPPOE_HASH_SIZE (1 << PPPOE_HASH_BITS)
+@@ -600,9 +593,11 @@ static int pppoe_release(struct socket *sock)
+ 	 * protect "po" from concurrent updates
+ 	 * on pppoe_flush_dev
+ 	 */
+-#if defined(CONFIG_MV_ETH_NFP_PPP_LEARN)
+-	nfp_hook_ppp_info_del((u32)&po->chan);
+-#endif /* CONFIG_MV_ETH_NFP_PPP_LEARN */
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++	f (nfp_mgr_p->nfp_hook_ppp_info_del)
++		p_mgr_p->nfp_hook_ppp_info_del((u32)&po->chan);
++#endif
++
+ 	delete_item(pn, po->pppoe_pa.sid, po->pppoe_pa.remote,
+ 		    po->pppoe_ifindex);
+ 
+@@ -703,9 +698,12 @@ static int pppoe_connect(struct socket *sock, struct sockaddr *uservaddr,
+ 		}
+ 
+ 		sk->sk_state = PPPOX_CONNECTED;
+-#if defined(CONFIG_MV_ETH_NFP_PPP_LEARN)
+-	nfp_hook_ppp_half_set(sp->sa_addr.pppoe.sid, (u32)&po->chan, dev, po->pppoe_pa.remote);
+-#endif /* defined(CONFIG_MV_ETH_NFP_PPP_LEARN) */
++
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++	if (nfp_mgr_p->nfp_hook_ppp_half_set)
++		p_mgr_p->nfp_hook_ppp_half_set(sp->sa_addr.pppoe.sid, (u32)&po->chan, dev, po->pppoe_pa.remote);
++#endif /* CONFIG_MV_ETH_NFP_LEARN || CONFIG_MV_ETH_NFP_LEARN_MODULE */
++
+ 	}
+ 
+ 	po->num = sp->sa_addr.pppoe.sid;
+@@ -1191,9 +1189,6 @@ static int __init pppoe_init(void)
+ 	dev_add_pack(&pppoes_ptype);
+ 	dev_add_pack(&pppoed_ptype);
+ 	register_netdevice_notifier(&pppoe_notifier);
+-#if defined(CONFIG_MV_ETH_NFP_PPP_LEARN)
+-	nfp_ppp_db_init();
+-#endif /* defined(CONFIG_MV_ETH_NFP_PPP_LEARN) */
+ 
+ 	return 0;
+ 
+@@ -1207,10 +1202,6 @@ out:
+ 
+ static void __exit pppoe_exit(void)
+ {
+-#if defined(CONFIG_MV_ETH_NFP_PPP_LEARN)
+-	nfp_ppp_db_clear();
+-#endif /*  defined(CONFIG_MV_ETH_NFP_PPP_LEARN)*/
+-
+ 	unregister_netdevice_notifier(&pppoe_notifier);
+ 	dev_remove_pack(&pppoed_ptype);
+ 	dev_remove_pack(&pppoes_ptype);
+diff --git a/include/linux/mv_nfp.h b/include/linux/mv_nfp.h
+new file mode 100644
+index 0000000..4602697
+--- /dev/null
++++ b/include/linux/mv_nfp.h
+@@ -0,0 +1,54 @@
++/* linux/mv_nfp.h */
++
++#ifndef LINUX_MV_NFP_H
++#define LINUX_MV_NFP_H
++
++#include <net/netfilter/nf_conntrack.h>
++#include <net/netfilter/nf_nat.h>
++
++#if defined(CONFIG_MV_ETH_NFP) || defined(CONFIG_MV_ETH_NFP_MODULE)
++struct nfp_hook_ops {
++	int (*nfp_hook_fib_rule_add)(int family, u8 *src_l3, u8 *dst_l3, u8 *gw,
++							 int iif, int oif);
++	int (*nfp_hook_fib_rule_del)(int family, u8 *src_l3, u8 *dst_l3,
++					int iif, int oif);
++	int (*nfp_hook_fib_rule_age)(int family, u8 *src_l3, u8 *dst_l3,
++					int iif, int oif);
++	int (*nfp_hook_arp_add)(int family, u8 *ip, u8 *mac, int if_index);
++	int (*nfp_hook_arp_delete)(int family, u8 *ip);
++	int (*nfp_hook_arp_is_confirmed)(int family, u8 *ip);
++
++	int (*nfp_hook_fdb_rule_add)(int br_index, int if_index, u8 *mac, int is_local);
++	int (*nfp_hook_fdb_rule_age)(int br_index, int if_index, u8 *mac);
++	int (*nfp_hook_fdb_rule_del)(int br_index, int if_index, u8 *mac);
++
++	int (*nfp_hook_vlan_add)(int if_index, struct net_device *dev,
++					int real_if_index, int vlan_id);
++	int (*nfp_hook_vlan_del)(int if_index);
++
++	void (*nfp_hook_ct_del)(int family, u8 *src_l3, u8 *dst_l3, u16 sport, u16 dport, u8 proto);
++	int (*nfp_hook_ct_age)(int family, u8 *src_l3, u8 *dst_l3, u16 sport, u16 dport, u8 proto);
++	void (*nfp_ct_sync)(int family);
++
++	int (*nfp_hook_del_br)(int ifindex);
++	int (*nfp_hook_del_port_from_br)(int bridge_if, int port_if);
++
++	int (*nfp_hook_ppp_info_del)(u32 channel);
++	int (*nfp_hook_ppp_half_set)(u16 sid, u32 chan, struct net_device *eth_dev, char *remoteMac);
++	int (*nfp_hook_ppp_complete)(u32 chan, struct net_device *ppp_dev);
++
++	int (*nfp_hook_move_nat_to_nfp)(const struct nf_conntrack_tuple *tuple,
++					const struct nf_conntrack_tuple *target,
++					enum nf_nat_manip_type maniptype);
++	int (*nfp_hook_move_fwd_to_nfp)(const struct nf_conntrack_tuple *tuple,
++					int mode);
++	int (*nfp_is_learning_enabled)(void);
++	int (*nfp_ct_is_learning_enabled)(void);
++};
++
++extern struct nfp_hook_ops *nfp_mgr_p;
++
++int nfp_init_nfp_hook_ops(void);
++
++#endif /* CONFIG_MV_ETH_NFP */
++#endif
+diff --git a/include/net/ip6_fib.h b/include/net/ip6_fib.h
+index 2efb1d6..5de0af5 100644
+--- a/include/net/ip6_fib.h
++++ b/include/net/ip6_fib.h
+@@ -1,8 +1,8 @@
+ /*
+- *	Linux INET6 implementation 
++ *	Linux INET6 implementation
+  *
+  *	Authors:
+- *	Pedro Roque		<roque@di.fc.ul.pt>	
++ *	Pedro Roque		<roque@di.fc.ul.pt>
+  *
+  *	This program is free software; you can redistribute it and/or
+  *      modify it under the terms of the GNU General Public License
+@@ -120,10 +120,10 @@ struct rt6_info {
+ 
+ 	u8				rt6i_protocol;
+ 
+-#if defined (CONFIG_MV_ETH_NFP_FIB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 	int				rt6i_iifindex;
+ 	bool 			nfp;
+-#endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ };
+ 
+ static inline struct inet6_dev *ip6_dst_idev(struct dst_entry *dst)
+diff --git a/include/net/neighbour.h b/include/net/neighbour.h
+index fa927d9..8a842e3 100644
+--- a/include/net/neighbour.h
++++ b/include/net/neighbour.h
+@@ -113,9 +113,9 @@ struct neighbour {
+ 	const struct neigh_ops	*ops;
+ 	struct rcu_head		rcu;
+ 	struct net_device	*dev;
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 	bool 			nfp;
+-#endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 	u8			primary_key[0];
+ };
+ 
+diff --git a/include/net/netfilter/nf_conntrack_tuple.h b/include/net/netfilter/nf_conntrack_tuple.h
+index d85d340..5bb729b 100644
+--- a/include/net/netfilter/nf_conntrack_tuple.h
++++ b/include/net/netfilter/nf_conntrack_tuple.h
+@@ -71,14 +71,14 @@ struct nf_conntrack_tuple {
+ 		u_int8_t dir;
+ 	} dst;
+ 
+-#if defined(CONFIG_MV_ETH_NFP_CT_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 	/* If true, this connection is handled by NFP */
+ 	bool nfp;
+ 	int ifindex;
+ 	bool nfpCapable;
+ 	bool udpCsum;
+ 	struct ipt_nfp_info *info;
+-#endif /* CONFIG_MV_ETH_NFP_CT_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ };
+ 
+ struct nf_conntrack_tuple_mask {
+@@ -132,7 +132,7 @@ struct nf_conntrack_tuple_hash {
+ 
+ static inline bool __nf_ct_tuple_src_equal(const struct nf_conntrack_tuple *t1,
+ 					   const struct nf_conntrack_tuple *t2)
+-{ 
++{
+ 	return (nf_inet_addr_cmp(&t1->src.u3, &t2->src.u3) &&
+ 		t1->src.u.all == t2->src.u.all &&
+ 		t1->src.l3num == t2->src.l3num);
+diff --git a/include/net/route.h b/include/net/route.h
+index 1a607ef..fc0ff7a 100644
+--- a/include/net/route.h
++++ b/include/net/route.h
+@@ -70,7 +70,7 @@ struct rtable {
+ 	struct inet_peer	*peer; /* long-living peer info */
+ 	struct fib_info		*fi; /* for client ref to shared metrics */
+ 
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 	bool 			nfp;
+ #endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
+ };
+diff --git a/net/8021q/vlan.c b/net/8021q/vlan.c
+index 94134c1..39d713f 100644
+--- a/net/8021q/vlan.c
++++ b/net/8021q/vlan.c
+@@ -31,6 +31,7 @@
+ #include <net/arp.h>
+ #include <linux/rtnetlink.h>
+ #include <linux/notifier.h>
++#include <linux/mv_nfp.h>
+ #include <net/rtnetlink.h>
+ #include <net/net_namespace.h>
+ #include <net/netns/generic.h>
+@@ -43,12 +44,6 @@
+ #define DRV_VERSION "1.8"
+ 
+ 
+-#if defined(CONFIG_MV_ETH_NFP_VLAN_LEARN)
+-extern int nfp_hook_vlan_add(int if_index, struct net_device *dev,
+-					int real_if_index, int vlan_id);
+-extern int nfp_hook_vlan_del(int if_index);
+-#endif /* CONFIG_MV_ETH_NFP_VLAN_LEARN */
+-
+ /* Global VLAN variables */
+ 
+ int vlan_net_id __read_mostly;
+@@ -128,11 +123,10 @@ void unregister_vlan_dev(struct net_device *dev, struct list_head *head)
+ 
+ 	if (vlan->flags & VLAN_FLAG_GVRP)
+ 		vlan_gvrp_request_leave(dev);
+-
+-#if defined(CONFIG_MV_ETH_NFP_VLAN_LEARN)
+-	nfp_hook_vlan_del(dev->ifindex);
+-#endif /* CONFIG_MV_ETH_NFP_VLAN_LEARN */
+-
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++	if (nfp_mgr_p->nfp_hook_vlan_del)
++		nfp_mgr_p->nfp_hook_vlan_del(dev->ifindex);
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 	vlan_group_set_device(grp, vlan_id, NULL);
+ 	/* Because unregister_netdevice_queue() makes sure at least one rcu
+ 	 * grace period is respected before device freeing,
+@@ -298,11 +292,10 @@ static int register_vlan_device(struct net_device *real_dev, u16 vlan_id)
+ 	err = register_vlan_dev(new_dev);
+ 	if (err < 0)
+ 		goto out_free_newdev;
+-
+-#if defined(CONFIG_MV_ETH_NFP_VLAN_LEARN)
+-	nfp_hook_vlan_add(new_dev->ifindex, new_dev, real_dev->ifindex, vlan_id);
+-#endif /* CONFIG_MV_ETH_NFP_VLAN_LEARN */
+-
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++	if (nfp_mgr_p->nfp_hook_vlan_add)
++		nfp_mgr_p->nfp_hook_vlan_add(new_dev->ifindex, new_dev, real_dev->ifindex, vlan_id);
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 	return 0;
+ 
+ out_free_newdev:
+@@ -727,7 +720,7 @@ static void __exit vlan_cleanup_module(void)
+ 	vlan_gvrp_uninit();
+ }
+ 
+-#if defined(CONFIG_MV_ETH_NFP_VLAN_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ void vlan_sync(void)
+ {
+ 	struct net_device *dev;
+@@ -738,14 +731,16 @@ void vlan_sync(void)
+ 			struct vlan_dev_info *vlan = vlan_dev_info(dev);
+ 			struct net_device *real_dev = vlan->real_dev;
+ 			u16 vlan_id = vlan->vlan_id;
+-
+-			if (nfp_hook_vlan_add(dev->ifindex, dev, real_dev->ifindex, vlan_id))
+-				printk("nfp_hook_vlan_add failed in %s\n",__func__);
++			if (nfp_mgr_p->nfp_hook_vlan_add)
++				if (nfp_mgr_p->nfp_hook_vlan_add(dev->ifindex, dev, real_dev->ifindex, vlan_id))
++					printk(KERN_ERR "nfp_hook_vlan_add failed in %s\n", __func__);
+ 		}
+ 	}
+ 	rtnl_unlock();
+ }
+-#endif /* CONFIG_MV_ETH_NFP_VLAN_LEARN */
++EXPORT_SYMBOL(vlan_sync);
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
++
+ 
+ module_init(vlan_proto_init);
+ module_exit(vlan_cleanup_module);
+diff --git a/net/bridge/br_fdb.c b/net/bridge/br_fdb.c
+index 7e63781..8c4a360 100644
+--- a/net/bridge/br_fdb.c
++++ b/net/bridge/br_fdb.c
+@@ -23,6 +23,7 @@
+ #include <linux/slab.h>
+ #include <linux/atomic.h>
+ #include <asm/unaligned.h>
++#include <linux/mv_nfp.h>
+ #include "br_private.h"
+ 
+ static struct kmem_cache *br_fdb_cache __read_mostly;
+@@ -32,12 +33,6 @@ static void fdb_notify(const struct net_bridge_fdb_entry *, int);
+ 
+ static u32 fdb_salt __read_mostly;
+ 
+-#if defined(CONFIG_MV_ETH_NFP_FDB_LEARN)
+-int nfp_hook_fdb_rule_add(int br_index, int if_index, const u8 *mac, int is_local);
+-int nfp_hook_fdb_rule_age(int br_index, int if_index, const u8 *mac);
+-int nfp_hook_fdb_rule_del(int br_index, int if_index, const u8 *mac);
+-#endif /* CONFIG_MV_ETH_NFP_FDB_LEARN */
+-
+ int __init br_fdb_init(void)
+ {
+ 	br_fdb_cache = kmem_cache_create("bridge_fdb_cache",
+@@ -70,14 +65,14 @@ static inline int has_expired(const struct net_bridge *br,
+ {
+ 	if (fdb->is_static)
+ 		return 0;
+-
+-#if defined(CONFIG_MV_ETH_NFP_FDB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 	if (fdb->nfp) {
+-		if (nfp_hook_fdb_rule_age(fdb->dst->br->dev->ifindex,
++		if (nfp_mgr_p->nfp_hook_fdb_rule_age)
++			if (nfp_mgr_p->nfp_hook_fdb_rule_age(fdb->dst->br->dev->ifindex,
+ 					fdb->dst->dev->ifindex, fdb->addr.addr) > 0)
+ 			fdb->updated = jiffies + fdb->dst->br->forward_delay;
+ 	}
+-#endif /* CONFIG_MV_ETH_NFP_FDB_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 
+ 	return time_before_eq(fdb->updated + hold_time(br), jiffies);
+ }
+@@ -98,12 +93,13 @@ static void fdb_rcu_free(struct rcu_head *head)
+ 
+ static inline void fdb_delete(struct net_bridge_fdb_entry *f)
+ {
+-#if defined(CONFIG_MV_ETH_NFP_FDB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 	if (f->nfp) {
+-		nfp_hook_fdb_rule_del(f->dst->br->dev->ifindex,
+-				f->dst->dev->ifindex, f->addr.addr);
++		if (nfp_mgr_p->nfp_hook_fdb_rule_del)
++			nfp_mgr_p->nfp_hook_fdb_rule_del(f->dst->br->dev->ifindex,
++					f->dst->dev->ifindex, f->addr.addr);
+ 	}
+-#endif /* CONFIG_MV_ETH_NFP_FDB_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 
+ 	fdb_notify(f, RTM_DELNEIGH);
+ 	hlist_del_rcu(&f->hlist);
+@@ -166,13 +162,14 @@ void br_fdb_cleanup(unsigned long _data)
+ 			if (f->is_static)
+ 				continue;
+ 
+-#if defined(CONFIG_MV_ETH_NFP_FDB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 			if (f->nfp) {
+-				if (nfp_hook_fdb_rule_age(f->dst->br->dev->ifindex,
++				if (nfp_mgr_p->nfp_hook_fdb_rule_age)
++					if (nfp_mgr_p->nfp_hook_fdb_rule_age(f->dst->br->dev->ifindex,
+ 							f->dst->dev->ifindex, f->addr.addr) > 0)
+ 					f->updated = jiffies + f->dst->br->forward_delay;
+ 			}
+-#endif /* CONFIG_MV_ETH_NFP_FDB_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 
+ 			this_timer = f->updated + delay;
+ 			if (time_before_eq(this_timer, jiffies))
+@@ -380,11 +377,12 @@ static struct net_bridge_fdb_entry *fdb_create(struct hlist_head *head,
+ 		fdb->updated = fdb->used = jiffies;
+ 		hlist_add_head_rcu(&fdb->hlist, head);
+ 
+-#if defined(CONFIG_MV_ETH_NFP_FDB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 		fdb->nfp = false;
+-		if (!nfp_hook_fdb_rule_add(fdb->dst->br->dev->ifindex, fdb->dst->dev->ifindex, addr, is_local))
+-			fdb->nfp = true;
+-#endif /* CONFIG_MV_ETH_NFP_FDB_LEARN */
++		if (nfp_mgr_p->nfp_hook_fdb_rule_add)
++			if (!nfp_mgr_p->nfp_hook_fdb_rule_add(fdb->dst->br->dev->ifindex, fdb->dst->dev->ifindex, addr, is_local))
++				fdb->nfp = true;
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 	}
+ 	return fdb;
+ }
+@@ -741,7 +739,7 @@ int br_fdb_delete(struct sk_buff *skb, struct nlmsghdr *nlh, void *arg)
+ 	return err;
+ }
+ 
+-#if defined(CONFIG_MV_ETH_NFP_FDB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ void fdb_sync(void)
+ {
+ 	struct net_device *dev;
+@@ -757,7 +755,8 @@ void fdb_sync(void)
+ 				struct hlist_node *h, *n;
+ 
+ 				hlist_for_each_entry_safe(fdb, h, n, &br->hash[i], hlist) {
+-					if (!nfp_hook_fdb_rule_add(fdb->dst->br->dev->ifindex,
++					if (nfp_mgr_p->nfp_hook_fdb_rule_add)
++						if (!nfp_mgr_p->nfp_hook_fdb_rule_add(fdb->dst->br->dev->ifindex,
+ 							       fdb->dst->dev->ifindex,
+ 							       fdb->addr.addr,
+ 							       fdb->is_local)) {
+@@ -773,4 +772,6 @@ void fdb_sync(void)
+ 	}
+ 	rtnl_unlock();
+ }
+-#endif /* CONFIG_MV_ETH_NFP_FDB_LEARN */
++EXPORT_SYMBOL(fdb_sync);
++
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+diff --git a/net/bridge/br_if.c b/net/bridge/br_if.c
+index cbbd03a..0b3fd87 100644
+--- a/net/bridge/br_if.c
++++ b/net/bridge/br_if.c
+@@ -22,15 +22,11 @@
+ #include <linux/rtnetlink.h>
+ #include <linux/if_ether.h>
+ #include <linux/slab.h>
++#include <linux/mv_nfp.h>
+ #include <net/sock.h>
+ 
+ #include "br_private.h"
+ 
+-#if defined(CONFIG_MV_ETH_NFP_FDB_LEARN)
+-int nfp_hook_del_br(int ifindex);
+-int nfp_hook_del_port_from_br(int bridge_if, int port_if);
+-#endif /* CONFIG_MV_ETH_NFP_FDB_LEARN */
+-
+ /*
+  * Determine initial path cost based on speed.
+  * using recommendations from 802.1d standard
+@@ -173,18 +169,20 @@ void br_dev_delete(struct net_device *dev, struct list_head *head)
+ 
+ 	list_for_each_entry_safe(p, n, &br->port_list, list) {
+ 
+-#if defined(CONFIG_MV_ETH_NFP_FDB_LEARN)
+-	nfp_hook_del_port_from_br(br->dev->ifindex, p->dev->ifindex);
+-#endif /* CONFIG_MV_ETH_NFP_FDB_LEARN */
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++	if (nfp_mgr_p->nfp_hook_del_port_from_br)
++		nfp_mgr_p->nfp_hook_del_port_from_br(br->dev->ifindex, p->dev->ifindex);
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 
+ 		del_nbp(p);
+ 	}
+ 
+ 	del_timer_sync(&br->gc_timer);
+ 
+-#if defined(CONFIG_MV_ETH_NFP_FDB_LEARN)
+-	nfp_hook_del_br(br->dev->ifindex);
+-#endif /* CONFIG_MV_ETH_NFP_FDB_LEARN */
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++	if (nfp_mgr_p->nfp_hook_del_br)
++		nfp_mgr_p->nfp_hook_del_br(br->dev->ifindex);
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 
+ 	br_sysfs_delbr(br->dev);
+ 	unregister_netdevice_queue(br->dev, head);
+@@ -440,9 +438,10 @@ int br_del_if(struct net_bridge *br, struct net_device *dev)
+ 	if (!p || p->br != br)
+ 		return -EINVAL;
+ 
+-#if defined(CONFIG_MV_ETH_NFP_FDB_LEARN)
+-	nfp_hook_del_port_from_br(br->dev->ifindex, p->dev->ifindex);
+-#endif /* CONFIG_MV_ETH_NFP_FDB_LEARN */
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++	if (nfp_mgr_p->nfp_hook_del_port_from_br)
++		nfp_mgr_p->nfp_hook_del_port_from_br(br->dev->ifindex, p->dev->ifindex);
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 
+ 	del_nbp(p);
+ 
+diff --git a/net/bridge/br_private.h b/net/bridge/br_private.h
+index f47bfa7..2043387 100644
+--- a/net/bridge/br_private.h
++++ b/net/bridge/br_private.h
+@@ -75,7 +75,7 @@ struct net_bridge_fdb_entry
+ 	unsigned char			is_local;
+ 	unsigned char			is_static;
+ 
+-#if defined(CONFIG_MV_ETH_NFP_FDB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 	bool 			nfp;
+ #endif /* CONFIG_MV_ETH_NFP_FDB_LEARN */
+ };
+diff --git a/net/core/Makefile b/net/core/Makefile
+index 0d357b1..4609e29 100644
+--- a/net/core/Makefile
++++ b/net/core/Makefile
+@@ -19,3 +19,10 @@ obj-$(CONFIG_FIB_RULES) += fib_rules.o
+ obj-$(CONFIG_TRACEPOINTS) += net-traces.o
+ obj-$(CONFIG_NET_DROP_MONITOR) += drop_monitor.o
+ obj-$(CONFIG_NETWORK_PHY_TIMESTAMPING) += timestamping.o
++
++ifeq ($(CONFIG_MV_ETH_NFP),y)
++obj-y += mv_nfp.o
++endif
++ifeq ($(CONFIG_MV_ETH_NFP),m)
++obj-y += mv_nfp.o
++endif
+diff --git a/net/core/dev.c b/net/core/dev.c
+index e9fe395..7ebab12 100644
+--- a/net/core/dev.c
++++ b/net/core/dev.c
+@@ -137,7 +137,7 @@
+ #include <linux/if_pppox.h>
+ #include <linux/ppp_defs.h>
+ #include <linux/net_tstamp.h>
+-
++#include <linux/mv_nfp.h>
+ #include "net-sysfs.h"
+ 
+ /* Instead of increasing this, you should create a hash table. */
+@@ -6674,6 +6674,9 @@ static int __init net_dev_init(void)
+ 	dst_init();
+ 	dev_mcast_init();
+ 	rc = 0;
++#if defined(CONFIG_MV_ETH_NFP) || defined(CONFIG_MV_ETH_NFP_MODULE)
++	init_nfp_hook_ops();
++#endif
+ out:
+ 	return rc;
+ }
+diff --git a/net/core/mv_nfp.c b/net/core/mv_nfp.c
+new file mode 100644
+index 0000000..3e8f0cc
+--- /dev/null
++++ b/net/core/mv_nfp.c
+@@ -0,0 +1,40 @@
++/* mv_nfp.c */
++#include "linux/mv_nfp.h"
++
++struct nfp_hook_ops *nfp_mgr_p;
++
++int nfp_init_nfp_hook_ops(void)
++{
++	nfp_mgr_p = kzalloc(sizeof(struct nfp_hook_ops *), GFP_KERNEL);
++	if (!nfp_mgr_p) {
++			printk(KERN_INFO "%s: Could not allocate mem for nfp_mgr_p\n", __func__);
++			return -ENOMEM;
++		}
++
++	nfp_mgr_p->nfp_hook_fib_rule_add 	  = NULL;
++	nfp_mgr_p->nfp_hook_fib_rule_del 	  = NULL;
++	nfp_mgr_p->nfp_hook_fib_rule_age 	  = NULL;
++	nfp_mgr_p->nfp_hook_arp_add      	  = NULL;
++	nfp_mgr_p->nfp_hook_arp_delete   	  = NULL;
++	nfp_mgr_p->nfp_hook_arp_is_confirmed  = NULL;
++	nfp_mgr_p->nfp_hook_fdb_rule_add      = NULL;
++	nfp_mgr_p->nfp_hook_fdb_rule_age      = NULL;
++	nfp_mgr_p->nfp_hook_fdb_rule_del      = NULL;
++	nfp_mgr_p->nfp_hook_vlan_add          = NULL;
++	nfp_mgr_p->nfp_hook_vlan_del          = NULL;
++	nfp_mgr_p->nfp_hook_ct_del			  = NULL;
++	nfp_mgr_p->nfp_hook_ct_age			  = NULL;
++	nfp_mgr_p->nfp_hook_del_br 			  = NULL;
++	nfp_mgr_p->nfp_hook_del_port_from_br  = NULL;
++	nfp_mgr_p->nfp_hook_ppp_info_del 	  = NULL;
++	nfp_mgr_p->nfp_hook_ppp_half_set 	  = NULL;
++	nfp_mgr_p->nfp_hook_ppp_complete      = NULL;
++	nfp_mgr_p->nfp_hook_move_nat_to_nfp   = NULL;
++	nfp_mgr_p->nfp_hook_move_fwd_to_nfp   = NULL;
++	nfp_mgr_p->nfp_hook_ct_age            = NULL;
++	nfp_mgr_p->nfp_ct_sync                = NULL;
++	nfp_mgr_p->nfp_is_learning_enabled    = NULL;
++	nfp_mgr_p->nfp_ct_is_learning_enabled = NULL;
++	return 0;
++}
++EXPORT_SYMBOL(nfp_mgr_p);
+diff --git a/net/core/neighbour.c b/net/core/neighbour.c
+index bb356ed..0d23e28 100644
+--- a/net/core/neighbour.c
++++ b/net/core/neighbour.c
+@@ -36,13 +36,7 @@
+ #include <linux/random.h>
+ #include <linux/string.h>
+ #include <linux/log2.h>
+-
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
+-extern int nfp_hook_arp_add(int family, const u8 *ip, u8 *mac, int if_index);
+-extern int nfp_hook_arp_delete(int family, const u8 *ip);
+-extern int nfp_hook_arp_is_confirmed(int family, const u8 *ip);
+-#endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
+-
++#include <linux/mv_nfp.h>
+ #define NEIGH_DEBUG 1
+ 
+ #define NEIGH_PRINTK(x...) printk(x)
+@@ -707,14 +701,14 @@ void neigh_destroy(struct neighbour *neigh)
+ 	if (neigh_del_timer(neigh))
+ 		printk(KERN_WARNING "Impossible event.\n");
+ 
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+        if (neigh->nfp) {
+-               nfp_hook_arp_delete(neigh->tbl->family, neigh->primary_key);
+-
++		if (nfp_mgr_p->nfp_hook_arp_delete)
++			nfp_mgr_p->nfp_hook_arp_delete(neigh->tbl->family, neigh->primary_key);
+                NEIGH_PRINTK2("0x%8lx: neigh %p, ref=%d, state=%d, nfp=%d is connected in %s.\n",
+                        jiffies, neigh, atomic_read(&neigh->refcnt), neigh->nud_state, neigh->nfp, __func__);
+        }
+-#endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 
+ 	skb_queue_purge(&neigh->arp_queue);
+ 
+@@ -747,15 +741,15 @@ static void neigh_suspect(struct neighbour *neigh)
+  */
+ static void neigh_connect(struct neighbour *neigh)
+ {
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
+-       neigh->nfp = false;
+-       if (!nfp_hook_arp_add(neigh->tbl->family, neigh->primary_key, neigh->ha, neigh->dev->ifindex)) {
+-               neigh->nfp = true;
+-
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++	neigh->nfp = false;
++	if (nfp_mgr_p->nfp_hook_arp_add)
++		if (!nfp_mgr_p->nfp_hook_arp_add(neigh->tbl->family, neigh->primary_key, neigh->ha, neigh->dev->ifindex)) {
++			neigh->nfp = true;
+                NEIGH_PRINTK2("0x%8lx: neigh %p, ref=%d, state=%d, nfp=%d is connected in %s.\n",
+                        jiffies, neigh, atomic_read(&neigh->refcnt), neigh->nud_state, neigh->nfp, __func__);
+        }
+-#endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_LEARN  */
+ 	neigh->output = neigh->ops->connected_output;
+ }
+ 
+@@ -802,20 +796,19 @@ static void neigh_periodic_work(struct work_struct *work)
+ 
+ 			if (time_before(n->used, n->confirmed))
+ 				n->used = n->confirmed;
+-
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 			if ((atomic_read(&n->refcnt) == 1) && (state != NUD_FAILED) &&
+ 				time_after(jiffies, n->used + n->parms->gc_staletime)) {
+ 				if (n->nfp) {
+-					if (nfp_hook_arp_is_confirmed(n->tbl->family, n->primary_key)) {
+-						neigh_event_send(n, NULL);
++					if (nfp_mgr_p->nfp_hook_arp_is_confirmed)
++						if (nfp_mgr_p->nfp_hook_arp_is_confirmed(n->tbl->family, n->primary_key)) {
++							neigh_event_send(n, NULL);
+ 					}
+ 					NEIGH_PRINTK2("0x%8lx: neigh %p ref=%d, state=%d, NFP ARP aging in %s\n",
+ 						jiffies, n, atomic_read(&n->refcnt), n->nud_state, __func__);
+ 				}
+ 			}
+-#endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
+-
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 			if (atomic_read(&n->refcnt) == 1 &&
+ 			    (state == NUD_FAILED ||
+ 			     time_after(jiffies, n->used + n->parms->gc_staletime))) {
+@@ -2898,7 +2891,7 @@ EXPORT_SYMBOL(neigh_sysctl_unregister);
+ 
+ #endif	/* CONFIG_SYSCTL */
+ 
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ void neigh_sync(int family)
+ {
+ 	struct neigh_table *tbl;
+@@ -2920,7 +2913,8 @@ void neigh_sync(int family)
+ 					 if (n->dev == NULL)
+ 						continue;
+ 					n->nfp = false;
+-					if (!nfp_hook_arp_add(n->tbl->family,
++					if (nfp_mgr_p->nfp_hook_arp_add)
++						if (!nfp_mgr_p->nfp_hook_arp_add(n->tbl->family,
+ 							n->primary_key,
+ 							n->ha,
+ 							n->dev->ifindex)) {
+@@ -2932,8 +2926,8 @@ void neigh_sync(int family)
+ 	rcu_read_unlock_bh();
+ 	read_unlock(&neigh_tbl_lock);
+ }
+-
+-#endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
++EXPORT_SYMBOL(neigh_sync);
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 
+ static int __init neigh_init(void)
+ {
+diff --git a/net/ipv4/route.c b/net/ipv4/route.c
+index 30029cb..0ac50fa 100644
+--- a/net/ipv4/route.c
++++ b/net/ipv4/route.c
+@@ -91,6 +91,7 @@
+ #include <linux/rcupdate.h>
+ #include <linux/times.h>
+ #include <linux/slab.h>
++#include <linux/mv_nfp.h>
+ #include <linux/prefetch.h>
+ #include <net/dst.h>
+ #include <net/net_namespace.h>
+@@ -112,13 +113,6 @@
+ #include <net/atmclip.h>
+ #include <net/secure_seq.h>
+ 
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
+-extern int nfp_fib_learn_en;
+-extern int nfp_hook_fib_rule_add(int family, u8 *src_l3, u8 *dst_l3, u8 *gtw_l3, int iif, int oif);
+-extern int nfp_hook_fib_rule_del(int family, u8 *src_l3, u8 *dst_l3, int iif, int oif);
+-extern int nfp_hook_fib_rule_age(int family, u8 *src_l3, u8 *dst_l3, int iif, int oif);
+-#endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
+-
+ #define RT_FL_TOS(oldflp4) \
+ 	((oldflp4)->flowi4_tos & (IPTOS_RT_MASK | RTO_ONLINK))
+ 
+@@ -667,12 +661,12 @@ static inline int ip_rt_proc_init(void)
+ 
+ static inline void rt_free(struct rtable *rt)
+ {
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 		if (rt->nfp)
+-			nfp_hook_fib_rule_del(AF_INET, (u8*)(&rt->rt_src),(u8*)(&rt->rt_dst),
++			if (nfp_mgr_p->nfp_hook_fib_rule_del)
++				nfp_mgr_p->nfp_hook_fib_rule_del(AF_INET, (u8 *)(&rt->rt_src), (u8*)(&rt->rt_dst),
+ 							rt->rt_iif, rt->dst.dev->ifindex);
+-#endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
+-
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 	call_rcu_bh(&rt->dst.rcu_head, dst_rcu_free);
+ }
+ 
+@@ -702,15 +696,14 @@ static int rt_may_expire(struct rtable *rth, unsigned long tmo1, unsigned long t
+ 	int ret = 0;
+ 	if (atomic_read(&rth->dst.__refcnt))
+ 		goto out;
+-
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 	if (rth->nfp) {
+-		if (nfp_hook_fib_rule_age(AF_INET,(u8 *)(&rth->rt_src), (u8 *)(&rth->rt_dst),
++		if (nfp_mgr_p->nfp_hook_fib_rule_age)
++			if (nfp_mgr_p->nfp_hook_fib_rule_age(AF_INET, (u8 *)(&rth->rt_src), (u8 *)(&rth->rt_dst),
+ 						rth->rt_iif, rth->dst.dev->ifindex))
+ 			rth->dst.lastuse = jiffies;
+ 	}
+-#endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
+-
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 	age = jiffies - rth->dst.lastuse;
+ 	if ((age <= tmo1 && !rt_fast_clean(rth)) ||
+ 	    (age <= tmo2 && rt_valuable(rth)))
+@@ -825,7 +818,7 @@ static void rt_do_flush(struct net *net, int process_context)
+ 	}
+ }
+ 
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ void nfp_fib_sync(void)
+ {
+ 	struct rtable *rt;
+@@ -843,7 +836,8 @@ void nfp_fib_sync(void)
+ 
+ 			rt->nfp = false;
+ 			if (!(rt->rt_flags & (RTCF_MULTICAST | RTCF_BROADCAST | RTCF_LOCAL | RTCF_REJECT))) {
+-				if (!nfp_hook_fib_rule_add(AF_INET, (u8 *)(&rt->rt_src), (u8 *)(&rt->rt_dst),
++				if (nfp_mgr_p->nfp_hook_fib_rule_add)
++					if (!nfp_mgr_p->nfp_hook_fib_rule_add(AF_INET, (u8 *)(&rt->rt_src), (u8 *)(&rt->rt_dst),
+ 					  (u8 *)(&rt->rt_gateway), rt->rt_iif, rt->dst.dev->ifindex))
+ 					rt->nfp = true;
+ 			}
+@@ -851,7 +845,8 @@ void nfp_fib_sync(void)
+ 		rcu_read_unlock_bh();
+ 	}
+ }
+-#endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
++EXPORT_SYMBOL(nfp_fib_sync);
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 
+ /*
+  * While freeing expired entries, we compute average chain length
+@@ -2100,9 +2095,9 @@ static int ip_route_input_mc(struct sk_buff *skb, __be32 daddr, __be32 saddr,
+ 			   IN_DEV_CONF_GET(in_dev, NOPOLICY), false);
+ 	if (!rth)
+ 		goto e_nobufs;
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 	rth->nfp = false;
+-#endif
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ #ifdef CONFIG_IP_ROUTE_CLASSID
+ 	rth->dst.tclassid = itag;
+ #endif
+@@ -2265,15 +2260,15 @@ static int __mkroute_input(struct sk_buff *skb,
+ 	rth->dst.output = ip_output;
+ 
+ 	rt_set_nexthop(rth, NULL, res, res->fi, res->type, itag);
+-
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 	rth->nfp = false;
+ 	if (!(rth->rt_flags & (RTCF_MULTICAST | RTCF_BROADCAST | RTCF_LOCAL | RTCF_REJECT))) {
+-		if (!nfp_hook_fib_rule_add(AF_INET, (u8 *)(&rth->rt_src), (u8 *)(&rth->rt_dst),
++		if (nfp_mgr_p->nfp_hook_fib_rule_add)
++			if (!nfp_mgr_p->nfp_hook_fib_rule_add(AF_INET, (u8 *)(&rth->rt_src), (u8 *)(&rth->rt_dst),
+ 					(u8 *)(&rth->rt_gateway), rth->rt_iif, rth->dst.dev->ifindex))
+ 			rth->nfp = true;
+ 	}
+-#endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 
+ 	*result = rth;
+ 	err = 0;
+@@ -2425,9 +2420,9 @@ local_input:
+ 			   IN_DEV_CONF_GET(in_dev, NOPOLICY), false);
+ 	if (!rth)
+ 		goto e_nobufs;
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 	rth->nfp = false;
+-#endif
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 	rth->dst.input= ip_local_deliver;
+ 	rth->dst.output= ip_rt_bug;
+ #ifdef CONFIG_IP_ROUTE_CLASSID
+@@ -2638,11 +2633,9 @@ static struct rtable *__mkroute_output(const struct fib_result *res,
+ 			   IN_DEV_CONF_GET(in_dev, NOXFRM));
+ 	if (!rth)
+ 		return ERR_PTR(-ENOBUFS);
+-
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 	rth->nfp = false;
+-#endif
+-
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 	rth->dst.output = ip_output;
+ 
+ 	rth->rt_key_dst	= orig_daddr;
+@@ -2981,9 +2974,9 @@ struct dst_entry *ipv4_blackhole_route(struct net *net, struct dst_entry *dst_or
+ 		new->dev = ort->dst.dev;
+ 		if (new->dev)
+ 			dev_hold(new->dev);
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 		rt->nfp = false;
+-#endif
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 		rt->rt_key_dst = ort->rt_key_dst;
+ 		rt->rt_key_src = ort->rt_key_src;
+ 		rt->rt_key_tos = ort->rt_key_tos;
+diff --git a/net/ipv6/ip6_fib.c b/net/ipv6/ip6_fib.c
+index 33563dc..912585e 100644
+--- a/net/ipv6/ip6_fib.c
++++ b/net/ipv6/ip6_fib.c
+@@ -27,6 +27,7 @@
+ #include <linux/init.h>
+ #include <linux/list.h>
+ #include <linux/slab.h>
++#include <linux/mv_nfp.h>
+ 
+ #include <net/ipv6.h>
+ #include <net/ndisc.h>
+@@ -43,13 +44,6 @@
+ #define RT6_TRACE(x...) do { ; } while (0)
+ #endif
+ 
+-#if defined (CONFIG_MV_ETH_NFP_FIB_LEARN)
+-extern int nfp_hook_fib_rule_add(int family, const u8 *src_l3, const u8 *dst_l3,
+-				const u8 *def_gtw_l3, int iif, int oif);
+-extern int nfp_hook_fib_rule_del(int family, const u8 *src_l3, const u8 *dst_l3, int iif, int oif);
+-extern int nfp_hook_fib_rule_age(int family, u8 *src_l3, u8 *dst_l3, int iif, int oif);
+-#endif /*  CONFIG_MV_ETH_NFP_FIB_LEARN */
+-
+ static struct kmem_cache * fib6_node_kmem __read_mostly;
+ 
+ enum fib_walk_state_t
+@@ -423,13 +417,14 @@ out:
+ }
+ 
+ 
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ static int fib6_add_node(struct fib6_walker_t *w)
+ {
+ 	struct rt6_info *rt;
+ 	for (rt = w->leaf; rt; rt = rt->dst.rt6_next) {
+ 		if (rt->rt6i_flags & RTF_CACHE) {
+-			if (!nfp_hook_fib_rule_add(AF_INET6, (u8 *)&rt->rt6i_src.addr,
++			if (nfp_mgr_p->nfp_hook_fib_rule_add)
++				if (!nfp_mgr_p->nfp_hook_fib_rule_add(AF_INET6, (u8 *)&rt->rt6i_src.addr,
+ 				(u8 *)&rt->rt6i_dst.addr,
+ 				(u8 *)&rt->rt6i_gateway,
+ 				rt->rt6i_iifindex,
+@@ -453,7 +448,7 @@ void nfp_fib6_sync(void)
+ 
+ 	w.func = fib6_add_node;
+ 	w.prune = 0;
+-
++	printk(KERN_INFO "%s:\n", __func__);
+ 	rcu_read_lock();
+ 	for (h = 0; h < FIB6_TABLE_HASHSZ; h++) {
+ 		head = &net->ipv6.fib_table_hash[h];
+@@ -467,7 +462,9 @@ void nfp_fib6_sync(void)
+ 	rcu_read_unlock();
+ 
+ }
+-#endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
++EXPORT_SYMBOL(nfp_fib6_sync);
++
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 
+ /*
+  *	Routing Table
+@@ -722,16 +719,16 @@ static int fib6_add_rt2node(struct fib6_node *fn, struct rt6_info *rt,
+ 		fn->fn_flags |= RTN_RTINFO;
+ 	}
+ 
+-#if defined (CONFIG_MV_ETH_NFP_FIB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 	rt->nfp = false;
+ 	if (rt->rt6i_flags & RTF_CACHE)	{
+-		if (!nfp_hook_fib_rule_add(AF_INET6, (u8 *)&rt->rt6i_src.addr,
++		if (nfp_mgr_p->nfp_hook_fib_rule_add)
++			if (!nfp_mgr_p->nfp_hook_fib_rule_add(AF_INET6, (u8 *)&rt->rt6i_src.addr,
+ 					(u8 *)&rt->rt6i_dst.addr, (u8 *)&rt->rt6i_gateway,
+ 					rt->rt6i_iifindex, rt->rt6i_dev->ifindex))
+ 				rt->nfp = true;
+ 	}
+-#endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
+-
++#endif
+ 	return 0;
+ }
+ 
+@@ -1220,14 +1217,13 @@ static void fib6_del_route(struct fib6_node *fn, struct rt6_info **rtp,
+ 	}
+ 
+ 	inet6_rt_notify(RTM_DELROUTE, rt, info);
+-
+-#if defined (CONFIG_MV_ETH_NFP_FIB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 	if (rt->rt6i_flags & RTF_CACHE)
+ 		if (rt->nfp)
+-			nfp_hook_fib_rule_del(AF_INET6, (u8 *)&rt->rt6i_src.addr, (u8 *)&rt->rt6i_dst.addr,
++			if (nfp_mgr_p->nfp_hook_fib_rule_del)
++				nfp_mgr_p->nfp_hook_fib_rule_del(AF_INET6, (u8 *)&rt->rt6i_src.addr, (u8 *)&rt->rt6i_dst.addr,
+ 							rt->rt6i_iifindex, rt->rt6i_dev->ifindex);
+-#endif /*  CONFIG_MV_ETH_NFP_FIB_LEARN  */
+-
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 	rt6_release(rt);
+ }
+ 
+@@ -1528,13 +1524,14 @@ static int fib6_age(struct rt6_info *rt, void *arg)
+ 				  rt);
+ 			return -1;
+ 		}
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 		if (rt->nfp) {
+-			if (nfp_hook_fib_rule_age(AF_INET6,(u8 *)(&rt->rt6i_src.addr), (u8 *)(&rt->rt6i_dst.addr),
++			if (nfp_mgr_p->nfp_hook_fib_rule_age)
++				if (nfp_mgr_p->nfp_hook_fib_rule_age(AF_INET6, (u8 *)(&rt->rt6i_src.addr), (u8 *)(&rt->rt6i_dst.addr),
+ 					rt->rt6i_iifindex, rt->rt6i_dev->ifindex))
+ 				rt->dst.lastuse = now;
+ 		}
+-#endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 		gc_args.more++;
+ 	}
+ 
+diff --git a/net/ipv6/netfilter/Kconfig b/net/ipv6/netfilter/Kconfig
+index b57be24..568657e 100644
+--- a/net/ipv6/netfilter/Kconfig
++++ b/net/ipv6/netfilter/Kconfig
+@@ -197,7 +197,7 @@ config IP6_NF_RAW
+ config IP6_NF_TARGET_NFP
+ 	tristate "NFP target support for IPv6"
+ 	default y
+-	depends on NF_CONNTRACK_IPV6 && MV_ETH_NFP_CT
++	depends on NF_CONNTRACK_IPV6 && MV_ETH_NFP_CT && (MV_ETH_NFP_LEARN || (m && MV_ETH_NFP_LEARN=m))
+ 	help
+ 	  This target allows to process selected connections in NFP.
+ 
+diff --git a/net/netfilter/nf_conntrack_core.c b/net/netfilter/nf_conntrack_core.c
+index d5c7d19..ad9ba4e 100644
+--- a/net/netfilter/nf_conntrack_core.c
++++ b/net/netfilter/nf_conntrack_core.c
+@@ -32,7 +32,7 @@
+ #include <linux/mm.h>
+ #include <linux/nsproxy.h>
+ #include <linux/rculist_nulls.h>
+-
++#include <linux/mv_nfp.h>
+ #include <net/netfilter/nf_conntrack.h>
+ #include <net/netfilter/nf_conntrack_l3proto.h>
+ #include <net/netfilter/nf_conntrack_l4proto.h>
+@@ -48,18 +48,6 @@
+ #include <net/netfilter/nf_nat_core.h>
+ #include <linux/netfilter/ipt_NFP.h>
+ 
+-#if defined(CONFIG_MV_ETH_NFP_CT_LEARN)
+-extern void nfp_hook_ct_del(int family, u8 *src_l3, u8 *dst_l3, u16 sport, u16 dport, u8 proto);
+-extern int  nfp_hook_ct_age(int family, u8 *src_l3, u8 *dst_l3, u16 sport, u16 dport, u8 proto);
+-extern void nfp_ct_sync(int family);
+-#ifdef CONFIG_MV_ETH_NFP_NAT
+-extern void move_nat_to_nfp(const struct nf_conntrack_tuple *tuple,
+-							const struct nf_conntrack_tuple *target,
+-							enum nf_nat_manip_type maniptype);
+-#endif /* CONFIG_MV_ETH_NFP_NAT */
+-extern int move_fwd_to_nfp(const struct nf_conntrack_tuple *tuple, int mode);
+-#endif /* CONFIG_MV_ETH_NFP_CT_LEARN */
+-
+ #define NF_CONNTRACK_VERSION	"0.5.0"
+ 
+ int (*nfnetlink_parse_nat_setup_hook)(struct nf_conn *ct,
+@@ -319,20 +307,24 @@ static void death_by_timeout(unsigned long ul_conntrack)
+ 	struct nf_conn *ct = (void *)ul_conntrack;
+ 	struct nf_conn_tstamp *tstamp;
+ 
+-#if defined (CONFIG_MV_ETH_NFP_CT_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 	struct nf_conntrack_tuple *t0 = &ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple;
+ 	struct nf_conntrack_tuple *t1 = &ct->tuplehash[IP_CT_DIR_REPLY].tuple;
+ 	int confirmed_org = 0, confirmed_reply = 0;
+ 
+ 	if (t0 && t0->nfp) {
+ 		if (t0->src.l3num == AF_INET)
+-			confirmed_org = nfp_hook_ct_age(t0->src.l3num, (u8 *)&(t0->src.u3.ip),
++			{
++			if (nfp_mgr_p->nfp_hook_ct_age)
++				confirmed_org = nfp_mgr_p->nfp_hook_ct_age(t0->src.l3num, (u8 *)&(t0->src.u3.ip),
+ 					(u8 *)&(t0->dst.u3.ip),
+ 					ntohs(t0->src.u.all),
+ 					ntohs(t0->dst.u.all),
+ 					t0->dst.protonum);
++			}
+ 		else
+-			confirmed_org = nfp_hook_ct_age(t0->src.l3num, (u8 *)&(t0->src.u3.ip6),
++			if (nfp_mgr_p->nfp_hook_ct_age)
++				confirmed_org = nfp_mgr_p->nfp_hook_ct_age(t0->src.l3num, (u8 *)&(t0->src.u3.ip6),
+ 					(u8 *)&(t0->dst.u3.ip6),
+ 					ntohs(t0->src.u.all),
+ 					ntohs(t0->dst.u.all),
+@@ -341,13 +333,17 @@ static void death_by_timeout(unsigned long ul_conntrack)
+ 
+ 	if (t1 && t1->nfp) {
+ 		if (t1->src.l3num == AF_INET)
+-			confirmed_reply = nfp_hook_ct_age(t1->src.l3num, (u8 *)&(t1->src.u3.ip),
++			{
++			if (nfp_mgr_p->nfp_hook_ct_age)
++				confirmed_reply = nfp_mgr_p->nfp_hook_ct_age(t1->src.l3num, (u8 *)&(t1->src.u3.ip),
+ 					(u8 *)&(t1->dst.u3.ip),
+ 					ntohs(t1->src.u.all),
+ 					ntohs(t1->dst.u.all),
+ 					t1->dst.protonum);
++			}
+ 		else
+-			confirmed_reply = nfp_hook_ct_age(t1->src.l3num, (u8 *)&(t1->src.u3.ip6),
++			if (nfp_mgr_p->nfp_hook_ct_age)
++				confirmed_reply = nfp_mgr_p->nfp_hook_ct_age(t1->src.l3num, (u8 *)&(t1->src.u3.ip6),
+ 					(u8 *)&(t1->dst.u3.ip6),
+ 					ntohs(t1->src.u.all),
+ 					ntohs(t1->dst.u.all),
+@@ -364,13 +360,17 @@ static void death_by_timeout(unsigned long ul_conntrack)
+ 		t0->nfp = false;
+ 
+ 		if (t0->src.l3num == AF_INET)
+-			nfp_hook_ct_del(t0->src.l3num, (u8 *)&(t0->src.u3.ip),
++			{
++			if (nfp_mgr_p->nfp_hook_ct_del)
++				nfp_mgr_p->nfp_hook_ct_del(t0->src.l3num, (u8 *)&(t0->src.u3.ip),
+ 					(u8 *)&(t0->dst.u3.ip),
+ 					ntohs(t0->src.u.all),
+ 					ntohs(t0->dst.u.all),
+ 					t0->dst.protonum);
++			}
+ 		else
+-			nfp_hook_ct_del(t0->src.l3num, (u8 *)&(t0->src.u3.ip6),
++			if (nfp_mgr_p->nfp_hook_ct_del)
++				nfp_mgr_p->nfp_hook_ct_del(t0->src.l3num, (u8 *)&(t0->src.u3.ip6),
+ 					(u8 *)&(t0->dst.u3.ip6),
+ 					ntohs(t0->src.u.all),
+ 					ntohs(t0->dst.u.all),
+@@ -381,19 +381,22 @@ static void death_by_timeout(unsigned long ul_conntrack)
+ 		t1->nfp = false;
+ 
+ 		if (t1->src.l3num == AF_INET)
+-			nfp_hook_ct_del(t1->src.l3num, (u8 *)&(t1->src.u3.ip),
++			{
++			if (nfp_mgr_p->nfp_hook_ct_del)
++				nfp_mgr_p->nfp_hook_ct_del(t1->src.l3num, (u8 *)&(t1->src.u3.ip),
+ 					(u8 *)&(t1->dst.u3.ip),
+ 					ntohs(t1->src.u.all),
+ 					ntohs(t1->dst.u.all),
+ 					t1->dst.protonum);
++			}
+ 		else
+-			nfp_hook_ct_del(t1->src.l3num, (u8 *)&(t1->src.u3.ip6),
++			nfp_mgr_p->nfp_hook_ct_del(t1->src.l3num, (u8 *)&(t1->src.u3.ip6),
+ 					(u8 *)&(t1->dst.u3.ip6),
+ 					ntohs(t1->src.u.all),
+ 					ntohs(t1->dst.u.all),
+ 					t1->dst.protonum);
+ 	}
+-#endif /* CONFIG_MV_ETH_NFP_CT_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 
+ 	tstamp = nf_conn_tstamp_find(ct);
+ 	if (tstamp && tstamp->stop == 0)
+@@ -801,7 +804,7 @@ __nf_conntrack_alloc(struct net *net, u16 zone,
+ 	}
+ #endif
+ 
+-#if defined(CONFIG_MV_ETH_NFP_CT_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 	ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple.nfp = false;
+ 	ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple.ifindex = -1;
+ 	ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple.nfpCapable = false;
+@@ -811,7 +814,7 @@ __nf_conntrack_alloc(struct net *net, u16 zone,
+ 	ct->tuplehash[IP_CT_DIR_REPLY].tuple.ifindex = -1;
+ 	ct->tuplehash[IP_CT_DIR_REPLY].tuple.nfpCapable = false;
+ 	ct->tuplehash[IP_CT_DIR_REPLY].tuple.info = NULL;
+-#endif /* CONFIG_MV_ETH_NFP_CT_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 
+ 	/*
+ 	 * changes to lookup keys must be done before setting refcnt to 1
+@@ -840,13 +843,13 @@ void nf_conntrack_free(struct nf_conn *ct)
+ {
+ 	struct net *net = nf_ct_net(ct);
+ 
+-#if defined(CONFIG_MV_ETH_NFP_CT_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 	if (ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple.info)
+ 		kfree(ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple.info);
+ 
+ 	if (ct->tuplehash[IP_CT_DIR_REPLY].tuple.info)
+ 		kfree(ct->tuplehash[IP_CT_DIR_REPLY].tuple.info);
+-#endif /* CONFIG_MV_ETH_NFP_CT_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 
+ 	nf_ct_ext_destroy(ct);
+ 	atomic_dec(&net->ct.count);
+@@ -1549,7 +1552,7 @@ void nf_ct_untracked_status_or(unsigned long bits)
+ }
+ EXPORT_SYMBOL_GPL(nf_ct_untracked_status_or);
+ 
+-#if defined(CONFIG_MV_ETH_NFP_CT_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ void nfp_ct_sync(int family)
+ {
+ 	struct nf_conntrack_tuple_hash *h;
+@@ -1583,7 +1586,8 @@ void nfp_ct_sync(int family)
+ 			tuple->nfp = true;
+ 
+ 			if (tuple->info->mode == IPT_NFP_DROP) {
+-				move_fwd_to_nfp(tuple, 0);
++				if (nfp_mgr_p->nfp_hook_move_fwd_to_nfp)
++					nfp_mgr_p->nfp_hook_move_fwd_to_nfp(tuple, 0);
+ 				continue;
+ 			}
+ 
+@@ -1602,12 +1606,15 @@ void nfp_ct_sync(int family)
+ 					nf_ct_invert_tuplepr(&target_tuple, &ct->tuplehash[!dir].tuple);
+ 
+ 					if ((status & IPS_NAT_MASK) == IPS_DST_NAT) {
+-						move_nat_to_nfp(tuple, &target_tuple, IP_NAT_MANIP_DST);
++						if (nfp_mgr_p->nfp_hook_move_nat_to_nfp)
++							nfp_mgr_p->nfp_hook_move_nat_to_nfp(tuple, &target_tuple, IP_NAT_MANIP_DST);
+ 					} else if ((status & IPS_NAT_MASK) == IPS_SRC_NAT) {
+-						move_nat_to_nfp(tuple, &target_tuple, IP_NAT_MANIP_SRC);
++						if (nfp_mgr_p->nfp_hook_move_nat_to_nfp)
++							nfp_mgr_p->nfp_hook_move_nat_to_nfp(tuple, &target_tuple, IP_NAT_MANIP_SRC);
+ 					} else {
+-						move_nat_to_nfp(tuple, &target_tuple, IP_NAT_MANIP_DST);
+-						move_nat_to_nfp(tuple, &target_tuple, IP_NAT_MANIP_SRC);
++						if (nfp_mgr_p->nfp_hook_move_nat_to_nfp)
++							nfp_mgr_p->nfp_hook_move_nat_to_nfp(tuple, &target_tuple, IP_NAT_MANIP_DST);
++							nfp_mgr_p->nfp_hook_move_nat_to_nfp(tuple, &target_tuple, IP_NAT_MANIP_SRC);
+ 					}
+ 
+ 					continue;
+@@ -1619,13 +1626,15 @@ void nfp_ct_sync(int family)
+ 			}
+ #endif /* CONFIG_MV_ETH_NFP_NAT */
+ 			/* If we got till here, it must be IPT_NFP_FWD */
+-			move_fwd_to_nfp(tuple, 1);
++			if (nfp_mgr_p->nfp_hook_move_fwd_to_nfp)
++				nfp_mgr_p->nfp_hook_move_fwd_to_nfp(tuple, 1);
+ 		}
+ 	}
+ 
+ 	spin_unlock_bh(&nf_conntrack_lock);
+ }
+-#endif /* CONFIG_MV_ETH_NFP_CT_LEARN */
++EXPORT_SYMBOL(nfp_ct_sync);
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 
+ static int nf_conntrack_init_init_net(void)
+ {
+-- 
+1.7.9.5
+

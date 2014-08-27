@@ -1,0 +1,36 @@
+From 12d24a92872e5398c4144932ef969d1b0ce3a365 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Sun, 25 Nov 2012 12:55:58 +0200
+Subject: [PATCH 348/609] pgtable.h cleanup after the v3.2.33 rebase
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/include/asm/pgtable.h |   12 ------------
+ 1 file changed, 12 deletions(-)
+
+diff --git a/arch/arm/include/asm/pgtable.h b/arch/arm/include/asm/pgtable.h
+index 3b8249f..449b1bb 100644
+--- a/arch/arm/include/asm/pgtable.h
++++ b/arch/arm/include/asm/pgtable.h
+@@ -307,18 +307,6 @@ static inline pte_t *pmd_page_vaddr(pmd_t pmd)
+ #define set_pte_ext(ptep,pte,ext) cpu_set_pte_ext(ptep,pte,ext)
+ #endif
+ 
+-#define pte_none(pte)		(!pte_val(pte))
+-#define pte_present(pte)	(pte_val(pte) & L_PTE_PRESENT)
+-#define pte_write(pte)		(!(pte_val(pte) & L_PTE_RDONLY))
+-#define pte_dirty(pte)		(pte_val(pte) & L_PTE_DIRTY)
+-#define pte_young(pte)		(pte_val(pte) & L_PTE_YOUNG)
+-#define pte_exec(pte)		(!(pte_val(pte) & L_PTE_XN))
+-#define pte_special(pte)	(0)
+-
+-#define pte_present_user(pte) \
+-	((pte_val(pte) & (L_PTE_PRESENT | L_PTE_USER)) == \
+-	 (L_PTE_PRESENT | L_PTE_USER))
+-
+ #if __LINUX_ARM_ARCH__ < 6
+ static inline void __sync_icache_dcache(pte_t pteval)
+ {
+-- 
+1.7.9.5
+

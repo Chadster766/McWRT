@@ -1,0 +1,41 @@
+From d88c686856af72018d6b4163b0aab6a2b1c4c4b1 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Mon, 11 Mar 2013 16:20:17 +0200
+Subject: [PATCH 561/609] PM: Re-set default value for the pmuPowerUpDelay
+ parameter
+
+After removing the pmuPowerUpDelay parameter setting from the mvBoardEnvInit function,
+old U-Boot versions might still configure this value to other value than default.
+This re-sets the spec's default value.
+
+Bug fix - need to integrate to stable branch
+
+Change-Id: I607b4c3544f15d4409de6b8acada69ed51887eb4
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1243
+Reviewed-by: Tawfik Bayouk <tawfik@marvell.com>
+Tested-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/cpuidle.c |    5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/arch/arm/plat-armada/cpuidle.c b/arch/arm/plat-armada/cpuidle.c
+index 69fbf93..f740ac7 100644
+--- a/arch/arm/plat-armada/cpuidle.c
++++ b/arch/arm/plat-armada/cpuidle.c
+@@ -71,6 +71,11 @@ void armadaxp_fabric_setup_deepIdle(void)
+ 	reg |= MV_L2C_NFABRIC_PM_CTRL_CFG_PWR_DOWN;
+ 	MV_REG_WRITE(MV_L2C_NFABRIC_PM_CTRL_CFG_REG, reg);
+ 
++#if defined CONFIG_ARCH_ARMADA_XP
++	/* Re-set default value for the pmuPowerUpDelay parameter */
++	/* ArmadaXP uses on-die power switches so the pmuPowerUpDelay must be preserved */
++	MV_REG_WRITE(MV_RUNIT_PMU_REGS_OFFSET + 0x14, 0x100);
++#endif
+ 	/* Set the resume control registers to do nothing */
+ 	MV_REG_WRITE(0x20980, 0);
+ 	MV_REG_WRITE(0x20988, 0);
+-- 
+1.7.9.5
+

@@ -1,0 +1,36 @@
+--- a/update-usbids.sh.in
++++ b/update-usbids.sh.in
+@@ -6,9 +6,9 @@
+ 
+ set -e
+ SRC="http://www.linux-usb.org/usb.ids"
+-DEST=usb.ids
++DEST=usb.ids.gz
+ 
+-# if usb.ids is read-only (because the filesystem is read-only),
++# if usb.ids.gz is read-only (because the filesystem is read-only),
+ # then just skip this whole process.
+ if ! touch ${DEST} >&2 >/dev/null ; then
+ 	${quiet} || echo "${DEST} is read-only, exiting."
+@@ -16,10 +16,10 @@ if ! touch ${DEST} >&2 >/dev/null ; then
+ fi
+ 
+ if which wget >/dev/null 2>&1 ; then
+-	DL="wget -O $DEST.new $SRC"
++	DL="eval wget -O- $SRC | gzip >$DEST.new"
+ 	${quiet} && DL="$DL -q"
+ elif which lynx >/dev/null 2>&1 ; then
+-	DL="eval lynx -source $SRC >$DEST.new"
++	DL="eval lynx -source $SRC | gzip >$DEST.new"
+ else
+ 	echo >&2 "update-usbids: cannot find wget nor lynx"
+ 	exit 1
+@@ -31,7 +31,7 @@ if ! $DL ; then
+ 	exit 1
+ fi
+ 
+-if ! grep >/dev/null "^C " $DEST.new ; then
++if ! zcat $DEST.new | grep >/dev/null "^C " ; then
+ 	echo >&2 "update-usbids: missing class info, probably truncated file"
+ 	exit 1
+ fi

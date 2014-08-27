@@ -1,0 +1,308 @@
+MARS by Noel Bouchard, TELE DATA Inc.
+mars@teledata.qc.ca
+
++ - - - - - - - - - - - - - - - - - - - - - - - - -+
+
+Firmware	       	OpenWrt Kamikaze - With X-Wrt Extensions 7.09
+Kernel	  	Linux 2.4.34 #94 Tue Sep 9 02:58:48 CDT 2008
+MAC	  	00:1D:60:DE:BF:DB
+Device	 	ASUS WL-500g Premium
+Board	 	Broadcom BCM4704 chip rev 9
+Username	  	root
+
+Web mgt. console	Webif²
+Version		r4306
+
+MARS	 	MARS V2.2 by TELE DATA Inc. 02/2009
+Asterisk	 	Asterisk 1.4.11
+
+MARS V2.21 by TELE DATA Inc. 02/2009
+Asterisk 1.4.11 built by micha @ namib on a i686 running Linux on 2007-11-03 11:30:09 UTC
+Linux 2.4.34 #94 Tue Sep 9 02:58:48 CDT 2008
+
+system type		: Broadcom BCM4704 chip rev 9
+processor		: 0
+cpu model		: BCM3302 V0.6
+BogoMIPS		: 262.96
+
++ - - - - - - - - - - - - - - - - - - - - - - - - -+
+
+USB Memory (required)
+
+/mnt/disc0_1
+/dev/scsi/host0/bus0/target0/lun0/part1
+
+File systems
+Device Path 	Mount Point 	File System 	Read/Write 	Action
+/dev/scsi/host0/bus0/target0/lun0/part1 	/mnt/disc0_1 	ext2 	Read/Write
+
+Loaded USB drivers
+hub
+usb-storage
+usbdevfs
+
+USB Storage SETUP
+
+1- Create Partition with
+fdisk /dev/scsi/host0/bus0/target0/lun0/disc
+
+Type 'm' for menu.
+- delete any existing partition  'd' and enter partition number and 'w' to write change.
+- create a new partition 'n' using all space
+- set partition type to 83 (Linux) using the 't' command
+- use the 'w' command to write partition and exit
+
+ipkg install e2fsprogs
+(ln -s /proc/mounts /etc/mtab)
+
+'format' partition with the following command
+mke2fs -j /dev/scsi/host0/bus0/target0/lun0/part1
+
+mount /dev/scsi/host0/bus0/target0/lun0/part1 /mnt/disc0_1
+
++ - - - - - - - - - - - - - - - - - - - - - - - - -+
+System info
+
+Free
+
+total         used         free       shared      buffers
+Mem:        30512        27300         3212            0         1240
+Swap:            0            0            0
+Total:        30512        27300         3212
+
+
+df
+
+Filesystem           1k-blocks      Used Available Use% Mounted on
+none                     15256      1784     13472  12% /tmp
+/dev/mtdblock/4           6016      5852       164  97% /jffs
+mini_fo:/jffs             1344      1344         0 100% /
+/dev/scsi/host0/bus0/target0/lun0/part1    378951     83216    276170  23% /mnt/disc0_1
+
+
+mount
+
+rootfs on / type rootfs (rw)
+/dev/root on /rom type squashfs (ro)
+none on /dev type devfs (rw)
+none on /proc type proc (rw)
+none on /tmp type tmpfs (rw,nosuid,nodev)
+none on /dev/pts type devpts (rw)
+/dev/mtdblock/4 on /jffs type jffs2 (rw)
+mini_fo:/jffs on / type mini_fo (rw)
+none on /proc/bus/usb type usbfs (rw)
+/dev/scsi/host0/bus0/target0/lun0/part1 on /mnt/disc0_1 type ext2 (rw)
+
+
+ps
+
+  PID  Uid     VmSize Stat Command
+    1 root        400 S   init       
+    2 root            SW  [keventd]
+    3 root            SWN [ksoftirqd_CPU0]
+    4 root            SW  [kswapd]
+    5 root            SW  [bdflush]
+    6 root            SW  [kupdated]
+    9 root            SW  [mtdblockd]
+   54 root            SWN [jffs2_gcd_mtd4]
+   67 root        408 S   logger -s -p 6 -t  
+   70 root        404 S   init       
+   78 root        392 S   /sbin/syslogd -C16 -m 0 
+   83 root        372 S   /sbin/klogd 
+  229 root            SW  [khubd]
+  250 root        444 S   udhcpc -t 0 -i eth0.1 -b -p /var/run/eth0.1.pid -R 
+  351 root            SW  [usb-storage-0]
+  352 root            SW  [scsi_eh_0]
+  430 root            SW  [usb-storage-1]
+  431 root            SW  [scsi_eh_1]
+  451 root        428 S   crond -c /etc/crontabs 
+  457 root        416 S   /usr/sbin/dropbear -p 22 
+  465 root        428 S   httpd -p 80 -h /www -r OpenWrt 
+  472 root        412 S   httpd -p 32345 -h /www/webcall -r MARS 
+  489 nobody      444 S   /usr/sbin/dnsmasq -I br-lan --dhcp-range=lan,192.168.
+20138 root       4576 S   /usr/sbin/asterisk 
+20139 root       4576 S   /usr/sbin/asterisk 
+20141 root       4576 S   /usr/sbin/asterisk 
+20142 root       4576 S   /usr/sbin/asterisk 
+20143 root       4576 S   /usr/sbin/asterisk 
+20144 root       4576 S   /usr/sbin/asterisk 
+20145 root       4576 S   /usr/sbin/asterisk 
+20146 root       4576 S   /usr/sbin/asterisk 
+20147 root       4576 S   /usr/sbin/asterisk 
+20148 root       4576 S   /usr/sbin/asterisk 
+20149 root       4576 S   /usr/sbin/asterisk 
+20150 root       4576 S   /usr/sbin/asterisk 
+20151 root       4576 S   /usr/sbin/asterisk 
+20152 root       4576 S   /usr/sbin/asterisk 
+20153 root       4576 S   /usr/sbin/asterisk 
+20154 root       4576 S   /usr/sbin/asterisk 
+20155 root       4576 S   /usr/sbin/asterisk 
+20156 root       4576 S   /usr/sbin/asterisk 
+20157 root       4576 S   /usr/sbin/asterisk 
+20158 root       4576 S   /usr/sbin/asterisk 
+20159 root       4576 S   /usr/sbin/asterisk 
+20212 root       4576 S   /usr/sbin/asterisk 
+16926 root        576 S   /usr/sbin/dropbear -p 22 
+16927 root        468 S   -ash 
+17189 root        592 S   /usr/sbin/dropbear -p 22 
+17190 root        584 S   -ash 
+17505 root        400 S   /bin/sh -c /www/cgi-bin/webif/pid_send_all.sh > /dev/
+17506 root        464 S   /bin/sh /www/cgi-bin/webif/pid_send_all.sh 
+17626 root        284 S   sleep 1 
+17627 root        472 S   httpd -p 80 -h /www -r OpenWrt 
+17628 root        252 S   /usr/bin/webif-page /www/cgi-bin/webif/test_email.sh 
+17629 root        404 S   sh -c /usr/bin/haserl /www/cgi-bin/webif/test_email.s
+17630 root        260 S   /usr/bin/haserl /www/cgi-bin/webif/test_email.sh 
+17631 root        580 S   /bin/sh 
+17635 root        420 R   ps 
+
+
+Ethernet/Wireless Physical Connections
+
+IP address       HW type     Flags       HW address            Mask     Device
+192.168.1.100    0x1         0x2         00:0E:A6:3B:28:9E     *        br-lan
+192.168.1.1      0x1         0x2         00:18:39:FF:F8:C2     *        br-lan
+
+
+
+Routing Table
+
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags   MSS Window  irtt Iface
+192.168.1.0     0.0.0.0         255.255.255.0   U         0 0          0 br-lan
+0.0.0.0         192.168.1.1     0.0.0.0         UG        0 0          0 br-lan
+
+
+
+Router Listening Ports
+
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State
+tcp        0      0 0.0.0.0:5038            0.0.0.0:*               LISTEN      
+tcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN      
+tcp        0      0 0.0.0.0:53              0.0.0.0:*               LISTEN      
+tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      
+tcp        0      0 0.0.0.0:8088            0.0.0.0:*               LISTEN      
+tcp        0      0 0.0.0.0:32345           0.0.0.0:*               LISTEN      
+udp        0      0 0.0.0.0:1025            0.0.0.0:*                           
+udp        0      0 0.0.0.0:53              0.0.0.0:*                           
+udp        0      0 0.0.0.0:67              0.0.0.0:*                           
+udp        0      0 0.0.0.0:5060            0.0.0.0:*                           
+udp        0      0 0.0.0.0:4569            0.0.0.0:*                           
+
+
+
+Connections to the Router
+
+Active Internet connections (w/o servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State
+tcp        0      0 192.168.1.10:80         192.168.1.100:1962      TIME_WAIT   
+tcp        0      0 192.168.1.10:80         192.168.1.100:1958      TIME_WAIT   
+tcp        0      0 192.168.1.10:80         192.168.1.100:1967      ESTABLISHED 
+tcp        0      0 192.168.1.10:80         192.168.1.100:1959      TIME_WAIT   
+tcp        0      0 192.168.1.10:80         192.168.1.100:1960      TIME_WAIT   
+tcp        0      0 192.168.1.10:80         192.168.1.100:1965      TIME_WAIT   
+tcp        0      0 192.168.1.10:22         192.168.1.100:1957      ESTABLISHED 
+tcp        0      0 192.168.1.10:22         192.168.1.100:1953      ESTABLISHED 
+
++ - - - - - - - - - - - - - - - - - - - - - - - - -+
+
+Modifs to /usr/lib/webif/apply.sh
+
+                    ## MARS config added by NB  
+		"mars")  
+                               echo '<strong>Stopping Asterisk</strong><br>'
+                               /etc/init.d/asterisk stop
+                               sleep 2
+                              echo '<strong>Restarting Asterisk</strong><br>'
+                              /etc/init.d/asterisk start
+			;;
++ - - - - - - - - - - - - - - - - - - - - - - - - -+
+
+Loaded Modules
+Module 	Size 	Count 	Used by
+diag 	25520 	0 	(unused)
+ehci-hcd 	20556 	0 	(unused)
+ext2 	40304 	1 	
+fat 	34448 	0 	[msdos vfat]
+ip_conntrack_ftp 	4272 	1 	
+ip_conntrack_irc 	3128 	1 	
+ip_conntrack_tftp 	1712 	0 	(unused)
+ip_nat_ftp 	2960 	0 	(unused)
+ip_nat_irc 	2336 	0 	(unused)
+msdos 	6028 	0 	(unused)
+ppp_async 	7884 	0 	(unused)
+ppp_generic 	22300 	0 	[ppp_async]
+scsi_mod 	66048 	3 	[usb-storage sd_mod]
+sd_mod 	12500 	2 	
+slhc 	6064 	0 	[ppp_generic]
+switch-core 	4864 	0 	[switch-robo]
+switch-robo 	4540 	0 	(unused)
+uhci 	29044 	0 	(unused)
+usb-storage 	68240 	1 	
+usbcore 	71296 	1 	[usb-storage ehci-hcd uhci]
+vfat 	11340 	0 	(unused)
+wl 	630776 	0 	(unused)
+wlcompat 	14944 	0 	(unused)
+Total 	1091104 	 
+
++ - - - - - - - - - - - - - - - - - - - - - - - - -+
+
+Installed Packages
+
+ASUS WL-500G Premium
+
+Action	Package	Version	Description
+Uninstall	asterisk14	1.4.11-1	
+Uninstall	asterisk14-format-mp3	1.4.7-1	
+Uninstall	asterisk14-res-agi	1.4.11-1	
+Uninstall	asterisk14-voicemail	1.4.11-1	
+Uninstall	base-files-brcm-2.4	10-12557	
+Uninstall	bridge	1.0.6-1	
+Uninstall	busybox	1.4.2-2	
+Uninstall	dnsmasq	2.39-1	
+Uninstall	dropbear	0.50-2	
+Uninstall	e2fsprogs	1.39-1	
+Uninstall	fdisk	2.12r-2	
+Uninstall	haserl	0.8.0-2	
+Uninstall	iptables	1.3.7-1	
+Uninstall	kernel	2.4.34-brcm-1	
+Uninstall	kmod-brcm-wl	2.4.34+4.80.53.0-1	
+Uninstall	kmod-diag	2+2.4.34-brcm-1	
+Uninstall	kmod-fs-ext2	2.4.34-brcm-1	
+Uninstall	kmod-fs-msdos	2.4.34-brcm-1	
+Uninstall	kmod-fs-vfat	2.4.34-brcm-1	
+Uninstall	kmod-ipt-nathelper	2.4.34-brcm-1	
+Uninstall	kmod-ppp	2.4.34-brcm-1	
+Uninstall	kmod-pppoe	2.4.34-brcm-1	
+Uninstall	kmod-scsi-core	2.4.34-brcm-1	
+Uninstall	kmod-switch	2.4.34-brcm-1	
+Uninstall	kmod-usb-core	2.4.34-brcm-1	
+Uninstall	kmod-usb-storage	2.4.34-brcm-1	
+Uninstall	kmod-usb-uhci	2.4.34-brcm-1	
+Uninstall	kmod-usb2	2.4.34-brcm-1	
+Uninstall	kmod-wlcompat	2.4.34+brcm-6	
+Uninstall	libgcc	3.4.6-10	
+Uninstall	libltdl	1.5.22-1	
+Uninstall	libncurses	5.6-1	
+Uninstall	libopenssl	0.9.8e-1	
+Uninstall	libpopt	1.7-4	
+Uninstall	libpthread	0.9.28-10	
+Uninstall	libuuid	1.39-1	
+Uninstall	mtd	5	
+Uninstall	ntpclient	2003_194-4	
+Uninstall	nvram	1	
+Uninstall	openssl-util	0.9.8e-1	
+Uninstall	ppp	2.4.3-8	
+Uninstall	ppp-mod-pppoe	2.4.3-8	
+Uninstall	ssmtp	2.61-2	
+Uninstall	uclibc	0.9.28-10	
+Uninstall	webif	0.3-12	
+Uninstall	wget-nossl	1.10.2-2	
+Uninstall	wireless-tools	29-1	
+Uninstall	wlc	4.80.53.0-1	
+Uninstall	wput	0.5-1	
+Uninstall	zlib	1.2.3-4
+
++ - - - - - - - - - - - - - - - - - - - - - - - - -+
+

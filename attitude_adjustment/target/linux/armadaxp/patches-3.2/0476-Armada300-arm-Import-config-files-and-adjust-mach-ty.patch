@@ -1,0 +1,66 @@
+From 067b2d4b9c849f35270b7f792c3eac36853f802c Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Thu, 13 Dec 2012 19:43:47 +0200
+Subject: [PATCH 476/609] Armada300,arm: Import config files and adjust
+ mach-types.
+
+Change-Id: I7ea6d43f7bd3bae3916f468d912406ab1b0472b6
+Signed-off-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/Kconfig                       |   23 +--
+ arch/arm/tools/mach-types                          |    1 +
+
+diff --git a/arch/arm/plat-armada/Kconfig b/arch/arm/plat-armada/Kconfig
+index 5710b3b..77f9c2e 100644
+--- a/arch/arm/plat-armada/Kconfig
++++ b/arch/arm/plat-armada/Kconfig
+@@ -273,7 +273,7 @@ config MV_DCACHE_SIZE
+ 
+ config MV_ICACHE_SIZE
+ 	hex
+-	default 0x8000 if MV78XX0 || ARMDAD_XP || ARMADA_370
++	default 0x8000 if MV78XX0 || ARMADA_XP || ARMADA_370
+ 	default 0x4000 if MV88F6500 || MV88F6281
+ 	          
+ menu "Armada SoC MTD support"
+@@ -401,27 +401,6 @@ config USE_DSP
+ 	depends on !ARMADA_XP
+ 	default n
+ 
+-choice
+-	prompt "Protect from speculative instruction prefetch"
+-	depends on CACHE_FEROCEON_L2
+-	default MV_SP_I_FTCH_DB_INV
+-
+-config MV_SP_I_FTCH_DB_INV
+-	bool "Double invalidate for DMA buffers"
+-	---help---
+-	Choosing this option will add L2 invalidate for DMA recieved buffers before processing it,
+-	This is done through the pci_unmap_sg/page/single APIs.
+-
+-config MV_SP_I_FTCH_LCK_L2_ICACHE
+-	bool "Lock L2 I-cache"
+-	---help---
+-	Choosing this option will lock L2 Icache.
+-
+-config MV_SP_I_FTCH_NONE
+-	bool "Ignore"
+-
+-endchoice
+-
+ config  FEROCEON_PROC
+ 	bool "Support for MV-shell proc file system"
+ 	depends on PROC_FS
+diff --git a/arch/arm/tools/mach-types b/arch/arm/tools/mach-types
+index 2129a4a..b26d989 100644
+--- a/arch/arm/tools/mach-types
++++ b/arch/arm/tools/mach-types
+@@ -3562,3 +3562,4 @@ filbert			MACH_FILBERT		FILBERT			3601
+ m28evk			MACH_M28EVK		M28EVK			3613
+ smdk4212		MACH_SMDK4212		SMDK4212		3638
+ smdk4412		MACH_SMDK4412		SMDK4412		3765
++rd88f6282_a		MACH_RD88F6282_A	RD88F6282_A		3892
+-- 
+1.7.9.5
+

@@ -1,0 +1,34 @@
+#!/bin/sh
+
+. /lib/functions.sh
+. /lib/functions/bbstored.sh
+
+bxbk_config_file=
+NORUN=
+
+if [ "$1" = "-c" ]; then
+	shift
+	bxbk_config_file="$1"
+	shift
+else
+	if [ -z "$1" ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+		/usr/lib/boxbackup/bbstoreaccounts -h
+		exit 1
+	fi
+	if [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ] || [ -z "$5" ]; then
+		/usr/lib/boxbackup/bbstoreaccounts -h
+		exit 1
+	fi
+	config_load bbstored
+	create_config
+	if [ "$EXTERNAL_CONFIG" = "1" ]; then
+		bxbk_config_file="$EXTERNAL_CONF_FILE"
+	else
+		bxbk_config_file="$BXBK_CONFIG_PATH/bbstored.conf"
+	fi
+fi
+
+[ "$NORUN" != "1" ] && [ -n "$bxbk_config_file" ] && /usr/lib/boxbackup/bbstoreaccounts -c "$bxbk_config_file" "$@" || {
+	echo "Error managing account using '$bxbk_config_file'"
+	exit 1
+}

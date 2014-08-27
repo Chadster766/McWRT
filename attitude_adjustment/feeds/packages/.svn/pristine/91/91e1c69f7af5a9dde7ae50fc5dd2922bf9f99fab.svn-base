@@ -1,0 +1,500 @@
+## cryptest-data-files-location.diff by Jens Peter Secher <jps@debian.org>
+##
+## Prefix data file names by PACKAGE_DATA_DIR which is set during build.
+
+Index: libcrypto++/bench2.cpp
+===================================================================
+--- libcrypto++.orig/bench2.cpp	2009-04-07 03:08:36.000000000 +0200
++++ libcrypto++/bench2.cpp	2009-04-07 03:23:43.000000000 +0200
+@@ -245,44 +245,44 @@
+ 	cout << "<THEAD><TR><TH>Operation<TH>Milliseconds/Operation" << (g_hertz ? "<TH>Megacycles/Operation" : "") << endl;
+ 
+ 	cout << "\n<TBODY style=\"background: yellow\">";
+-	BenchMarkCrypto<RSAES<OAEP<SHA> > >("TestData/rsa1024.dat", "RSA 1024", t);
+-	BenchMarkCrypto<LUCES<OAEP<SHA> > >("TestData/luc1024.dat", "LUC 1024", t);
+-	BenchMarkCrypto<DLIES<> >("TestData/dlie1024.dat", "DLIES 1024", t);
+-	BenchMarkCrypto<LUC_IES<> >("TestData/lucc512.dat", "LUCELG 512", t);
++	BenchMarkCrypto<RSAES<OAEP<SHA> > >(PACKAGE_DATA_DIR "TestData/rsa1024.dat", "RSA 1024", t);
++	BenchMarkCrypto<LUCES<OAEP<SHA> > >(PACKAGE_DATA_DIR "TestData/luc1024.dat", "LUC 1024", t);
++	BenchMarkCrypto<DLIES<> >(PACKAGE_DATA_DIR "TestData/dlie1024.dat", "DLIES 1024", t);
++	BenchMarkCrypto<LUC_IES<> >(PACKAGE_DATA_DIR "TestData/lucc512.dat", "LUCELG 512", t);
+ 
+ 	cout << "\n<TBODY style=\"background: white\">";
+-	BenchMarkCrypto<RSAES<OAEP<SHA> > >("TestData/rsa2048.dat", "RSA 2048", t);
+-	BenchMarkCrypto<LUCES<OAEP<SHA> > >("TestData/luc2048.dat", "LUC 2048", t);
+-	BenchMarkCrypto<DLIES<> >("TestData/dlie2048.dat", "DLIES 2048", t);
+-	BenchMarkCrypto<LUC_IES<> >("TestData/lucc1024.dat", "LUCELG 1024", t);
++	BenchMarkCrypto<RSAES<OAEP<SHA> > >(PACKAGE_DATA_DIR "TestData/rsa2048.dat", "RSA 2048", t);
++	BenchMarkCrypto<LUCES<OAEP<SHA> > >(PACKAGE_DATA_DIR "TestData/luc2048.dat", "LUC 2048", t);
++	BenchMarkCrypto<DLIES<> >(PACKAGE_DATA_DIR "TestData/dlie2048.dat", "DLIES 2048", t);
++	BenchMarkCrypto<LUC_IES<> >(PACKAGE_DATA_DIR "TestData/lucc1024.dat", "LUCELG 1024", t);
+ 
+ 	cout << "\n<TBODY style=\"background: yellow\">";
+-	BenchMarkSignature<RSASS<PSSR, SHA> >("TestData/rsa1024.dat", "RSA 1024", t);
+-	BenchMarkSignature<RWSS<PSSR, SHA> >("TestData/rw1024.dat", "RW 1024", t);
+-	BenchMarkSignature<LUCSS<PSSR, SHA> >("TestData/luc1024.dat", "LUC 1024", t);
+-	BenchMarkSignature<NR<SHA> >("TestData/nr1024.dat", "NR 1024", t);
+-	BenchMarkSignature<DSA>("TestData/dsa1024.dat", "DSA 1024", t);
+-	BenchMarkSignature<LUC_HMP<SHA> >("TestData/lucs512.dat", "LUC-HMP 512", t);
+-	BenchMarkSignature<ESIGN<SHA> >("TestData/esig1023.dat", "ESIGN 1023", t);
+-	BenchMarkSignature<ESIGN<SHA> >("TestData/esig1536.dat", "ESIGN 1536", t);
++	BenchMarkSignature<RSASS<PSSR, SHA> >(PACKAGE_DATA_DIR "TestData/rsa1024.dat", "RSA 1024", t);
++	BenchMarkSignature<RWSS<PSSR, SHA> >(PACKAGE_DATA_DIR "TestData/rw1024.dat", "RW 1024", t);
++	BenchMarkSignature<LUCSS<PSSR, SHA> >(PACKAGE_DATA_DIR "TestData/luc1024.dat", "LUC 1024", t);
++	BenchMarkSignature<NR<SHA> >(PACKAGE_DATA_DIR "TestData/nr1024.dat", "NR 1024", t);
++	BenchMarkSignature<DSA>(PACKAGE_DATA_DIR "TestData/dsa1024.dat", "DSA 1024", t);
++	BenchMarkSignature<LUC_HMP<SHA> >(PACKAGE_DATA_DIR "TestData/lucs512.dat", "LUC-HMP 512", t);
++	BenchMarkSignature<ESIGN<SHA> >(PACKAGE_DATA_DIR "TestData/esig1023.dat", "ESIGN 1023", t);
++	BenchMarkSignature<ESIGN<SHA> >(PACKAGE_DATA_DIR "TestData/esig1536.dat", "ESIGN 1536", t);
+ 
+ 	cout << "\n<TBODY style=\"background: white\">";
+-	BenchMarkSignature<RSASS<PSSR, SHA> >("TestData/rsa2048.dat", "RSA 2048", t);
+-	BenchMarkSignature<RWSS<PSSR, SHA> >("TestData/rw2048.dat", "RW 2048", t);
+-	BenchMarkSignature<LUCSS<PSSR, SHA> >("TestData/luc2048.dat", "LUC 2048", t);
+-	BenchMarkSignature<NR<SHA> >("TestData/nr2048.dat", "NR 2048", t);
+-	BenchMarkSignature<LUC_HMP<SHA> >("TestData/lucs1024.dat", "LUC-HMP 1024", t);
+-	BenchMarkSignature<ESIGN<SHA> >("TestData/esig2046.dat", "ESIGN 2046", t);
++	BenchMarkSignature<RSASS<PSSR, SHA> >(PACKAGE_DATA_DIR "TestData/rsa2048.dat", "RSA 2048", t);
++	BenchMarkSignature<RWSS<PSSR, SHA> >(PACKAGE_DATA_DIR "TestData/rw2048.dat", "RW 2048", t);
++	BenchMarkSignature<LUCSS<PSSR, SHA> >(PACKAGE_DATA_DIR "TestData/luc2048.dat", "LUC 2048", t);
++	BenchMarkSignature<NR<SHA> >(PACKAGE_DATA_DIR "TestData/nr2048.dat", "NR 2048", t);
++	BenchMarkSignature<LUC_HMP<SHA> >(PACKAGE_DATA_DIR "TestData/lucs1024.dat", "LUC-HMP 1024", t);
++	BenchMarkSignature<ESIGN<SHA> >(PACKAGE_DATA_DIR "TestData/esig2046.dat", "ESIGN 2046", t);
+ 
+ 	cout << "\n<TBODY style=\"background: yellow\">";
+-	BenchMarkKeyAgreement<XTR_DH>("TestData/xtrdh171.dat", "XTR-DH 171", t);
+-	BenchMarkKeyAgreement<XTR_DH>("TestData/xtrdh342.dat", "XTR-DH 342", t);
+-	BenchMarkKeyAgreement<DH>("TestData/dh1024.dat", "DH 1024", t);
+-	BenchMarkKeyAgreement<DH>("TestData/dh2048.dat", "DH 2048", t);
+-	BenchMarkKeyAgreement<LUC_DH>("TestData/lucd512.dat", "LUCDIF 512", t);
+-	BenchMarkKeyAgreement<LUC_DH>("TestData/lucd1024.dat", "LUCDIF 1024", t);
+-	BenchMarkKeyAgreement<MQV>("TestData/mqv1024.dat", "MQV 1024", t);
+-	BenchMarkKeyAgreement<MQV>("TestData/mqv2048.dat", "MQV 2048", t);
++	BenchMarkKeyAgreement<XTR_DH>(PACKAGE_DATA_DIR "TestData/xtrdh171.dat", "XTR-DH 171", t);
++	BenchMarkKeyAgreement<XTR_DH>(PACKAGE_DATA_DIR "TestData/xtrdh342.dat", "XTR-DH 342", t);
++	BenchMarkKeyAgreement<DH>(PACKAGE_DATA_DIR "TestData/dh1024.dat", "DH 1024", t);
++	BenchMarkKeyAgreement<DH>(PACKAGE_DATA_DIR "TestData/dh2048.dat", "DH 2048", t);
++	BenchMarkKeyAgreement<LUC_DH>(PACKAGE_DATA_DIR "TestData/lucd512.dat", "LUCDIF 512", t);
++	BenchMarkKeyAgreement<LUC_DH>(PACKAGE_DATA_DIR "TestData/lucd1024.dat", "LUCDIF 1024", t);
++	BenchMarkKeyAgreement<MQV>(PACKAGE_DATA_DIR "TestData/mqv1024.dat", "MQV 1024", t);
++	BenchMarkKeyAgreement<MQV>(PACKAGE_DATA_DIR "TestData/mqv2048.dat", "MQV 2048", t);
+ 
+ 	cout << "\n<TBODY style=\"background: white\">";
+ 	{
+Index: libcrypto++/test.cpp
+===================================================================
+--- libcrypto++.orig/test.cpp	2009-04-07 03:08:36.000000000 +0200
++++ libcrypto++/test.cpp	2009-04-07 03:24:04.000000000 +0200
+@@ -337,7 +337,7 @@
+ 			AES_CTR_Encrypt(argv[2], argv[3], argv[4], argv[5]);
+ 		else if (command == "h")
+ 		{
+-			FileSource usage("TestData/usage.dat", true, new FileSink(cout));
++			FileSource usage(PACKAGE_DATA_DIR "TestData/usage.dat", true, new FileSink(cout));
+ 			return 1;
+ 		}
+ 		else if (command == "V")
+Index: libcrypto++/validat1.cpp
+===================================================================
+--- libcrypto++.orig/validat1.cpp	2009-04-07 03:08:36.000000000 +0200
++++ libcrypto++/validat1.cpp	2009-04-07 03:25:57.000000000 +0200
+@@ -508,12 +508,12 @@
+ {
+ 	cout << "\nDES validation suite running...\n\n";
+ 
+-	FileSource valdata("TestData/descert.dat", true, new HexDecoder);
++	FileSource valdata(PACKAGE_DATA_DIR "TestData/descert.dat", true, new HexDecoder);
+ 	bool pass = BlockTransformationTest(FixedRoundsCipherFactory<DESEncryption, DESDecryption>(), valdata);
+ 
+ 	cout << "\nTesting EDE2, EDE3, and XEX3 variants...\n\n";
+ 
+-	FileSource valdata1("TestData/3desval.dat", true, new HexDecoder);
++	FileSource valdata1(PACKAGE_DATA_DIR "TestData/3desval.dat", true, new HexDecoder);
+ 	pass = BlockTransformationTest(FixedRoundsCipherFactory<DES_EDE2_Encryption, DES_EDE2_Decryption>(), valdata1, 1) && pass;
+ 	pass = BlockTransformationTest(FixedRoundsCipherFactory<DES_EDE3_Encryption, DES_EDE3_Decryption>(), valdata1, 1) && pass;
+ 	pass = BlockTransformationTest(FixedRoundsCipherFactory<DES_XEX3_Encryption, DES_XEX3_Decryption>(), valdata1, 1) && pass;
+@@ -855,7 +855,7 @@
+ {
+ 	cout << "\nIDEA validation suite running...\n\n";
+ 
+-	FileSource valdata("TestData/ideaval.dat", true, new HexDecoder);
++	FileSource valdata(PACKAGE_DATA_DIR "TestData/ideaval.dat", true, new HexDecoder);
+ 	return BlockTransformationTest(FixedRoundsCipherFactory<IDEAEncryption, IDEADecryption>(), valdata);
+ }
+ 
+@@ -863,7 +863,7 @@
+ {
+ 	cout << "\nSAFER validation suite running...\n\n";
+ 
+-	FileSource valdata("TestData/saferval.dat", true, new HexDecoder);
++	FileSource valdata(PACKAGE_DATA_DIR "TestData/saferval.dat", true, new HexDecoder);
+ 	bool pass = true;
+ 	pass = BlockTransformationTest(VariableRoundsCipherFactory<SAFER_K_Encryption, SAFER_K_Decryption>(8,6), valdata, 4) && pass;
+ 	pass = BlockTransformationTest(VariableRoundsCipherFactory<SAFER_K_Encryption, SAFER_K_Decryption>(16,12), valdata, 4) && pass;
+@@ -876,7 +876,7 @@
+ {
+ 	cout << "\nRC2 validation suite running...\n\n";
+ 
+-	FileSource valdata("TestData/rc2val.dat", true, new HexDecoder);
++	FileSource valdata(PACKAGE_DATA_DIR "TestData/rc2val.dat", true, new HexDecoder);
+ 	HexEncoder output(new FileSink(cout));
+ 	SecByteBlock plain(RC2Encryption::BLOCKSIZE), cipher(RC2Encryption::BLOCKSIZE), out(RC2Encryption::BLOCKSIZE), outplain(RC2Encryption::BLOCKSIZE);
+ 	SecByteBlock key(128);
+@@ -1086,7 +1086,7 @@
+ {
+ 	cout << "\nRC5 validation suite running...\n\n";
+ 
+-	FileSource valdata("TestData/rc5val.dat", true, new HexDecoder);
++	FileSource valdata(PACKAGE_DATA_DIR "TestData/rc5val.dat", true, new HexDecoder);
+ 	return BlockTransformationTest(VariableRoundsCipherFactory<RC5Encryption, RC5Decryption>(16, 12), valdata);
+ }
+ 
+@@ -1094,7 +1094,7 @@
+ {
+ 	cout << "\nRC6 validation suite running...\n\n";
+ 
+-	FileSource valdata("TestData/rc6val.dat", true, new HexDecoder);
++	FileSource valdata(PACKAGE_DATA_DIR "TestData/rc6val.dat", true, new HexDecoder);
+ 	bool pass = true;
+ 	pass = BlockTransformationTest(FixedRoundsCipherFactory<RC6Encryption, RC6Decryption>(16), valdata, 2) && pass;
+ 	pass = BlockTransformationTest(FixedRoundsCipherFactory<RC6Encryption, RC6Decryption>(24), valdata, 2) && pass;
+@@ -1106,7 +1106,7 @@
+ {
+ 	cout << "\nMARS validation suite running...\n\n";
+ 
+-	FileSource valdata("TestData/marsval.dat", true, new HexDecoder);
++	FileSource valdata(PACKAGE_DATA_DIR "TestData/marsval.dat", true, new HexDecoder);
+ 	bool pass = true;
+ 	pass = BlockTransformationTest(FixedRoundsCipherFactory<MARSEncryption, MARSDecryption>(16), valdata, 4) && pass;
+ 	pass = BlockTransformationTest(FixedRoundsCipherFactory<MARSEncryption, MARSDecryption>(24), valdata, 3) && pass;
+@@ -1118,7 +1118,7 @@
+ {
+ 	cout << "\nRijndael (AES) validation suite running...\n\n";
+ 
+-	FileSource valdata("TestData/rijndael.dat", true, new HexDecoder);
++	FileSource valdata(PACKAGE_DATA_DIR "TestData/rijndael.dat", true, new HexDecoder);
+ 	bool pass = true;
+ 	pass = BlockTransformationTest(FixedRoundsCipherFactory<RijndaelEncryption, RijndaelDecryption>(16), valdata, 4) && pass;
+ 	pass = BlockTransformationTest(FixedRoundsCipherFactory<RijndaelEncryption, RijndaelDecryption>(24), valdata, 3) && pass;
+@@ -1131,7 +1131,7 @@
+ {
+ 	cout << "\nTwofish validation suite running...\n\n";
+ 
+-	FileSource valdata("TestData/twofishv.dat", true, new HexDecoder);
++	FileSource valdata(PACKAGE_DATA_DIR "TestData/twofishv.dat", true, new HexDecoder);
+ 	bool pass = true;
+ 	pass = BlockTransformationTest(FixedRoundsCipherFactory<TwofishEncryption, TwofishDecryption>(16), valdata, 4) && pass;
+ 	pass = BlockTransformationTest(FixedRoundsCipherFactory<TwofishEncryption, TwofishDecryption>(24), valdata, 3) && pass;
+@@ -1143,7 +1143,7 @@
+ {
+ 	cout << "\nSerpent validation suite running...\n\n";
+ 
+-	FileSource valdata("TestData/serpentv.dat", true, new HexDecoder);
++	FileSource valdata(PACKAGE_DATA_DIR "TestData/serpentv.dat", true, new HexDecoder);
+ 	bool pass = true;
+ 	pass = BlockTransformationTest(FixedRoundsCipherFactory<SerpentEncryption, SerpentDecryption>(16), valdata, 4) && pass;
+ 	pass = BlockTransformationTest(FixedRoundsCipherFactory<SerpentEncryption, SerpentDecryption>(24), valdata, 3) && pass;
+@@ -1189,7 +1189,7 @@
+ {
+ 	cout << "\n3-WAY validation suite running...\n\n";
+ 
+-	FileSource valdata("TestData/3wayval.dat", true, new HexDecoder);
++	FileSource valdata(PACKAGE_DATA_DIR "TestData/3wayval.dat", true, new HexDecoder);
+ 	return BlockTransformationTest(FixedRoundsCipherFactory<ThreeWayEncryption, ThreeWayDecryption>(), valdata);
+ }
+ 
+@@ -1197,7 +1197,7 @@
+ {
+ 	cout << "\nGOST validation suite running...\n\n";
+ 
+-	FileSource valdata("TestData/gostval.dat", true, new HexDecoder);
++	FileSource valdata(PACKAGE_DATA_DIR "TestData/gostval.dat", true, new HexDecoder);
+ 	return BlockTransformationTest(FixedRoundsCipherFactory<GOSTEncryption, GOSTDecryption>(), valdata);
+ }
+ 
+@@ -1205,7 +1205,7 @@
+ {
+ 	cout << "\nSHARK validation suite running...\n\n";
+ 
+-	FileSource valdata("TestData/sharkval.dat", true, new HexDecoder);
++	FileSource valdata(PACKAGE_DATA_DIR "TestData/sharkval.dat", true, new HexDecoder);
+ 	return BlockTransformationTest(FixedRoundsCipherFactory<SHARKEncryption, SHARKDecryption>(), valdata);
+ }
+ 
+@@ -1215,14 +1215,14 @@
+ 
+ 	cout << "\nCAST-128 validation suite running...\n\n";
+ 
+-	FileSource val128("TestData/cast128v.dat", true, new HexDecoder);
++	FileSource val128(PACKAGE_DATA_DIR "TestData/cast128v.dat", true, new HexDecoder);
+ 	pass = BlockTransformationTest(FixedRoundsCipherFactory<CAST128Encryption, CAST128Decryption>(16), val128, 1) && pass;
+ 	pass = BlockTransformationTest(FixedRoundsCipherFactory<CAST128Encryption, CAST128Decryption>(10), val128, 1) && pass;
+ 	pass = BlockTransformationTest(FixedRoundsCipherFactory<CAST128Encryption, CAST128Decryption>(5), val128, 1) && pass;
+ 
+ 	cout << "\nCAST-256 validation suite running...\n\n";
+ 
+-	FileSource val256("TestData/cast256v.dat", true, new HexDecoder);
++	FileSource val256(PACKAGE_DATA_DIR "TestData/cast256v.dat", true, new HexDecoder);
+ 	pass = BlockTransformationTest(FixedRoundsCipherFactory<CAST256Encryption, CAST256Decryption>(16), val256, 1) && pass;
+ 	pass = BlockTransformationTest(FixedRoundsCipherFactory<CAST256Encryption, CAST256Decryption>(24), val256, 1) && pass;
+ 	pass = BlockTransformationTest(FixedRoundsCipherFactory<CAST256Encryption, CAST256Decryption>(32), val256, 1) && pass;
+@@ -1234,7 +1234,7 @@
+ {
+ 	cout << "\nSquare validation suite running...\n\n";
+ 
+-	FileSource valdata("TestData/squareva.dat", true, new HexDecoder);
++	FileSource valdata(PACKAGE_DATA_DIR "TestData/squareva.dat", true, new HexDecoder);
+ 	return BlockTransformationTest(FixedRoundsCipherFactory<SquareEncryption, SquareDecryption>(), valdata);
+ }
+ 
+@@ -1242,7 +1242,7 @@
+ {
+ 	cout << "\nSKIPJACK validation suite running...\n\n";
+ 
+-	FileSource valdata("TestData/skipjack.dat", true, new HexDecoder);
++	FileSource valdata(PACKAGE_DATA_DIR "TestData/skipjack.dat", true, new HexDecoder);
+ 	return BlockTransformationTest(FixedRoundsCipherFactory<SKIPJACKEncryption, SKIPJACKDecryption>(), valdata);
+ }
+ 
+@@ -1346,7 +1346,7 @@
+ 	cout << "\nSHACAL-2 validation suite running...\n\n";
+ 
+ 	bool pass = true;
+-	FileSource valdata("TestData/shacal2v.dat", true, new HexDecoder);
++	FileSource valdata(PACKAGE_DATA_DIR "TestData/shacal2v.dat", true, new HexDecoder);
+ 	pass = BlockTransformationTest(FixedRoundsCipherFactory<SHACAL2Encryption, SHACAL2Decryption>(16), valdata, 4) && pass;
+ 	pass = BlockTransformationTest(FixedRoundsCipherFactory<SHACAL2Encryption, SHACAL2Decryption>(64), valdata, 10) && pass;
+ 	return pass;
+@@ -1357,7 +1357,7 @@
+ 	cout << "\nCamellia validation suite running...\n\n";
+ 
+ 	bool pass = true;
+-	FileSource valdata("TestData/camellia.dat", true, new HexDecoder);
++	FileSource valdata(PACKAGE_DATA_DIR "TestData/camellia.dat", true, new HexDecoder);
+ 	pass = BlockTransformationTest(FixedRoundsCipherFactory<CamelliaEncryption, CamelliaDecryption>(16), valdata, 15) && pass;
+ 	pass = BlockTransformationTest(FixedRoundsCipherFactory<CamelliaEncryption, CamelliaDecryption>(24), valdata, 15) && pass;
+ 	pass = BlockTransformationTest(FixedRoundsCipherFactory<CamelliaEncryption, CamelliaDecryption>(32), valdata, 15) && pass;
+@@ -1368,19 +1368,19 @@
+ {
+ 	cout << "\nSalsa validation suite running...\n";
+ 
+-	return RunTestDataFile("TestVectors/salsa.txt");
++	return RunTestDataFile(PACKAGE_DATA_DIR "TestVectors/salsa.txt");
+ }
+ 
+ bool ValidateSosemanuk()
+ {
+ 	cout << "\nSosemanuk validation suite running...\n";
+-	return RunTestDataFile("TestVectors/sosemanuk.txt");
++	return RunTestDataFile(PACKAGE_DATA_DIR "TestVectors/sosemanuk.txt");
+ }
+ 
+ bool ValidateVMAC()
+ {
+ 	cout << "\nVMAC validation suite running...\n";
+-	return RunTestDataFile("TestVectors/vmac.txt");
++	return RunTestDataFile(PACKAGE_DATA_DIR "TestVectors/vmac.txt");
+ }
+ 
+ bool ValidateCCM()
+Index: libcrypto++/validat2.cpp
+===================================================================
+--- libcrypto++.orig/validat2.cpp	2009-04-07 03:08:36.000000000 +0200
++++ libcrypto++/validat2.cpp	2009-04-07 03:28:02.000000000 +0200
+@@ -268,7 +268,7 @@
+ 			"\x69\x94\xac\x04\xf3\x41\xb5\x7d\x05\x20\x2d\x42\x8f\xb2\xa2\x7b"
+ 			"\x5c\x77\xdf\xd9\xb1\x5b\xfc\x3d\x55\x93\x53\x50\x34\x10\xc1\xe1";
+ 
+-		FileSource keys("TestData/rsa512a.dat", true, new HexDecoder);
++		FileSource keys(PACKAGE_DATA_DIR "TestData/rsa512a.dat", true, new HexDecoder);
+ 		Weak::RSASSA_PKCS1v15_MD2_Signer rsaPriv(keys);
+ 		Weak::RSASSA_PKCS1v15_MD2_Verifier rsaPub(rsaPriv);
+ 
+@@ -293,7 +293,7 @@
+ 		cout << "invalid signature verification\n";
+ 	}
+ 	{
+-		FileSource keys("TestData/rsa1024.dat", true, new HexDecoder);
++		FileSource keys(PACKAGE_DATA_DIR "TestData/rsa1024.dat", true, new HexDecoder);
+ 		RSAES_PKCS1v15_Decryptor rsaPriv(keys);
+ 		RSAES_PKCS1v15_Encryptor rsaPub(rsaPriv);
+ 
+@@ -320,8 +320,8 @@
+ 		bq.Put(oaepSeed, 20);
+ 		FixedRNG rng(bq);
+ 
+-		FileSource privFile("TestData/rsa400pv.dat", true, new HexDecoder);
+-		FileSource pubFile("TestData/rsa400pb.dat", true, new HexDecoder);
++		FileSource privFile(PACKAGE_DATA_DIR "TestData/rsa400pv.dat", true, new HexDecoder);
++		FileSource pubFile(PACKAGE_DATA_DIR "TestData/rsa400pb.dat", true, new HexDecoder);
+ 		RSAES_OAEP_SHA_Decryptor rsaPriv;
+ 		rsaPriv.AccessKey().BERDecodePrivateKey(privFile, false, 0);
+ 		RSAES_OAEP_SHA_Encryptor rsaPub(pubFile);
+@@ -344,7 +344,7 @@
+ {
+ 	cout << "\nDH validation suite running...\n\n";
+ 
+-	FileSource f("TestData/dh1024.dat", true, new HexDecoder());
++	FileSource f(PACKAGE_DATA_DIR "TestData/dh1024.dat", true, new HexDecoder());
+ 	DH dh(f);
+ 	return SimpleKeyAgreementValidate(dh);
+ }
+@@ -353,7 +353,7 @@
+ {
+ 	cout << "\nMQV validation suite running...\n\n";
+ 
+-	FileSource f("TestData/mqv1024.dat", true, new HexDecoder());
++	FileSource f(PACKAGE_DATA_DIR "TestData/mqv1024.dat", true, new HexDecoder());
+ 	MQV mqv(f);
+ 	return AuthenticatedKeyAgreementValidate(mqv);
+ }
+@@ -362,7 +362,7 @@
+ {
+ 	cout << "\nLUC-DH validation suite running...\n\n";
+ 
+-	FileSource f("TestData/lucd512.dat", true, new HexDecoder());
++	FileSource f(PACKAGE_DATA_DIR "TestData/lucd512.dat", true, new HexDecoder());
+ 	LUC_DH dh(f);
+ 	return SimpleKeyAgreementValidate(dh);
+ }
+@@ -371,7 +371,7 @@
+ {
+ 	cout << "\nXTR-DH validation suite running...\n\n";
+ 
+-	FileSource f("TestData/xtrdh171.dat", true, new HexDecoder());
++	FileSource f(PACKAGE_DATA_DIR "TestData/xtrdh171.dat", true, new HexDecoder());
+ 	XTR_DH dh(f);
+ 	return SimpleKeyAgreementValidate(dh);
+ }
+@@ -381,7 +381,7 @@
+ 	cout << "\nElGamal validation suite running...\n\n";
+ 	bool pass = true;
+ 	{
+-		FileSource fc("TestData/elgc1024.dat", true, new HexDecoder);
++		FileSource fc(PACKAGE_DATA_DIR "TestData/elgc1024.dat", true, new HexDecoder);
+ 		ElGamalDecryptor privC(fc);
+ 		ElGamalEncryptor pubC(privC);
+ 		privC.AccessKey().Precompute();
+@@ -399,7 +399,7 @@
+ 	cout << "\nDLIES validation suite running...\n\n";
+ 	bool pass = true;
+ 	{
+-		FileSource fc("TestData/dlie1024.dat", true, new HexDecoder);
++		FileSource fc(PACKAGE_DATA_DIR "TestData/dlie1024.dat", true, new HexDecoder);
+ 		DLIES<>::Decryptor privC(fc);
+ 		DLIES<>::Encryptor pubC(privC);
+ 		pass = CryptoSystemValidate(privC, pubC) && pass;
+@@ -422,7 +422,7 @@
+ 	cout << "\nNR validation suite running...\n\n";
+ 	bool pass = true;
+ 	{
+-		FileSource f("TestData/nr2048.dat", true, new HexDecoder);
++		FileSource f(PACKAGE_DATA_DIR "TestData/nr2048.dat", true, new HexDecoder);
+ 		NR<SHA>::Signer privS(f);
+ 		privS.AccessKey().Precompute();
+ 		NR<SHA>::Verifier pubS(privS);
+@@ -445,7 +445,7 @@
+ 
+ 	bool pass = true, fail;
+ 	{
+-	FileSource fs("TestData/dsa512.dat", true, new HexDecoder());
++	FileSource fs(PACKAGE_DATA_DIR "TestData/dsa512.dat", true, new HexDecoder());
+ 	GDSA<SHA>::Signer priv(fs);
+ 	priv.AccessKey().Precompute(16);
+ 	GDSA<SHA>::Verifier pub(priv);
+@@ -487,10 +487,10 @@
+ 	fail = pub.VerifyMessage((byte *)"xyz", 3, sig, sizeof(sig));
+ 	pass = pass && !fail;
+ 	}
+-	FileSource fs1("TestData/dsa1024.dat", true, new HexDecoder());
++	FileSource fs1(PACKAGE_DATA_DIR "TestData/dsa1024.dat", true, new HexDecoder());
+ 	DSA::Signer priv(fs1);
+ 	DSA::Verifier pub(priv);
+-	FileSource fs2("TestData/dsa1024b.dat", true, new HexDecoder());
++	FileSource fs2(PACKAGE_DATA_DIR "TestData/dsa1024b.dat", true, new HexDecoder());
+ 	DSA::Verifier pub1(fs2);
+ 	assert(pub.GetKey() == pub1.GetKey());
+ 	pass = SignatureValidate(priv, pub, thorough) && pass;
+@@ -503,7 +503,7 @@
+ 	bool pass=true;
+ 
+ 	{
+-		FileSource f("TestData/luc1024.dat", true, new HexDecoder);
++		FileSource f(PACKAGE_DATA_DIR "TestData/luc1024.dat", true, new HexDecoder);
+ 		LUCSSA_PKCS1v15_SHA_Signer priv(f);
+ 		LUCSSA_PKCS1v15_SHA_Verifier pub(priv);
+ 		pass = SignatureValidate(priv, pub) && pass;
+@@ -520,14 +520,14 @@
+ {
+ 	cout << "\nLUC-HMP validation suite running...\n\n";
+ 
+-	FileSource f("TestData/lucs512.dat", true, new HexDecoder);
++	FileSource f(PACKAGE_DATA_DIR "TestData/lucs512.dat", true, new HexDecoder);
+ 	LUC_HMP<SHA>::Signer privS(f);
+ 	LUC_HMP<SHA>::Verifier pubS(privS);
+ 	bool pass = SignatureValidate(privS, pubS);
+ 
+ 	cout << "\nLUC-IES validation suite running...\n\n";
+ 
+-	FileSource fc("TestData/lucc512.dat", true, new HexDecoder);
++	FileSource fc(PACKAGE_DATA_DIR "TestData/lucc512.dat", true, new HexDecoder);
+ 	LUC_IES<>::Decryptor privC(fc);
+ 	LUC_IES<>::Encryptor pubC(privC);
+ 	pass = CryptoSystemValidate(privC, pubC) && pass;
+@@ -541,7 +541,7 @@
+ 	bool pass=true;
+ 
+ 	{
+-		FileSource f("TestData/rabi1024.dat", true, new HexDecoder);
++		FileSource f(PACKAGE_DATA_DIR "TestData/rabi1024.dat", true, new HexDecoder);
+ 		RabinSS<PSSR, SHA>::Signer priv(f);
+ 		RabinSS<PSSR, SHA>::Verifier pub(priv);
+ 		pass = SignatureValidate(priv, pub) && pass;
+@@ -558,7 +558,7 @@
+ {
+ 	cout << "\nRW validation suite running...\n\n";
+ 
+-	FileSource f("TestData/rw1024.dat", true, new HexDecoder);
++	FileSource f(PACKAGE_DATA_DIR "TestData/rw1024.dat", true, new HexDecoder);
+ 	RWSS<PSSR, SHA>::Signer priv(f);
+ 	RWSS<PSSR, SHA>::Verifier pub(priv);
+ 
+@@ -570,7 +570,7 @@
+ {
+ 	cout << "\nBlumGoldwasser validation suite running...\n\n";
+ 
+-	FileSource f("TestData/blum512.dat", true, new HexDecoder);
++	FileSource f(PACKAGE_DATA_DIR "TestData/blum512.dat", true, new HexDecoder);
+ 	BlumGoldwasserPrivateKey priv(f);
+ 	BlumGoldwasserPublicKey pub(priv);
+ 
+@@ -740,7 +740,7 @@
+ 		"\x74\x02\x37\x0E\xED\x0A\x06\xAD\xF4\x15\x65\xB8\xE1\xD1\x45\xAE\x39\x19\xB4\xFF\x5D\xF1\x45\x7B\xE0\xFE\x72\xED\x11\x92\x8F\x61\x41\x4F\x02\x00\xF2\x76\x6F\x7C"
+ 		"\x79\xA2\xE5\x52\x20\x5D\x97\x5E\xFE\x39\xAE\x21\x10\xFB\x35\xF4\x80\x81\x41\x13\xDD\xE8\x5F\xCA\x1E\x4F\xF8\x9B\xB2\x68\xFB\x28";
+ 
+-	FileSource keys("TestData/esig1536.dat", true, new HexDecoder);
++	FileSource keys(PACKAGE_DATA_DIR "TestData/esig1536.dat", true, new HexDecoder);
+ 	ESIGN<SHA>::Signer signer(keys);
+ 	ESIGN<SHA>::Verifier verifier(signer);
+ 
+Index: libcrypto++/validat3.cpp
+===================================================================
+--- libcrypto++.orig/validat3.cpp	2009-04-07 03:08:36.000000000 +0200
++++ libcrypto++/validat3.cpp	2009-04-07 03:29:42.000000000 +0200
+@@ -365,14 +365,14 @@
+ {
+ 	cout << "\nPanama validation suite running...\n";
+ 
+-	return RunTestDataFile("TestVectors/panama.txt");
++	return RunTestDataFile(PACKAGE_DATA_DIR "TestVectors/panama.txt");
+ }
+ 
+ bool ValidateWhirlpool()
+ {
+ 	cout << "\nWhirlpool Hash Function validation suite running...\n";
+ 
+-	return RunTestDataFile("TestVectors/whrlpool.txt");
++	return RunTestDataFile(PACKAGE_DATA_DIR "TestVectors/whrlpool.txt");
+ }
+ 
+ #ifdef CRYPTOPP_REMOVED

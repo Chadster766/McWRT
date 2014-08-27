@@ -1,0 +1,88 @@
+From f094900c7c41706b93374ed50b9cee55eabe1ca1 Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Thu, 13 Dec 2012 19:43:44 +0200
+Subject: [PATCH 473/609] Armada300,include: Align include files.
+
+Change-Id: I895147d8be8b54df3ac521479be6fdb17c82c43c
+Signed-off-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ include/linux/fs.h     |    2 +-
+ include/linux/kernel.h |   11 +++++++++++
+ include/linux/major.h  |    2 ++
+ include/linux/mbus.h   |   13 ++++++++++++-
+ 4 files changed, 26 insertions(+), 2 deletions(-)
+
+diff --git a/include/linux/fs.h b/include/linux/fs.h
+index 03c64fa..88bce43 100644
+--- a/include/linux/fs.h
++++ b/include/linux/fs.h
+@@ -1629,7 +1629,7 @@ struct file_operations {
+ 	int (*flock) (struct file *, int, struct file_lock *);
+ 	ssize_t (*splice_write)(struct pipe_inode_info *, struct file *, loff_t *, size_t, unsigned int);
+ 	ssize_t (*splice_read)(struct file *, loff_t *, struct pipe_inode_info *, size_t, unsigned int);
+-	ssize_t (*splice_from_socket)(struct file *file, struct socket *sock,
++	ssize_t (*splice_from_socket)(struct file *, struct socket *,
+ 				     loff_t __user *ppos, size_t count);
+ 	int (*setlease)(struct file *, long, struct file_lock **);
+ 	long (*fallocate)(struct file *file, int mode, loff_t offset,
+diff --git a/include/linux/kernel.h b/include/linux/kernel.h
+index a70783d..1485e01 100644
+--- a/include/linux/kernel.h
++++ b/include/linux/kernel.h
+@@ -542,6 +542,17 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
+ #endif /* CONFIG_TRACING */
+ 
+ /*
++ *      Display an IP address in readable format.
++ */
++
++#define NIPQUAD(addr) \
++	((unsigned char *)&addr)[0], \
++	((unsigned char *)&addr)[1], \
++	((unsigned char *)&addr)[2], \
++	((unsigned char *)&addr)[3]
++#define NIPQUAD_FMT "%u.%u.%u.%u"
++
++/*
+  * min()/max()/clamp() macros that also do
+  * strict type-checking.. See the
+  * "unnecessary" pointer comparison.
+diff --git a/include/linux/major.h b/include/linux/major.h
+index 6a8ca98..8a04370 100644
+--- a/include/linux/major.h
++++ b/include/linux/major.h
+@@ -171,6 +171,8 @@
+ 
+ #define VIOTAPE_MAJOR		230
+ 
++#define MV_TS_MAJOR		231	/* Marvell Transport Stream driver */
++
+ #define BLOCK_EXT_MAJOR		259
+ #define SCSI_OSD_MAJOR		260	/* open-osd's OSD scsi device */
+ 
+diff --git a/include/linux/mbus.h b/include/linux/mbus.h
+index c11ff29..efa1a6d 100644
+--- a/include/linux/mbus.h
++++ b/include/linux/mbus.h
+@@ -32,5 +32,16 @@ struct mbus_dram_target_info
+ 	} cs[4];
+ };
+ 
+-
++/*
++ * The Marvell mbus is to be found only on SOCs from the Orion family
++ * at the moment.  Provide a dummy stub for other architectures.
++ */
++#ifdef CONFIG_PLAT_ORION
++extern const struct mbus_dram_target_info *mv_mbus_dram_info(void);
++#else
++static inline const struct mbus_dram_target_info *mv_mbus_dram_info(void)
++{
++	return NULL;
++}
++#endif
+ #endif
+-- 
+1.7.9.5
+

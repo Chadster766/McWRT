@@ -1,0 +1,64 @@
+From 9bbbfece82edce951e08123f5246457c8cc17f64 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Mon, 25 Feb 2013 13:56:58 +0200
+Subject: [PATCH 536/609] usb: Fix USB drive recovering from suspend to mem
+
+- By setting USB_QUIRK_RESET_RESUME quirk and reloading quirks during USB resume
+  routine we are forcing USB driver to revive not only device but also interface
+  after power down instead of blocking corresponding device node and setting new
+  one in it's place.
+
+Signed-off-by: Zbigniew Bodek <zbb@semihalf.com>
+
+Change-Id: I51397524a04e366b5efd8d3d7ef593bae8224ccc
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1181
+Reviewed-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Yehuda Yitschak <yehuday@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ drivers/usb/core/driver.c |    5 +++++
+ drivers/usb/core/quirks.c |   11 +++++++++++
+ 2 files changed, 16 insertions(+)
+
+diff --git a/drivers/usb/core/driver.c b/drivers/usb/core/driver.c
+index c77f0d6..43aee7e 100644
+--- a/drivers/usb/core/driver.c
++++ b/drivers/usb/core/driver.c
+@@ -1337,6 +1337,11 @@ int usb_resume(struct device *dev, pm_message_t msg)
+ 	 * Unbind the interfaces that will need rebinding later.
+ 	 */
+ 	} else {
++		/*
++		 * Detect USB quirks again as they are lost after
++		 * suspend to mem.
++		 */
++		usb_detect_quirks(udev);
+ 		status = usb_resume_both(udev, msg);
+ 		if (status == 0) {
+ 			pm_runtime_disable(dev);
+diff --git a/drivers/usb/core/quirks.c b/drivers/usb/core/quirks.c
+index 8b2a9d8..249c870 100644
+--- a/drivers/usb/core/quirks.c
++++ b/drivers/usb/core/quirks.c
+@@ -186,6 +186,17 @@ void usb_detect_quirks(struct usb_device *udev)
+ 		dev_dbg(&udev->dev, "USB quirks for this device: %x\n",
+ 				udev->quirks);
+ 
++	/*
++	 * Set USB_QUIRK_RESET_RESUME permanently
++	 * when power management is enabled.
++	 * This will allow successful resume from mem
++	 * without changing the drive's letter and detecting
++	 * new USB drive on every resume.
++	 */
++#ifdef CONFIG_PM
++	udev->quirks = USB_QUIRK_RESET_RESUME;
++#endif
++
+ 	/* For the present, all devices default to USB-PERSIST enabled */
+ #if 0		/* was: #ifdef CONFIG_PM */
+ 	/* Hubs are automatically enabled for USB-PERSIST */
+-- 
+1.7.9.5
+

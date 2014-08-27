@@ -1,0 +1,46 @@
+From 518267822bc779077ca4f9193c765ca969c2a844 Mon Sep 17 00:00:00 2001
+From: Lennox Wu <lennoxwu@marvell.com>
+Date: Tue, 13 Mar 2012 17:28:22 +0800
+Subject: [PATCH 231/609] Armadaxp support sparse memory model
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/Kconfig               |    5 +++++
+ arch/arm/mach-armadaxp/include/mach/memory.h |    5 +++++
+ 2 files changed, 10 insertions(+)
+
+diff --git a/arch/arm/mach-armadaxp/Kconfig b/arch/arm/mach-armadaxp/Kconfig
+index bfb3705..ff58fa3 100644
+--- a/arch/arm/mach-armadaxp/Kconfig
++++ b/arch/arm/mach-armadaxp/Kconfig
+@@ -71,6 +71,11 @@ config CFU_DRAM_BYPASS
+ 	default n
+ 	help
+ 
++config ARMADA_XP_SPARSEMEM
++	bool "Use sparse memory model"
++	select ARCH_SPARSEMEM_ENABLE
++	default n
++
+ config ARMADAXP_USE_IRQ_INDIRECT_MODE
+        bool "Use indirect mode for handling interrupt controller"
+        default n
+diff --git a/arch/arm/mach-armadaxp/include/mach/memory.h b/arch/arm/mach-armadaxp/include/mach/memory.h
+index 86fe350..6740ff2 100644
+--- a/arch/arm/mach-armadaxp/include/mach/memory.h
++++ b/arch/arm/mach-armadaxp/include/mach/memory.h
+@@ -17,6 +17,11 @@
+ 
+ 
+ /* Override the ARM default */
++#ifdef CONFIG_SPARSEMEM
++#define MAX_PHYSMEM_BITS       35
++#define SECTION_SIZE_BITS      29
++#endif
++
+ #if 0
+ #ifdef CONFIG_FB_DOVE_CONSISTENT_DMA_SIZE
+ 
+-- 
+1.7.9.5
+

@@ -1,0 +1,81 @@
+--- a/configure.ac
++++ b/configure.ac
+@@ -3737,18 +3737,6 @@ gio/fen/Makefile
+ gio/fam/Makefile
+ gio/win32/Makefile
+ gio/tests/Makefile
+-po/Makefile.in
+-docs/Makefile
+-docs/reference/Makefile
+-docs/reference/glib/Makefile
+-docs/reference/glib/version.xml
+-docs/reference/gobject/Makefile
+-docs/reference/gobject/version.xml
+-docs/reference/gio/Makefile
+-docs/reference/gio/version.xml
+-tests/Makefile
+-tests/gobject/Makefile
+-tests/refcount/Makefile
+ m4macros/Makefile
+ ])
+ 
+--- a/gio/Makefile.am
++++ b/gio/Makefile.am
+@@ -264,8 +264,6 @@ giowin32include_HEADERS = \
+ 
+ endif
+ 
+-SUBDIRS += tests
+-
+ libgio_2_0_la_SOURCES =		\
+ 	gappinfo.c 		\
+ 	gasynchelper.c 		\
+--- a/glib/Makefile.am
++++ b/glib/Makefile.am
+@@ -48,9 +48,9 @@ else
+ gatomic_c = gatomic.c
+ endif
+ 
+-SUBDIRS = libcharset $(PRINTF_SUBDIR) $(MAYBE_PCRE) update-pcre . tests
++SUBDIRS = libcharset $(PRINTF_SUBDIR) $(MAYBE_PCRE) update-pcre .
+ 
+-DIST_SUBDIRS = libcharset gnulib pcre update-pcre tests
++DIST_SUBDIRS = libcharset gnulib pcre update-pcre
+ 
+ AM_CPPFLAGS = 				\
+ 	$(glib_INCLUDES) 		\
+--- a/gobject/Makefile.am
++++ b/gobject/Makefile.am
+@@ -4,7 +4,7 @@
+ ## Process this file with automake to produce Makefile.in
+ include $(top_srcdir)/Makefile.decl
+ 
+-SUBDIRS = . tests
++SUBDIRS = .
+ 
+ CLEANFILES=
+ 
+--- a/gthread/Makefile.am
++++ b/gthread/Makefile.am
+@@ -1,8 +1,8 @@
+ ## Process this file with automake to produce Makefile.in
+ include $(top_srcdir)/Makefile.decl
+ 
+-SUBDIRS = . tests
+-DIST_SUBDIRS = tests
++SUBDIRS = .
++DIST_SUBDIRS = 
+ 
+ AM_CPPFLAGS = 				\
+ 	$(glib_INCLUDES) 		\
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -3,7 +3,7 @@ include $(top_srcdir)/Makefile.decl
+ 
+ ACLOCAL_AMFLAGS = -I m4macros ${ACLOCAL_FLAGS}
+ 
+-SUBDIRS = . m4macros glib gmodule gthread gobject gio tests po docs
++SUBDIRS = . m4macros glib gmodule gthread gobject gio
+ DIST_SUBDIRS = $(SUBDIRS) build
+ 
+ bin_SCRIPTS = glib-gettextize

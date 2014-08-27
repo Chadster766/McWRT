@@ -1,0 +1,39 @@
+From b9399559f73c423953d1177397f7324318b6d3f7 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Mon, 11 Feb 2013 11:14:33 +0200
+Subject: [PATCH 515/609] IRQ: Re-design of the Armada interrupt driver
+
+Disable and removal of the "Direct IRQ handling mode" mode
+Update of the IRQ Mask, Unmask and Set Affinity functions
+Add special treatment for Network IRQs
+This patch fixes BTS #225 and #237 and should be merged to stable branch
+Code cleanup
+
+Change-Id: I38bd45fc36451ecfbe055b24cbaabd3bf0f670b0
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h     |    6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
+index 21ed29f..76362d2 100755
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
+@@ -319,9 +319,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define CPU_INT_SET_MASK_OFFS			(0xB8)
+ #define CPU_INT_CLEAR_MASK_OFFS			(0xBC)
+ 
+-#define CPU_INT_SET_MASK_LOCAL_REG		(MV_CPUIF_LOCAL_REGS_OFFSET + CPU_INT_SET_MASK_OFFS)
+-#define CPU_INT_CLEAR_MASK_LOCAL_REG		(MV_CPUIF_LOCAL_REGS_OFFSET + CPU_INT_CLEAR_MASK_OFFS)
++#define CPU_INT_SET_MASK_REG(cpu)		(MV_CPUIF_REGS_BASE(cpu) + CPU_INT_SET_MASK_OFFS)
++#define CPU_INT_CLEAR_MASK_REG(cpu)		(MV_CPUIF_REGS_BASE(cpu) + CPU_INT_CLEAR_MASK_OFFS)
+ 
++#define CPU_INT_SET_MASK_LOCAL_REG		(MV_CPUIF_LOCAL_REGS_OFFSET + CPU_INT_SET_MASK_OFFS)
++#define CPU_INT_CLEAR_MASK_LOCAL_REG	(MV_CPUIF_LOCAL_REGS_OFFSET + CPU_INT_CLEAR_MASK_OFFS)
+ 
+ #define CPU_SNOOP_FILTER_CTRL_REG		(MV_CPUIF_LOCAL_REGS_OFFSET + 0x20)
+ 
+-- 
+1.7.9.5
+

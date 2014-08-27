@@ -1,0 +1,82 @@
+From 07c4345c55861149241c00bc48fa0feca865f02d Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Wed, 15 Feb 2012 04:47:59 -0500
+Subject: [PATCH 113/609] Neta: Fix for L2 Forwarding
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c      |   13 ++++++++-----
+ .../mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h      |    1 -
+ 2 files changed, 8 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c
+index 4c6508b..588eb94 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c
+@@ -35,8 +35,9 @@ static MV_U32 l2fw_jhash_iv;
+ static int numHashEntries;
+ 
+ struct eth_port_l2fw **mv_eth_ports_l2fw;
++static inline int       mv_eth_l2fw_rx(struct eth_port *pp, int rx_todo, int rxq);
+ static inline MV_STATUS mv_eth_l2fw_tx(struct eth_pbuf *pkt, struct eth_port *pp,
+-									   int withXor, struct neta_rx_desc *rx_desc);
++					   int withXor, struct neta_rx_desc *rx_desc);
+ 
+ 
+ void printBufVirtPtr(MV_BUF_INFO *pBuf)
+@@ -392,7 +393,7 @@ static int mv_eth_poll_l2fw(struct napi_struct *napi, int budget)
+ 		if (rx_queue == -1)
+ 			break;
+ 
+-		count = mv_eth_rx_l2f(pp, budget, rx_queue);
++		count = mv_eth_l2fw_rx(pp, budget, rx_queue);
+ 		rx_done += count;
+ 		budget -= count;
+ 		if (budget > 0)
+@@ -400,7 +401,7 @@ static int mv_eth_poll_l2fw(struct napi_struct *napi, int budget)
+ 			 ~((1 << rx_queue) << NETA_CAUSE_RXQ_OCCUP_DESC_OFFS);
+ 	}
+ #else
+-	rx_done = mv_eth_rx_l2f(pp, budget, CONFIG_MV_ETH_RXQ_DEF);
++	rx_done = mv_eth_l2fw_rx(pp, budget, CONFIG_MV_ETH_RXQ_DEF);
+ 	budget -= rx_done;
+ #endif /* (CONFIG_MV_ETH_RXQ > 1) */
+ 
+@@ -705,10 +706,12 @@ static inline MV_STATUS mv_eth_l2fw_tx(struct eth_pbuf *pkt, struct eth_port *pp
+ 	if (withXor) {
+ 		if (!xorReady()) {
+ 			mvOsPrintf("MV_DROPPED in %s\n", __func__);
++			spin_unlock(&txq_ctrl->queue_lock);
++			read_unlock(&pp->rwlock);
+ 			return MV_DROPPED;
+ 		}
+ 	}
+-	mvNetaTxqPendDescAdd(pp->port, pp->txp, 0, 1);
++	mvNetaTxqPendDescAdd(pp->port, pp->txp, txq, 1);
+ 
+ 	spin_unlock(&txq_ctrl->queue_lock);
+ 	read_unlock(&pp->rwlock);
+@@ -717,7 +720,7 @@ static inline MV_STATUS mv_eth_l2fw_tx(struct eth_pbuf *pkt, struct eth_port *pp
+ }
+ 
+ 
+-inline int mv_eth_rx_l2f(struct eth_port *pp, int rx_todo, int rxq)
++static inline int mv_eth_l2fw_rx(struct eth_port *pp, int rx_todo, int rxq)
+ {
+ 	struct eth_port  *new_pp;
+ 	L2FW_RULE *l2fw_rule;
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h
+index 08782ce..c25ef58 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h
+@@ -25,7 +25,6 @@ typedef struct l2fw_rule {
+ 
+ void l2fw(int cmd, int rx_port, int tx_port);
+ void l2fw_xor(int threshold);
+-int mv_eth_rx_l2f(struct eth_port *pp, int rx_todo, int rxq);
+ MV_STATUS l2fw_add(MV_U32 srcIP, MV_U32 dstIP, int port);
+ MV_STATUS l2fw_add_ip(const char *buf);
+ void l2fw_esp_show(void);
+-- 
+1.7.9.5
+

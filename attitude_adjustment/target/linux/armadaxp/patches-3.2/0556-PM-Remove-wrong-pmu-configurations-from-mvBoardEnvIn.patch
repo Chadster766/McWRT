@@ -1,0 +1,112 @@
+From 062ddd7550a627e92bd6cffe4635a89a05282656 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Mon, 11 Mar 2013 16:05:27 +0200
+Subject: [PATCH 556/609] PM: Remove wrong pmu configurations from
+ mvBoardEnvInit
+
+ArmadaXP has on-die per-CPU power switches for powering down the CPUs.
+Those old configuration are relevant for configuring off-die power switches parameters.
+The correct power up delay value has correct default value and should be configured if needed
+in the cpuidle driver.
+
+Bug fix - needs to be integrated in stable branch
+
+Change-Id: I45c32d51722146903d3825c4b40a7fe67eabdcec
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1242
+Reviewed-by: Star_Automation <star@marvell.com>
+Reviewed-by: Tawfik Bayouk <tawfik@marvell.com>
+Tested-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/boardEnv/mvBoardEnvLib.c      |    3 ---
+ .../armada_xp_family/boardEnv/mvBoardEnvSpec.c     |   24 --------------------
+ 2 files changed, 27 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+index 9eb3d0b..ce09691 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+@@ -144,9 +144,6 @@ MV_VOID mvBoardEnvInit(MV_VOID)
+ 		MV_REG_WRITE(DEV_BUS_SYNC_CTRL, 0x11);
+ 	}
+ 
+-	MV_REG_WRITE(MV_RUNIT_PMU_REGS_OFFSET + 0x4, BOARD_INFO(boardId)->pmuPwrUpPolarity);
+-	MV_REG_WRITE(MV_RUNIT_PMU_REGS_OFFSET + 0x14, BOARD_INFO(boardId)->pmuPwrUpDelay);
+-
+ 	/* Set GPP Out value */
+ 	MV_REG_WRITE(GPP_DATA_OUT_REG(0), BOARD_INFO(boardId)->gppOutValLow);
+ 	MV_REG_WRITE(GPP_DATA_OUT_REG(1), BOARD_INFO(boardId)->gppOutValMid);
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+index a7867e7..6d0e70a 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+@@ -206,10 +206,6 @@ MV_BOARD_INFO db88f78XX0Info = {
+ 	.pLedGppPin			= db88f6781InfoBoardDebugLedIf,
+ 	.ledsPolarity			= 0,
+ 
+-	/* PMU Power */
+-	.pmuPwrUpPolarity		= 0,
+-	.pmuPwrUpDelay			= 80000,
+-
+ 	/* GPP values */
+ 	.gppOutEnValLow			= DB_88F78XX0_GPP_OUT_ENA_LOW,
+ 	.gppOutEnValMid			= DB_88F78XX0_GPP_OUT_ENA_MID,
+@@ -385,10 +381,6 @@ MV_BOARD_INFO db88f78XX0rev2Info = {
+ 	.pLedGppPin			= db88f6781InfoBoardDebugLedIf,
+ 	.ledsPolarity			= 0,
+ 
+-	/* PMU Power */
+-	.pmuPwrUpPolarity		= 0,
+-	.pmuPwrUpDelay			= 80000,
+-
+ 	/* GPP values */
+ 	.gppOutEnValLow			= DB_88F78XX0_REV2_GPP_OUT_ENA_LOW,
+ 	.gppOutEnValMid			= DB_88F78XX0_REV2_GPP_OUT_ENA_MID,
+@@ -501,10 +493,6 @@ MV_BOARD_INFO rd78460nasInfo = {
+ 	.pLedGppPin			= NULL,
+ 	.ledsPolarity			= 0,
+ 
+-	/* PMU Power */
+-	.pmuPwrUpPolarity		= 0,
+-	.pmuPwrUpDelay			= 80000,
+-
+ 	/* GPP values */
+ 	.gppOutEnValLow			= RD_78460_NAS_GPP_OUT_ENA_LOW,
+ 	.gppOutEnValMid			= RD_78460_NAS_GPP_OUT_ENA_MID,
+@@ -1045,10 +1033,6 @@ MV_BOARD_INFO fpga88f78XX0Info = {
+ 	.pLedGppPin			= NULL,
+ 	.ledsPolarity			= 0,
+ 
+-	/* PMU Power */
+-	.pmuPwrUpPolarity		= 0,
+-	.pmuPwrUpDelay			= 80000,
+-
+ 	/* GPP values */
+ 	.gppOutEnValLow			= FPGA_88F78XX0_GPP_OUT_ENA_LOW,
+ 	.gppOutEnValMid			= FPGA_88F78XX0_GPP_OUT_ENA_MID,
+@@ -1283,10 +1267,6 @@ MV_BOARD_INFO rd78460gpInfo = {
+ 	.pLedGppPin			= NULL,
+ 	.ledsPolarity			= 0,
+ 
+-	/* PMU Power */
+-	.pmuPwrUpPolarity		= 0,
+-	.pmuPwrUpDelay			= 80000,
+-
+ 	/* GPP values */
+ 	.gppOutEnValLow			= RD_78460_GP_GPP_OUT_ENA_LOW,
+ 	.gppOutEnValMid			= RD_78460_GP_GPP_OUT_ENA_MID,
+@@ -1398,10 +1378,6 @@ MV_BOARD_INFO rd78460customerInfo = {
+ 	.pLedGppPin			= NULL,
+ 	.ledsPolarity			= 0,
+ 
+-	/* PMU Power */
+-	.pmuPwrUpPolarity		= 0,
+-	.pmuPwrUpDelay			= 80000,
+-
+ 	/* GPP values */
+ 	.gppOutEnValLow			= RD_78460_CUSTOMER_GPP_OUT_ENA_LOW,
+ 	.gppOutEnValMid			= RD_78460_CUSTOMER_GPP_OUT_ENA_MID,
+-- 
+1.7.9.5
+

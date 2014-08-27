@@ -1,0 +1,42 @@
+--- psplash.orig/psplash.c	2009-05-11 15:45:57.000000000 +0200
++++ psplash/psplash.c	2009-05-13 00:21:20.000000000 +0200
+@@ -19,11 +19,11 @@
+  */
+ 
+ #include "psplash.h"
+-#include "psplash-hand-img.h"
++#include "psplash-owrt-img.h"
+ #include "psplash-bar-img.h"
+ #include "radeon-font.h"
+ 
+-#define MSG ""
++#define MSG "Loading - please wait..."
+ 
+ void
+ psplash_exit (int signum)
+@@ -263,17 +263,17 @@
+ 	  goto fb_fail;
+   }
+ 
+-  /* Clear the background with #ecece1 */
+-  psplash_fb_draw_rect (fb, 0, 0, fb->width, fb->height, 0xec, 0xec, 0xe1);
++  /* Clear the background with #192a65 */
++  psplash_fb_draw_rect (fb, 0, 0, fb->width, fb->height, 0x19, 0x2a, 0x65);
+ 
+   /* Draw the OH logo  */
+   psplash_fb_draw_image (fb, 
+-			 (fb->width  - HAND_IMG_WIDTH)/2, 
+-			 (fb->height - HAND_IMG_HEIGHT)/2, 
+-			 HAND_IMG_WIDTH,
+-			 HAND_IMG_HEIGHT,
+-			 HAND_IMG_BYTES_PER_PIXEL,
+-			 HAND_IMG_RLE_PIXEL_DATA);
++			 0, 
++			 0, 
++			 OWRT_IMG_WIDTH,
++			 OWRT_IMG_HEIGHT,
++			 OWRT_IMG_BYTES_PER_PIXEL,
++			 OWRT_IMG_RLE_PIXEL_DATA);
+ 
+   /* Draw progress bar border */
+   psplash_fb_draw_image (fb, 

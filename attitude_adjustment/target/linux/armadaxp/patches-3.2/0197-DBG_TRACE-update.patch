@@ -1,0 +1,177 @@
+From a155f24d59c46424e6fa5aac10f960f3fb4c7fbf Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Wed, 30 May 2012 15:51:50 -0400
+Subject: [PATCH 197/609] DBG_TRACE update
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../plat-armada/mv_drivers_lsp/mv_phone/tdm_if.c   |   38 ++++++++++----------
+ .../mv_drivers_lsp/mv_trace/dbg-trace.c            |    2 +-
+ 2 files changed, 19 insertions(+), 21 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_phone/tdm_if.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_phone/tdm_if.c
+index 617041f..2fa60c9 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_phone/tdm_if.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_phone/tdm_if.c
+@@ -163,10 +163,8 @@ MV_STATUS tdm_if_init(tdm_if_register_ops_t* register_ops, tdm_if_params_t* tdm_
+ 	/* Extract TDM irq number */
+ 	irqnr = mvCtrlTdmUnitIrqGet();
+ 
+-	/* Start Marvell trace */
+-	TRC_START(); 
+-	TRC_INIT(NULL, NULL, 0, 0);
+-	TRC_REC("->%s\n",__FUNCTION__);
++	/* Enable Marvell tracing */
++	TRC_REC("->%s\n", __FUNCTION__);
+ 
+ #if defined(CONFIG_ARCH_FEROCEON_KW)
+ 	/* Assign TDM MPPs  - TBD */
+@@ -202,7 +200,7 @@ MV_STATUS tdm_if_init(tdm_if_register_ops_t* register_ops, tdm_if_params_t* tdm_
+ 
+ 	printk("Marvell Telephony Driver Loaded Successfully\n");
+ 
+-	TRC_REC("<-%s\n",__FUNCTION__);
++	TRC_REC("<-%s\n", __FUNCTION__);
+ 	return MV_OK;
+ }
+ 
+@@ -213,7 +211,7 @@ void tdm_if_exit(void)
+ 	if(!irq_init && !pcm_enable && !tdm_init)
+ 		return;
+ 
+-	TRC_REC("->%s\n",__FUNCTION__);
++	TRC_REC("->%s\n", __FUNCTION__);
+ 
+ 	if(irq_init) {
+ 		/* Release IRQ */
+@@ -241,7 +239,7 @@ void tdm_if_exit(void)
+ 	remove_proc_entry("tx_underrun", tdm_stats);
+ 	remove_proc_entry("tdm", NULL);
+ 
+-	TRC_REC("<-%s\n",__FUNCTION__);
++	TRC_REC("<-%s\n", __FUNCTION__);
+ 
+ 	TRC_OUTPUT();
+ 	TRC_RELEASE();
+@@ -251,7 +249,7 @@ static void tdm_if_pcm_start(void)
+ {
+ 	unsigned long flags;
+ 
+-	TRC_REC("->%s\n",__FUNCTION__);
++	TRC_REC("->%s\n", __FUNCTION__);
+ 
+ 	spin_lock_irqsave(&tdm_if_lock, flags);
+ 	if(!pcm_enable) {
+@@ -265,7 +263,7 @@ static void tdm_if_pcm_start(void)
+ 	}
+ 	spin_unlock_irqrestore(&tdm_if_lock, flags);
+ 
+-	TRC_REC("<-%s\n",__FUNCTION__);
++	TRC_REC("<-%s\n", __FUNCTION__);
+ 	return;
+ }
+ 
+@@ -273,7 +271,7 @@ static void tdm_if_pcm_stop(void)
+ {
+ 	unsigned long flags;
+ 
+-	TRC_REC("->%s\n",__FUNCTION__);
++	TRC_REC("->%s\n", __FUNCTION__);
+ 
+ 	spin_lock_irqsave(&tdm_if_lock, flags);
+ 	if(pcm_enable) {
+@@ -287,7 +285,7 @@ static void tdm_if_pcm_stop(void)
+ 	}
+ 	spin_unlock_irqrestore(&tdm_if_lock, flags);
+ 
+-	TRC_REC("<-%s\n",__FUNCTION__);
++	TRC_REC("<-%s\n", __FUNCTION__);
+ 	return;
+ }
+ 
+@@ -296,7 +294,7 @@ static irqreturn_t tdm_if_isr(int irq, void* dev_id)
+ 	MV_TDM_INT_INFO tdm_int_info;
+ 	unsigned int int_type;
+ 
+-	TRC_REC("->%s\n",__FUNCTION__);
++	TRC_REC("->%s\n", __FUNCTION__);
+ 
+ 	/* Extract interrupt information from low level ISR */
+ #ifdef CONFIG_MV_TDM_SUPPORT
+@@ -317,7 +315,7 @@ static irqreturn_t tdm_if_isr(int irq, void* dev_id)
+ 	if(int_type & MV_RX_INT) {
+ 		if(rxBuff != NULL) {
+ 			rx_miss++;
+-			TRC_REC("%s: Warning, missed Rx buffer processing !!!\n",__FUNCTION__);
++			TRC_REC("%s: Warning, missed Rx buffer processing !!!\n", __FUNCTION__);
+ 		}
+ 		else {
+ 			rxBuff = tdm_int_info.tdmRxBuff;
+@@ -332,7 +330,7 @@ static irqreturn_t tdm_if_isr(int irq, void* dev_id)
+ 	if(int_type & MV_TX_INT) {
+ 		if(txBuff != NULL) {
+ 			tx_miss++;
+-			TRC_REC("%s: Warning, missed Tx buffer processing !!!\n",__FUNCTION__);
++			TRC_REC("%s: Warning, missed Tx buffer processing !!!\n", __FUNCTION__);
+ 		}
+ 		else {
+ 			txBuff = tdm_int_info.tdmTxBuff;
+@@ -355,17 +353,17 @@ static irqreturn_t tdm_if_isr(int irq, void* dev_id)
+ 
+ 
+ out:
+-	TRC_REC("<-%s\n",__FUNCTION__);
++	TRC_REC("<-%s\n", __FUNCTION__);
+ 	return IRQ_HANDLED;
+ }
+ 
+ /* Rx tasklet */
+ static void tdm_if_pcm_rx_process(unsigned long arg)
+ {
+-	TRC_REC("->%s\n",__FUNCTION__);
++	TRC_REC("->%s\n", __FUNCTION__);
+ 	if(pcm_enable) {
+ 		if(rxBuff == NULL) {
+-			TRC_REC("%s: Error, empty Rx processing\n",__FUNCTION__);
++			TRC_REC("%s: Error, empty Rx processing\n", __FUNCTION__);
+ 			return;
+ 		}
+ 
+@@ -384,18 +382,18 @@ static void tdm_if_pcm_rx_process(unsigned long arg)
+ 	/* Clear rxBuff for next iteration */
+ 	rxBuff = NULL;
+ 
+-	TRC_REC("<-%s\n",__FUNCTION__);
++	TRC_REC("<-%s\n", __FUNCTION__);
+ 	return;
+ }
+ 
+ /* Tx tasklet */
+ static void tdm_if_pcm_tx_process(unsigned long arg)
+ {
+-	TRC_REC("->%s\n",__FUNCTION__);
++	TRC_REC("->%s\n", __FUNCTION__);
+ 
+ 	if(pcm_enable) {
+ 		if(txBuff == NULL) {
+-			TRC_REC("%s: Error, empty Tx processing\n",__FUNCTION__);
++			TRC_REC("%s: Error, empty Tx processing\n", __FUNCTION__);
+ 			return;
+ 		}
+ 
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.c
+index 1ad4cf1..b0dc2ba 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.c
+@@ -185,7 +185,7 @@ void TRC_OUTPUT(int cpu_mask, int time_mode)
+ 		msec = usec / 1000;
+ 		usec = usec % 1000;
+ 		printk(KERN_INFO "%03d: %d: [%02u:%03u:%03u]: ", i, cpu, sec, msec, usec);
+-		printk(KERN_INFO "%s", p->str);
++		printk(KERN_CONT "%s", p->str);
+ 		i = mv_trace_next_idx(i);
+ 		if (time_mode == 1)
+ 			tv_base = &p->tv;
+-- 
+1.7.9.5
+

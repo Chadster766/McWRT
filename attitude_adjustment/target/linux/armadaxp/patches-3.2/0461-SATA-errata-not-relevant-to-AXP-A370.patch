@@ -1,0 +1,143 @@
+From 060b3ef9eb3229d8b78c8bd735f57612820552b4 Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Sun, 16 Dec 2012 10:59:11 +0200
+Subject: [PATCH 461/609] SATA errata - not relevant to AXP & A370
+
+Change-Id: I3e0491be6a2e90a10ec7a0061a1e15c0228f27c0
+Signed-off-by: Neta Zur <neta@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../plat-armada/mv_hal/sata/CoreDriver/mvSata.c    |   18 ++++++++++++++++++
+ .../plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.c |    6 ++++--
+ 2 files changed, 22 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c
+index af725d7..6e3af2a 100755
+--- a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c
++++ b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c
+@@ -2948,11 +2948,15 @@ static void _establishSataComm(MV_SATA_ADAPTER *pAdapter, MV_U8 channelIndex)
+ 			/* force Sata speed to Gen1 */
+ 			regVal = MV_REG_READ_DWORD(pAdapter->adapterIoBaseAddress,
+ 						   getEdmaRegOffset(channelIndex) + MV_SATA_II_SATA_CONFIG_REG_OFFSET);
++
++#ifdef SATA_ERRATA_88SX60X1_8
+ 			/* according to the spec, bits [31:12] must be set to 0x009B1 */
+ 			/* Fix for 88SX60x1 FEr SATA#8 */
+ 			regVal &= 0x00000FFF;
+ 			/* regVal |= MV_BIT12; */
+ 			regVal |= 0x009B1000;
++#endif
++
+ 			regVal &= ~MV_BIT7;	/* Disable GEn II */
+ 			MV_REG_WRITE_DWORD(pAdapter->adapterIoBaseAddress,
+ 					   getEdmaRegOffset(channelIndex) + MV_SATA_II_SATA_CONFIG_REG_OFFSET, regVal);
+@@ -6062,11 +6066,14 @@ MV_BOOLEAN mvSataChannelPhyShutdown(MV_SATA_ADAPTER *pAdapter, MV_U8 channelInde
+ 	if (pAdapter->sataAdapterGeneration >= MV_SATA_GEN_II) {
+ 		regVal = MV_REG_READ_DWORD(pAdapter->adapterIoBaseAddress,
+ 					   getEdmaRegOffset(channelIndex) + MV_SATA_II_SATA_CONFIG_REG_OFFSET);
++
++#ifdef SATA_ERRATA_88SX60X1_8
+ 		/* Fix for 88SX60x1 FEr SATA#8 */
+ 		/* according to the spec, bits [31:12] must be set to 0x009B1 */
+ 		regVal &= 0x00000FFF;
+ 		/* regVal |= MV_BIT12; */
+ 		regVal |= 0x009B1000;
++#endif
+ 
+ 		regVal |= MV_BIT9;
+ 		MV_REG_WRITE_DWORD(pAdapter->adapterIoBaseAddress,
+@@ -6115,11 +6122,14 @@ MV_BOOLEAN mvSataChannelPhyPowerOn(MV_SATA_ADAPTER *pAdapter, MV_U8 channelIndex
+ 	if (pAdapter->sataAdapterGeneration >= MV_SATA_GEN_II) {
+ 		regVal = MV_REG_READ_DWORD(pAdapter->adapterIoBaseAddress,
+ 					   getEdmaRegOffset(channelIndex) + MV_SATA_II_SATA_CONFIG_REG_OFFSET);
++
++#ifdef SATA_ERRATA_88SX60X1_8
+ 		/* Fix for 88SX60x1 FEr SATA#8 */
+ 		/* according to the spec, bits [31:12] must be set to 0x009B1 */
+ 		regVal &= 0x00000FFF;
+ 		/* regVal |= MV_BIT12; */
+ 		regVal |= 0x009B1000;
++#endif
+ 
+ 		regVal &= ~(MV_BIT9);
+ 		MV_REG_WRITE_DWORD(pAdapter->adapterIoBaseAddress,
+@@ -6968,10 +6978,12 @@ MV_BOOLEAN mvSataSetInterfaceSpeed(MV_SATA_ADAPTER *pAdapter, MV_U8 channelIndex
+ 				LPRegVal &= ~(0xFF << 5);
+ 			}
+ 
++#ifdef SATA_ERRATA_88SX60X1_8
+ 			/* according to the spec, bits [31:12] must be set to 0x009B1 */
+ 			regVal &= 0x00000FFF;
+ 			/* regVal |= MV_BIT12; */
+ 			regVal |= 0x009B1000;
++#endif
+ 
+ 			if ((pAdapter->limitInterfaceSpeed[channelIndex] == MV_TRUE) &&
+ 			    (pAdapter->ifSpeed[channelIndex] == MV_SATA_IF_SPEED_1_5_GBPS)) {
+@@ -7293,11 +7305,14 @@ MV_BOOLEAN mvSataC2CInit(MV_SATA_ADAPTER *pAdapter,
+ 	regVal = MV_REG_READ_DWORD(ioBaseAddr, pSataChannel->eDmaRegsOffset + MV_SATA_II_SATA_CONFIG_REG_OFFSET);
+ 	/* Enable communication mode */
+ 	regVal |= MV_BIT11;
++
++#ifdef SATA_ERRATA_88SX60X1_8
+ 	/* Fix for 88SX60xx FEr SATA#8 */
+ 	/* according to the spec, bits [31:12] must be set to 0x009B1 */
+ 	regVal &= 0x00000FFF;
+ 	/* regVal |= MV_BIT12; */
+ 	regVal |= 0x009B1000;
++#endif
+ 
+ 	if (mvSataC2CMode == MV_SATA_C2C_MODE_INITIATOR)
+ 		regVal |= MV_BIT10;	/* Initiator */
+@@ -7374,11 +7389,14 @@ MV_BOOLEAN mvSataC2CStop(MV_SATA_ADAPTER *pAdapter, MV_U8 channelIndex)
+ 
+ 	regVal = MV_REG_READ_DWORD(ioBaseAddr, pSataChannel->eDmaRegsOffset + MV_SATA_II_SATA_CONFIG_REG_OFFSET);
+ 	regVal &= ~MV_BIT11;	/* Disable communication mode */
++
++#ifdef SATA_ERRATA_88SX60X1_8
+ 	/* Fix for 88SX60xx FEr SATA#8 */
+ 	/* according to the spec, bits [31:12] must be set to 0x009B1 */
+ 	regVal &= 0x00000FFF;
+ 	/* regVal |= MV_BIT12; */
+ 	regVal |= 0x009B1000;
++#endif
+ 
+ 	MV_REG_WRITE_DWORD(ioBaseAddr, pSataChannel->eDmaRegsOffset + MV_SATA_II_SATA_CONFIG_REG_OFFSET, regVal);
+ 	MV_REG_READ_DWORD(ioBaseAddr, pSataChannel->eDmaRegsOffset + MV_SATA_II_SATA_CONFIG_REG_OFFSET);
+diff --git a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.c b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.c
+index d6dc9ef..88b70ca 100755
+--- a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.c
++++ b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.c
+@@ -79,12 +79,13 @@ MV_BOOL mvSataPhyShutdown(MV_U8 port)
+ 	MV_U32 adapterIoBaseAddress = MV_SATA_REGS_OFFSET - 0x20000;
+ 
+ 	regVal = MV_REG_READ(adapterIoBaseAddress + getEdmaRegOffsetSataSoc(port) + MV_SATA_II_SATA_CONFIG_REG_OFFSET);
++#ifdef SATA_ERRATA_88SX60X1_8
+ 	/* Fix for 88SX60x1 FEr SATA#8 */
+ 	/* according to the spec, bits [31:12] must be set to 0x009B1 */
+ 	regVal &= 0x00000FFF;
+ 	/* regVal |= MV_BIT12; */
+ 	regVal |= 0x009B1000;
+-
++#endif
+ 	regVal |= BIT9;
+ 	MV_REG_WRITE(adapterIoBaseAddress + getEdmaRegOffsetSataSoc(port) + MV_SATA_II_SATA_CONFIG_REG_OFFSET, regVal);
+ 	return MV_TRUE;
+@@ -95,12 +96,13 @@ MV_BOOL mvSataPhyPowerOn(MV_U8 port)
+ 	MV_U32 adapterIoBaseAddress = MV_SATA_REGS_OFFSET - 0x20000;
+ 
+ 	MV_U32 regVal = MV_REG_READ(adapterIoBaseAddress + getEdmaRegOffsetSataSoc(port) + MV_SATA_II_SATA_CONFIG_REG_OFFSET);
++#ifdef SATA_ERRATA_88SX60X1_8
+ 	/* Fix for 88SX60x1 FEr SATA#8 */
+ 	/* according to the spec, bits [31:12] must be set to 0x009B1 */
+ 	regVal &= 0x00000FFF;
+ 	/* regVal |= MV_BIT12; */
+ 	regVal |= 0x009B1000;
+-
++#endif
+ 	regVal &= ~(BIT9);
+ 	MV_REG_WRITE(adapterIoBaseAddress + getEdmaRegOffsetSataSoc(port) + MV_SATA_II_SATA_CONFIG_REG_OFFSET, regVal);
+ 	return MV_TRUE;
+-- 
+1.7.9.5
+

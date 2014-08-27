@@ -1,0 +1,186 @@
+From 485e09d992c53888d7c8827c65f4c673db57dcd1 Mon Sep 17 00:00:00 2001
+From: Eli Nidam <elini@marvell.com>
+Date: Thu, 29 Nov 2012 11:40:49 +0200
+Subject: [PATCH 439/609] Update bios/SatR/TWSI for amc/GP
+
+Change-Id: Idd01f9effc3bf3f328c33884145f93149ef011e8
+Signed-off-by: Eli Nidam <elini@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/boardEnv/mvBoardEnvLib.c      |   31 ++++++++++++--------
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvLib.c        |   17 ++++++-----
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvLib.h        |    2 +-
+ 3 files changed, 28 insertions(+), 22 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+index fbcf267..4611026 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+@@ -410,6 +410,7 @@ MV_32 mvBoardPhyLinkCryptPortAddrGet(MV_U32 ethPortNum)
+ 	return BOARD_INFO(boardId)->pBoardMacInfo[ethPortNum].LinkCryptPortAddr;
+ }
+ 
++
+ /*******************************************************************************
+ * mvBoardSwitchCpuPortGet - Get the the Ethernet Switch CPU port
+ *
+@@ -471,7 +472,6 @@ MV_BOARD_MAC_SPEED mvBoardMacSpeedGet(MV_U32 ethPortNum)
+ 	}
+ 	return BOARD_INFO(boardId)->pBoardMacInfo[ethPortNum].boardMacSpeed;
+ }
+-
+ /*******************************************************************************
+ * mvBoardSpecInitGet -
+ *
+@@ -1531,20 +1531,23 @@ MV_U8 mvBoardTwsiSatRGet(MV_U8 devNum, MV_U8 regNum)
+ 	MV_TWSI_ADDR slave;
+ 	MV_U8 data;
+ 
+-	/* TWSI init */
+-	slave.type = ADDR7_BIT;
+-	slave.address = 0;
+-	mvTwsiInit(0, TWSI_SPEED, mvBoardTclkGet(), &slave, 0);
+-
+ 	/* Read MPP module ID */
+ 	DB(mvOsPrintf("Board: Read S@R device read\n"));
+ 	twsiSlave.slaveAddr.address = mvBoardTwsiAddrGet(BOARD_DEV_TWSI_SATR, devNum);
++	if (0xFF == twsiSlave.slaveAddr.address)
++		return MV_ERROR;
+ 	twsiSlave.slaveAddr.type = mvBoardTwsiAddrTypeGet(BOARD_DEV_TWSI_SATR, devNum);
+ 
+-	twsiSlave.validOffset = MV_TRUE;
+ 	/* Use offset as command */
+ 	twsiSlave.offset = regNum;
+ 	twsiSlave.moreThen256 = MV_FALSE;
++	twsiSlave.validOffset = MV_TRUE;
++
++	/* TWSI init */
++	slave.type = ADDR7_BIT;
++	slave.address = 0;
++	mvTwsiInit(0, TWSI_SPEED, mvBoardTclkGet(), &slave, 0);
++
+ 
+ 	if (MV_OK != mvTwsiRead(0, &twsiSlave, &data, 1)) {
+ 		DB(mvOsPrintf("Board: Read S@R fail\n"));
+@@ -1578,13 +1581,10 @@ MV_STATUS mvBoardTwsiSatRSet(MV_U8 devNum, MV_U8 regNum, MV_U8 regVal)
+ 	MV_TWSI_SLAVE twsiSlave;
+ 	MV_TWSI_ADDR slave;
+ 
+-	/* TWSI init */
+-	slave.type = ADDR7_BIT;
+-	slave.address = 0;
+-	mvTwsiInit(0, TWSI_SPEED, mvBoardTclkGet(), &slave, 0);
+-
+ 	/* Read MPP module ID */
+ 	twsiSlave.slaveAddr.address = mvBoardTwsiAddrGet(BOARD_DEV_TWSI_SATR, devNum);
++	if (0xFF == twsiSlave.slaveAddr.address)
++		return MV_ERROR;
+ 	twsiSlave.slaveAddr.type = mvBoardTwsiAddrTypeGet(BOARD_DEV_TWSI_SATR, devNum);
+ 	twsiSlave.validOffset = MV_TRUE;
+ 	DB(mvOsPrintf("Board: Write S@R device addr %x, type %x, data %x\n",
+@@ -1592,6 +1592,11 @@ MV_STATUS mvBoardTwsiSatRSet(MV_U8 devNum, MV_U8 regNum, MV_U8 regVal)
+ 	/* Use offset as command */
+ 	twsiSlave.offset = regNum;
+ 	twsiSlave.moreThen256 = MV_FALSE;
++	/* TWSI init */
++	slave.type = ADDR7_BIT;
++	slave.address = 0;
++	mvTwsiInit(0, TWSI_SPEED, mvBoardTclkGet(), &slave, 0);
++
+ 	if (MV_OK != mvTwsiWrite(0, &twsiSlave, &regVal, 1)) {
+ 		DB1(mvOsPrintf("Board: Write S@R fail\n"));
+ 		return MV_ERROR;
+@@ -1820,7 +1825,7 @@ MV_U8 mvBoardCpu0EndianessGet(MV_VOID)
+ {
+ 	MV_U8 sar;
+ 	if (DB_784MP_GP_ID == mvBoardIdGet())
+-		return 3;
++		return 0;
+ 
+ 	sar = mvBoardTwsiSatRGet(3, 0);
+ 	if ((MV_8)MV_ERROR == (MV_8)sar)
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
+index 4315530..ec95d36 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
+@@ -111,8 +111,6 @@ MV_U32 dummyFlavour = 0;
+ MV_BIOS_MODE bios_modes[BIOS_MODES_NUM] = {
+ /*DBConf ConfID Code L2Size CPUFreq CpuFreqMode FabricFreq  Altfabricfreq     FabricFreqMode CPU1/2/3Enable cpuEndianess dramBusWidth BootSRC BootWidth */
+ /*	                       0x4d/[1:0]  0x4d/[4:2]  0x4e[0]      0x4e/[4:1]  	0x4f[0]   0x4f/[2:1]      0x4f/[3]   	  */
+-{"78130",0x10, 0x7813, 0x1,  0x3,      0x0,  0x1a,		0x5,		0x1,	     0x0,	    0x1,	0x1, 	     0x3,	0x1},
+-{"78160",0x12, 0x7816, 0x1,  0x3,      0x0,	 0x1a, 		0x5,		0x1,	     0x0,	    0x1, 	0x0, 	     0x3,	0x1},
+ {"78230",0x13, 0x7823, 0x1,  0x3,      0x0,	 0x1a, 		0x5,		0x1,	     0x1,	    0x0,	0x1, 	     0x3,	0x1},
+ {"78260",0x14, 0x7826, 0x1,  0x3,      0x0,	 0x1a,		0x5,		0x1,	     0x1,	    0x0,	0x0, 	     0x3,	0x1},
+ {"78460",0x15, 0x7846, 0x3,  0x3,      0x0,	 0x1a, 		0x5,		0x1,	     0x3,	    0x0,	0x0, 	     0x3,	0x1},
+@@ -124,8 +122,6 @@ MV_BIOS_MODE bios_modes[BIOS_MODES_NUM] = {
+ MV_BIOS_MODE bios_modes_b0[BIOS_MODES_NUM] = {
+ /*DBConf ConfID Code L2Size CPUFreq CpuFreqMode FabricFreq  Altfabricfreq  FabricFreqMode CPUEna  cpuEndianess dramBusWidth BootSRC BootWidth */
+ /*	                       0x4d/[1:0]  0x4d/[4:2]  0x4e[0]      0x4e/[4:1]  	0x4f[0]   0x4f/[2:1]      0x4f/[3]   	  */
+-{"78130",0x10, 0x7813, 0x1,  0x3,      0x0,  		0x5,  	    0x5,        	0x1,	     0x0,	    0x1,		0x1, 	   0x3,		0x1},
+-{"78160",0x12, 0x7816, 0x1,  0x3,      0x0,	 		0x5, 		0x5,			0x1,	     0x0,	    0x1, 		0x0, 	   0x3,		0x1},
+ {"78230",0x13, 0x7823, 0x1,  0x3,      0x0,	 		0x5, 		0x5,			0x1,	     0x1,	    0x0,		0x1, 	   0x3,		0x1},
+ {"78260",0x14, 0x7826, 0x1,  0x3,      0x0,	 		0x5,		0x5,			0x1,	     0x1,	    0x0,		0x0, 	   0x3,		0x1},
+ {"78460",0x15, 0x7846, 0x3,  0x3,      0x0,	 		0x5, 		0x5,			0x1,	     0x3,	    0x1,		0x0, 	   0x3,		0x1},
+@@ -152,8 +148,11 @@ MV_BOOL mvCtrlIsValidSatR(MV_VOID)
+ 	MV_U8 fabricFreqMode;
+ 	MV_BIOS_MODE * pBbiosModes;
+ 
++#if defined(RD_88F78460_SERVER) || defined(DB_78X60_AMC)
++	MV_U32 confId = 0x15;
++#else
+ 	MV_U32 confId = mvBoardConfIdGet();
+-
++#endif
+ 	l2size = (MV_REG_READ(MPP_SAMPLE_AT_RESET(0)) & SAR0_L2_SIZE_MASK) >> SAR0_L2_SIZE_OFFSET;
+ 	cpuFreq = (MV_REG_READ(MPP_SAMPLE_AT_RESET(0)) & SAR0_CPU_FREQ_MASK) >> SAR0_CPU_FREQ_OFFSET;
+ 	fabricFreq = (MV_REG_READ(MPP_SAMPLE_AT_RESET(0)) & SAR0_FABRIC_FREQ_MASK) >> SAR0_FABRIC_FREQ_OFFSET;
+@@ -196,12 +195,13 @@ MV_BOOL mvCtrlIsValidSatR(MV_VOID)
+ MV_STATUS mvCtrlUpdatePexId(MV_VOID)
+ {
+ 	MV_U32 pmCtrl;
+-#if defined(DB_88F78X60) || defined(RD_88F78460_SERVER) || defined (DB_88F78X60_REV2)
++#if defined(DB_88F78X60) || defined(RD_88F78460_SERVER) || defined (DB_88F78X60_REV2)|| defined(DB_784MP_GP) || defined(DB_78X60_AMC)
+ 	MV_BIOS_MODE * pBbiosModes;
+ 	MV_U32 devVendId;
+ 	int i, j;
+ 	MV_U16 confId;
+ 	MV_U32 tmp;
++
+ 	if (mvCtrlRevGet() == 2)
+ 		pBbiosModes = bios_modes_b0;
+ 	else
+@@ -214,7 +214,8 @@ MV_STATUS mvCtrlUpdatePexId(MV_VOID)
+ 		MV_REG_WRITE(POWER_MNG_CTRL_REG,
+ 			(pmCtrl & ~PMC_PEXSTOPCLOCK_MASK(0)) | PMC_PEXSTOPCLOCK_EN(0));
+ 	}
+-#if defined(DB_88F78X60) || defined (DB_88F78X60_REV2)
++#if defined(DB_88F78X60) || defined (DB_88F78X60_REV2) || defined(DB_784MP_GP)
++
+ 	devVendId = MV_REG_READ(PEX_CFG_DIRECT_ACCESS(0, PEX_DEVICE_AND_VENDOR_ID));
+ 
+ 	confId = mvBoardConfIdGet();
+@@ -234,7 +235,7 @@ MV_STATUS mvCtrlUpdatePexId(MV_VOID)
+ 		pBbiosModes++;
+ 	}
+ 
+-#elif defined(RD_88F78460_SERVER)
++#elif defined(RD_88F78460_SERVER) || defined(DB_78X60_AMC)
+ 	devVendId = MV_REG_READ(PEX_CFG_DIRECT_ACCESS(0, PEX_DEVICE_AND_VENDOR_ID));
+ 	devVendId &= 0x0000FFFF;
+ 	devVendId |= 0x7846 << 16;
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
+index 59baf1d..0d2e39a 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
+@@ -174,7 +174,7 @@ typedef struct _boardSerdesConf {
+ #define SAR1_FABRIC_MODE_OFFSET	19
+ 
+ #define SAR_CPU_FAB_GET(cpu, fab)	(((cpu & 0x7) << 21) | ((fab & 0xF) << 24))
+-#define BIOS_MODES_NUM			6
++#define BIOS_MODES_NUM			4
+ 
+ typedef struct {
+ 	char *name;
+-- 
+1.7.9.5
+

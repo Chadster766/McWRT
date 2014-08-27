@@ -1,0 +1,77 @@
+config 'websettings' 'webadmin'
+	option 'userlevel' '1'
+	option 'enable' '1'
+
+config 'mroute' 'settings'
+	option 'os' 'OpenWrt'
+	option 'debug' '0'
+	option 'sleeptime' '5'
+	option 'testip' '204.225.44.3'
+	option 'timeout' '2'
+	option 'success' '2'
+	option 'failure' '3'
+	option 'resetif' '5'
+	option 'mroute_dns'	'8.8.8.8 8.8.4.4'
+
+config 'wanif' 'wan'
+	option 'name' 'Provider1'
+	option 'weight' '5'
+	option 'mroute_dns' '204.117.121.235'
+	
+config 'wanif' 'wan2'
+	option 'name' 'Provider2'
+	option 'weight' '1'
+	option 'mroute_dns' '198.68.161.67'
+
+config mangles
+#	option input '192.168.1.1'
+	option outwan wan
+	option mark	5
+	option protocol udp
+	option dport '5060 4569'
+
+config mangles
+#	option input '192.168.1.1'
+	option outwan wan2
+	option mark	6
+	option protocol tcp
+	option dport '6666'
+
+config mangles
+#	option input '192.168.1.1'
+	option outwan wan
+	option mark	4
+	option protocol tcp
+	option destination 'openwrt.org'
+	option dport '80'
+	
+
+config mangles
+#	option input '192.168.1.1'
+	option outwan wan2
+	option mark	3
+	option protocol tcp
+	option destination 'x-wrt.org'
+	option dport '80'
+	
+#config mangles
+##	option input '192.168.1.1'
+#	option outwan wan2
+#	option mark	1
+#	option destination 'mail.provider2.com'
+#	option port '25'
+#	option protocol tcp
+	
+#config mangles
+##	option input '192.168.1.1'
+#	option outwan wan
+#	option mark	2
+#	option protocol 'tcp'
+#	option destination 'pop3.provider1.com smtp.provider1.com'
+#	option dport '25'
+	
+config 'lanif' 'lan'
+	option 'name' 'LAN'
+
+config 'mroute' 'system'
+	option 'apply' '/usr/lib/lua/lua-xwrt/applys/mroute.lua'

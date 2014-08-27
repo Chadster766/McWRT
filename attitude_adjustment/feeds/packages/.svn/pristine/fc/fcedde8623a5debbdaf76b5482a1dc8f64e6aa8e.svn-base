@@ -1,0 +1,20 @@
+Index: mpdas-0.3.0/Makefile
+===================================================================
+--- mpdas-0.3.0.orig/Makefile	2010-11-22 02:15:12.000000000 +0100
++++ mpdas-0.3.0/Makefile	2011-07-20 16:53:31.000000000 +0200
+@@ -3,12 +3,12 @@
+ CXX	?= g++
+ OBJ	= main.o md5.o utils.o mpd.o audioscrobbler.o cache.o config.o
+ OUT	= mpdas
+-PREFIX ?= /usr/local
++PREFIX ?= /
+ MANPREFIX ?= ${PREFIX}/man/man1
+ CONFIG ?= $(PREFIX)/etc
+ 
+-CXXFLAGS	+= `pkg-config --cflags libmpd libcurl` 
+-LIBS		= `pkg-config --libs libmpd libcurl`
++CXXFLAGS	+= $(CPPFLAGS) `pkg-config --cflags libmpd libcurl`
++LIBS		= $(LDFLAGS) `pkg-config --libs libmpd libcurl`
+ 
+ CXXFLAGS	+= -DCONFDIR="\"$(CONFIG)\"" -DVERSION="\"$(VERSION)\""
+ 

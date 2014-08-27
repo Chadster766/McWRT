@@ -1,0 +1,156 @@
+From 59bb536d4337e27231958cc5bed5be03e953859a Mon Sep 17 00:00:00 2001
+From: Matthew Fatheree <Matthew.Fatheree@belkin.com>
+Date: Sun, 11 May 2014 22:32:16 +0700
+Subject: [PATCH 08/31] Support USB, TMP421, On-Die sensor, PM, ... for Mamba
+ board
+
+Signed-off-by: Matthew Fatheree <Matthew.Fatheree@belkin.com>
+---
+ target/linux/armadaxp/config-3.2 |  123 +++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 121 insertions(+), 2 deletions(-)
+
+diff --git a/target/linux/armadaxp/config-3.2 b/target/linux/armadaxp/config-3.2
+index 4276798..e79af6a 100644
+--- a/target/linux/armadaxp/config-3.2
++++ b/target/linux/armadaxp/config-3.2
+@@ -1,4 +1,14 @@
++# CONFIG_APM_EMULATION is not set
++CONFIG_ARPD=y
++CONFIG_EFI_PARTITION=y
+ CONFIG_FS_POSIX_ACL=y
++CONFIG_GENERIC_ACL=y
++CONFIG_HWMON=y
++# CONFIG_HWMON_DEBUG_CHIP is not set
++# CONFIG_HWMON_VID is not set
++CONFIG_IP_MROUTE=y
++# CONFIG_IP_PIMSM_V1 is not set
++# CONFIG_IP_PIMSM_V2 is not set
+ # CONFIG_JFFS2_COMPRESSION_OPTIONS is not set
+ CONFIG_JFFS2_FS=y
+ CONFIG_JFFS2_FS_DEBUG=0
+@@ -35,11 +45,120 @@ CONFIG_MV_ETH_PORTS_NUM=2
+ # CONFIG_MV_ETH_SWITCH is not set
+ CONFIG_MV_INCLUDE_PCI=y
+ CONFIG_MV_INCLUDE_SWITCH=y
+-# CONFIG_MV_INCLUDE_USB is not set
+ # CONFIG_MV_PHONE is not set
+ # CONFIG_MV_PHONE_USE_SLIC_LIBS is not set
++# CONFIG_NTFS_DEBUG is not set
++CONFIG_NTFS_FS=y
++CONFIG_NTFS_RW=y
+ # CONFIG_OVERLAYFS_FS is not set
++CONFIG_PM=y
++# CONFIG_PMBUS is not set
++CONFIG_PM_CLK=y
++# CONFIG_PM_DEBUG is not set
++CONFIG_PM_RUNTIME=y
+ # CONFIG_PPP is not set
++# CONFIG_SENSORS_AD7314 is not set
++# CONFIG_SENSORS_AD7414 is not set
++# CONFIG_SENSORS_AD7418 is not set
++# CONFIG_SENSORS_ADCXX is not set
++# CONFIG_SENSORS_ADM1021 is not set
++# CONFIG_SENSORS_ADM1025 is not set
++# CONFIG_SENSORS_ADM1026 is not set
++# CONFIG_SENSORS_ADM1029 is not set
++# CONFIG_SENSORS_ADM1031 is not set
++# CONFIG_SENSORS_ADM9240 is not set
++# CONFIG_SENSORS_ADS1015 is not set
++# CONFIG_SENSORS_ADS7828 is not set
++# CONFIG_SENSORS_ADS7871 is not set
++# CONFIG_SENSORS_ADT7411 is not set
++# CONFIG_SENSORS_ADT7462 is not set
++# CONFIG_SENSORS_ADT7470 is not set
++# CONFIG_SENSORS_ADT7475 is not set
++# CONFIG_SENSORS_AMC6821 is not set
++CONFIG_SENSORS_ARMADA=y
++# CONFIG_SENSORS_ASC7621 is not set
++# CONFIG_SENSORS_ATXP1 is not set
++# CONFIG_SENSORS_DME1737 is not set
++# CONFIG_SENSORS_DS1621 is not set
++# CONFIG_SENSORS_DS620 is not set
++# CONFIG_SENSORS_EMC1403 is not set
++# CONFIG_SENSORS_EMC2103 is not set
++# CONFIG_SENSORS_EMC6W201 is not set
++# CONFIG_SENSORS_F71805F is not set
++# CONFIG_SENSORS_F71882FG is not set
++# CONFIG_SENSORS_F75375S is not set
++# CONFIG_SENSORS_G760A is not set
++# CONFIG_SENSORS_GL518SM is not set
++# CONFIG_SENSORS_GL520SM is not set
++# CONFIG_SENSORS_GPIO_FAN is not set
++# CONFIG_SENSORS_I5K_AMB is not set
++# CONFIG_SENSORS_IT87 is not set
++# CONFIG_SENSORS_JC42 is not set
++# CONFIG_SENSORS_LINEAGE is not set
++# CONFIG_SENSORS_LM63 is not set
++# CONFIG_SENSORS_LM70 is not set
++# CONFIG_SENSORS_LM73 is not set
++# CONFIG_SENSORS_LM75 is not set
++# CONFIG_SENSORS_LM77 is not set
++# CONFIG_SENSORS_LM78 is not set
++# CONFIG_SENSORS_LM80 is not set
++# CONFIG_SENSORS_LM83 is not set
++# CONFIG_SENSORS_LM85 is not set
++# CONFIG_SENSORS_LM87 is not set
++# CONFIG_SENSORS_LM90 is not set
++# CONFIG_SENSORS_LM92 is not set
++# CONFIG_SENSORS_LM93 is not set
++# CONFIG_SENSORS_LM95241 is not set
++# CONFIG_SENSORS_LM95245 is not set
++# CONFIG_SENSORS_LTC4151 is not set
++# CONFIG_SENSORS_LTC4215 is not set
++# CONFIG_SENSORS_LTC4245 is not set
++# CONFIG_SENSORS_LTC4261 is not set
++# CONFIG_SENSORS_MAX1111 is not set
++# CONFIG_SENSORS_MAX16065 is not set
++# CONFIG_SENSORS_MAX1619 is not set
++# CONFIG_SENSORS_MAX1668 is not set
++# CONFIG_SENSORS_MAX6639 is not set
++# CONFIG_SENSORS_MAX6642 is not set
++# CONFIG_SENSORS_MAX6650 is not set
++# CONFIG_SENSORS_NTC_THERMISTOR is not set
++# CONFIG_SENSORS_PC87360 is not set
++# CONFIG_SENSORS_PC87427 is not set
++# CONFIG_SENSORS_PCF8591 is not set
++# CONFIG_SENSORS_SCH5627 is not set
++# CONFIG_SENSORS_SCH5636 is not set
++# CONFIG_SENSORS_SCH56XX_COMMON is not set
++# CONFIG_SENSORS_SHT15 is not set
++# CONFIG_SENSORS_SHT21 is not set
++# CONFIG_SENSORS_SIS5595 is not set
++# CONFIG_SENSORS_SMM665 is not set
++# CONFIG_SENSORS_SMSC47B397 is not set
++# CONFIG_SENSORS_SMSC47M1 is not set
++# CONFIG_SENSORS_SMSC47M192 is not set
++# CONFIG_SENSORS_THMC50 is not set
++# CONFIG_SENSORS_TMP102 is not set
++# CONFIG_SENSORS_TMP401 is not set
++CONFIG_SENSORS_TMP421=y
++# CONFIG_SENSORS_VIA686A is not set
++# CONFIG_SENSORS_VT1211 is not set
++# CONFIG_SENSORS_VT8231 is not set
++# CONFIG_SENSORS_W83627EHF is not set
++# CONFIG_SENSORS_W83627HF is not set
++# CONFIG_SENSORS_W83781D is not set
++# CONFIG_SENSORS_W83791D is not set
++# CONFIG_SENSORS_W83792D is not set
++# CONFIG_SENSORS_W83793 is not set
++# CONFIG_SENSORS_W83795 is not set
++# CONFIG_SENSORS_W83L785TS is not set
++# CONFIG_SENSORS_W83L786NG is not set
+ # CONFIG_TDM_DEV_TEST_SUPPORT is not set
+-# CONFIG_USB_ETRON_HCD is not set
++CONFIG_TMPFS_POSIX_ACL=y
++CONFIG_TMPFS_XATTR=y
++CONFIG_TUN=y
++CONFIG_USB_ETRON_HCD=y
++# CONFIG_USB_ETRON_HCD_DEBUGGING is not set
++CONFIG_USB_ETRON_HUB=y
++# CONFIG_USB_OTG is not set
++CONFIG_USB_SUSPEND=y
+ # CONFIG_USB_UAS is not set
++# CONFIG_USB_XHCI_HCD is not set
+-- 
+1.7.9.5
+

@@ -1,0 +1,163 @@
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index a580abe..d5473a8 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -113,7 +113,7 @@ extern unsigned int irq_int_type[];
+ extern void __init axp_map_io(void);
+ extern void __init mv_init_irq(void);
+ extern struct sys_timer axp_timer;
+-extern void axp_timer_resume();
++extern void axp_timer_resume(void);
+ extern MV_CPU_DEC_WIN* mv_sys_map(void);
+ #if defined(CONFIG_MV_INCLUDE_CESA)
+ extern u32 mv_crypto_virt_base_get(u8 chan);
+@@ -358,7 +358,7 @@ unsigned long mv_cpu_count = NR_CPUS;
+ static int __init mv_cpu_count_setup(char *s)
+ {
+ 	int fail;
+-	unsigned int cpu_count;
++	unsigned long cpu_count;
+ 
+ 	/* Translate string to integer. If fails return to default*/
+ 	while (isspace(*s))
+@@ -448,15 +448,13 @@ __setup("mv_ipc=", mv_ipc_setup);
+ 
+ void __init armadaxp_setup_cpu_mbus(void)
+ {
+-	void __iomem *addr;
+ 	int i;
+ 	int cs;
+ 	u8	coherency_status = 0;
++	static MV_UNIT_WIN_INFO addrWinMap[MAX_TARGETS + 1];
+ #if defined(CONFIG_AURORA_IO_CACHE_COHERENCY)
+ 	coherency_status = COHERENCY_STATUS_SHARED_NO_L2_ALLOC;
+ #endif
+-	static MV_UNIT_WIN_INFO addrWinMap[MAX_TARGETS + 1];
+-
+ 
+ 	/*
+ 	 * Setup MBUS dram target info.
+@@ -512,7 +510,7 @@ static struct resource axp_i2c_0_resources[] = {
+ 	},
+ };
+ 
+-
++#ifdef CONFIG_FB_DOVE
+ static struct resource axp_i2c_1_resources[] = {
+ 	{
+ 		.name   = "i2c base",
+@@ -527,6 +525,7 @@ static struct resource axp_i2c_1_resources[] = {
+ 		.flags  = IORESOURCE_IRQ,
+ 	},
+ };
++#endif
+ 
+ static struct platform_device axp_i2c0 = {
+ 	.name           = MV64XXX_I2C_CTLR_NAME,
+@@ -538,6 +537,7 @@ static struct platform_device axp_i2c0 = {
+ 	},
+ };
+ 
++#ifdef CONFIG_FB_DOVE
+ static struct platform_device axp_i2c1 = {
+ 	.name           = MV64XXX_I2C_CTLR_NAME,
+ 	.id             = 1,
+@@ -547,6 +547,8 @@ static struct platform_device axp_i2c1 = {
+ 		.platform_data = &axp_i2c_pdata,
+ 	},
+ };
++#endif
++
+ /**********
+  * UART-0 *
+  **********/
+@@ -788,7 +790,7 @@ static struct platform_device mv_gpio = {
+ 	.num_resources	= 0,
+ };
+ 
+-static void __init mv_gpio_init()
++static void __init mv_gpio_init(void)
+ {
+ 	platform_device_register(&mv_gpio);
+ }
+@@ -1473,6 +1475,9 @@ static int mvAmpInitCpuIf()
+ void axp_db_restore(void)
+ {
+ 	int maxPorts, port;
++#ifdef CONFIG_MV_INCLUDE_SDIO
++	static MV_UNIT_WIN_INFO addrWinMap[MAX_TARGETS + 1];
++#endif
+ 
+ 	/* init the Board environment */
+ 	mvBoardEnvInit();
+@@ -1490,8 +1495,6 @@ void axp_db_restore(void)
+ 	}
+ 
+ #ifdef CONFIG_MV_INCLUDE_SDIO
+-	static MV_UNIT_WIN_INFO addrWinMap[MAX_TARGETS + 1];
+-
+ 	if(MV_OK == mvCtrlAddrWinMapBuild(addrWinMap, MAX_TARGETS + 1))
+ 		if (MV_OK == mvSdmmcWinInit(addrWinMap)) {
+ 			printk("Resuming SDIO\n");
+@@ -1929,9 +1932,6 @@ static void __init axp_rd_nas_init(void)
+         platform_device_register(&axp_i2c1);
+ #endif
+ 
+-
+-
+-
+ #if defined(CONFIG_MV_INCLUDE_SDIO)
+ 	if (MV_TRUE == mvCtrlPwrClckGet(SDIO_UNIT_ID, 0)) {
+ 		int irq_detect = mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_DETECT);
+diff --git a/arch/arm/mach-armadaxp/time.c b/arch/arm/mach-armadaxp/time.c
+index fdf089d..bbb1e3f 100644
+--- a/arch/arm/mach-armadaxp/time.c
++++ b/arch/arm/mach-armadaxp/time.c
+@@ -360,7 +360,7 @@ static irqreturn_t axp_localtimer_handler(int irq, void *dev_id)
+ /*
+  * Setup the local clock events for a CPU.
+  */
+- __cpuinit local_timer_setup(struct clock_event_device *clk)
++int __cpuinit local_timer_setup(struct clock_event_device *clk)
+ {
+ #if !defined (CONFIG_ARMADA_XP_REV_Z1) || defined (CONFIG_MACH_ARMADA_XP_FPGA)
+ 	/* FPGA hardcoded to 25Mhz and in DSMP-A0 the referance clock for the timers is 25MHz */
+@@ -368,7 +368,7 @@ static irqreturn_t axp_localtimer_handler(int irq, void *dev_id)
+ #else
+ 	unsigned int fabric_clk = mvCpuL2ClkGet(); /* DSMP-Z1 clock is taken from Fabric */
+ #endif
+-	static cpu0_flag=0;
++	static int cpu0_flag = 0;
+ 	int cpu = smp_processor_id();
+ 	struct clock_event_device **this_cpu_clk;
+ 
+diff --git a/arch/arm/mm/cache-aurora-l2.c b/arch/arm/mm/cache-aurora-l2.c
+index 3e4673d..dbc5c01 100644
+--- a/arch/arm/mm/cache-aurora-l2.c
++++ b/arch/arm/mm/cache-aurora-l2.c
+@@ -253,8 +253,9 @@ out:
+ #define RANGE_OP
+ 
+ static int l2_wt_override = 0;
++#ifdef RANGE_OP
+ static DEFINE_SPINLOCK(smp_l2cache_lock);
+-
++#endif
+ /*
+  * Low-level cache maintenance operations.
+  *
+diff --git a/arch/arm/vfp/vfpmodule.c b/arch/arm/vfp/vfpmodule.c
+index 2a5bd12..a5d3851 100644
+--- a/arch/arm/vfp/vfpmodule.c
++++ b/arch/arm/vfp/vfpmodule.c
+@@ -563,7 +563,6 @@ static int vfp_hotplug(struct notifier_block *b, unsigned long action,
+ 
+ void vfp_save(void)
+ {
+-        struct pm_message temp;
+         /*
+          * if VFP was not initialized yet, then do nothing
+          */
+-- 
+1.7.9.5
+

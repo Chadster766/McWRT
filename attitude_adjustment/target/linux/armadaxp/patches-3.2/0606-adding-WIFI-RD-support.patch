@@ -1,0 +1,455 @@
+From b56adbb53c2777209bb329832d4177a6c5499607 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Mon, 20 May 2013 17:29:52 -0700
+Subject: [PATCH 606/609] adding WIFI RD support
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/Kconfig                     |    5 +
+ .../armada_xp_family/boardEnv/mvBoardEnvLib.c      |    6 +-
+ .../armada_xp_family/boardEnv/mvBoardEnvSpec.c     |  117 ++++++++++++++++
+ .../armada_xp_family/boardEnv/mvBoardEnvSpec.h     |   35 ++++-
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvLib.c        |    1 +
+ arch/arm/mach-armadaxp/core.c                      |  140 ++++++++++++++++++++
+ arch/arm/tools/mach-types                          |    1 +
+ drivers/usb/host/ehci_marvell.c                    |    4 +-
+ 8 files changed, 305 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/Kconfig b/arch/arm/mach-armadaxp/Kconfig
+index 7ea7904..3360315 100644
+--- a/arch/arm/mach-armadaxp/Kconfig
++++ b/arch/arm/mach-armadaxp/Kconfig
+@@ -81,6 +81,11 @@ config MACH_ARMADA_XP_RD_NAS
+ 	default y
+ 	help
+ 
++config MACH_ARMADA_XP_RD_WIFI
++        bool "Marvell Armada XP WIFI RD Board"
++        default y
++        help
++
+ config MACH_ARMADA_XP_FPGA
+ 	bool "Marvell Armada XP FPGA Board"	
+ 	depends on !MACH_ARMADA_XP_DB && !MACH_ARMADA_XP_RDSRV
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+index ce09691..166ffbe 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+@@ -1468,6 +1468,8 @@ MV_VOID mvBoardIdSet(MV_VOID)
+ 		gBoardId = DB_78X60_PCAC_REV2_ID;
+ #elif defined(DB_784MP_GP)
+ 		gBoardId = DB_784MP_GP_ID;
++#elif defined(RD_78XMP_WIFI)
++		gBoardId = RD_78XMP_WIFI_ID;
+ #elif defined(RD_78460_CUSTOMER)
+ 		gBoardId = RD_78460_CUSTOMER_ID;
+ #else
+@@ -2019,6 +2021,7 @@ MV_U16 mvBoardPexCapabilityGet(MV_VOID)
+ 	case DB_78X60_PCAC_REV2_ID:
+ 	case RD_78460_SERVER_ID:
+ 	case RD_78460_SERVER_REV2_ID:
++	case RD_78XMP_WIFI_ID:
+ 		sar = 0x1; /* Gen2 */
+ 		break;
+ 	case DB_784MP_GP_ID:
+@@ -2662,10 +2665,11 @@ MV_BOARD_PEX_INFO *mvBoardPexInfoGet(void)
+ 	case RD_78460_CUSTOMER_ID:
+ 	case DB_78X60_AMC_ID:
+ 	case DB_78X60_PCAC_REV2_ID:
++	case RD_78XMP_WIFI_ID:
+ 		return &BOARD_INFO(boardId)->boardPexInfo;
+ 		break;
+ 	default:
+-		DB(mvOsPrintf("mvBoardSerdesCfgGet: Unsupported board!\n"));
++		DB(mvOsPrintf("mvBoardPexInfoGet: Unsupported board!\n"));
+ 		return NULL;
+ 	}
+ }
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+index 6d0e70a..68408ab 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+@@ -1303,6 +1303,122 @@ MV_BOARD_INFO rd78460gpInfo = {
+ 	.norFlashWriteParams		= RD_78460_GP_BOARD_NOR_WRITE_PARAMS
+ };
+ 
++
++
++/*********************************************************************************/
++
++/***************************/
++/* ARMADA-XP RD WIFI BOARD */
++/***************************/
++#define RD_78460_WIFI_BOARD_NAND_READ_PARAMS              0x000C0282
++#define RD_78460_WIFI_BOARD_NAND_WRITE_PARAMS             0x00010305
++
++#define RD_78460_WIFI_BOARD_NAND_CONTROL                  0x01c00543
++
++
++MV_BOARD_TWSI_INFO   rd78460wifiInfoBoardTwsiDev[] = {
++        /* {{MV_BOARD_DEV_CLASS devClass, MV_U8 twsiDevAddr, MV_U8 twsiDevAddrType}} */
++};
++
++MV_BOARD_MAC_INFO rd78460wifiInfoBoardMacInfo[] = {
++        /* {{MV_BOARD_MAC_SPEED boardMacSpeed, MV_U8 boardEthSmiAddr}} */
++        /* speed will toggle to force link 1000 when SW module detected */
++	{BOARD_MAC_SPEED_AUTO, 0x0,0x0, 0x0,},
++        {BOARD_MAC_SPEED_AUTO, 0x1,0x0, 0x0,}
++};
++
++
++MV_BOARD_MODULE_TYPE_INFO rd78460wifiInfoBoardModTypeInfo[] = {
++		/*NULL*/ 
++};
++
++
++MV_BOARD_GPP_INFO rd78460wifiInfoBoardGppInfo[] = {
++        /* {{MV_BOARD_GPP_CLASS devClass, MV_U8 gppPinNum}} */
++};
++
++MV_DEV_CS_INFO rd78460wifiInfoBoardDeCsInfo[] = {
++        /*{deviceCS, params, devType, devWidth, busWidth }*/
++//	{DEVICE_CS0,N_A, BOARD_DEV_NAND_FLASH,8,8},
++#if defined(MV_INCLUDE_SPI)
++	{SPI_CS0, N_A, BOARD_DEV_SPI_FLASH, 8, 8} /* SPI DEV */
++#endif
++};
++
++MV_BOARD_MPP_INFO rd78460wifiInfoBoardMppConfigValue[] = {
++        { {
++        RD_78460_WIFI_MPP0_7,
++        RD_78460_WIFI_MPP8_15,
++        RD_78460_WIFI_MPP16_23,
++        RD_78460_WIFI_MPP24_31,
++        RD_78460_WIFI_MPP32_39,
++        RD_78460_WIFI_MPP40_47,
++        RD_78460_WIFI_MPP48_55,
++        RD_78460_WIFI_MPP56_63,
++        RD_78460_WIFI_MPP64_67,
++        } }
++};
++
++MV_BOARD_INFO rd78460wifiInfo = {
++        .boardName                      = "RD-AXP-WIFI rev 3.0",
++	.numBoardMppTypeValue           = ARRSZ(rd78460wifiInfoBoardModTypeInfo),
++        .pBoardModTypeValue             = rd78460wifiInfoBoardModTypeInfo,
++        .numBoardMppConfigValue         = ARRSZ(rd78460wifiInfoBoardMppConfigValue),
++        .pBoardMppConfigValue           = rd78460wifiInfoBoardMppConfigValue,
++        .intsGppMaskLow                 = 0,
++        .intsGppMaskMid                 = 0,
++        .intsGppMaskHigh                = 0,
++        .numBoardDeviceIf               = ARRSZ(rd78460wifiInfoBoardDeCsInfo),
++        .pDevCsInfo                             = rd78460wifiInfoBoardDeCsInfo,
++        .numBoardTwsiDev                = 0, 
++        .pBoardTwsiDev                  = NULL,
++        .numBoardMacInfo                = ARRSZ(rd78460wifiInfoBoardMacInfo),
++        .pBoardMacInfo                  = rd78460wifiInfoBoardMacInfo,
++        .numBoardGppInfo                = ARRSZ(rd78460wifiInfoBoardGppInfo),
++        .pBoardGppInfo                  = rd78460wifiInfoBoardGppInfo,
++        .activeLedsNumber               = 0,
++        .pLedGppPin                     = NULL,
++        .ledsPolarity                   = 0,
++
++        /* GPP values */
++        .gppOutEnValLow                 = RD_78460_WIFI_GPP_OUT_ENA_LOW,
++        .gppOutEnValMid                 = RD_78460_WIFI_GPP_OUT_ENA_MID,
++        .gppOutEnValHigh                = RD_78460_WIFI_GPP_OUT_ENA_HIGH,
++        .gppOutValLow                   = RD_78460_WIFI_GPP_OUT_VAL_LOW,
++        .gppOutValMid                   = RD_78460_WIFI_GPP_OUT_VAL_MID,
++        .gppOutValHigh                  = RD_78460_WIFI_GPP_OUT_VAL_HIGH,
++        .gppPolarityValLow              = RD_78460_WIFI_GPP_POL_LOW,
++        .gppPolarityValMid              = RD_78460_WIFI_GPP_POL_MID,
++        .gppPolarityValHigh             = RD_78460_WIFI_GPP_POL_HIGH,
++
++        /* External Switch Configuration */
++        .pSwitchInfo = NULL,
++        .switchInfoNum = 0,
++
++        /* TDM configuration */
++        /* We hold a different configuration array for each possible slic that
++        ** can be connected to board.
++        ** When modules are scanned, then we select the index of the relevant
++        ** slic's information array.
++        ** For RD and Customers boards we only need to initialize a single
++        ** entry of the arrays below, and set the boardTdmInfoIndex to 0.
++        */
++        .numBoardTdmInfo                        = {},
++        .pBoardTdmInt2CsInfo                    = {},
++        .boardTdmInfoIndex                      = -1,
++
++        /* NAND init params */
++        .nandFlashReadParams            = RD_78460_WIFI_BOARD_NAND_READ_PARAMS,
++        .nandFlashWriteParams           = RD_78460_WIFI_BOARD_NAND_WRITE_PARAMS,
++        .nandFlashControl               = RD_78460_WIFI_BOARD_NAND_CONTROL,
++#if defined(MV_INCLUDE_NOR)
++        /* NOR init params */
++        .norFlashReadParams             = RD_78460_WIFI_BOARD_NOR_READ_PARAMS,
++        .norFlashWriteParams            = RD_78460_WIFI_BOARD_NOR_WRITE_PARAMS
++#endif
++};
++
++
+ /***************************/
+ /* ARMADA-XP CUSTOMER BOARD */
+ /***************************/
+@@ -1427,5 +1543,6 @@ MV_BOARD_INFO *boardInfoTbl[] = {
+ 	&db78X60pcacrev2Info,
+ 	&rd78460ServerRev2Info,
+ 	&rd78460gpInfo,
++	&rd78460wifiInfo,
+ 	&rd78460customerInfo
+ };
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
+index 82b58a0..7fd8152 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
+@@ -99,7 +99,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define DB_78X60_PCAC_REV2_ID		(DB_78X60_AMC_ID + 1)
+ #define RD_78460_SERVER_REV2_ID		(DB_78X60_PCAC_REV2_ID + 1)
+ #define DB_784MP_GP_ID				(RD_78460_SERVER_REV2_ID + 1)
+-#define RD_78460_CUSTOMER_ID		(DB_784MP_GP_ID+ 1)
++#define RD_78XMP_WIFI_ID			(DB_784MP_GP_ID + 1)
++#define RD_78460_CUSTOMER_ID			(RD_78XMP_WIFI_ID+ 1)
+ #define MV_MAX_BOARD_ID				(RD_78460_CUSTOMER_ID + 1)
+ #define INVALID_BAORD_ID			0xFFFFFFFF
+ 
+@@ -529,7 +530,39 @@ MPP#	NAME			IN/OUT
+ #define RD_78460_GP_GPP_POL_HIGH	0x0
+ 
+ 
++/*********************/
++/* RD-AXP-WIFI         */
++/*********************/
++
++
++#define RD_78460_WIFI_MPP0_7		  0x11111111
++#define RD_78460_WIFI_MPP8_15             0x22221111
++#define RD_78460_WIFI_MPP16_23            0x22222222
++#define RD_78460_WIFI_MPP24_31            0x00000000
++#define RD_78460_WIFI_MPP32_39            0x11110000
++#define RD_78460_WIFI_MPP40_47            0x00000000
++#define RD_78460_WIFI_MPP48_55            0x00000003
++#define RD_78460_WIFI_MPP56_63            0x00000000
++#define RD_78460_WIFI_MPP64_67            0x00000000
++
++
++/* GPPs
++MPP#    NAME                    IN/OUT
++----------------------------------------------
++42	USB3_RSRn		OUT
++43	PEX_RSTOUTn		OUT
++*/
++#define RD_78460_WIFI_GPP_OUT_ENA_LOW	(~(0x0))
++#define RD_78460_WIFI_GPP_OUT_ENA_MID	(~(BIT11 | BIT10))
++#define RD_78460_WIFI_GPP_OUT_ENA_HIGH    (~(0x0))
++
++#define RD_78460_WIFI_GPP_OUT_VAL_LOW	(0x0)
++#define RD_78460_WIFI_GPP_OUT_VAL_MID	(BIT11 | BIT10)
++#define RD_78460_WIFI_GPP_OUT_VAL_HIGH    0x0
+ 
++#define RD_78460_WIFI_GPP_POL_LOW         0x0
++#define RD_78460_WIFI_GPP_POL_MID         0x0
++#define RD_78460_WIFI_GPP_POL_HIGH        0x0
+ 
+ /**********************/
+ /* DB-AXP-CUSTOMER         */
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
+index 424c151..54159b9 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
+@@ -321,6 +321,7 @@ MV_U32 mvCtrlPexMaxIfGet(MV_VOID)
+ 
+ 	case MV_78160_DEV_ID:
+ 	case MV_78260_DEV_ID:
++		return 9;
+ 	case MV_78460_DEV_ID:
+ 	case MV_78000_DEV_ID:
+ 		return MV_PEX_MAX_IF;
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index 76d9336..4235e94 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -2172,6 +2172,146 @@ MACHINE_START(ARMADA_XP_RD_NAS, "Marvell Armada XP RD NAS Board")
+ MACHINE_END
+ 
+ 
++
++
++/*****************************************************************************
++ * RD WIFI BOARD
++ ****************************************************************************/
++static void __init axp_rd_wifi_init(void)
++{
++        /* Call Aurora/cpu special configurations */
++        cpu_fabric_common_init();
++
++        /* Select appropriate Board ID for Machine */
++        gBoardId = RD_78XMP_WIFI_ID;
++	/* init the Board environment */
++        mvBoardEnvInit();
++
++        /* init the controller environment */
++        if( mvCtrlEnvInit() ) {
++                printk( "Controller env initialization failed.\n" );
++                return;
++        }
++
++        armadaxp_setup_cpu_mbus();
++
++        /* Init the CPU windows setting and the access protection windows. */
++        if( mvCpuIfInit(mv_sys_map())) {
++                printk( "Cpu Interface initialization failed.\n" );
++                return;
++        }
++
++        /* Init Tclk & SysClk */
++        mvTclk = mvBoardTclkGet();
++        mvSysclk = mvBoardSysClkGet();
++
++        elf_hwcap &= ~HWCAP_JAVA;
++
++        serial_initialize(0);
++
++        /* At this point, the CPU windows are configured according to default definitions in mvSysHwConfig.h */
++        /* and cpuAddrWinMap table in mvCpuIf.c. Now it's time to change defaults for each platform.         */
++        /*mvCpuIfAddDecShow();*/
++
++        print_board_info();
++        mv_gpio_init();
++
++        /* RTC */
++        rtc_init();
++
++#ifdef CONFIG_MV_INCLUDE_SPI
++        /* SPI */
++        mvSysSpiInit(0, _16M);
++#endif
++
++        /* ETH-PHY */
++        mvSysEthPhyInit();
++
++        /* Sata */
++#ifdef CONFIG_SATA_MV
++        armadaxp_sata_init(&dbdsmp_sata_data);
++#endif
++#ifdef CONFIG_MTD_NAND_NFC
++        /* NAND */
++        axp_db_nfc_init();
++#endif
++        /* HWMON */
++        armadaxp_hwmon_init();
++
++        /* XOR */
++#ifdef XOR0_ENABLE
++        armadaxp_xor0_init();
++#endif
++        armadaxp_xor1_init();
++
++        /* I2C */
++        armadaxp_i2c0_init();
++#if 0
++#ifdef CONFIG_FB_DOVE
++        if ((lcd0_enable == 1) && (lcd_panel == 0))
++                armadaxp_i2c1_init();
++#endif
++
++
++#if defined(CONFIG_MV_INCLUDE_SDIO)
++        if (MV_TRUE == mvCtrlPwrClckGet(SDIO_UNIT_ID, 0)) {
++                int irq_detect = mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_DETECT);
++                MV_UNIT_WIN_INFO addrWinMap[MAX_TARGETS + 1];
++
++                if (irq_detect != MV_ERROR) {
++                        mvsdio_data.gpio_card_detect = mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_DETECT);
++                        irq_int_type[mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_DETECT)+IRQ_AURORA_GPIO_START] = GPP_IRQ_TYPE_CHANGE_LEVEL;
++                }
++
++                if(mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_WP) != MV_ERROR)
++                        mvsdio_data.gpio_write_protect = mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_WP);
++
++                if(MV_OK == mvCtrlAddrWinMapBuild(addrWinMap, MAX_TARGETS + 1))
++                        if (MV_OK == mvSdmmcWinInit(addrWinMap))
++                                mvsdio_data.clock = mvBoardTclkGet();
++                platform_device_register(&mv_sdio_plat);
++       }
++#endif
++
++#endif
++
++#ifdef CONFIG_MV_ETHERNET
++        /* Ethernet */
++        eth_init();
++#endif
++
++
++#if 0
++#ifdef CONFIG_FB_DOVE
++        kw_lcd0_dmi.dram = &armadaxp_mbus_dram_info;
++        if (lcd_panel) {
++                kw_lcd0_dmi.lvds_info.enabled = 1;
++                kw_lcd0_dmi.fixed_full_div = 1;
++                kw_lcd0_dmi.full_div_val = 7;
++//              kw_lcd0_dmi.lcd_ref_clk = 27000000;
++                printk(KERN_INFO "LCD Panel enabled.\n");
++        }
++        clcd_platform_init(&kw_lcd0_dmi, &kw_lcd0_vid_dmi, &dsmp_backlight_data);
++#endif
++#endif
++        return;
++}
++
++MACHINE_START(ARMADA_XP_RD_WIFI, "Marvell Armada XP RD WIFI Board")
++        /* MAINTAINER("MARVELL") */
++        .atag_offset    = 0x00000100,
++        .map_io         = axp_map_io,
++        .init_irq       = axp_init_irq,
++        .timer          = &axp_timer,
++        .init_machine   = axp_rd_wifi_init,
++#ifdef CONFIG_FB_DOVE
++        /* reserve memory for LCD */
++        .fixup          = axp_tag_fixup_mem32,
++#endif /* CONFIG_FB_DOVE */
++MACHINE_END
++
++
++
+ /*****************************************************************************
+ * RDSRV BOARD: Main Initialization
+  ****************************************************************************/
+diff --git a/arch/arm/tools/mach-types b/arch/arm/tools/mach-types
+index 5b2de82..60b7b0d 100755
+--- a/arch/arm/tools/mach-types
++++ b/arch/arm/tools/mach-types
+@@ -3005,6 +3005,7 @@ at91cap7stk		MACH_AT91CAP7STK	AT91CAP7STK		3033
+ kt_sbc_sam9_1		MACH_KT_SBC_SAM9_1	KT_SBC_SAM9_1		3034
+ armada_xp_gp		MACH_ARMADA_XP_GP	ARMADA_XP_GP		3035
+ armada_xp_db		MACH_ARMADA_XP_DB	ARMADA_XP_DB		3036
++armada_xp_rd_wifi	MACH_ARMADA_XP_RD_WIFI	ARMADA_XP_RD_WIFI	3040
+ armada_xp_rd_nas	MACH_ARMADA_XP_RD_NAS	ARMADA_XP_RD_NAS	3500
+ armada_xp_rdsrv         MACH_ARMADA_XP_RDSRV    ARMADA_XP_RDSRV         3037
+ armada_370              MACH_ARMADA_370         ARMADA_370              3038
+diff --git a/drivers/usb/host/ehci_marvell.c b/drivers/usb/host/ehci_marvell.c
+index 889d488..d6a551c 100644
+--- a/drivers/usb/host/ehci_marvell.c
++++ b/drivers/usb/host/ehci_marvell.c
+@@ -201,7 +201,7 @@ static int ehci_marvell_remove(struct platform_device *pdev)
+    return 0;
+ } 
+  
+-#if defined(CONFIG_ARCH_ARMADA_XP)
++#if defined(CONFIG_ARCH_ARMADA_XP) && defined(CONFIG_MV_INCLUDE_USB)
+ extern int mv_usb_resume(int dev);
+ 
+ static int ehci_marvell_resume(struct platform_device *pdev)
+@@ -218,7 +218,7 @@ static struct platform_driver ehci_marvell_driver =
+     .driver.name = "ehci_marvell", 
+     .probe = ehci_marvell_probe, 
+     .remove = ehci_marvell_remove,
+-#if defined(CONFIG_ARCH_ARMADA_XP)
++#if defined(CONFIG_ARCH_ARMADA_XP) && defined(CONFIG_MV_INCLUDE_USB)
+     .resume = ehci_marvell_resume,
+ #endif
+     .shutdown = usb_hcd_platform_shutdown, 
+-- 
+1.7.9.5
+

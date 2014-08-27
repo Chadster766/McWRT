@@ -1,0 +1,69 @@
+--- a/ifconfig.old	2010-12-10 11:18:19.890041196 +0100
++++ b/ifconfig.c	2010-12-10 11:59:58.170347114 +0100
+@@ -43,6 +43,9 @@
+     char addr[20];
+     char brdaddr[20];
+     char netmask[20];
++    short int flags = 0;
++
++    hwaddr[0] = addr[0] = brdaddr[0] = netmask[0] = 0;
+ 
+     if (!PyArg_ParseTuple(args, "s", &itf))
+ 	return NULL;
+@@ -51,29 +54,35 @@
+ 
+     strcpy(ifreq.ifr_name, itf);
+ 
+-    /* hardware address */
+-    ioctl(fd, SIOCGIFHWADDR, &ifreq);
+-    hw = ifreq.ifr_hwaddr.sa_data;
+-    sprintf(hwaddr, "%02x:%02x:%02x:%02x:%02x:%02x",
+-	    *hw, *(hw + 1), *(hw + 2), *(hw + 3), *(hw + 4), *(hw + 5));
+-
+-    /* address */
+-    ioctl(fd, SIOCGIFADDR, &ifreq);
+-    sin = (struct sockaddr_in *)&ifreq.ifr_broadaddr;
+-    sprintf(addr, "%s", inet_ntoa(sin->sin_addr));
+-
+-    /* broadcast */
+-    ioctl(fd, SIOCGIFBRDADDR, &ifreq);
+-    sin = (struct sockaddr_in *)&ifreq.ifr_broadaddr;
+-    sprintf(brdaddr, "%s", inet_ntoa(sin->sin_addr));
+-
+-    /* netmask */
+-    ioctl(fd, SIOCGIFNETMASK, &ifreq);
+-    sin = (struct sockaddr_in *)&ifreq.ifr_broadaddr;
+-    sprintf(netmask, "%s", inet_ntoa(sin->sin_addr));
++    /* flags */
++    if (ioctl(fd, SIOCGIFFLAGS, &ifreq) == 0) {
++        flags = ifreq.ifr_flags;
++
++        /* hardware address */
++        ioctl(fd, SIOCGIFHWADDR, &ifreq);
++        hw = ifreq.ifr_hwaddr.sa_data;
++        sprintf(hwaddr, "%02x:%02x:%02x:%02x:%02x:%02x",
++	        *hw, *(hw + 1), *(hw + 2), *(hw + 3), *(hw + 4), *(hw + 5));
++
++        /* address */
++        ioctl(fd, SIOCGIFADDR, &ifreq);
++        sin = (struct sockaddr_in *)&ifreq.ifr_broadaddr;
++        sprintf(addr, "%s", inet_ntoa(sin->sin_addr));
++
++        /* broadcast */
++        ioctl(fd, SIOCGIFBRDADDR, &ifreq);
++        sin = (struct sockaddr_in *)&ifreq.ifr_broadaddr;
++        sprintf(brdaddr, "%s", inet_ntoa(sin->sin_addr));
++
++        /* netmask */
++        ioctl(fd, SIOCGIFNETMASK, &ifreq);
++        sin = (struct sockaddr_in *)&ifreq.ifr_broadaddr;
++        sprintf(netmask, "%s", inet_ntoa(sin->sin_addr));
++    }
+ 
+     close(fd);
+-    return Py_BuildValue("{s:s,s:s,s:s,s:s}",
++    return Py_BuildValue("{s:i,s:s,s:s,s:s,s:s}",
++                         "flags", flags,
+ 			 "hwaddr", hwaddr,
+ 			 "addr", addr,
+ 			 "brdaddr", brdaddr,

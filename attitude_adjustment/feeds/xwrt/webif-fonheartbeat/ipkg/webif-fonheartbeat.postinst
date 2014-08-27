@@ -1,0 +1,30 @@
+#!/bin/sh
+#
+# Webif post-install script.
+#
+
+if [ ! -f /root/.ssh/known_hosts ]; then
+	echo "+ known_hosts not found, creating file"
+	touch /root/.ssh/known_hosts
+fi
+if [ "`cat /root/.ssh/known_hosts|grep download.fon.com`" = "" ]; then
+	echo "+ download.fon.com not found in known_hosts, adding download.fon.com"
+	echo "download.fon.com ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAIEA0zJFtj5NtrVsj8+qG0dtPE8WpHHDpTXp5+d3vvtSS7Hx7vYHyrfN/8PBVrrYOgl4dySY65sGtq34EU04VN4a7xQHSKJBunDUSQ/2Xz+eyo53LCVeFy1zNRCmB6jrFlJQvl5yviLvXmMtOGxG8Z1dfu4qavfGtBxwtwxKPKuiyhs=" >> /root/.ssh/known_hosts
+fi
+
+
+if [ ! -f /etc/crontabs/root ]; then
+	echo "+ crontab 'root' not found, creating file"
+	touch /etc/crontabs/root
+	
+	echo "+ enabling cron"
+	/etc/init.d/cron enable
+fi
+if [ "`cat /etc/crontabs/root|grep fonheartbeat`" = "" ]; then
+
+	echo "+ no entry found in crontab, adding fonheartbeat"
+	echo "0,30 * * * *    /etc/init.d/fonheartbeat start" >> /etc/crontabs/root
+	
+	echo "+ restarting cron"
+	/etc/init.d/cron restart
+fi

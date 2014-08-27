@@ -1,0 +1,13 @@
+#!/bin/sh
+. /etc/openssl/read_uci
+#openssl req -new -batch \
+openssl req -new -nodes -batch \
+	-keyout /etc/openssl/$ENTITY/private/$KEY_COMMON_NAME.key \
+	-out /etc/openssl/$ENTITY/csr/$KEY_COMMON_NAME.csr \
+	-config /etc/openssl/openssl.cnf
+
+#openssl ca -batch -passout $KEY_PASSWD \
+openssl ca -batch \
+	-out /etc/openssl/$ENTITY/certs/$KEY_COMMON_NAME.crt \
+	-in /etc/openssl/$ENTITY/csr/$KEY_COMMON_NAME.csr \
+	-config /etc/openssl/openssl.cnf

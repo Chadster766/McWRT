@@ -1,0 +1,22 @@
+diff -urN orig/dhcp6-1.0/client/clilib.c dhcp6-1.0/client/clilib.c
+--- orig/dhcp6-1.0/client/clilib.c	2025-06-28 23:21:40.000000000 +0200
++++ dhcp6-1.0/client/clilib.c	2005-12-13 13:42:43.000000000 +0100
+@@ -554,7 +554,7 @@
+ 
+ void generate_trans_id (u_int32_t *trans_id)
+ {
+-    extern u_int32_t g_trans_id;
++    extern int g_trans_id;
+     time_t t;
+     srand (time (&t));
+     *trans_id = 0;
+@@ -890,9 +890,7 @@
+ 		    break;
+ 
+ 		default :
+-#if DEBUG == 3
+ 		    printf ("Unrecognized DUID type\n");
+-#endif
+ 	    }
+ 
+ 	    next_opt = (struct OPTIONS *) malloc (sizeof (struct OPTIONS));

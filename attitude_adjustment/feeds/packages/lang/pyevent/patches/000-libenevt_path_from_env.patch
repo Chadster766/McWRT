@@ -1,0 +1,20 @@
+diff -ruN pyevent-0.3.pris/setup.py pyevent-0.3/setup.py
+--- pyevent-0.3.pris/setup.py	2005-09-11 22:44:04.000000000 -0500
++++ pyevent-0.3/setup.py	2007-04-23 11:17:14.500323500 -0500
+@@ -5,9 +5,13 @@
+ from distutils.core import setup, Extension
+ import glob, os, sys
+ 
+-if glob.glob('/usr/lib/libevent.*'):
+-    print 'found system libevent for', sys.platform
+-    event = Extension(name='event',
++# Where to find libevent
++libevent_location = os.environ.get('LIBEVENT_HOME')
++
++if libevent_location != None:
++    if glob.glob('%s/libevent.*' % (libevent_location,)):
++        print 'found system libevent for', sys.platform
++        event = Extension(name='event',
+                        sources=[ 'event.c' ],
+                        libraries=[ 'event' ])
+ elif glob.glob('%s/lib/libevent.*' % sys.prefix):

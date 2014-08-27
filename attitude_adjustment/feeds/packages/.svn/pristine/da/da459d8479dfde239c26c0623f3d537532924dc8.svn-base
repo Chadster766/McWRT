@@ -1,0 +1,143 @@
+--- a/include/cga_keyutils.h
++++ b/include/cga_keyutils.h
+@@ -40,8 +40,8 @@
+ 
+ extern int cga_add_key(cga_ctx_t *, EVP_PKEY *, int, uint16_t);
+ extern EVP_PKEY *cga_der2key(uint8_t *, int );
+-extern STACK *cga_der2keys(uint8_t *, int );
+-extern void cga_free_keystack(STACK *);
++extern STACK_OF(GENERAL_NAME) *cga_der2keys(uint8_t *, int );
++extern void cga_free_keystack(STACK_OF(GENERAL_NAME) *);
+ extern uint8_t *cga_key2der(EVP_PKEY *, int *);
+ extern int cga_load_cert(cga_ctx_t *, const char *);
+ extern int cga_load_key(cga_ctx_t *, const char *);
+--- a/libs/libcga/cga_keyutils.c
++++ b/libs/libcga/cga_keyutils.c
+@@ -215,7 +215,7 @@ cga_set_key(cga_ctx_t *cga, EVP_PKEY *k)
+ }
+ 
+ void
+-cga_free_keystack(STACK *sk)
++cga_free_keystack(STACK_OF(GENERAL_NAME) *sk)
+ {
+ 	EVP_PKEY *k;
+ 
+@@ -232,14 +232,14 @@ cga_free_keystack(STACK *sk)
+  *
+  * Returns a stack of EVP_PKEYs on success.
+  */
+-STACK *
++STACK_OF(GENERAL_NAME) *
+ cga_der2keys(uint8_t *der, int dlen)
+ {
+ 	uint8_t *dk;
+ 	EVP_PKEY *k;
+ 	int klen, elen;
+ 	uint16_t type;
+-	STACK *sk;
++	STACK_OF(GENERAL_NAME) *sk;
+ 
+ 	if ((sk = sk_new_null()) == NULL) {
+ 		APPLOG_NOMEM();
+--- a/include/pkixip_ext.h
++++ b/include/pkixip_ext.h
+@@ -54,7 +54,7 @@ extern int pkixip_add2stores_cert(X509 *
+ extern int pkixip_add2stores_file(const char *);
+ extern int pkixip_add_store(int *, int (*cmp)(X509_OBJECT **, X509_OBJECT **));
+ extern void *pkixip_find_cert(void *, int);
+-extern STACK *pkixip_get_mychain(void);
++extern STACK_OF(GENERAL_NAME) *pkixip_get_mychain(void);
+ extern X509_STORE_CTX *pkixip_get_store_ctx(void);
+ extern int pkixip_has_ext(X509 *x);
+ extern X509 *pkixip_load_cert(const char *);
+--- a/libs/libpkixipext/x509.c
++++ b/libs/libpkixipext/x509.c
+@@ -62,14 +62,14 @@ X509V3_EXT_METHOD pkix_ip_ext_method = {
+ 	i2v : (X509V3_EXT_I2V)i2v_IPAddrBlocks,
+ };
+ 
+-static STACK *stores[PKIXIP_MAX_STORES];
++static STACK_OF(GENERAL_NAME) *stores[PKIXIP_MAX_STORES];
+ static X509_STORE_CTX *ctx_bysubj;
+ static int next_store = 1;
+ static void *(*wrap_store_cert)(X509 *x);
+ static void (*trustanchor_cb)(X509 *x);
+ pthread_mutex_t stores_lock = PTHREAD_MUTEX_INITIALIZER;
+ 
+-static STACK *mychain;
++static STACK_OF(GENERAL_NAME) *mychain;
+ 
+ /* Lifted from openssl x509_lu.c */
+ static int
+@@ -243,7 +243,7 @@ pkixip_load_pkey(const char *f)
+ 	return (pkey);
+ }
+ 
+-static STACK *
++static STACK_OF(GENERAL_NAME) *
+ pkixip_get_store(int handle)
+ {
+ 	if (handle >= PKIXIP_MAX_STORES || handle < 0) {
+@@ -257,7 +257,7 @@ pkixip_get_store(int handle)
+ void
+ pkixip_walk_store(int (*cb)(X509 *, void *), void *cookie, int handle)
+ {
+-	STACK *objs;
++	STACK_OF(GENERAL_NAME) *objs;
+ 	int i;
+ 	X509_OBJECT *xo;
+ 
+@@ -282,7 +282,7 @@ done:
+ void *
+ pkixip_find_cert(void *k, int handle)
+ {
+-	STACK *store;
++	STACK_OF(GENERAL_NAME) *store;
+ 	int i;
+ 	void *r = NULL;
+ 
+@@ -305,7 +305,7 @@ done:
+ /* Caller must hold stores_lock */
+ static int
+ pkixip_do_add_store(int handle, int (*cmp)(X509_OBJECT **, X509_OBJECT **),
+-    STACK *objs)
++    STACK_OF(GENERAL_NAME) *objs)
+ {
+ 	if (objs == NULL && (objs = sk_X509_OBJECT_new(cmp)) == NULL) {
+ 		applog(LOG_CRIT, "no memory");
+@@ -538,7 +538,7 @@ done:
+ 	return (r);
+ }
+ 
+-STACK *
++STACK_OF(GENERAL_NAME) *
+ pkixip_get_mychain(void)
+ {
+ 	return (mychain);
+--- a/sendd/cpa.c
++++ b/sendd/cpa.c
+@@ -183,13 +183,13 @@ next:
+ }
+ 
+ static int
+-can_handle_cps(uint8_t *ops, int len, STACK *chain, X509 **x)
++can_handle_cps(uint8_t *ops, int len, STACK_OF(GENERAL_NAME) *chain, X509 **x)
+ {
+ 	int i, j, r = 0;
+ 	X509_NAME *dn;
+ 	X509 x509_s;
+ 	X509_CINF cinf_s;
+-	STACK *dchain;
++	STACK_OF(GENERAL_NAME) *dchain;
+ 	STACK_OF(X509_NAME) *dns;
+ 
+ 	*x = NULL;
+@@ -239,7 +239,7 @@ snd_handle_cps(struct sbuff *b, struct s
+ {
+ 	uint8_t *msg = sbuff_data(b);
+ 	int len = b->len;
+-	STACK *chain;
++	STACK_OF(GENERAL_NAME) *chain;
+ 	X509 *x, *trx = NULL;
+ 	int i, tot, olen;
+ 	uint8_t *ops;

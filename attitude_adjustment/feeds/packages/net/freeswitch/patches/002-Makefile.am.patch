@@ -1,0 +1,49 @@
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -1,3 +1,7 @@
++BASE=.
++
++include $(BASE)/build/openwrt_rules.mk
++
+ EXTRA_DIST =
+ SUBDIRS = . src
+ AUTOMAKE_OPTIONS = foreign
+@@ -61,7 +65,7 @@ cd-moh-install: uhd-moh-install sounds-m
+ # (1) if the variable is set in `config.status', edit `config.status'
+ #     (which will cause the Makefiles to be regenerated when you run `make');
+ # (2) otherwise, pass the desired values on the `make' command line.
+-all-recursive: libfreeswitch.la
++all-recursive: spandsp-reconf libfreeswitch.la
+ clean-recusive: clean_core
+ install-recursive: install-libLTLIBRARIES install-binPROGRAMS
+ $(RECURSIVE_TARGETS):
+@@ -586,10 +590,13 @@ speex-reconf:
+ 
+ tiff-reconf:
+ 	cd libs/tiff-3.8.2 && autoreconf -fi
+-	cd libs/tiff-3.8.2 && sh ./configure.gnu
++	cd libs/tiff-3.8.2 && sh ./configure.gnu --host=$(GNU_TARGET_NAME)
+ 	cd libs/spandsp && autoreconf -fi
+-	cd libs/spandsp && sh ./configure.gnu
+-	make mod_voipcodecs-clean
++	cd libs/spandsp && sh ./configure.gnu --host=$(GNU_TARGET_NAME) --prefix=$(prefix)
++	cd libs/tiff-3.8.2 && $(MAKE)
++
++spandsp-reconf: tiff-reconf
++	cd libs/spandsp && $(MAKE)
+ 
+ python-reconf:
+ 	rm -f src/mod/languages/mod_python/Makefile
+@@ -612,12 +619,6 @@ iks-reconf:
+ 	cd libs/iksemel && sh ./configure.gnu --prefix=$(prefix)
+ 	$(MAKE) mod_dingaling-clean
+ 
+-spandsp-reconf:
+-	cd libs/spandsp && $(MAKE) clean || echo
+-	cd libs/spandsp && autoreconf -fi
+-	cd libs/spandsp && sh ./configure.gnu --prefix=$(prefix)
+-	cd libs/spandsp && $(MAKE)
+-
+ sofia-reconf:
+ 	cd libs/sofia-sip && sh ./autogen.sh
+ 	cd libs/sofia-sip && $(MAKE) clean

@@ -1,0 +1,34 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2008 OpenWrt.org
+
+START=90
+RUN_D=/var
+PID_F=$RUN_D/stunnel.pid
+
+start() {
+	if [ -s "/etc/stunnel/stunnel.pem" ]; then
+		chmod og-rwx /etc/stunnel/stunnel.pem
+		[ ! -f $PID_F ] && stunnel
+	else
+		[ -e /etc/stunnel/config ] && \
+		. /etc/stunnel/config
+
+		X509_CN=${X509_CN:-"router"}
+		X509_O=${X509_O:-"openwrt.org"}
+		X509_OU=${X509_OU:-"open-source firmware"}
+
+		[ -x /sbin/keygen ] && {
+		(keygen "$X509_CN" "$X509_O" "$X509_OU" > /etc/stunnel/stunnel.pem;
+			chmod og-rwx /etc/stunnel/stunnel.pem;
+			stunnel) &
+		}
+	fi
+}
+
+stop() {
+	[ -f $PID_F ] && {
+		kill $(cat $PID_F)
+		kill -9 $(cat $PID_F)
+		rm -f $PID_F
+	}
+}

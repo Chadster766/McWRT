@@ -1,0 +1,36 @@
+--- a/ezxml.c
++++ b/ezxml.c
+@@ -599,6 +599,19 @@ ezxml_t ezxml_parse_str(char *s, size_t
+     else return ezxml_err(root, d, "unclosed tag <%s>", root->cur->name);
+ }
+ 
++// parse the given xml string and return an ezxml structure
++ezxml_t ezxml_parse_str_d(char const *_s, size_t len)
++{
++    ezxml_root_t root;
++    char *s;
++
++    if (! (s = strndup(_s, len))) return NULL;
++
++    root = (ezxml_root_t)ezxml_parse_str(s, strlen(s));
++    root->len = -1; // so we know to free s in ezxml_free()
++    return &root->xml;
++}
++
+ // Wrapper for ezxml_parse_str() that accepts a file stream. Reads the entire
+ // stream into memory and then parses it. For xml files, use ezxml_parse_file()
+ // or ezxml_parse_fd()
+--- a/ezxml.h
++++ b/ezxml.h
+@@ -59,6 +59,11 @@ struct ezxml {
+ // pass in the copy. Returns NULL on failure.
+ ezxml_t ezxml_parse_str(char *s, size_t len);
+ 
++// Given a string of xml data and its length, parses it and creates an ezxml
++// structure. that strdup()s s
++// Returns NULL on failure.
++ezxml_t ezxml_parse_str_d(char const *s, size_t len);
++
+ // A wrapper for ezxml_parse_str() that accepts a file descriptor. First
+ // attempts to mem map the file. Failing that, reads the file into memory.
+ // Returns NULL on failure.

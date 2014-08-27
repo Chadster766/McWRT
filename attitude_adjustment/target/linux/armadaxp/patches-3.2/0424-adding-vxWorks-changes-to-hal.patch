@@ -1,0 +1,650 @@
+From 8dc897233a8fdeac0133286b24acbd3a8c4a35bb Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Thu, 8 Nov 2012 10:21:40 +0200
+Subject: [PATCH 424/609] adding vxWorks changes to hal
+
+Change-Id: Ia6ffc4edad1c43fc16dcc94fdd9cb6f9bb006423
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c        |   20 ++
+ arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h        |    3 +
+ arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.c      |    4 +-
+ arch/arm/plat-armada/mv_hal/idma/mvIdma.c          |   30 ++-
+ arch/arm/plat-armada/mv_hal/idma/mvIdma.h          |    3 +-
+ arch/arm/plat-armada/mv_hal/idma/mvIdmaAddrDec.c   |  270 ++++++++++++++++++++
+ arch/arm/plat-armada/mv_hal/idma/mvIdmaRegs.h      |   34 ++-
+ arch/arm/plat-armada/mv_hal/pex/mvPex.c            |    2 +-
+ .../plat-armada/mv_hal/sata/CoreDriver/mvSata.c    |    6 +-
+ .../plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.c |    4 -
+ .../plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.h |    6 +
+ arch/arm/plat-armada/mv_hal/xor/mvXor.c            |   18 ++
+ arch/arm/plat-armada/mv_hal/xor/mvXor.h            |    9 +
+ 13 files changed, 381 insertions(+), 28 deletions(-)
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/idma/mvIdma.c
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/idma/mvIdma.h
+ create mode 100755 arch/arm/plat-armada/mv_hal/idma/mvIdmaAddrDec.c
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/idma/mvIdmaRegs.h
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.c
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.h
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/xor/mvXor.c
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/xor/mvXor.h
+
+diff --git a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
+index 270c89b..bd2b709 100755
+--- a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
++++ b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
+@@ -137,6 +137,26 @@ MV_U32 mvCntmrRead(MV_U32 countNum)
+ {
+ 	return MV_REG_READ(CNTMR_VAL_REG(countNum));
+ }
++/*******************************************************************************
++* mvCntmrReadDiff -
++*
++* DESCRIPTION:
++*  	Returns the number of counts of the given Counter/Timer
++*
++* INPUT:
++*       countNum - counter number
++*
++* OUTPUT:
++*       None.
++*
++* RETURN:
++*       MV_U32 the number of counts of the given Counter/Timer
++*******************************************************************************/
++MV_U32 mvCntmrReadDiff(MV_U32 countNum)
++{
++	/* counter counts down */
++	return TVR_ARM_TIMER_MAX - MV_REG_READ(CNTMR_VAL_REG(countNum));
++}
+ 
+ /*******************************************************************************
+ * mvCntmrWrite -
+diff --git a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h
+index c9fd581..899d09f 100755
+--- a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h
++++ b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h
+@@ -119,6 +119,9 @@ extern "C" {
+ /* Returns the value of the given Counter/Timer */
+ 	MV_U32 mvCntmrRead(MV_U32 countNum);
+ 
++/* Returns 0xffffffff minus the value of the given Counter/Timer */
++	MV_U32 mvCntmrReadDiff(MV_U32 countNum);
++
+ /* Write a value of the given Counter/Timer */
+ 	void mvCntmrWrite(MV_U32 countNum, MV_U32 countVal);
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.c b/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.c
+index ad8be88..5b537a7 100755
+--- a/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.c
++++ b/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.c
+@@ -154,8 +154,8 @@ MV_U32 mvDramIfHwSizeGet(MV_VOID)
+ 		}
+ 	}
+ 	/* Dram size alignment fix */
+-	sizeRegVal = (totalSize & SDRAMWCR_SIZE_MASK) >> SDRAMWCR_SIZE_OFFS;   // sizeregVal = ( amount of 16mb chunks -1 )
+-	totalSize = (sizeRegVal + 1) * SDRAMWCR_SIZE_ALLIGNMENT;    	     // size = alined size (num of 16mb chunks * 16mb)
++	sizeRegVal = (totalSize & SDRAMWCR_SIZE_MASK) >> SDRAMWCR_SIZE_OFFS;   /* sizeregVal = ( amount of 16mb chunks -1 ) */
++	totalSize = (sizeRegVal + 1) * SDRAMWCR_SIZE_ALLIGNMENT;    	     /* size = alined size (num of 16mb chunks * 16mb) */
+ 	/* Dram size alignment fix*/
+ 	return totalSize;
+ }
+diff --git a/arch/arm/plat-armada/mv_hal/idma/mvIdma.c b/arch/arm/plat-armada/mv_hal/idma/mvIdma.c
+old mode 100644
+new mode 100755
+index cbae167..a4f5e83
+--- a/arch/arm/plat-armada/mv_hal/idma/mvIdma.c
++++ b/arch/arm/plat-armada/mv_hal/idma/mvIdma.c
+@@ -333,10 +333,38 @@ MV_STATE mvDmaStateGet(MV_U32 chan)
+ }
+ 
+ /*******************************************************************************
++* mvDmaStopAll - Stop any IDMA activity.
++*
++* DESCRIPTION:
++*		This function stops any DMA activity.
++*
++* INPUT:
++*       None.
++*
++* OUTPUT:
++*       None.
++*
++* RETURN:
++*       None.
++*
++*******************************************************************************/
++MV_VOID mvDmaStopAll(MV_VOID)
++{
++	MV_U32      dmaChanNum;
++
++	for(dmaChanNum = 0; dmaChanNum < MV_IDMA_MAX_CHAN; dmaChanNum++)
++	{
++		mvDmaCommandSet(dmaChanNum, MV_STOP);
++	}
++
++	return;
++}
++
++/*******************************************************************************
+ * mvDmaCommandSet - Set command to DMA channel
+ *
+ * DESCRIPTION:
+-*       DMA channel can be started, idel, paused and restarted.
++*       DMA channel can be started, idle, paused and restarted.
+ *       Paused can be set only if channel is active.
+ *       Start can be set only if channel is idle.
+ *       Restart can be set only if channel is paused.
+diff --git a/arch/arm/plat-armada/mv_hal/idma/mvIdma.h b/arch/arm/plat-armada/mv_hal/idma/mvIdma.h
+old mode 100644
+new mode 100755
+index 69beb04..9342c09
+--- a/arch/arm/plat-armada/mv_hal/idma/mvIdma.h
++++ b/arch/arm/plat-armada/mv_hal/idma/mvIdma.h
+@@ -101,7 +101,6 @@ typedef struct _mvDmaDesc {
+ 				/* otherwise it should be NULL.                 */
+ } MV_DMA_DESC;
+ 
+-
+ /* mvIdma.h API list */
+ MV_VOID mvDmaHalInit(MV_U32);
+ MV_STATUS mvDmaCtrlLowSet(MV_U32 chan, MV_U32 ctrlWord);
+@@ -109,9 +108,11 @@ MV_STATUS mvDmaCtrlHighSet(MV_U32 chan, MV_U32 ctrlWord);
+ MV_STATUS mvDmaTransfer(MV_U32 chan, MV_U32 phySrc, MV_U32 phyDst, MV_U32 size, MV_U32 phyNextDescPtr);
+ MV_STATUS mvDmaMemInit(MV_U32 chan, MV_U32 ptrnPtr, MV_U32 startPtr, MV_U32 size);
+ MV_STATE  mvDmaStateGet(MV_U32 chan);
++MV_VOID   mvDmaStopAll(MV_VOID);
+ MV_STATUS mvDmaCommandSet(MV_U32 chan, MV_COMMAND command);
+ 
+ MV_VOID mvIdmaRegs(MV_U32 chan);
++MV_STATUS mvDmaWinInit(MV_UNIT_WIN_INFO *addrWinMap);
+ 
+ #endif /* __INCmvIdmah */
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/idma/mvIdmaAddrDec.c b/arch/arm/plat-armada/mv_hal/idma/mvIdmaAddrDec.c
+new file mode 100755
+index 0000000..f63f5bb
+--- /dev/null
++++ b/arch/arm/plat-armada/mv_hal/idma/mvIdmaAddrDec.c
+@@ -0,0 +1,270 @@
++/*******************************************************************************
++Copyright (C) Marvell International Ltd. and its affiliates
++This software file (the "File") is owned and distributed by Marvell
++International Ltd. and/or its affiliates ("Marvell") under the following
++alternative licensing terms.  Once you have made an election to distribute the
++File under one of the following license alternatives, please (i) delete this
++introductory statement regarding license alternatives, (ii) delete the two
++license alternatives that you have not elected to use and (iii) preserve the
++Marvell copyright notice above.
++
++********************************************************************************
++Marvell Commercial License Option
++
++If you received this File from Marvell and you have entered into a commercial
++license agreement (a "Commercial License") with Marvell, the File is licensed
++to you under the terms of the applicable Commercial License.
++
++********************************************************************************
++Marvell GPL License Option
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File in accordance with the terms and conditions of the General
++Public License Version 2, June 1991 (the "GPL License"), a copy of which is
++available along with the File in the license.txt file or by writing to the Free
++Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
++on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++
++THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
++DISCLAIMED.  The GPL License provides additional details about this warranty
++disclaimer.
++********************************************************************************
++Marvell BSD License Option
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File under the following licensing terms.
++Redistribution and use in source and binary forms, with or without modification,
++are permitted provided that the following conditions are met:
++
++    *   Redistributions of source code must retain the above copyright notice,
++	this list of conditions and the following disclaimer.
++
++    *   Redistributions in binary form must reproduce the above copyright
++	notice, this list of conditions and the following disclaimer in the
++	documentation and/or other materials provided with the distribution.
++
++    *   Neither the name of Marvell nor the names of its contributors may be
++	used to endorse or promote products derived from this software without
++	specific prior written permission.
++
++THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
++ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
++WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
++DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
++ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
++(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
++LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
++ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
++SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++
++*******************************************************************************/
++
++#include "mvCommon.h"
++#include "mvSysHwConfig.h"
++#include "mvOs.h"
++#include "ctrlEnv/mvCtrlEnvSpec.h"
++#include "mvIdmaRegs.h"
++#include "mvIdma.h"
++#include "mv_hal_if/mvSysIdma.h"
++#include "armadaxp.h"
++#include "mvXorRegs.h"
++
++/* defines  */
++
++/* #define MV_DEBUG */
++
++#ifdef MV_DEBUG
++#define DB(x)	x
++#else
++#define DB(x)
++#endif
++
++MV_STATUS mvDmaTargetWinEnable(MV_U32 winNum, MV_BOOL enable);
++MV_STATUS mvDmaTargetWinWrite(MV_U32 winNum, MV_UNIT_WIN_INFO *pAddrDecWin);
++
++MV_TARGET idmaAddrDecPrioTap[] = {
++/* Note: the size of this array should be limited according to IDMA_MAX_ADDR_DEC_WIN */
++#if defined(MV_INCLUDE_PEX)
++#if PEX0_MEM_SIZE
++	PEX0_MEM,
++#endif
++#if PEX1_MEM_SIZE
++	PEX1_MEM,
++#endif
++#if PEX2_MEM_SIZE
++	PEX2_MEM,
++#endif
++#if PEX3_MEM_SIZE
++	PEX3_MEM,
++#endif
++#if PEX8_MEM_BASE
++	PEX8_MEM,
++#endif
++#if PEX9_MEM_BASE
++	PEX9_MEM,
++#endif
++#endif
++#if defined(MV_INCLUDE_SDRAM_CS0)
++	SDRAM_CS0,
++#endif
++#if defined(MV_INCLUDE_SDRAM_CS1)
++	SDRAM_CS1,
++#endif
++#if defined(MV_INCLUDE_SDRAM_CS2)
++	SDRAM_CS2,
++#endif
++#if defined(MV_INCLUDE_SDRAM_CS3)
++	SDRAM_CS3,
++#endif
++#if defined(MV_INCLUDE_DEVICE_CS0)
++	DEVICE_CS0,
++#endif
++#if defined(MV_INCLUDE_DEVICE_CS1)
++	DEV_CS1,
++#endif
++#if defined(MV_INCLUDE_CESA)
++	CRYPT1_ENG,
++#endif
++	TBL_TERM
++};
++
++/*******************************************************************************
++* mvDmaWinInit
++*
++* DESCRIPTION:
++*   This function sets the default address decode windows of the unit.
++*   Note that if the address window is disabled in idmaAddrDecMap, the
++*   window parameters will be set but the window will remain disabled.
++*
++* INPUT:
++*       None.
++*
++* OUTPUT:
++*       None.
++*
++* RETURN:
++*       MV_BAD_PARAM if parameters to function invalid, MV_OK otherwise.
++*******************************************************************************/
++MV_STATUS mvDmaWinInit(MV_UNIT_WIN_INFO *addrWinMap)
++{
++	MV_U32 winNum;
++	MV_UNIT_WIN_INFO *addrDecWin;
++	MV_U32 winPrioIndex = 0;
++
++	/* First disable all address decode windows */
++	for (winNum = 0; winNum < IDMA_MAX_ADDR_DEC_WIN; winNum++)
++		mvDmaTargetWinEnable(winNum, MV_FALSE);
++
++	/* Go through all windows in user table until table terminator */
++	for (winNum = 0; ((idmaAddrDecPrioTap[winPrioIndex] != TBL_TERM) && (winNum < IDMA_MAX_ADDR_DEC_WIN));) {
++		addrDecWin = &addrWinMap[idmaAddrDecPrioTap[winPrioIndex]];
++		if (addrDecWin->enable == MV_TRUE) {
++			if (mvDmaTargetWinWrite(winNum, addrDecWin) != MV_OK) {
++				DB(mvOsPrintf("mvDmaInit: ERR. mvDmaTargetWinSet failed\n"));
++				return MV_ERROR;
++			}
++			if (mvDmaTargetWinEnable(winNum, MV_TRUE) != MV_OK) {
++				DB(mvOsPrintf("mvDmaInit: ERR. mvDmaTargetWinSet failed\n"));
++				return MV_ERROR;
++			}
++			winNum++;
++		}
++		winPrioIndex++;
++	}
++
++	return MV_OK;
++}
++
++/*******************************************************************************
++* mvDmaTargetWinWrite - Set IDMA target address window
++*
++* DESCRIPTION:
++*       This function sets a peripheral target (e.g. SDRAM bank0, PCI_MEM0)
++*       address window. After setting this target window, the IDMA will be
++*       able to access the target within the address window.
++*
++* INPUT:
++*	winNum - One of the possible IDMA memory decode windows.
++*	pAddrDecWin - describes the window
++*
++* OUTPUT:
++*       None.
++*
++* RETURN:
++*       MV_BAD_PARAM if parameters to function invalid, MV_OK otherwise.
++*
++*******************************************************************************/
++MV_STATUS mvDmaTargetWinWrite(MV_U32 winNum, MV_UNIT_WIN_INFO *pAddrDecWin)
++{
++	MV_U32 sizeReg, baseReg;
++
++	if (winNum >= IDMA_MAX_ADDR_DEC_WIN) {
++		DB(mvOsPrintf("%s: ERR. Invalid win num %d\n",  __func__, winNum));
++		return MV_BAD_PARAM;
++	}
++
++	if (pAddrDecWin == NULL) {
++		DB(mvOsPrintf("%s: ERR. pAddrDecWin is NULL pointer\n",  __func__));
++		return MV_BAD_PTR;
++	}
++
++	if (!MV_IS_POWER_OF_2(pAddrDecWin->addrWin.size)) {
++		mvOsPrintf("%s: ERR. Illegal window size.\n",  __func__);
++		return MV_BAD_PARAM;
++	}
++
++	baseReg = pAddrDecWin->addrWin.baseLow & XEBARX_BASE_MASK;
++	sizeReg = (pAddrDecWin->addrWin.size / XOR_WIN_SIZE_ALIGN) - 1;
++	sizeReg = (sizeReg << XESMRX_SIZE_MASK_OFFS) & XESMRX_SIZE_MASK_MASK;
++
++	/* set attributes */
++	baseReg &= ~XEBARX_ATTR_MASK;
++	baseReg |= pAddrDecWin->attrib << XEBARX_ATTR_OFFS;
++	/* set target ID */
++	baseReg &= ~XEBARX_TARGET_MASK;
++	baseReg |= pAddrDecWin->targetId << XEBARX_TARGET_OFFS;
++
++	/* Write to address decode Base Address Register */
++	MV_REG_WRITE(IDMA_BASE_ADDR_REG(winNum), baseReg);
++
++	/* Write to Size Register */
++	MV_REG_WRITE(IDMA_SIZE_MASK_REG(winNum), sizeReg);
++
++	return MV_OK;
++}
++
++
++/*******************************************************************************
++* mvDmaTargetWinEnable - Enable/disable a Idma address decode window
++*
++* DESCRIPTION:
++*       This function enable/disable a IDMA address decode window.
++*       if parameter 'enable' == MV_TRUE the routine will enable the
++*       window, thus enabling IDMA accesses (before enabling the window it is
++*       tested for overlapping). Otherwise, the window will be disabled.
++*
++* INPUT:
++*       winNum - Decode window number.
++*       enable - Enable/disable parameter.
++*
++* OUTPUT:
++*       None.
++*
++* RETURN:
++*       MV_BAD_PARAM if parameters to function invalid, MV_OK otherwise.
++*
++*******************************************************************************/
++MV_STATUS mvDmaTargetWinEnable(MV_U32 winNum, MV_BOOL enable)
++{
++	if (winNum >= IDMA_MAX_ADDR_DEC_WIN) {
++		DB(mvOsPrintf("%s: ERR. Invalid winNum%d\n",  __func__, winNum));
++		return MV_ERROR;
++	}
++
++	if (enable == MV_TRUE)
++		MV_REG_BIT_RESET(IDMA_BASE_ADDR_ENABLE_REG, IBAER_ENABLE(winNum));
++	else
++		MV_REG_BIT_SET(IDMA_BASE_ADDR_ENABLE_REG, IBAER_ENABLE(winNum));
++
++	return MV_OK;
++}
+diff --git a/arch/arm/plat-armada/mv_hal/idma/mvIdmaRegs.h b/arch/arm/plat-armada/mv_hal/idma/mvIdmaRegs.h
+old mode 100644
+new mode 100755
+index 8dc6488..91a452a
+--- a/arch/arm/plat-armada/mv_hal/idma/mvIdmaRegs.h
++++ b/arch/arm/plat-armada/mv_hal/idma/mvIdmaRegs.h
+@@ -62,29 +62,35 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+ *******************************************************************************/
+ 
++#include "mvSysIdmaConfig.h"
++
+ #ifndef __INCmvIdmaRegsh
+ #define __INCmvIdmaRegsh
+ 
+ 
+ /* defines */
+ 
++/* IDMA channel rgisters */
++#define IDMA_BYTE_COUNT_REG(chan)          	(MV_IDMA_REGS_BASE + 0x0 + ((chan) * 4))
++#define IDMA_SRC_ADDR_REG(chan)            	(MV_IDMA_REGS_BASE + 0x10 + ((chan) * 4))
++#define IDMA_DST_ADDR_REG(chan)            	(MV_IDMA_REGS_BASE + 0x20 + ((chan) * 4))
++#define IDMA_NEXT_DESC_PTR_REG(chan)       	(MV_IDMA_REGS_BASE + 0x30 + ((chan) * 4))
++#define IDMA_CURR_DESC_PTR_REG(chan)	   	(MV_IDMA_REGS_BASE + 0x70 + ((chan) * 4))
+ 
+-/* IDMA channel rgisters       												*/
+-#define IDMA_BYTE_COUNT_REG(chan)          	(IDMA_UNIT_BASE + 0x0 + ((chan) * 4))
+-#define IDMA_SRC_ADDR_REG(chan)            	(IDMA_UNIT_BASE + 0x10 + ((chan) * 4))
+-#define IDMA_DST_ADDR_REG(chan)            	(IDMA_UNIT_BASE + 0x20 + ((chan) * 4))
+-#define IDMA_NEXT_DESC_PTR_REG(chan)       	(IDMA_UNIT_BASE + 0x30 + ((chan) * 4))
+-#define IDMA_CURR_DESC_PTR_REG(chan)	   	(IDMA_UNIT_BASE + 0x70 + ((chan) * 4))
+-
+-/* IDMA Channel Control														*/
+-#define IDMA_CTRL_LOW_REG(chan)			(IDMA_UNIT_BASE + 0x40 + ((chan) * 4))
+-#define IDMA_CTRL_HIGH_REG(chan)		(IDMA_UNIT_BASE + 0x80 + ((chan) * 4))
++/* IDMA Channel Control	*/
++#define IDMA_CTRL_LOW_REG(chan)			(MV_IDMA_REGS_BASE + 0x40 + ((chan) * 4))
++#define IDMA_CTRL_HIGH_REG(chan)		(MV_IDMA_REGS_BASE + 0x80 + ((chan) * 4))
+ 
+  /*  IDMA Interrupt Register  */
+-#define IDMA_CAUSE_REG            		(IDMA_UNIT_BASE + 0xc0)
+-#define IDMA_MASK_REG           		(IDMA_UNIT_BASE + 0xc4)
+-#define IDMA_ERROR_ADDR_REG             (IDMA_UNIT_BASE + 0xc8)
+-#define IDMA_ERROR_SELECT_REG           (IDMA_UNIT_BASE + 0xcc)
++#define IDMA_CAUSE_REG            		(MV_IDMA_REGS_BASE + 0xc0)
++#define IDMA_MASK_REG           		(MV_IDMA_REGS_BASE + 0xc4)
++#define IDMA_ERROR_ADDR_REG             (MV_IDMA_REGS_BASE + 0xc8)
++#define IDMA_ERROR_SELECT_REG           (MV_IDMA_REGS_BASE + 0xcc)
++
++/* IDMA Engine address decode registers.	*/
++
++#define IDMA_MAX_ADDR_DEC_WIN           8	/* Maximum address decode windows		*/
++#define IDMA_MAX_REMAP_WIN              4	/* Maximum address arbiter windows		*/
+ 
+ 
+ /* DMA register fileds */
+diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPex.c b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
+index e489c18..d90a297 100755
+--- a/arch/arm/plat-armada/mv_hal/pex/mvPex.c
++++ b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
+@@ -86,7 +86,7 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+ 	MV_PEX_MODE pexMode;
+ 	MV_U32 regVal;
+ 	MV_U32 status;
+-	MV_U16 ctrlModel, phyRegVal = 0;
++	MV_U16 ctrlModel;
+ 
+ 	mvOsMemcpy(&pexHalData[pexIf], halData, sizeof(MV_PEX_HAL_DATA));
+ 	ctrlModel = pexHalData[pexIf].ctrlModel;
+diff --git a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c
+index 66e3312..4502bd7 100755
+--- a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c
++++ b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c
+@@ -115,7 +115,7 @@ extern void dumpAtaDeviceRegisters(MV_SATA_ADAPTER *pAdapter,
+ 
+ extern MV_BOOLEAN _doSoftReset(MV_SATA_CHANNEL *pSataChannel);
+ 
+-MV_BOOLEAN isStorageDevReadyForPIO(MV_SATA_CHANNEL *pSataChannel);
++static MV_BOOLEAN isStorageDevReadyForPIO(MV_SATA_CHANNEL *pSataChannel);
+ 
+ extern MV_BOOLEAN executeNonUDMACommand(MV_SATA_ADAPTER *pAdapter,
+ 					MV_U8 channelIndex,
+@@ -389,10 +389,6 @@ static void checkIogBit(MV_SATA_ADAPTER *pAdapter, MV_U8 bitOffset, MV_U8 value)
+ static MV_BOOLEAN iogReset(MV_SATA_ADAPTER *pAdapter);
+ #endif
+ 
+-/* Calculate the base address of the registers for a SATA channel */
+-MV_U32 edmaRegOffst[MV_SATA_CHANNELS_NUM] = { 0x22000, 0x24000, 0x26000, 0x28000,
+-	0x32000, 0x34000, 0x36000, 0x38000
+-};
+ 
+ #define getEdmaRegOffset(x) edmaRegOffst[(x)]
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.c b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.c
+old mode 100644
+new mode 100755
+index 2668aca..3aeeb78
+--- a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.c
++++ b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.c
+@@ -65,10 +65,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #include "mvSataSoc.h"
+ #include "mvRegs.h"
+ 
+-/* Calculate the base address of the registers for a SATA channel */
+-static MV_U32 edmaRegOffst[8] = { 0x22000, 0x24000, 0x26000, 0x28000,
+-	0x32000, 0x34000, 0x36000, 0x38000
+-};
+ 
+ #define getEdmaRegOffset(x) edmaRegOffst[(x)]
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.h b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.h
+old mode 100644
+new mode 100755
+index aba2058..b57159c
+--- a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.h
++++ b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.h
+@@ -75,6 +75,12 @@ extern "C"			/*{ */
+  MV_BOOL mvSataPhyShutdown(MV_U8 port);
+ MV_BOOL mvSataPhyPowerOn(MV_U8 port);
+ 
++/* Calculate the base address of the registers for a SATA channel */
++MV_U32 edmaRegOffst[8] = { 0x22000, 0x24000, 0x26000, 0x28000,
++	0x32000, 0x34000, 0x36000, 0x38000
++};
++
++
+ #ifdef __cplusplus
+ 
+ /*}*/
+diff --git a/arch/arm/plat-armada/mv_hal/xor/mvXor.c b/arch/arm/plat-armada/mv_hal/xor/mvXor.c
+old mode 100644
+new mode 100755
+index 4c3a638..aade40e
+--- a/arch/arm/plat-armada/mv_hal/xor/mvXor.c
++++ b/arch/arm/plat-armada/mv_hal/xor/mvXor.c
+@@ -62,6 +62,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #include "mvCommon.h"
+ #include "mvOs.h"
+ #include "ctrlEnv/mvCtrlEnvSpec.h"
++#include "ctrlEnv/mvUnitMap.h"
+ #include "mvSysXorConfig.h"
+ #include "mvXorRegs.h"
+ #include "mvXor.h"
+@@ -91,6 +92,10 @@ MV_VOID mvXorHalInit(MV_U32 xorChanNum)
+ 	MV_U32 i;
+ 	/* Abort any XOR activity & set default configuration */
+ 	for (i = 0; i < xorChanNum; i++) {
++
++		if(mvUnitMapIsMine(XOR0 + XOR_UNIT(i)) == FALSE)
++			continue;
++
+ 		mvXorCommandSet(i, MV_STOP);
+ 		mvXorCtrlSet(i, (1 << XEXCR_REG_ACC_PROTECT_OFFS) |
+ 			     (4 << XEXCR_DST_BURST_LIMIT_OFFS) | (4 << XEXCR_SRC_BURST_LIMIT_OFFS)
+@@ -577,3 +582,16 @@ MV_STATUS mvXorOverrideSet(MV_U32 chan, MV_XOR_OVERRIDE_TARGET target, MV_U32 wi
+ 	MV_REG_WRITE(XOR_OVERRIDE_CTRL_REG(chan), temp);
+ 	return MV_OK;
+ }
++
++MV_VOID mvXorOverrideDisable(MV_U32 chan)
++{
++	MV_REG_WRITE(XOR_OVERRIDE_CTRL_REG(chan), 0);
++}
++
++MV_VOID xorSetSrcBurstLimit(MV_U32 chan, MV_XOR_BURST_LIMIT srcBurstLimit)
++{
++    MV_U32 temp = MV_REG_READ(XOR_CONFIG_REG(XOR_UNIT(chan), XOR_CHAN(chan)));
++    temp &= ~XEXCR_SRC_BURST_LIMIT_MASK;
++    temp |= srcBurstLimit << XEXCR_SRC_BURST_LIMIT_OFFS;
++    MV_REG_WRITE(XOR_CONFIG_REG(XOR_UNIT(chan),XOR_CHAN(chan)), temp);
++}
+diff --git a/arch/arm/plat-armada/mv_hal/xor/mvXor.h b/arch/arm/plat-armada/mv_hal/xor/mvXor.h
+old mode 100644
+new mode 100755
+index 75e1fdb..6bde57f
+--- a/arch/arm/plat-armada/mv_hal/xor/mvXor.h
++++ b/arch/arm/plat-armada/mv_hal/xor/mvXor.h
+@@ -93,6 +93,12 @@ extern "C" {
+ 		MV_CRC32	/* XOR channel functions as CRC 32 calculator   */
+ 	} MV_XOR_TYPE;
+ 
++	typedef enum _mvXorBurstLinit {
++		MV_XOR_BURST_LIMIT_32_BYTES  = 0x2,
++		MV_XOR_BURST_LIMIT_64_BYTES  = 0x3,
++		MV_XOR_BURST_LIMIT_128_BYTES = 0x4
++	} MV_XOR_BURST_LIMIT;
++
+ #if defined(MV_CPU_LE)
+ 	/* This structure describes XOR descriptor size 64bytes                     */
+ 	typedef struct _mvXorDesc {
+@@ -161,6 +167,7 @@ extern "C" {
+ 
+ #endif
+ 
++#define MV_XOR_DESC_ALIGNMENT       sizeof(MV_XOR_DESC)
+ 	typedef struct _mvXorEcc {
+ 		MV_U32 destPtr;	/* Target block pointer to ECC/MemInit operation */
+ 		MV_U32 blockSize;	/* Block size in bytes for ECC/MemInit operation */
+@@ -191,6 +198,8 @@ extern "C" {
+ 	MV_STATE mvXorStateGet(MV_U32 chan);
+ 	MV_STATUS mvXorCommandSet(MV_U32 chan, MV_COMMAND command);
+ 	MV_STATUS mvXorOverrideSet(MV_U32 chan, MV_XOR_OVERRIDE_TARGET target, MV_U32 winNum, MV_BOOL enable);
++	MV_VOID xorSetSrcBurstLimit(MV_U32 chan, MV_XOR_BURST_LIMIT srcBurstLimit);
++	MV_VOID mvXorOverrideDisable(MV_U32 chan);
+ 
+ 	MV_STATUS mvXorWinInit(MV_UNIT_WIN_INFO *addrWinMap);
+ 	MV_STATUS mvXorTargetWinWrite(MV_U32 unit, MV_U32 winNum,
+-- 
+1.7.9.5
+

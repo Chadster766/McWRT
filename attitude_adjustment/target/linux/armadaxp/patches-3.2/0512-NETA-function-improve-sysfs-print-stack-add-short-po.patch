@@ -1,0 +1,95 @@
+From 1b08f242f263ca758af423bf8d092c37777c62f9 Mon Sep 17 00:00:00 2001
+From: Uri Eliyahu <uriel@marvell.com>
+Date: Sun, 27 Jan 2013 11:25:33 +0200
+Subject: [PATCH 512/609] NETA function improve: sysfs print stack add short
+ pool
+
+Change-Id: Ibbb79f19dd6252296742540a19bb24f66cce99c6
+Signed-off-by: Uri Eliyahu <uriel@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/974
+Reviewed-by: Tawfik Bayouk <tawfik@marvell.com>
+Tested-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c  |    4 +--
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |   26 ++++++++++++++++++--
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h     |    2 +-
+ 3 files changed, 27 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
+index 5584bb0..d55dff5 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
+@@ -45,7 +45,7 @@ static ssize_t mv_eth_help(char *buf)
+ 	off += mvOsSPrintf(buf+off, "\n");
+ 
+ 	off += sprintf(buf+off, "cat                ports           - show all ports info\n");
+-	off += sprintf(buf+off, "echo p             > stack         - show all stack elements\n");
++	off += sprintf(buf+off, "echo p d           > stack         - show pools stack for port <p>. d=0-brief, d=1-full\n");
+ 	off += sprintf(buf+off, "echo p             > port          - show a port info\n");
+ 	off += sprintf(buf+off, "echo p             > stats         - show a port statistics\n");
+ 	off += sprintf(buf+off, "echo p txp         > cntrs         - show a port counters\n");
+@@ -221,7 +221,7 @@ static ssize_t mv_eth_port_store(struct device *dev,
+ 		mvNetaPortStatus(p);
+ 		mv_eth_port_status_print(p);
+ 	} else if (!strcmp(name, "stack")) {
+-		mv_eth_stack_print(p);
++		mv_eth_stack_print(p, v);
+ 	} else if (!strcmp(name, "stats")) {
+ 		mv_eth_port_stats_print(p);
+ 	} else if (!strcmp(name, "tos")) {
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 579bc12..20caace 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -193,10 +193,32 @@ int mv_eth_cmdline_port3_config(char *s)
+ 	port3_config_str = s;
+ 	return 1;
+ }
+-void mv_eth_stack_print(int port)
++void mv_eth_stack_print(int port, MV_BOOL isPrintElements)
+ {
+ 	struct eth_port *pp = mv_eth_port_by_id(port);
+-	mvStackStatus(pp->pool_long->stack, 1);
++
++	if (pp == NULL) {
++		printk(KERN_INFO "port doens not exist (%d) in %s\n" , port, __func__);
++		return;
++	}
++
++	if (pp->pool_long == NULL) {
++		printk(KERN_ERR "Error - long pool is null in %s\n", __func__);
++		return;
++	}
++
++	printk(KERN_INFO "Long pool (%d) stack\n", pp->pool_long->pool);
++	mvStackStatus(pp->pool_long->stack, isPrintElements);
++
++#ifdef CONFIG_MV_ETH_BM
++	if (pp->pool_short == NULL) {
++		printk(KERN_ERR "Error - short pool is null in %s\n", __func__);
++		return;
++	}
++
++	printk(KERN_INFO "Short pool (%d) stack\n", pp->pool_short->pool);
++	mvStackStatus(pp->pool_short->stack, isPrintElements);
++#endif /* CONFIG_MV_ETH_BM */
+ }
+ 
+ 
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+index 36ae9e9..a617a5e 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+@@ -476,7 +476,7 @@ int mv_eth_bm_config_long_buf_num_get(int port);
+ void mv_eth_bm_config_print(void);
+ #endif /* CONFIG_MV_ETH_BM */
+ 
+-void mv_eth_stack_print(int port);
++void mv_eth_stack_print(int port, MV_BOOL isPrintElements);
+ extern struct bm_pool mv_eth_pool[MV_ETH_BM_POOLS];
+ extern struct eth_port **mv_eth_ports;
+ 
+-- 
+1.7.9.5
+

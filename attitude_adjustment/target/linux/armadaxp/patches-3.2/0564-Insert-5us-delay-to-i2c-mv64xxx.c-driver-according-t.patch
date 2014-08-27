@@ -1,0 +1,53 @@
+From 523868d2e3ba82f10324191d82e8b6c4e052ceac Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Thu, 14 Mar 2013 09:47:24 +0200
+Subject: [PATCH 564/609] Insert 5us delay to i2c-mv64xxx.c driver according
+ to errata FE-8471889
+
+Bug fix - BTS #241 'The I2C driver is missing a delay that should be part of
+the Errata'
+
+Change-Id: I968199377b17081f7c1bc8ade8cc2c78c0ec3d2d
+Signed-off-by: Marcin Wojtas <mw@semihalf.com>
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1292
+Reviewed-by: Lior Amsalem <alior@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ drivers/i2c/busses/i2c-mv64xxx.c |    6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/i2c/busses/i2c-mv64xxx.c b/drivers/i2c/busses/i2c-mv64xxx.c
+index b20a456..894e3f1 100644
+--- a/drivers/i2c/busses/i2c-mv64xxx.c
++++ b/drivers/i2c/busses/i2c-mv64xxx.c
+@@ -18,6 +18,7 @@
+ #include <linux/mv643xx_i2c.h>
+ #include <linux/platform_device.h>
+ #include <linux/io.h>
++#include <linux/delay.h>
+ 
+ /* Register defines */
+ #define	MV64XXX_I2C_REG_SLAVE_ADDR			0x00
+@@ -273,6 +274,10 @@ mv64xxx_i2c_do_action(struct mv64xxx_i2c_data *drv_data)
+ 		writel(drv_data->cntl_bits | MV64XXX_I2C_REG_CONTROL_STOP,
+ 			drv_data->reg_base + MV64XXX_I2C_REG_CONTROL);
+ 		drv_data->block = 0;
++#if defined(CONFIG_ARMADA_XP_REV_A0) || defined(CONFIG_ARMADA_XP_REV_B0)
++		/* Add 5us delay in order to avoid repeated start timing violation */
++		udelay(5);
++#endif /* CONFIG_ARMADA_XP_REV_A0 || CONFIG_ARMADA_XP_REV_B0 */
+ 		wake_up_interruptible(&drv_data->waitq);
+ 		break;
+ 
+@@ -288,6 +293,7 @@ mv64xxx_i2c_do_action(struct mv64xxx_i2c_data *drv_data)
+ 		writel(drv_data->cntl_bits | MV64XXX_I2C_REG_CONTROL_STOP,
+ 			drv_data->reg_base + MV64XXX_I2C_REG_CONTROL);
+ 		drv_data->block = 0;
++
+ 		wake_up_interruptible(&drv_data->waitq);
+ 		break;
+ 	}
+-- 
+1.7.9.5
+

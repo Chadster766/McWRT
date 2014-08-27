@@ -1,0 +1,162 @@
+diff -Naur hostapd-0.8-snapshot/src/wps/wps_common.c hostapd-0.8-wps/src/wps/wps_common.c
+--- hostapd-0.8-snapshot/src/wps/wps_common.c	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8-wps/src/wps/wps_common.c	2014-01-14 12:24:06.768857973 +0700
+@@ -23,7 +23,6 @@
+ #include "wps_i.h"
+ #include "wps_dev_attr.h"
+ 
+-
+ void wps_kdf(const u8 *key, const u8 *label_prefix, size_t label_prefix_len,
+ 	     const char *label, u8 *res, size_t res_len)
+ {
+@@ -653,3 +652,98 @@
+ 
+ 	return methods;
+ }
++
++/*Function to write WPS LED value to proc entry */
++
++const char *led_mode[] = {"none","solid","heartbeat","heartbeat"};
++
++void write_wps_white_led_value(int value)
++{
++        FILE *fp;
++	int ret;
++
++	if ((value == WPS_LED_OFF) || (value == WPS_LED_SOLID_WHITE))
++		fp = fopen("/sys/class/leds/tlc59116\:wps_white/brightness","w");
++	else
++        	fp = fopen("/sys/class/leds/tlc59116\:wps_white/trigger","w");
++
++        if (fp != NULL)
++        {
++                /*
++                * Program the led in the simple led proc entry
++                */
++		switch (value)
++		{
++			case WPS_LED_OFF:
++				ret = fprintf(fp, "%d",0);
++				break;
++			case WPS_LED_SOLID_WHITE:
++				ret = fprintf(fp, "%d",255);
++				break;
++			default:
++				ret = fprintf(fp, "%s",led_mode[value]);
++				break;
++		}
++                if (ret < 0)
++                        wpa_printf(MSG_DEBUG, "%s: error with fputc \n", __func__);
++
++                fclose(fp);
++        }
++        else
++                wpa_printf(MSG_DEBUG, "%s: unable to open /sys/class/leds/tlc59116\:wps_white/trigger \n", __func__);
++}
++
++void write_wps_amber_led_value(int value)
++{
++	FILE *fp; 
++	int ret = 0;
++	if (value == WPS_LED_BLK_AMBER)
++		fp = fopen("/sys/class/leds/tlc59116\:wps_amber/trigger","w");
++	else
++		fp = fopen("/sys/class/leds/tlc59116\:wps_amber/brightness","w");
++
++	if (fp != NULL)
++	{
++		/*   
++		* Program the led in the simple led proc entry
++		*/
++		if (value == WPS_LED_BLK_AMBER)
++			ret = fprintf(fp, "%s",led_mode[value]);
++		else
++			ret = fprintf(fp, "%d",0);
++
++		if (ret < 0) 
++			wpa_printf(MSG_DEBUG, "%s: error with fputc \n", __func__);
++
++		fclose(fp);
++	}
++	else
++		wpa_printf(MSG_DEBUG, "%s: unable to open /sys/class/leds/tlc59116\:wps_amber/trigger \n", __func__);
++}
++
++void wps_led_control(int value)
++{
++        switch (value)
++        {
++                case WPS_LED_OFF:
++                        write_wps_white_led_value(WPS_LED_OFF);
++			write_wps_amber_led_value(WPS_LED_OFF);
++                        break;
++                case WPS_LED_SOLID_WHITE:
++			write_wps_amber_led_value(WPS_LED_OFF);
++                        write_wps_white_led_value(WPS_LED_SOLID_WHITE);
++                        break;
++                case WPS_LED_BLK_WHITE:
++			write_wps_amber_led_value(WPS_LED_OFF);
++                        write_wps_white_led_value(WPS_LED_BLK_WHITE);
++                        break;
++                case WPS_LED_BLK_AMBER:
++			write_wps_white_led_value(WPS_LED_OFF);
++                        write_wps_amber_led_value(WPS_LED_BLK_AMBER);
++                        break;
++                default:
++                        write_wps_white_led_value(WPS_LED_OFF);
++                        write_wps_amber_led_value(WPS_LED_OFF);
++                        break;
++        }
++}
+diff -Naur hostapd-0.8-snapshot/src/wps/wps.h hostapd-0.8-wps/src/wps/wps.h
+--- hostapd-0.8-snapshot/src/wps/wps.h	2014-01-14 21:18:57.052677971 +0700
++++ hostapd-0.8-wps/src/wps/wps.h	2014-01-14 11:28:57.992876533 +0700
+@@ -17,6 +17,12 @@
+ 
+ #include "wps_defs.h"
+ 
++#define WPS_LED_OFF 0
++#define WPS_LED_SOLID_WHITE 1
++#define WPS_LED_BLK_WHITE 2
++#define WPS_LED_BLK_AMBER 3
++
++
+ /**
+  * enum wsc_op_code - EAP-WSC OP-Code values
+  */
+diff -Naur hostapd-0.8-snapshot/src/wps/wps_registrar.c hostapd-0.8-wps/src/wps/wps_registrar.c
+--- hostapd-0.8-snapshot/src/wps/wps_registrar.c	2014-01-14 21:18:57.052677971 +0700
++++ hostapd-0.8-wps/src/wps/wps_registrar.c	2014-01-14 17:05:32.276763258 +0700
+@@ -852,6 +852,8 @@
+ 	wpa_printf(MSG_DEBUG, "WPS: PBC timed out - disable PBC mode");
+ 	wps_pbc_timeout_event(reg->wps);
+ 	wps_registrar_stop_pbc(reg);
++	//wps_led_control(WPS_LED_BLK_AMBER);
++	wps_led_control(WPS_LED_OFF);
+ }
+ 
+ 
+@@ -866,6 +868,7 @@
+  */
+ int wps_registrar_button_pushed(struct wps_registrar *reg)
+ {
++	printf("wps_registrar_button_pushed\n");
+ 	if (wps_registrar_pbc_overlap(reg, NULL, NULL)) {
+ 		wpa_printf(MSG_DEBUG, "WPS: PBC overlap - do not start PBC "
+ 			   "mode");
+@@ -877,6 +880,7 @@
+ 	reg->selected_registrar = 1;
+ 	reg->pbc = 1;
+ 	wps_registrar_selected_registrar_changed(reg);
++	wps_led_control(WPS_LED_BLK_WHITE);
+ 
+ 	eloop_cancel_timeout(wps_registrar_set_selected_timeout, reg, NULL);
+ 	eloop_cancel_timeout(wps_registrar_pbc_timeout, reg, NULL);
+@@ -1720,6 +1724,7 @@
+ 	wpabuf_free(plain);
+ 
+ 	wps->state = RECV_DONE;
++	wps_led_control(WPS_LED_SOLID_WHITE);
+ 	return msg;
+ }
+ 

@@ -1,0 +1,46 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+config_cb() {
+       local cfg="$CONFIG_SECTION"
+       local cfgtype
+       config_get cfgtype "$cfg" TYPE
+       dudders=/usr/bin/dudders
+
+       case "$cfgtype" in
+               dudders)
+                       config_get enabled  $cfg enabled
+                       [ "$enabled" = "yes" ] || return 0
+
+                       config_get tcp      $cfg tcp
+                       config_get keyname  $cfg keyname
+                       config_get mname    $cfg mname
+                       config_get zone     $cfg zone
+                       config_get keyfile  $cfg keyfile
+                       config_get hostname $cfg hostname
+                       config_get ttl      $cfg ttl
+
+                       [ -r "$keyfile" ] || return 1
+                       sleep 1
+                       interface=$(route -n 2>&- \
+                         |grep '^0.0.0.0' \
+                         |sed -e 's/.* \([^ ]\+\)$/\1/')
+                       [ -z "$interface" ] && return 0
+                       [ "$DEVICE" = "$interface" -o \
+                         "$IFNAME" = "$interface" -o \
+                         "$PPP_IFACE" = "$interface" ] || return 0
+                       ipaddr=${PPP_LOCAL:-${IPLOCAL:-$(ifconfig "$interface" \
+                           |grep -o 'addr:[^ ]\+' \
+                           |sed -e 's/addr://')}}
+                       OPTS=${keyname:+" -k '$keyname'"}
+                       [ "$tcp" = "yes" ] && OPTS=$OPTS" -T"
+                       OPTS=$OPTS${mname:+" -m '$mname'"}
+                       OPTS=$OPTS${zone:+" -z '$zone'"}
+                       eval $dudders -k $keyfile $OPTS $hostname $ttl $ipaddr
+               ;;
+       esac
+}
+case "${ACTION:-ifup}" in
+       ifup) config_load dudders ;;
+esac

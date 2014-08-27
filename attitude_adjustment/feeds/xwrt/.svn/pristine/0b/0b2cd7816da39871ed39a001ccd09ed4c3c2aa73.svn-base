@@ -1,0 +1,1078 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta content="text/html; charset=ISO-8859-1" http-equiv="content-type"><title>MARS: Manager manual</title>
+<style media="all" type="text/css">
+td { font-family: Arial;
+}
+th { font-weight: bold;
+font-size: larger;
+color: rgb(0, 0, 0);
+background-color: rgb(255, 255, 255);
+}
+.title { font-weight: bold;
+font-size: larger;
+text-align: center;
+color: rgb(0, 0, 0);
+background-color: rgb(255, 255, 255);
+}
+.header { font-family: Arial,Helvetica,sans-serif;
+font-weight: bold;
+text-align: center;
+font-size: medium;
+background-color: rgb(255, 255, 255);
+color: rgb(0, 0, 0);
+}
+</style>
+<meta name="author" content="Noël Bouchard, Tele Data Inc."></head>
+<body><table style="text-align: left; width: 90%;" border="0" cellpadding="2" cellspacing="4"> <tbody>
+<tr> <td style="background-color: rgb(51, 51, 255);" colspan="3"></td> </tr> <tr class="title"><td style="text-align: center;" colspan="1">MARS<br>
+Mini-PBX / Wireless Router<br>
+Manager Manual</td> </tr> <tr> <td style="background-color: rgb(51, 51, 255);" colspan="1"></td>
+</tr> <tr> <td style="vertical-align: top; text-align: left;" colspan="1"><span class="title">1 - <a href="#Introduction">Introduction</a><br>
+2 - <a href="#Accès_interface_WWW">Connections and WWW
+interface access</a><br> </span><span class="title" style="font-weight: bold;"></span><span class="title">3 - </span><a class="title" href="#Configuration_PPPoE__DHCP__Switch">PPPoE / DHCP</a><a class="title" href="#Configuration_PPPoE__DHCP__Switch">
+Configuration</a><span class="title"> (WAN)<br>
+</span> <div style="margin-left: 40px;">ADSL<br>
+Cable<br>
+Switch</div> <span class="title">4 - <a href="#Configuration_Wi-Fi">WI-FI Configuration</a><br>
+</span><span class="title">5
+- <a href="#Service_de_DNS_dynamique">Dynamic DNS Service</a></span><br>
+<span class="title">6&nbsp;- </span><big><a style="font-weight: bold;" href="#Configuration_MARS">Asterisk
+MARS </a></big><big><a style="font-weight: bold;" href="MngrManual_en.html#Configuration_MARS">Configuration </a></big>
+<div style="margin-left: 40px;">System<br>
+Extensions<br>
+Trunks<br>
+Servers <br>
+Queue<br>
+Time conditions<br> <br> </div> <span class="title">7 - <a href="#Phone-in_Dictation">Phone-in
+Dictation</a><br>
+8 - <a href="#Dialer">Automated
+Dialer</a><br>
+9 - <a href="#WebCall">WebCall</a><br>
+10
+-&nbsp;<a href="#Formulaire_WebCall">WebCall Form</a><br>
+</span><span class="title"></span><br> </td></tr><tr><td style="background-color: rgb(51, 51, 255); text-align: center;"><a name="Introduction"></a><big><span style="color: rgb(255, 255, 255); font-weight: bold;">Introduction</span></big></td>
+</tr> <tr> <td><br>The
+installation and configuration of the MARS system can be simply
+accomplished by proceeding by steps as described by the list of topics
+above. In short, you must connect the system, configure the router,
+that is the Internet access and the wireless access point, and if
+desired the client for the dynamic DNS service. Then the PBX must be
+configured as well as the VoIP telephones.<br> <br>
+Some steps are optionals, according to the functions used, in which
+case this will be indicated in the text.<br> <br> <span class="title">Required Informations</span><br> <br>
+You will need the following informations provided by your Internet
+service provider and your VoIP provider:<br> <ul> <li>Your
+<span style="font-weight: bold;">user
+name</span> and the password for your Internet service<span style="font-weight: bold;"></span> (<span style="font-weight: bold;">ADSL / PPPoE</span>), </li>
+<li>The address of the&nbsp;<span style="font-weight: bold;">SMTP &nbsp;Server</span>&nbsp;used
+to send emails.</li> <li>The&nbsp;<span style="font-weight: bold;">user
+name&nbsp;</span>(Or DID / Tel No.) of your(s) VoIP lines
+with password and the URL (Internet address or domain name) of the
+service.<span style="font-weight: bold;"></span>&nbsp;</li>
+</ul>If you will use the dynamic DNS service you will need:<br>
+<ul><li>Your&nbsp;<span style="font-weight: bold;">user
+name and password</span> as well as your domain
+name&nbsp;chosen when you create your account. </li> </ul>
+Finally if you interconnect systems together you will need:<br> <ul>
+<li>The&nbsp;<span style="font-weight: bold;">server
+names and passwords</span>&nbsp;of the MARS systems as well
+as the IP address (or domain name) of all systems.</li> </ul>
+</td> </tr> <tr> <td class="title" style="background-color: rgb(51, 51, 255); text-align: center;" colspan="1"><a name="Accès_interface_WWW"></a><span style="color: rgb(255, 255, 255);"></span><span class="title"></span><span style="color: rgb(255, 255, 255);">Connections and WWW
+interface access</span><span style="color: rgb(255, 255, 255);"></span></td>
+</tr> <tr> <td style="vertical-align: top;"><br><span class="title">Connections<br> <br> </span>First,
+connect port one of the router to your PC
+network card using a standard network cable.<br>
+Then connect your broadband modem to the WAN connector of the router
+using a standard network cable.<br>
+Power up the MARS system and wait until booting is done ( &lt; 1
+min.)<br> <br> <span class="title">Initial
+configuration<br> </span><span style="font-weight: bold;"></span><br>
+The local LAN address of the MARS system is set by default
+to:&nbsp; <span style="font-weight: bold;">192.168.1.1</span><br>
+Make
+sure that the network adapter of the PC you are using is set to use a
+static IP address in the same segment, but different than the MARS
+system. For instance: <span style="font-weight: bold;">192.168.1.10<br>
+<br> </span>Open the network configuration utility (For
+Windows:
+Start | Settings | Network Connections | Local area connection.)<br>
+Click on the "Properties" and select the&nbsp;<span style="font-weight: bold;">Internet
+Protocol (TCP/IP).<br> </span>Click again on the
+"Properties button"<span style="font-weight: bold;"><br>
+</span><span style="font-weight: bold;"></span><br>If
+your network adapter is configured to obtain an IP address
+automatically (DHCP) or on a static address in a different network
+segment than 192.168.1.x, modify the config for the IP protocol as
+following:<br> <br>
+Check the "Use the following address" checkbox and set:<br> <span style="font-weight: bold;">IP Address:
+192.168.1.10</span><br style="font-weight: bold;"> <span style="font-weight: bold;">Mask: 255.255.255.0</span><br style="font-weight: bold;"> <span style="font-weight: bold;">Gateway: 192.168.1.1<br> <br>
+</span>You can now access MARS' WWW interface by pointing
+your browser to the following URL: <span style="font-weight: bold;">http://192.168.1.1<br>
+</span>The user name is "<span style="font-weight: bold;">root</span>"
+and the password is "<span style="font-weight: bold;">Mars08</span>".
+(The pwd may be different, use the one given)<br> <br>
+The
+WWW interface allows you to configure the network interfaces (LAN / WAN
+/ WI-FI), the PPPoE client (ADSL) and or DHCP, the dynamic DNS client
+and give access to the configuration panels of the MARS system.<br>
+<span style="font-weight: bold;"></span><br> <span style="font-weight: bold;"></span></td> </tr><tr class="header title"> <td style="background-color: rgb(51, 51, 255);" class="header" colspan="1"><a name="Configuration_PPPoE__DHCP__Switch"></a><span style="color: rgb(255, 255, 255);">PPPoE / DHCP / Switch
+(WAN)&nbsp;</span><span style="color: rgb(255, 255, 255);">Configuration
+</span></td> </tr> <tr> <td colspan="1"><br>To
+configure the Internet connection, select the "<span style="font-weight: bold;">Network</span>" option from
+the main menu and then the "<span style="font-weight: bold;">WAN-LAN</span>"
+option.<br> <big style="color: rgb(255, 0, 0);"><span style="font-weight: bold;"><br>
+Important:</span></big>
+The MARS system has it's own DHCP (Dynamic Host Configuration Protocol)
+&nbsp;server which is used to configure the network interfaces on
+the
+local LAN and behave as a DHCP client for the WAN side (Internet). It
+is very important that only one DHCP server is activated on a given LAN
+otherwise some configuration problems would occur. In consequence, make
+sure that you modem (or any other device) does not &nbsp;use it's
+DHCP
+server for the LAN, otherwise configure the device as a DHCP client or
+else disable the DHCP server and use a static IP address for the
+device. This static address must be set in the same network segment
+than the MARS system. (Usually at 192.168.1.1) For example:
+192.168.1.80.<br> <br> <span class="title">ADSL
+</span><span class="title">Modem </span><span class="title">/
+PPPoE: <br> <br> </span><span style="font-weight: normal;">If
+you use ADSL for your internet &nbsp;connection, you will need to
+configure the PPoE client to allow the system to automatically connect
+to your ISP on startup.<br> <br>
+- Select
+"<span style="font-weight: bold;">PPPoE</span>"
+under
+"<span style="font-weight: bold;">Connection
+Type</span>"<br>
+- Enter the values under <span style="font-weight: bold;">PPP
+Settings</span><br> <br> </span> <table style="text-align: left; width: 50%;" summary="Settings">
+<tbody> <tr id="redial" style=""> <th style="width: 40%; font-weight: bold;">Redial
+Policy</th> <td width="60%">Keep Alive<br> </td>
+</tr> <tr id="demand_idletime" style="display: none;"><td width="40%">Maximum
+Idle Time</td> <td width="60%"> <input id="ppp_idletime" name="ppp_idletime" value="5" type="text"></td> </tr> <tr id="persist_redialperiod" style=""> <th style="width: 40%;">Redial
+Timeout</th> <td width="60%">30 <br> </td>
+</tr> <tr id="username" style=""> <th style="width: 40%; font-weight: bold;">Username</th> <td width="60%">&lt;As given by your ISP&gt;<br> </td>
+</tr> <tr id="passwd" style=""> <th style="width: 40%; font-weight: bold;">Password</th> <td width="60%">&lt;As given by your ISP&gt; </td> </tr>
+<tr id="mtu" style=""> <th style="width: 40%; font-weight: bold;">MTU</th> <td>1492
+&nbsp;(unless your ISP say something
+else)</td> </tr> </tbody> </table> <span class="title"></span><br> <span style="font-weight: bold;">Make
+sure you save the changes by clicking on the "Save changes" button and
+the appy the changes &nbsp;by pressing the "Apply changes" button.</span><br>
+The
+system should now connect to your ISP automatically on startup. You may
+need to reboot the system (Using the "Reboot" option from the "System"
+menu option).&nbsp;<br> <br> <hr style="width: 100%; height: 2px;"><br> <span class="title">Cable Modem / DHCP:<br> <br> </span>If
+you use a cable Internet connection,
+&nbsp;select "DHCP" under &nbsp;<span style="font-weight: normal;">"<span style="font-weight: bold;">Connection Type</span>".<br>
+</span><span style="font-weight: bold;">Make
+sure you save the changes by
+clicking on the "Save changes" button and the appy the changes
+&nbsp;by
+pressing the "Apply changes" button.</span><br>
+You
+may need to "power cycle" both your cable modem and the MARS system in
+order for the cable modem's DHCP server to assign a WAN address to the
+MARS system. Turn off the power on the cable modem and disconnect the
+power cord on the MARS system and wait 1 - 2 minutes. Then power on the
+cable modem &nbsp;and then the MARS system. <br>
+You can verify the status of the connection using the "Status /
+Interface" menu option.<br> <br> <span class="title">Switch
+/ None:<br> <br> </span> <hr style="width: 100%; height: 2px;"><span class="title">LAN
+Configuration<br> <br> </span> <table style="width: 100%;" summary="Settings"> <tbody>
+<tr> <th style="width: 40%; text-align: left;">LAN
+IP Address</th> <td width="60%">192.168.1.1<br>
+</td> </tr> <tr> <th style="width: 40%; text-align: left;">Netmask</th> <td width="60%">255.255.255.0<br> </td> </tr>
+<tr> <th style="width: 40%; text-align: left;">Default
+Gateway</th> <td width="60%">192.168.1.1<br> </td>
+</tr> </tbody> </table> <br> <hr style="width: 100%; height: 2px;"><br> <span class="title">LAN DNS Servers Configuration</span><br>
+<br>Enter 192.168.1.1 in the edit box and press the <span style="font-weight: bold;">Add</span> Button. You
+should then see the following under <br> <br> <span style="font-weight: bold;">192.168.1.1
+&nbsp;Remove</span><br> <br>
+Press the <span style="font-weight: bold;">Save</span>
+button at the bottom of the screen and then the <span style="font-weight: bold;">Apply</span>
+link&nbsp;to apply changes.<br> <br> <br> <hr style="width: 100%; height: 2px;"><br> <span class="title">Connecting to the Internet<br> <br>
+</span>Once&nbsp;the
+Internet connection configuration is done, you will need to reconfigure
+your PCs network adapter so it gets an IP address assigned by the
+system.<br> <br>
+- Open the Network configuration utility.&nbsp;(Under Windows:
+Start | Settings | Network &amp;
+Dial up connections &nbsp;| Local area Network.)<br>
+- Press the&nbsp;Properties button and select&nbsp;<span style="font-weight: bold;">Internet
+Protocol (TCP/IP).<br> </span>- Press once again on the
+"Properties" button and
+select "Obtain an IP address automatically".<span style="font-weight: bold;"><br> </span><br>
+<hr style="width: 100%; height: 2px;"><br> <span class="title">Verifying the connection.</span><br>
+<br>You
+can verify the Internet connectivity from the main menu by selecting
+the "<span style="font-weight: bold;">Status</span>"
+menu option and then "<span style="font-weight: bold;">Interfaces</span>".
+Here is an example
+display:<br> <h3><strong>WAN</strong></h3>
+<table summary="Settings" width="100%"> <tbody><tr id="wan_ip_addr"> <td style="font-weight: bold;" width="40%">IP
+Address</td> <td style="font-weight: bold;" width="60%">216.209.xxx.xxx
+P-t-P </td> </tr> <tr id="dns_server_1"> <td style="font-weight: bold;" width="40%">DNS
+Server 1</td> <td style="font-weight: bold;" width="60%">216.209.xxx.xxx </td> </tr> <tr id="dns_server_2"> <td style="font-weight: bold;" width="40%">DNS
+Server 2</td> <td style="font-weight: bold;" width="60%">216.209.xxx.xxx </td> </tr> </tbody>
+</table> <br>It may also be
+necessary to restart your ADSL / Cable modem. Remove the power on the
+MARS system and then reboot your modem ... then put the power back on
+the MARS system. &nbsp;After restarting the MARS system, you should
+see than an IP address has
+been assigned to the WAN interface as well as to the DNS servers.
+Otherwise, double check your PPPoE settings.<br> <br> </td>
+</tr> <tr class="header"> <td style="color: rgb(255, 255, 255); background-color: rgb(51, 51, 255);"><a name="Configuration_Wi-Fi"></a>WI-FI Configuration</td>
+</tr> <tr> <td><br>To
+configure the WI-FI access point, select the "Network" menu option and
+then "Wireless". The WI-FI access point allows to connect devices with
+WI-FI network capability to your local area network. Theses devices can
+be portable computer or WI-FI VoIP phones.<br> <br>
+If you do not want to
+use the WI-FI access point, you can disable it by selecting "Disabled"
+under "Wireless Interface", otherwise set this to "Enabled". <br>
+The select "WEP " under "Encryption Type" and enter a "PassPhrase" that
+will be used to create the key and press the <span style="font-weight: bold;">"Generate 128 bits key" </span>button
+to generate the key. Take note of the pass phrase and WEP key as you
+will need these to configure the client that will connect &nbsp;to
+the
+access point.<br> <br> <span style="font-weight: bold;">Make
+sure you save
+the changes by
+clicking on the "Save changes" button and the apply the changes
+&nbsp;by
+pressing the "Apply changes" button.</span><br> <span style="font-weight: bold;"><br> </span><span class="title">WI-FI Clients
+Configuration</span><span style="font-weight: bold;"><br>
+</span><br>It
+is impossible to describe here the exact procedure to configure the
+WI-FI clients but as a general rule, an configuration utility will be
+provided. This will allow to locate the access point and get access by
+specifying the encryption as "WEP" &nbsp;using a 128 bits key and
+by
+providing either the pass phrase or WEP key used on the access point.
+You will then be able to connect the PC or WI-FI phone to the local
+LAN. The WI-FI client will memorize the informations and will use it to
+connect to the AP on startup.<br> <br> <span style="font-weight: bold;"></span></td> </tr>
+<tr class="header"> <td style="color: rgb(255, 255, 255); background-color: rgb(51, 51, 255);"><a name="Service_de_DNS_dynamique"></a>Dynamic DNS Service</td>
+</tr> <tr> <td><br>MARS
+provides a dynamic DNS client which can provide a fixed domain name to
+your system. The dynamic DNS service client will contact the service
+DNS server to update your public IP address when it is
+&nbsp;assigned
+or renewed by your ISP. &nbsp;To use this service, you must first
+create an account and the configure the system's client. You don't
+really need this service you you do not use WebCall or do not link
+multiple systems together.<br> <br> <br> <span class="title">DynDNS account creation</span><span class="title"></span><br> <br>
+Go to <a href="http://www.dyndns.com/" target="_blank"><span style="font-weight: bold;">http://www.dyndns.com</span></a>
+, select the&nbsp;"New Account" link and complete the form to
+create
+your free DynDNS account. Write down your user name, password and
+chosen domain name. You can select a domain name with different
+suffixes like dyndns.org or dyndns.biz etc ... You must supply an
+unused prefix which together with the selected suffix will form your
+unique domain name. For instance: "<span style="font-weight: bold;">my-mars.dyndns.org</span>"
+or "<span style="font-weight: bold;">my-company.dyndns.biz</span>".
+After having created your account, you will receive
+a&nbsp;confirmation
+at the given&nbsp;email address which you must reply to validate
+your
+account.<br> <br> <br> <hr style="width: 100%; height: 2px;"><br> <span class="title">Configuration</span><br> <br>
+Once your DynDNS account has been created and activated, you can
+configure the MARS client by selecting the "<span style="font-weight: bold;">Network</span>" menu item
+and then "<span style="font-weight: bold;">DynDNS</span>".<br>
+<br> <table style="width: 60%;" summary="Settings"><tbody><tr><th style="text-align: left;">DynDNS</th>
+<td><span style="font-weight: bold;">Enable</span></td>
+</tr> <tr> <th style="width: 40%; text-align: left;">DynDNS
+Service</th> <td width="60%"><span style="font-weight: bold;">dyndns</span><br> </td>
+</tr> <tr> <th style="width: 40%; text-align: left;">User
+Name</th> <td style="width: 60%;">&lt;Your
+DynDNS
+user name&gt;<br> </td> </tr> <tr> <th style="width: 40%; text-align: left;">Password</th> <td width="60%">&lt;dyndns account
+password&gt;<br> </td> </tr> <tr> <th style="width: 40%; text-align: left;">Host
+Name</th> <td width="60%">&lt;Your DynDNS
+domain
+name&gt;. Ex: mars.dyndns.org<br> </td> </tr> <tr>
+<th style="width: 40%; text-align: left;">Wildcard</th>
+<td style="font-weight: bold;" width="60%">Disabled</td>
+</tr> <tr> <th style="width: 40%; text-align: left;">Server
+Name</th> <td width="60%"><span style="font-weight: bold;">members.dyndns.org</span><br>
+</td> </tr> <tr> <th style="width: 40%; text-align: left;">Max
+Interval (sec)</th> <td><span style="font-weight: bold;">86400
+</span>(60 secs * 60 mins * 24 hrs ) Renew every 24
+hours.</td> </tr> </tbody> </table> <br>
+<span style="font-weight: bold;">Make sure you save
+the changes by
+clicking on the "Save changes" button and the apply the changes
+&nbsp;by
+pressing the "Apply changes" button.</span><br> <span style="font-weight: bold;"><br> </span>MARS
+DynDNS client will contact the DynDNS server regularly to communicate
+the current public IP address of the system. The DynDNS domain name
+servers will then be able to supply the correct IP address when someone
+request your DynDNS domain name.<span style="font-weight: bold;"><br>
+<br> </span><span class="title">DynDNS client
+verification<br> <br> </span><span style="font-weight: normal;">You
+can verify that the dydns client works properly by using the "ping"
+utility that is accessible from the menu under </span>"Status"
+/ "Diagnostics". Enter your dyndns domain name in the edit box and
+press the "Ping" button. If everything works, you should get the result
+after a few seconds. The first line will indicate the IP address given
+by the DynDNS domain name server for your domain name. Example:<br>
+<span style="font-weight: normal;"></span><span class="title"></span> <pre>PING my-mars.dyndns.org (216.239.76.53): 56 data bytes</pre>Verify
+that the given IP address is the same as displayed under "Status" /
+"Interface" for the WAN interface. If not, double check the DynDNS
+client data and make sure your account has been activated and try to
+reboot the system. ("System" / "Reboot").<br> <br> </td>
+</tr> <tr class="header"> <td style="background-color: rgb(51, 51, 255);"><a name="Configuration_MARS"></a><span style="color: rgb(255, 255, 255);">MARS </span><span style="color: rgb(255, 255, 255);">Configuration</span></td>
+</tr> <tr> <td style="text-align: left;"><br><br>To
+configure the&nbsp;PBX part of the MARS system you need to set the
+genral system &nbsp;parameters, the extensions, &nbsp;and the
+external
+lines (trunks). Then depending on the desired options the queue
+parameters and the time conditions. Finally if you want to interconnect
+MARS systems together, you will need to configure the Server section.<br>
+<br> <span class="title"><a name="System"></a>System:
+</span>This&nbsp;section allows to set the general
+system parameters.<br> <span class="title"><br>
+</span> <table style="width: 100%;" cellpadding="2" cellspacing="2"> <tbody> <tr> <th style="vertical-align: top; text-align: left;">System
+ID <br>
+(Server No): </th> <td colspan="3">The "System ID"
+is used to
+establish the base extension
+when two or more MARS systems are interconnected. In this case, each
+system must use a different system ID. The "Server ID" will determinate
+which the system local extensions . The ID 1 will assign extensions
+200-203. The ID "2" will set 300 - 303, the "3" will use extensions
+"400 - 403 and finally System ID 4 will use extension 500 to 503 as
+local internal extensions. If the system is not linked to any other the
+use "Server ID" 1. (Extensions 200-203).<br> </td> </tr>
+<tr> <th style="text-align: left;">Service Main
+Language (E/F): </th> <td colspan="3">This is the
+default main
+system language. Use "E" for
+English and "F" for French. For a bilingual system, the "welcome"
+message of the auto attendant allows to select the secondary language
+by pressing the "9" key.<br> </td> </tr> <tr>
+<th style="text-align: left;">Admin
+Email: </th> <td colspan="3">The administrator
+email
+address. This will be used to send the daily calls reports.<br> </td>
+</tr> <tr> <th style="text-align: left;">SMTP
+Server: </th> <td colspan="3">The address of the
+SMTP server
+used to send email (given by your Internet Service Provider)<br> </td>
+</tr> <tr> <th style="text-align: left;">Cell
+Phone Gateway Pwd: </th> <td colspan="3">The
+access code for the Cell
+to VoIP gateway. This code should &nbsp;use only disits and be of a
+minimum size of 4 or 5 digits.<br> </td> </tr> <tr>
+<th style="vertical-align: top; text-align: left;">Local&nbsp;Prefixes:&nbsp;
+</th> <td>This allows to get your local prefixes list
+according to your
+given area code and telephone number prefix. Enter your 3 digits area
+code and the first 3 digits of your telephone number and press the
+"Save" button to save. &nbsp;The press the "Get" button to get the
+list
+of prefixes from the Internet. &nbsp;(Make sure you &nbsp;have
+Internet
+connectivity before using this function.) </td> </tr> <tr>
+<th style="text-align: left;">Local
+Prefixes List:</th> <td>This displays the (read only) list
+of local
+prefix. </td> </tr> </tbody> </table> <br>
+<hr style="width: 100%; height: 2px;"><span class="title"><br> <a name="Extensions"></a>Extensions:
+</span>This
+section allows to define up to four extensions used by the system.
+These extensions can use the SIP or IAX2 protocol. Only the used
+extensions should be defined.<br> <br> <table> <tbody>
+<tr> <th style="vertical-align: top;">Extension</th>
+<td>This is the extension number. This is fixed and
+cant be modified. You will need to specify this value as the "<span style="font-weight: bold;">User ID</span>" or
+"UserName" when configuring the telephone that is attached to this
+extension. </td> </tr> <tr> <th style="vertical-align: top;">Password: </th> <td>Enter
+the access code for the extension. You will
+also need this value to configure the telephone attached to this
+extension<br> </td> </tr> <tr> <th style="text-align: left;">SIP/IAX2: </th> <td>Enter
+SIP or IAX2 according to the protocol used
+by the VoIP phone&nbsp;, ATA or "softphone"
+used.<br> </td> </tr> <tr> <th style="text-align: left;">Dial: </th> <td>Enter
+SIP / IAX2 followed by a forward slash
+followed by the extension. Ex: <span style="font-weight: bold;">SIP/200</span>
+&nbsp;ou &nbsp;<span style="font-weight: bold;">IAX2/203</span><br>
+</td> </tr> <tr> <th style="text-align: left;">CallerID:
+</th> <td>The number used to display the internal calls.
+Usually the extension number or user name. Ex: <span style="font-weight: bold;">200</span><br> </td>
+</tr> <tr> <th style="text-align: left;">EMail:</th>
+<td>The email address for the voice mail to email
+expedition for this extension. Ex: my-email@my-isp.com </td> </tr>
+</tbody> </table> <br> <span style="font-weight: bold; color: rgb(255, 0, 0);">IMPORTANT:</span><span style="color: rgb(255, 0, 0);"> </span>&nbsp;<br>
+<ul><li>After
+having configured the extension, you must configure the telephone
+attached to this extension using the&nbsp;extension number as user
+name&nbsp;and
+given password. (default to ext. number)</li> </ul> <hr style="width: 100%; height: 2px;"><br> <span class="title"><a name="Trunks"></a>Trunks:</span>
+This is used to configure the external lines of the system. You can
+define up to two VoIP lines using the SIP or IAX2 protocol. You can
+also define a PSTN line when using the FXO adapter. &nbsp;Fill only
+the
+entries which are in use by the system. Use the "Save" button under
+each section to save any modification.<br> <br> <table style="text-align: left; width: 90%;" border="0" cellpadding="2" cellspacing="2"> <tbody> <tr>
+<th><span style="font-weight: bold;">VoIP</span></th>
+<td></td> </tr> <tr> <th>Protocol</th>
+<td>This define the protocol used for the VoIP line.
+&nbsp;Use the "Save" button if changing protocol to update display.</td>
+</tr> <tr> <th>UserName
+(/DID)</th> <td>The UserName or DID (telephone number) as
+given
+by your VoIP provider.</td> </tr> <tr> <th>Password</th>
+<td>The password or secret for this line. (as given
+by your VoIP provider). </td> </tr> <tr> <th>Host</th>
+<td>Your VoIP host. (as given by your VoIP
+provider)&nbsp;</td> </tr> <tr> <th><span style="font-weight: bold;">PSTN</span></th> <td></td>
+</tr> <tr> <th>FXO1</th> <td>If you
+use an conventional external line using
+the FXO adater enter <span style="font-weight: bold;">FXO1</span>
+( F X Oh one). otherwise leave blank.</td> </tr> <tr>
+<th>Caller ID</th> <td>The phone number for this line</td>
+</tr> </tbody> </table> <br>After
+adding a new trunk you should issue a "SIP Reload" (or "IAX Reload")
+command (from the Management &nbsp;menu) and then&nbsp; verify
+the
+connectivity using the "Sip Registry" (or "IAX registry") command which
+will display the status of the registrations with the service provider.<br>
+<br> <hr style="width: 100%; height: 2px;"><br><span class="title"><a name="Servers"></a>Servers:
+</span><br>This
+section is used to define the local and remote MARS servers when
+interconnecting systems. Up to four MARS systems can be interconnected.
+Each of the system must be assigned a unique "Server ID"
+&nbsp;which
+will determine the extensions assigned to the server as well as the
+local server ID. For instance the first MARS system will be defined as
+"Server 1" &nbsp;and will use extensions 200 to 203 and will be
+defined
+in the "Server 1" entry of this page. The entry "Server 2" must contain
+the informations for the server with extension 300 - 303. The "Server
+3" for the server with extension&nbsp;400 - 403 and Server "4" for
+the
+one having extensions 500 to 503. The entry which correspond to the
+local server depends on it's&nbsp;server ID. You must specify the
+server name / password and host (static IP or DynDNS domain name) for
+all interconnected servers, including the local one.<br> <br>
+<table style="text-align: left; width: 90%;" border="0" cellpadding="2" cellspacing="2"> <tbody> <tr><th>Server
+UserName</th> <td>The name assigned to the external MARS
+system&nbsp; (or local)</td> </tr> <tr> <th>Password</th>
+<td>The password of the external MARS system (or
+local)</td> </tr> <tr> <th>Host
+(IP or dyndns)</th> <td>The IP address&nbsp; (or
+DynDNS domain name)
+of the MARS system</td> </tr> </tbody> </table>
+<br>After
+the servers have been defined you should issue a "IAX Reload" command
+(from the Management &nbsp;menu) on all interconnected servers. You
+can
+then verify the connectivity using the "IAX registry" command which
+will display the status of the registrations with the other systems. If
+the connection fail, check on each side if you can ping the other side
+domain name or IP address. (Using System / Diagnostics menu option).
+Once the connection is established, each side should be able to dial
+the other one&nbsp;by dialing it's 3 digits extensions number.<br>
+<br> <hr style="width: 100%; height: 2px;"><br><span class="title"><a name="Queue"></a>Queue:&nbsp;</span>This
+section is used to define the usage and parameters of the call queue.
+The default value is set to use the call queue only when the automated
+attendant has been deactivated. &nbsp;If desired, you can modify
+the
+queue usage here.<br> <span class="title"><br>
+</span> <table style="text-align: left; width: 90%;" border="0" cellpadding="2" cellspacing="2"> <tbody><tr><th style="vertical-align: top;">Use
+Queue</th> <td>Define the usage of the call queue.<br>
+"<span style="font-weight: bold;">When Auto-Attendant Off</span>"
+&nbsp;Use only when the automated attendant is deactivated.<br>
+"<span style="font-weight: bold;">Always</span>" Use
+at all time (Never use the Automated attendant)<br>
+"<span style="font-weight: bold;">Never</span>" Do
+not use.&nbsp;Direct the calls directly to voice mail of main
+extension if AA is deactivated. </td> </tr> <tr> <th style="vertical-align: top;">Queue Strategy</th> <td>Set
+the call handling by the call queue<br>
+"<span style="font-weight: bold;">Round Robin</span>"
+Contact an&nbsp;extension then another until an extension answers.<br>
+"<span style="font-weight: bold;">Ring
+All</span>" Ring all extensions and direct the call to the first
+one who answer.</td> </tr> <tr> <th>Members:</th>
+<td>You can select the extension that will be used in
+the call queue.</td> </tr> </tbody> </table>
+<br> <hr style="width: 100%; height: 2px;"><br><span class="title"><a name="TimeConditions"></a>Time
+Conditions:&nbsp;</span>This
+section allow to define a schedule to allow a specific treatment
+according to the current day and time. When activated, calls received
+outside of the def<a href="../Doc/MARS_en.html">file:///Y:/openWRT/Doc/MARS_en.html</a>ine
+working period will be directed to the voice mail
+for the main extension.<br> <br> <table style="text-align: left; width: 90%;" border="0" cellpadding="2" cellspacing="2"> <tbody> <tr>
+<th>Enable</th> <td>Activate time conditions</td>
+</tr> <tr> <th>From
+Hours</th> <td>Start of opening hours.&nbsp;
+Enter as&nbsp;hh:mm. in 24 hour format. For example: 09:00</td>
+</tr> <tr> <th>To
+Hours</th> <td>End of opening hours. Enter
+as&nbsp;hh:mm. in
+24 hour format. For example: 18:00</td> </tr> <tr> <th style="vertical-align: top;">Days</th> <td>Opening
+days. Enter as a 3 char. day
+name&nbsp; (mon,tue,wed,thu,fri,sat,sun) followed by a dash
+followed by the ending day. <br>
+Ex. <span style="font-weight: bold;">mon-fri</span>&nbsp;</td>
+</tr> </tbody> </table> <br> </td> </tr><tr><td style="background-color: rgb(51, 51, 255); text-align: center;"><big><span style="color: rgb(255, 255, 255); font-weight: bold;"><a name="Phone-in_Dictation"></a>Phone-in Dictation</span></big></td>
+</tr> <tr> <td><br>MARS Phone-In Dictation
+application is a multi-user dictation system
+that can be used with local telephone or over a VoIP line to allow
+callers to record dictation and deliver it to a receipient
+(transcriptionist) over
+the internet. The system is designed to complement or&nbsp;replace
+the traditional methods of
+recording and message delivery by a decentralised,
+inexpensive&nbsp;appliance.<br> <br>
+The dictation system can set to be used for a single user or multiple
+callers (recorders) and / or receivers (transcriptionnist) accounts.<br>
+<br>Callers accounts can be assigned a given receiver
+account&nbsp;OR
+&nbsp;can select the receiver account.<br>
+The system can use&nbsp;caller ID to identify the caller or user ID
+/ password.<br> <br>
+Receivers account can be set &nbsp;for each individual user
+(transcriptionist) &nbsp;each with their&nbsp;and delivery mode
+and destination.<br> <br> <big><span style="font-weight: bold;">Configuration</span></big><br>
+<br> <span class="header">General Phone-In
+Dial&nbsp;</span><br> <br> <input name="UserId" value="1" type="hidden"> <input name="RecAccId" value="100" type="hidden"> <table>
+<tbody> <tr> <th>Sender's Name:</th> <td><input maxlength="64" size="16" name="SenderName" value=""></td> <td>This will be used to
+identify the system in
+Emails.<br>
+Enter the name that will be printed as the sender in the emails</td>
+</tr> <tr> <th>Callers Account:</th> <td><input name="use_callers_accounts" value="1" checked="checked" type="checkbox">Use </td> <td>if this is not
+checked the system will not use any
+caller account. This should be used only &nbsp;<br>
+where there is only one recording user. <br>
+Check to use Callers Accounts to identify callers. &nbsp;<br>
+ICheck to use caller account &nbsp;so that the system will try to
+match the caller ID or ask the &nbsp;callers it's Id and password.</td>
+</tr> <tr> <th>Mailbox Account:</th> <td><input name="use_mailbox_accounts" value="1" checked="checked" type="checkbox">Use </td> <td>If unchecked the
+system will use the default
+destination.<br>
+Check if more than one Receiver use the system.<br>
+The system will either use the assigned mailbox or ask the account to
+to caller.<br> </td> </tr>
+<tr><th style="text-align: left;">Archiving:</th><td>
+<select id="Archive" name="Archive" onchange="modechange();"><option value="USB">USB
+Only </option><option selected="selected" value="BOTH">
+FTP </option></select></td>
+<td>Select FTP to backup all recordings to given FTP server.
+&nbsp;Set to USB Only for&nbsp;no external backup .</td></tr>
+<tr id="BFTP_Name"><th style="text-align: left;">FTP
+UserName</th>
+<td><input name="BFTP_Name" value="my_username" size="16" maxlength="64"></td><td>Enter
+Backup FTP user name</td></tr>
+<tr id="BFTP_Pwd"><th style="text-align: left;">FTP
+Password</th>
+<td><input name="BFTP_Pwd" value="my_password" size="16" maxlength="64"></td><td>Enter
+Backup FTP Password</td></tr>
+<tr id="BFTP_Host"><th style="text-align: left;">FTP
+Host</th>
+<td><input name="BFTP_Host" value="my_ftp_host.com" size="20" maxlength="64"></td><td>Enter
+Backup FTP Host</td></tr>
+</tbody></table> <br>The callers account are used to
+identify the users who call -in to
+record dictations.<br> <br> <span class="header"></span><br>
+<input name="UserId" value="1" type="hidden"><input name="RecAccId" value="100" type="hidden"><table><tbody>
+<form method="post" name="FormUsersAccounts" action="/cgi-bin/webif/asterisk-accounts.sh"></form> <tr><td colspan="4"> <h3>Callers
+Accounts&nbsp;&nbsp; </h3> </td> </tr> <tr>
+<th>User Name:</th> <td><input maxlength="32" size="16" name="UserName" value="Noel"></td>
+<td>Name of user<br>
+This will be printed in the email as the sender of the message </td>
+</tr> <tr> <th>Caller ID:</th> <td><input maxlength="16" size="16" name="CallerId" value="user_caller_id"></td> <td>Tel.No. of user<br>
+This will be used to identify &nbsp;this caller.<br>
+The caller ID will also be prited in the destination email</td> </tr>
+<tr> <th>Password:</th> <td><input maxlength="32" size="16" name="Password" value="1000"></td> <td>Password. <br>
+If calling from a different caller IId, the caller can use the User No
+and Password to log in.</td> </tr> <tr> <th>Receiver
+Account:</th> <td> <select id="Receiver" name="Receiver"><option value="UserSelect">
+UserSelect </option><option value="100"> 100 </option><option selected="selected" value="101">101 </option></select>
+</td> <td>Select the receiver account<br>
+If set to a mailbox account, the system will not ask the caller and
+record in the given &nbsp;maibox account number.<br>
+If set to <span style="font-weight: bold;">UserSeclect</span>,&nbsp;&nbsp;allows
+this caller to select&nbsp;a destination account number. This
+option can be used when a caller will want to send different dictation
+to different transcriptionnist.<br> </td> </tr> <form method="post" name="FormMbxAccounts" action="/cgi-bin/webif/asterisk-accounts.sh"></form> </tbody>
+</table> <br>The Mailbox or receiver's account are used to
+identify the receivers of
+the dictations. This is used when more than one receiver or
+transcriptionnist user will use the system.<br> <br> <input name="UserId" value="1" type="hidden"> <input name="action" value="SaveMailboxAccount" type="hidden">
+<input name="RecAccId" value="100" type="hidden"><table><tbody><form method="post" name="FormUsersAccounts" action="/cgi-bin/webif/asterisk-accounts.sh"></form> <form method="post" name="FormMbxAccounts" action="/cgi-bin/webif/asterisk-accounts.sh"></form> <tr>
+<td colspan="4"> <h3>Mailboxes Accounts
+(Inbox)&nbsp; </h3> </td> </tr> <tr> <th>Account:</th>
+<td> <select id="RecAccId" name="RecAccId" onchange="document.FormMailboxSel.submit();"><option selected="selected" value="100">100 </option></select>
+</td> <td>Select the user account<br>
+Select an account number to create or edit it.</td> </tr> <tr>
+<th>Name:</th> <td> <input maxlength="32" size="16" name="MailboxName" value="Noel"></td>
+<td>Name of user.<br> </td> </tr> <tr>
+<th>Password:</th> <td> <input maxlength="32" size="16" name="MbxPwd" value="100"></td>
+<td>Password.&nbsp;</td> </tr> <tr> <th>Delivery
+mode:</th> <td> <select id="DelMode" name="DelMode"><option value="None"> None </option><option selected="selected" value="EMail">Email </option><option value="FTP"> FTP </option><option value="Both">
+Both </option></select> </td> <td>Select the
+delivery mode of recordings<br>
+Select if message should be delivered by Email
+or&nbsp;FTP&nbsp;or none
+to leave the message on <br>
+the system when you want to&nbsp;access the message localy through
+the WWW interface using a
+regular&nbsp;browser.</td> </tr> <tr> <th>EMail
+</th> <td><input name="EMail" value="noel100@teledata.qc.ca" size="16" maxlength="64" type="text"></td> <td>Enter the email whe the
+message for this user will be delivered. Used if email delivery
+selected.</td> </tr>
+<tr><th>Delivery mode:</th><td>
+<select id="DelMode" name="DelMode" onchange="modechange();"><option value="None">
+None </option><option selected="selected" value="EMail">
+Email </option><option value="FTP"> FTP </option></select></td>
+<td>Select the delivery mode of recordings</td></tr>
+<tr id="DelEMail"><th>EMail </th>
+<td><input name="EMail" value="my_email@my_isp" size="20" maxlength="64"></td></tr><tr id="FTP_Name"><th>FTP UserName</th>
+<td><input name="FTP_Name" value="dest_ftp_username" size="16" maxlength="64"></td><td>Enter
+Mailbox FTP user name for the user of this mailbox.</td></tr>
+<tr id="FTP_Pwd"><th>FTP Password</th>
+<td><input name="FTP_Pwd" value="ftp_pwd" size="16" maxlength="64"></td><td>Enter
+Mailbox FTP password&nbsp; for the user of this mailbox.</td></tr>
+<tr id="FTP_Host"><th>FTP Host</th>
+<td><input name="FTP_Host" value="dest_ftp_host" size="20" maxlength="64"></td><td>Enter
+Mailbox FTP host&nbsp; for the user of this mailbox.</td></tr>
+<tr><td colspan="4"><h3></h3></td></tr>
+</tbody> </table> <br></td> </tr> <tr>
+<td> <hr style="width: 100%; height: 2px;"></td>
+</tr> <tr><td><span class="title">Using
+the Phone-In Dictation
+system</span><br> <br> <span class="title">Recording
+a dictation.<br> </span>The recording of dictations is
+done by calling in and
+follow a simple voice menu. Once the caller and the destination mailbox
+have been identified the caller is asked to the main menu. At this
+point, the system will ask to enter a recording number. <br>
+Recordings are identified by a recording number, which allows to
+identify the recordings and&nbsp;to resume recording in a
+subsequent
+call. <br> <span style="font-weight: bold;"><br>
+Record and Playback mode</span><br>
+If the given recording number is a new recording, the system will
+switch to recording mode. &nbsp;<br>
+If a recording with the given number already exists, the system will
+swich to playback mode.&nbsp;<br> <br> <span style="font-weight: bold;">Record mode</span><br>
+Press the "1" key to start recording and the pound (#) key to stop.
+&nbsp;Make sure you talk clearly &nbsp;and directly in the
+telelephone
+microphone when recording. <br>
+After recording you can use the "3" key to switch to playback mode.
+&nbsp;The "9" key is used to erase the current recording and start
+over. <br>
+Once a recording is completed it can be left for later addition or sent
+to the destination by pressing the "0" key.<br> <br>
+Record Menu<br> <span style="font-style: italic;">Press
+"1" to start recording.</span><br style="font-style: italic;">
+<span style="font-style: italic;">Press "3" to switch to
+playback mode.</span><br style="font-style: italic;">
+<span style="font-style: italic;">Press "9" &nbsp;to
+erase and start over this recording.</span><br style="font-style: italic;"> <span style="font-style: italic;">Press "0" to close and send this
+recording.</span><br style="font-style: italic;"> <span style="font-style: italic;">Press the * Key to go back to
+the main menu.</span><br> <br> <span style="font-weight: bold;">Playback Mode</span><br>
+While in playback mode some pre-defines keys allows to rewind, paus and
+go forward as follow:<br>
+Press the "1" key to start playback.&nbsp;<br>
+Press&nbsp;"4"&nbsp;to 'rewind' 1/10 of the duration of the
+recording.<br>
+Press&nbsp;"5"&nbsp;to pause and restart playback<br>
+Press&nbsp;"6"&nbsp;to go forward 1/10 of the duration of the
+recording.<br>
+Press&nbsp;"0"&nbsp;to start from the beginning.<br>
+Press the "#" key to stop playback and go back to the&nbsp;menu.<br>
+<br>Playback menu.<br> <span style="font-style: italic;">Press
+"1" to start playback.</span><br style="font-style: italic;">
+<span style="font-style: italic;">Press "3" to switch to
+recording mode.</span><br style="font-style: italic;">
+<span style="font-style: italic;">Press "0" to close and
+send this recording.</span><br style="font-style: italic;">
+<span style="font-style: italic;">Press the * Key to go
+back to the main menu.</span><br> <br> <span class="title">Using with local extensions</span><br>
+The system can be used with VoIp devices, that is VoIP phones,
+sofware phones running on a PC with sound card, conventional telephone
+with ATA adapter or VoIP WI-FI phone, &nbsp;that are connected
+either
+directly or remotely to the system as extensions. &nbsp;The VoIP
+telephones can be connected directly to the device through the local
+area network or directly on one of the 4 network connector on the
+appliance itself. &nbsp;It is also possible to log on to the device
+as
+a normal extension from a remote location over the internet. Up to 8
+extensions can be accomodated and these can be connected either
+directly to the device, trough the LAN or event remotely over the
+Internet.<br> <br> <span class="title">Accessing
+the system from a local extension</span><br>
+To access the dictation system from a local or remotely connected
+extension, dial the 3 digits number (from 100 to 131) of the
+destination mailbox you whish to record to. &nbsp;In the case of a
+single destination use the mailbox number 100.<br> <br> <span class="title">
+Using with VoIP line</span><br> The system can also use a
+normal VoIP line using the standard
+SIP protocol as provided by numerous services providers. &nbsp;The
+dictation system can then be accessed by calling a normal telephone
+number from any regular or mobile.phone. Many VoIp provider offer 'pay
+as you go' formulas that allow you to receive several simultaneous
+calls for a very low rate (as low as less tha 1 c / min) &nbsp;from
+the
+whole country. &nbsp;Refer to the system configuration for more
+info on
+configuration.<br> <br> <span class="title">
+Recordings </span><br>
+All recordings are archived in the system's USB memory that serve as a
+static storage . The recordings are accessible through the web
+interface by selecting&nbsp;Asterisk and Recordings on the menu.
+Here
+is the recording's web interface<br> <br> <br> <table style="text-align: left; margin-left: auto; margin-right: auto;" border="1" cellpadding="2" cellspacing="1"> <tbody>
+<tr> <td colspan="1"> <h3>New Recordings</h3>
+</td> <td colspan="4" align="center"> <h3>Help</h3>
+</td> </tr> <tr> <th>Account:&nbsp;&nbsp;</th>
+<td> <form method="post" name="AccountSelect" action="/cgi-bin/webif/asterisk-recordings.sh"> <select id="Account" name="Account" onchange="document.AccountSelect.submit();"><option selected="selected" value="100"> 100 </option><option value="101"> 101 </option><option value="102">
+102 </option><option value="103"> 103 </option><option value="104"> 104 </option><option value="105">
+105 </option><option value="106"> 106 </option><option value="108"> 108 </option><option value="109">
+109 </option></select> </form> </td> <td colspan="3">Select the receiver account</td> </tr>
+<tr> <th>Rec.</th> <th>Date</th> <th>Size</th>
+<th>Send</th> <th>Archive</th> </tr> <tr>
+<th><a href="http://192.168.1.10/dictate/100/3-1.WAV">3-1.WAV</a></th>
+<td>&nbsp;&nbsp;Mon Dec 22 10:17:19</td> <td>&nbsp;&nbsp;34316</td>
+<td>&nbsp;&nbsp;<a href="http://192.168.1.10/cgi-bin/webif/asterisk-recordings.sh?action=SendVEmail&Fname=/mnt/disc0_1/asterisk/dictate/100/3-1.WAV&Account=100">Send
+VEmail</a></td> <td>&nbsp;&nbsp;<a href="http://192.168.1.10/cgi-bin/webif/asterisk-recordings.sh?action=ArchiveFile&Fname=/mnt/disc0_1/asterisk/dictate/100/3-1.WAV&Account=100">Archive</a></td>
+</tr> <tr> <th><a href="http://192.168.1.10/dictate/100/3-2.WAV">3-2.WAV</a></th>
+<td>&nbsp;&nbsp;Mon Dec 22 10:21:57</td> <td>&nbsp;&nbsp;46016</td>
+<td>&nbsp;&nbsp;<a href="http://192.168.1.10/cgi-bin/webif/asterisk-recordings.sh?action=SendVEmail&Fname=/mnt/disc0_1/asterisk/dictate/100/3-2.WAV&Account=100">Send
+VEmail</a></td> <td>&nbsp;&nbsp;<a href="http://192.168.1.10/cgi-bin/webif/asterisk-recordings.sh?action=ArchiveFile&Fname=/mnt/disc0_1/asterisk/dictate/100/3-2.WAV&Account=100">Archive</a></td>
+</tr> <tr> <th><a href="http://192.168.1.10/dictate/100/3-4.WAV">3-4.WAV</a></th>
+<td>&nbsp;&nbsp;Mon Dec 22 11:29:00</td> <td>&nbsp;&nbsp;34966</td>
+<td>&nbsp;&nbsp;<a href="http://192.168.1.10/cgi-bin/webif/asterisk-recordings.sh?action=SendVEmail&Fname=/mnt/disc0_1/asterisk/dictate/100/3-4.WAV&Account=100">Send
+VEmail</a></td> <td>&nbsp;&nbsp;<a href="http://192.168.1.10/cgi-bin/webif/asterisk-recordings.sh?action=ArchiveFile&Fname=/mnt/disc0_1/asterisk/dictate/100/3-4.WAV&Account=100">Archive</a></td>
+</tr> <tr> <td colspan="5"> <h3>Archive</h3>
+</td> </tr> <tr> <td colspan="5"> <a href="http://192.168.1.10/cgi-bin/webif/asterisk-recordings.sh?action=BrowseArchive&Fname=/mnt/disc0_1/asterisk/dictate/100/archive/12-2008&Account=100">12-2008</a>&nbsp;&nbsp;
+<a href="http://192.168.1.10/cgi-bin/webif/asterisk-recordings.sh?action=BrowseArchive&Fname=/mnt/disc0_1/asterisk/dictate/100/archive/11-2008&Account=100">11-2008</a>&nbsp;&nbsp;
+<a href="http://192.168.1.10/cgi-bin/webif/asterisk-recordings.sh?action=BrowseArchive&Fname=/mnt/disc0_1/asterisk/dictate/100/archive/10-2008&Account=100">10-2008</a>&nbsp;&nbsp;
+<a href="http://192.168.1.10/cgi-bin/webif/asterisk-recordings.sh?action=BrowseArchive&Fname=/mnt/disc0_1/asterisk/dictate/100/archive/09-2008&Account=100">09-2008</a>&nbsp;&nbsp;
+<a href="http://192.168.1.10/cgi-bin/webif/asterisk-recordings.sh?action=BrowseArchive&Fname=/mnt/disc0_1/asterisk/dictate/100/archive/08-2008&Account=100">08-2008</a>&nbsp;&nbsp;
+<a href="http://192.168.1.10/cgi-bin/webif/asterisk-recordings.sh?action=BrowseArchive&Fname=/mnt/disc0_1/asterisk/dictate/100/archive/07-2008&Account=100">07-2008</a>&nbsp;&nbsp;
+</td> </tr> <tr> <td colspan="5"> <a href="http://192.168.1.10/cgi-bin/webif/asterisk-recordings.sh?action=BrowseArchive&Fname=/mnt/disc0_1/asterisk/dictate/100/archive/06-2008&Account=100">06-2008</a>&nbsp;&nbsp;
+<a href="http://192.168.1.10/cgi-bin/webif/asterisk-recordings.sh?action=BrowseArchive&Fname=/mnt/disc0_1/asterisk/dictate/100/archive/01-2009&Account=100">01-2009</a>&nbsp;&nbsp;
+</td> </tr> </tbody> </table> <br>A
+list allow to select the destination mailbox &nbsp;for which the
+currently active recording are displyed. Once a recording is closed and
+sent it will be archived in a sub directory defined by
+the&nbsp;month
+and year the recording was done. &nbsp;Recordings are named with se
+sender's number followed by the recording number.<br> <br>
+<span style="font-weight: bold;">Recording playback and
+downlowd from a web browser.</span><br>
+To play a recording, simply clink on the link &nbsp;formed by the
+recording name. The recording can also be download on you local disk by
+right click on the link ans selecting "Save Link as" or a similar
+function. <br> <br>
+The recording can be sent to the destination as define by the mailbox
+account by seleting the "<span style="font-weight: bold;">Send
+VEmail</span>" link . <br>
+Finally the recording can be archived by selection the "<span style="font-weight: bold;">Archive</span>" link. This
+will move the recording file to the archive directory.<br> <br>
+Recordings Archive<br>
+All the recordings are archived in the USB memory &nbsp;in a
+sub&nbsp;directory defined by the&nbsp;month and year the
+recording was
+done. You can select the month and year directory in the Archive
+display. The display is similar except for file names which are
+prepended&nbsp;the full date&nbsp;plus a sequence number that
+insure
+unique names.<br> </td> </tr> <tr> <td style="text-align: center; background-color: rgb(51, 51, 255);"><big><span style="font-weight: bold; color: rgb(255, 255, 255);"><a name="Dialer"></a>Automated Dialer</span></big></td>
+</tr> <tr> <td><br>MARS Automated Dialer
+offers sophisticated features with an easy to
+use&nbsp; Web based interface to allow you to prepare and save
+calling lists.<br>
+You can create up to 9 different lists with different phone
+numbers&nbsp; lists, messages and applications. &nbsp;You can
+then run
+the lists at any time you wish.&nbsp; <br> <br> <table style="text-align: left; width: 100%;" border="0" cellpadding="2" cellspacing="2"> <tbody> <tr>
+<th>Call List Management</th> <td>This allow you to
+select one of the call list for
+creation / edition </td> </tr> <tr> <th>Call
+List&nbsp;Name:</th> <td>This is the name given to
+this call list.
+Informational only.</td> </tr> <tr> <th>Source
+Caller ID:</th> <td>This will be set as the source caller
+ID for the
+outgoing calls. Note that certain ISP will not allow you to change
+this, and in this case, will have no effect.</td> </tr> <tr>
+<th>Application:</th> <td>Select one of the
+application that will be run
+after the call has been replied.<br> <table style="text-align: left; width: 100%;" border="0" cellpadding="2" cellspacing="2"> <tbody> <tr>
+<th>Call and play Message</th> <td>Call and then
+play the message and the menu
+for message acknowledgment and hangup.</td> </tr> <tr>
+<th>Call and Xfer to Extension</th> <td>Call, play
+the message and then offer to
+talk to an agent by pressing the "0" key.</td> </tr> <tr>
+<th>Call and Xfer to queue</th> <td>Call,&nbsp;play
+the message and then
+offer to talk to an agent by pressing the "0" key. Use the queue
+defined in the Queue menu for agents extensions.</td> </tr>
+<tr> <th>Call, play and Voice Mail</th> <td>Call,
+play the message and then offer to
+leave a message to Voice Mail. The message is left in the mailbox of
+the
+define extension. (see below)</td> </tr> <tr> <th>Call
+and Xfer on answer.</th> <td>Call and transfer immediatly
+after the call
+is answered . The call is transfered to the given extension (see below)</td>
+</tr> </tbody> </table> </td> </tr> <tr><th>Wait
+Time:</th> <td>The time to wait after call
+initiation before
+assuming there was no answer (in secs.)</td> </tr> <tr>
+<th>Extension / Voice Mail:</th> <td>Extension or
+Voice Mailbox to transfer the call
+after the user asks or for the predictive dialer aplplication.</td>
+</tr> <tr> <th>Trunk:</th> <td>Trunk
+to use for outgoing calls (default to SIP
+registration 1)</td> </tr> <tr> <th>Max.
+Calls per Trunk:</th> <td>Number of simultaneous calls to
+place on the line.</td> </tr> <tr> <th>Send
+Email Report:</th> <td>Send an email report of the results
+at the end of
+the call list. The report is sent using the SMTP server and the email
+destination address define in the System menu</td> </tr> <tr>
+<th>Call Prefix:</th> <td>Some&nbsp;ISPs may
+require to use the "1" for
+long distance
+number. &nbsp;You can either add it to your phone number list
+&nbsp;or
+use the 10 digits number and enter the "1" prefix here.</td> </tr>
+<tr> <th>Prompts::</th> <td>Display if the
+prompts are present. Call and
+select *93 to record these. You can also upload a prompt recorded in
+studio from your system hard drive. Select the prompt displayed in the
+list, then select a file and the click the UploadPrompt button. These
+prompts must be recorded in "Raw muLaw". Contact us if you need help to
+convert your &nbsp;recordings to the required format.</td> </tr>
+<tr> <th>Activity Traces</th> <td>Display the
+call results. Press the refresh
+button to get a new display.</td> </tr> </tbody> </table>
+<br class="header title"> <span class="title">Creating
+a call list</span><br> <br>
+To create a call list, select the Dialer Sub-Menu under the Asterisk
+menu
+option. You can create up to 9 different lists with different
+features.<br>
+First select the call list number, using the call list List Management
+selection list and the press the "refresh" button to activate it. The
+select and enter the desired parameters and click the SaveDef button to
+save the currently selected call list. <br> <br> <span class="title">Loading the Call List</span><br> <br>
+Once the required parameters are selected and the list saved you can
+upload a call list of numbers. This is a ascii text file that contains
+one phone number per line.<br> <br> <span class="title">Recording</span><br>
+<br>The Dialer uses up to four user recorded prompts. These are:<br>
+<span style="font-weight: bold;">Intro:</span>
+&nbsp; This is the first prompt played after the call is answered.
+It should contains a introduction message: Ex: "<span style="font-style: italic;">Hello! Here is a message from ...</span>"<br>
+<span style="font-weight: bold;">MainMsg</span>:
+This is the main message you want to be played to the callee.<br>
+<span style="font-weight: bold;">Menu:</span>
+This is the menu played after the main message. This should offer to:<br>
+Acknowledge reception of the message. Option "1".<br>
+To repeat the main message. Option "2"<br>
+To hang up. Star Key <br>
+Depending on the application, offer to transfer to an agent or to leave
+a message. Option "0".<br>
+Here is an example of a menu prompt for the "Transfer to extension
+application":<br> <br> <span style="font-style: italic;">To acknowledge the
+reception of theis message, press "1".</span><br style="font-style: italic;"> <span style="font-style: italic;">To repeat the
+message, Press "2".</span><br style="font-style: italic;">
+<span style="font-style: italic;">If you wish to
+talk to one of our agent, press "0".</span><br style="font-style: italic;"> <span style="font-style: italic;">To hangup, press
+the start key.</span><br style="font-style: italic;">
+<br> <span style="font-weight: bold;">Bye:</span>
+This is the parting prompt: Ex: "Thank you for listening to this
+message. Goodbye !"<br> <br>
+You can record these message by calling the system from any extension
+and selection *93. Select the Call List Number, then the prompt. You
+can playback, record or delete the selected prompt from the selected
+list.<br> <br>
+You can also upload a prompt from your system hard disc. These prompts
+must be recorded in "Raw muLaw" format. Please contact us if you need
+to have some of your recordings converted.<br> <br> <span class="title">Starting a Campaign</span><br> <br>
+Once a call list has been defined, the call list uploaded and the
+prompts
+recorded it is ready to be used. To start calling the numbers, press
+the "Start" button. You can pause an ongoing call list by pressing the
+:Stop" button and resume it by pressing the "Resume" button.<br> <br>
+You can have a refreshed display of the Call Activity by pressing the
+"Refresh" button.<br>
+A line will be displayed when a call is sent in the queue and at the
+end of the&nbsp;call, the&nbsp;result, acknowledge status and
+duration of the
+call (if answered).<br>
+Once the call list is terminated and all call have finished, a summary
+of the campaign will be displayed and sent to the manager by&nbsp;
+email
+if &nbsp;this option has been selected for this call list.<br>
+<br> </td> </tr> <tr class="header"> <td class="header" style="color: rgb(255, 255, 255); background-color: rgb(51, 51, 255);"><big><a name="Formulaire_WebCall"></a>Webcall Form</big></td>
+</tr> <tr> <td> <table style="text-align: left; width: 90%;" border="0" cellpadding="2" cellspacing="4"> <tbody> <tr><td><br>The
+WebCall form is displayed on your site and is used to transmit the
+call request to the MARS system. &nbsp;This form can be used in any
+WWW page to send a command to your MARS system to initiate an outbound
+call in between the given extension to the user entered phone number.<br>
+<br> <table style="width: 90%; text-align: left; margin-left: auto; margin-right: auto;" border="1" cellpadding="2" cellspacing="2"> <tbody>
+<tr> <td>Here is the HTML code form the WebCall form
+shown on the right.<br>
+A HTML table is used for better control of the presentation.<br>
+Note: For more clarity the style codes have been omitted. You can copy
+the whole form HTML code from the textarea box below.<br> <br>
+</td> <td style="text-align: center;" rowspan="10"><form onsubmit="return(checkTelNo(NetCall.TelNo.value));" name="NetCall" enctype="application/x-www-form-urlencoded" method="post" action="http://td-mars.dyndns.org:32345/cgi-bin/webcall.sh"><input name="User1" value="" type="hidden"><input name="User2" value="" type="hidden"> <table style="width: 280px; height: 120px; text-align: left; margin-left: auto; margin-right: auto;" border="0" cellpadding="1" cellspacing="1"> <tbody><tr style="font-weight: bold; color: rgb(255, 255, 255);" align="center"> <td style="text-align: center; background-color: rgb(0, 0, 153);" class="TableHead" colspan="2">Call Me Now&nbsp; !</td>
+</tr> <tr> <th>First Name</th> <td><input maxlength="15" size="15" name="FirstName"></td>
+</tr> <tr> <th>Last Name</th> <td><input maxlength="15" size="15" name="LastName"></td>
+</tr> <tr> <th>Company</th> <td><input maxlength="32" size="15" name="Company"></td>
+</tr> <tr> <th>Email</th> <td><input maxlength="31" size="15" name="Email"></td>
+</tr> <tr> <th><small>Area Code&nbsp;+
+Tel.No.</small><br> <small><small>(10 digits)<br>
+Ex: 5145551212</small></small></th> <td><input title="Entrez votre no. de tél. de 7 chiffres" maxlength="10" size="10" name="TelNo"></td> </tr> <tr>
+<td style="background-color: rgb(0, 0, 153);" colspan="2"><input name="step" value="1" type="hidden"></td></tr><tr><td style="text-align: center;" colspan="2"><input name="AccountNo" value="200" type="hidden"><input name="Language" value="F" type="hidden"><input name="Submit" value="Call Me Now !" type="submit"></td>
+</tr><tr> <td style="background-color: rgb(0, 0, 153);" colspan="2"></td> </tr> </tbody> </table><br></form>
+</td> </tr> <tr> <td>&lt;form&nbsp;<span style="font-style: italic;"></span>&nbsp;name="NetCall"
+enctype="application/x-www-form-urlencoded" method="post"<br>
+&nbsp;<span style="font-weight: bold;">action="http://&lt;YOUR_MARS_URL&gt;:32345/cgi-bin/webcall.sh"</span>&gt;</td>
+</tr> <tr> <td>&lt;table&nbsp;border="0"
+cellpadding="1" cellspacing="1"&gt;<br>
+&lt;tbody&gt;&lt;tr&nbsp;align="center"&gt;<br>
+&lt;td&nbsp;colspan="2"&gt;Appelez
+Moi !&lt;/td&gt;&lt;/tr&gt;</td> </tr> <tr> <td>&lt;tr&gt;&lt;th&gt;Pr&amp;eacute;nom&lt;/th&gt;<br>
+&lt;td&gt;<span style="font-weight: bold;">&lt;input
+&nbsp;maxlength="15" size="15"
+name="FirstName"&gt;</span>&lt;/td&gt;&lt;/tr&gt;</td> </tr>
+<tr> <td>&lt;tr&gt;&lt;th&gt;Nom&lt;/th&gt;<br>
+&lt;td&gt;<span style="font-weight: bold;">&lt;input
+&nbsp;maxlength="15" size="15"
+name="LastName"&gt;</span>&lt;/td&gt;&lt;/tr&gt;</td> </tr>
+<tr> <td>&lt;tr&gt;&lt;th&gt;Compagnie&lt;/th&gt;<br>
+&lt;td&gt;<span style="font-weight: bold;">&lt;input
+maxlength="32" size="15" name="Company"&gt;</span>&lt;/td&gt;&lt;/tr&gt;</td>
+</tr> <tr> <td>&lt;tr&gt;&lt;th&gt;Courriel&lt;/th&gt;<br>
+&lt;td&gt;<span style="font-weight: bold;">&lt;input
+maxlength="31" size="15" name="Email"&gt;</span>&lt;/td&gt;&lt;/tr&gt;</td>
+</tr> <tr> <td>&lt;tr&gt;&lt;th&gt;Code&nbsp;Reg.
++ Tel.No.(10 chiffres)&nbsp;Ex:&nbsp;5145551212&lt;/th&gt;<br>
+&lt;td&gt; <span style="font-weight: bold;">&lt;input
+&nbsp;maxlength="10" &nbsp;size="10"
+name="TelNo"&gt;</span>&lt;/td&gt;&lt;/tr&gt;</td> </tr>
+<tr> <td>&lt;tr&gt;&lt;td&nbsp;&nbsp;colspan="2"&gt;&lt;/td&gt;&lt;/tr&gt;<br>
+&lt;tr&gt;&lt;td&nbsp;
+colspan="2"&gt;<br> <span style="font-weight: bold;">&lt;input
+&nbsp;name="AccountNo"
+value="200" type="hidden"&gt;</span><br> <span style="font-weight: bold;">&lt;input
+&nbsp;name="Language" value="F" type="hidden"&gt;</span></td>
+</tr> <tr> <td><span style="font-weight: bold;">&lt;input
+name="Submit" value="Call Me Now !"&nbsp;type="submit"&gt;</span><br>
+&lt;/td&gt;&lt;/tr&gt;<br>
+&lt;tr&gt;&lt;td
+style="background-color: rgb(0, 0, 153);"
+colspan="2"&gt;&lt;/td&gt;&lt;/tr&gt;<br>
+&lt;/tbody&gt;&lt;/table&gt;<br>
+&lt;/form&gt;</td> </tr> <tr> <td></td>
+<td></td> </tr> <tr align="center"> <td colspan="2"><textarea cols="80" rows="24" name="WebCallFormText">&lt;form
+name="NetCall" enctype="application/x-www-form-urlencoded"
+method="post"
+action="http://&lt;YOUR_MARS_URL&gt;:32345/cgi-bin/webcall.sh"&gt;&lt;input
+name="User1" value="" type="hidden"&gt;&lt;input name="User2" value=""
+type="hidden"&gt;&lt;table style="width: 280px; height: 120px;
+text-align: left; margin-left: auto; margin-right: auto;" border="0"
+cellpadding="1" cellspacing="1"&gt;&lt;tbody&gt;&lt;tr
+style="font-weight: bold; color: rgb(255, 255, 255);"
+align="center"&gt;&lt;td style="text-align: center; background-color:
+rgb(0, 0, 153);" class="TableHead" colspan="2"&gt;Appelez Moi
+!&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;th&gt;Pr&amp;eacute;nom&lt;/th&gt;&lt;td&gt;&lt;input
+maxlength="15" size="15"
+name="FirstName"&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;th&gt;Nom&lt;/th&gt;&lt;td&gt;&lt;input
+maxlength="15" size="15"
+name="LastName"&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;th&gt;Compagnie&lt;/th&gt;&lt;td&gt;&lt;input
+maxlength="32" size="15"
+name="Company"&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;th&gt;Courriel&lt;/th&gt;&lt;td&gt;&lt;input
+maxlength="31" size="15"
+name="Email"&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;th&gt;&lt;small&gt;Code
+&amp;nbsp;Reg. + Tel.No.&lt;/small&gt;&lt;br&gt;
+&lt;small&gt;&lt;small&gt;(10
+chiffres)&lt;br&gt;Ex:
+5145551212&lt;/small&gt;&lt;/small&gt;&lt;/th&gt;&lt;td&gt;&lt;input
+title="Entrez votre no. de t&eacute;l. de 7 chiffres"
+maxlength="10" size="10" name="TelNo"&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td style="background-color: rgb(0, 0, 153);"
+colspan="2"&gt;&lt;input name="step" value="1"
+type="hidden"&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td
+style="text-align: center;" colspan="2"&gt;&lt;input name="AccountNo"
+value="200" type="hidden"&gt;&lt;input name="Language" value="F"
+type="hidden"&gt;&lt;input name="Submit" value="Appelez Moi !"
+type="submit"&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td
+style="background-color: rgb(0, 0, 153);"
+colspan="2"&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;&lt;br&gt;&lt;/form&gt;
+</textarea></td> </tr> <tr> <td></td>
+<td></td> </tr> </tbody> </table> <br><table style="width: 90%; text-align: left; margin-left: auto; margin-right: auto;" border="1" cellpadding="2" cellspacing="2"> <tbody><tr><td style="text-align: center;" colspan="4"><span class="title">Explanation of the WebCall form fields</span></td>
+</tr> <tr><th>Field Name</th><th>Type</th><th></th><td></td></tr><tr>
+<th style="vertical-align: top;">action:</th> <td>Form</td><td style="text-align: left; font-weight: bold;">M</td> <td>URL
+of the WebCall server. Insert the domain name (or dyndns domain) of
+your MARS system. Exemple:<br> <span style="font-weight: bold;">action="http://&lt;YOUR_MARS_URL&gt;:32345/cgi-bin/webcall.sh"</span>&gt;<br>
+Ex: <span style="font-weight: bold;">action="http://mars.dyndns.org:32345/cgi-bin/webcall.sh"
+&nbsp;(mandatory)</span><span style="font-weight: bold;"></span>
+</td> </tr> <tr> <th>FirstName</th> <td>Text</td><td style="text-align: left;">F</td> <td>Text type
+field. Max length&nbsp;15
+chars (facultative)</td> </tr> <tr> <th>LastName</th>
+<td>Text</td><td>F</td> <td>Text type
+field. Max length&nbsp;15
+chars (facultative)</td> </tr> <tr> <th>Email</th>
+<td>Text</td><td>F</td> <td>Text type
+field. Max length 32 chars
+(facultative)</td> </tr> <tr> <th>TelNo</th>
+<td>Text</td><td style="font-weight: bold;">M</td>
+<td>Text type field.. <span style="font-weight: bold;">Must
+be exactly 10 digits</span>
+(<span style="font-weight: bold;">mandatory</span><span style="font-weight: bold;"></span>)</td> </tr>
+<tr> <th>AccountNo</th> <td>Text/Hidden</td><td style="font-weight: bold;">M</td> <td>Extension
+used. (200 - 207) Hidden field (<span style="font-weight: bold;">mandatory</span>)
+<span style="font-weight: bold;">Ex:
+value="200"</span></td> </tr> <tr> <th>Language</th>
+<td>Text/Hidden</td><td>F</td> <td>Language
+of caller. (<span style="font-weight: bold;">E</span>
+/ <span style="font-weight: bold;">F</span>)
+Default to <span style="font-weight: bold;">E</span>nglish
+Hidden field
+(facultative). <span style="font-weight: bold;">Ex:value="F"</span></td>
+</tr> <tr><th>OnSuccess</th><td>Text/Hidden</td><td>F</td><td>URL
+to send the caller on success. This page should inform the&nbsp;the
+user requesting the call about the result of the procedure. This page
+should tell the user that he will shortly receive a call and maybe warn
+him to make sure it's line is available.<br>.If these fields are not given the user
+will be sent to the URL defined efined in the WebCall configuration
+panel or if not set a basic HTML page with result message will be
+returned.</td></tr><tr><th>OnDisabled</th><td>Text/Hidden</td><td>F</td><td>URL
+to send the caller when WebCall service has been disabled. This may tell the hours of availability of the service.</td></tr><tr><th>OnTelNoError</th><td>Text/Hidden</td><td>F</td><td>URL
+to send the caller when the TelNo field is not filled properly. (Only
+accepts 10 digits). This should tel the user that the procedure failed because of &nbsp;an improper phone number has been given.</td></tr><tr><th>OnBlackList</th><td>Text/Hidden</td><td>F</td><td>URL
+to send the caller when the caller has been black listed. This should
+tell the user that he is not allowed to use the service anymore.</td></tr><tr><td></td><td></td><td></td><td></td></tr><tr>
+<th>submit</th> <td>submit</td><td style="font-weight: bold;">M</td> <td>Used to
+accept and submit the
+form.&nbsp;"submit" type field (<span style="font-weight: bold;">mandatory</span><span style="font-weight: bold;"></span>)</td> </tr>
+</tbody> </table> <br><br><span class="title">Using WebCall with links .</span><br><br>Instead
+of using a form (and a POST method) you could also use a link
+&nbsp;with a GET method. <br>Just create an HTML link with
+the destination phone number and the extension given as parameters. <br>As
+an example this would call extension 200 and then place an external
+call to 555 555-1212 (assuming your MARS system is at 192.168.1.1 )<br><br><span style="font-weight: bold;">&lt;a
+href="http://192.168.1.1:32345/cgi-bin/webcall.sh?AccountNo=200&amp;TelNo=5555551212"&gt;
+Phone to dial &lt;/a&gt;</span><br><br>Using
+this technique, the&nbsp;WebCall
+service can also be used as a web based directory &nbsp;... Just create
+a page with links to your frequenly &nbsp;called number,.<br>You
+could also use a form pointed to your local MARS system (192.168.1.xxx)
+and have an ask for an extension to originate the call from.<br><span style="font-weight: bold;"><a target="_blank" href="http://192.168.1.1:32345/cgi-bin/webcall.sh?AccountNo=200&TelNo=5555551212"></a><br></span><span class="title">Using WebCall from a browser.<br><br></span>Or simply enter the URL in your browser address bar: &nbsp;<span style="font-weight: bold;">http://192.168.1.1:32345/cgi-bin/webcall.sh?AccountNo=200&amp;TelNo=5555551212</span><br><br><br> <br>
+</td></tr></tbody>
+</table> </td> </tr> </tbody></table></body></html>

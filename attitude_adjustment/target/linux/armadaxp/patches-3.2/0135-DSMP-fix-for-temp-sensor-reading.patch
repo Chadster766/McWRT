@@ -1,0 +1,86 @@
+From 63ec9760c8d3df87664cfc4a83238a0471aed3f4 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Sun, 15 Apr 2012 16:36:25 +0300
+Subject: [PATCH 135/609] DSMP fix for temp sensor reading
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvLib.h        |    4 ++--
+ arch/arm/mach-armadaxp/hwmon.c                     |   19 +++++--------------
+ 2 files changed, 7 insertions(+), 16 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
+index d67520f..c8355ce 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
+@@ -138,8 +138,8 @@ typedef struct _boardSerdesConf {
+ 	SGMII 	1.25 Gbps		3.125 Gbps	*/
+ } MV_SERDES_CFG;
+ /* Termal Sensor Registers */
+-#define TSEN_STATUS_REG					0x182B0
+-#define	TSEN_STATUS_TEMP_OUT_OFFSET		19
++#define TSEN_STATUS_REG				0x184C4
++#define	TSEN_STATUS_TEMP_OUT_OFFSET		1
+ #define	TSEN_STATUS_TEMP_OUT_MASK		(0x1FF << TSEN_STATUS_TEMP_OUT_OFFSET)
+ 
+ #define TSEN_CONF_REG					0x184D0
+diff --git a/arch/arm/mach-armadaxp/hwmon.c b/arch/arm/mach-armadaxp/hwmon.c
+index 354d68c..4e66dfe 100644
+--- a/arch/arm/mach-armadaxp/hwmon.c
++++ b/arch/arm/mach-armadaxp/hwmon.c
+@@ -29,13 +29,11 @@
+ #include <linux/platform_device.h>
+ #include <linux/cpu.h>
+ #include <asm/io.h>
+-//#include <linux/delay.h>
+ #include <linux/slab.h>
+-//#include "pmu/mvPmuRegs.h"
+ 
+ /* Termal Sensor Registers */
+-#define TSEN_STATUS_REG				0x182B0
+-#define	TSEN_STATUS_TEMP_OUT_OFFSET		19
++#define TSEN_STATUS_REG				0x184C4
++#define	TSEN_STATUS_TEMP_OUT_OFFSET		1
+ #define	TSEN_STATUS_TEMP_OUT_MASK		(0x1FF << TSEN_STATUS_TEMP_OUT_OFFSET)
+ 
+ #define TSEN_CONF_REG				0x184D0
+@@ -55,12 +53,7 @@
+ 
+ /* Junction Temperature */
+ #define ARMADAXP_TSEN_TEMP2RAW(x) ((3153000 - (13825 * x)) / 10000)
+-#define ARMADAXP_TSEN_RAW2TEMP(x) ((3153000 - (10000 * x)) * 1000 / 13825)
+-#if 0
+-/* Dove */
+-((2281638 - (10 * x)) / 7298)    /* in millCelsius */
+- ((2281638 - (7298 * x)) / 10)
+-#endif
++#define ARMADAXP_TSEN_RAW2TEMP(x) ((3153000 - (10000 * x)) / 13825)
+ 
+ #define LABEL "T-junction"
+ static struct device *hwmon_dev;
+@@ -145,12 +138,10 @@ static int axptemp_init_sensor(void)
+ 
+ static int axptemp_read_temp(void)
+ {
+-	u32 reg;
++	int reg;
+ 
+ 	reg = readl(INTER_REGS_BASE | TSEN_STATUS_REG);
+ 	reg = (reg & TSEN_STATUS_TEMP_OUT_MASK) >> TSEN_STATUS_TEMP_OUT_OFFSET;
+-//	value = ((3153000 - (10000 * reg)) / 13825);
+-
+ 	return ARMADAXP_TSEN_RAW2TEMP(reg);
+ }
+ 
+@@ -206,7 +197,7 @@ static ssize_t show_temp(struct device *dev,
+ 	struct sensor_device_attribute *attr = to_sensor_dev_attr(devattr);
+ 
+ 	if (attr->index == SHOW_TEMP)
+-		ret = sprintf(buf, "%d\n", axptemp_read_temp());
++		ret = sprintf(buf, "%d \n", axptemp_read_temp());
+ 	else if (attr->index == TEMP_MAX)
+ 		ret = sprintf(buf, "%d\n", temp_max);
+ 	else if (attr->index == TEMP_MIN)
+-- 
+1.7.9.5
+

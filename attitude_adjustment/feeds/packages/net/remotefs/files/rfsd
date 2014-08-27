@@ -1,0 +1,25 @@
+#!/bin/sh /etc/rc.common
+
+START=50
+
+LISTEN=$(ifconfig br-lan | sed -n 's/.*dr:\(.*\)Bc.*/\1/p')
+PORT="5001"
+RFSD_USER="root"
+RFSD_GROUP="root"
+PIDFILE="/var/run/rfsd.pid"
+
+start()
+{
+	rfsd -a ${LISTEN} -p ${PORT} -u ${RFSD_USER} -g ${RFSD_GROUP} -r ${PIDFILE}
+}
+
+stop()
+{
+	killall rfsd
+}
+
+reload()
+{
+	kill -s HUP `cat ${PIDFILE}`
+	start
+}

@@ -1,0 +1,64 @@
+From 7f67d79b5125ba0b3e93197d3501fde02a49f5c6 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Thu, 23 Aug 2012 11:01:48 +0300
+Subject: [PATCH 262/609] Align NAS defconfig for usage on AXP-B0
+
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/configs/armada_xp_nas_defconfig |   10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+ mode change 100644 => 100755 arch/arm/configs/armada_xp_nas_defconfig
+
+diff --git a/arch/arm/configs/armada_xp_nas_defconfig b/arch/arm/configs/armada_xp_nas_defconfig
+old mode 100644
+new mode 100755
+index 206a20f..adeb451
+--- a/arch/arm/configs/armada_xp_nas_defconfig
++++ b/arch/arm/configs/armada_xp_nas_defconfig
+@@ -15,11 +15,12 @@ CONFIG_MODULES=y
+ CONFIG_MODULE_UNLOAD=y
+ # CONFIG_BLK_DEV_BSG is not set
+ CONFIG_ARCH_ARMADA_XP=y
+-CONFIG_ARMADA_XP_REV_A0=y
++CONFIG_ARMADAXP_USE_IRQ_INDIRECT_MODE=y
+ CONFIG_MV_INCLUDE_PCI=y
+ # CONFIG_MV_INCLUDE_XOR is not set
+ # CONFIG_MV_INCLUDE_LEGACY_NAND is not set
+ # CONFIG_MV_INCLUDE_SWITCH is not set
++CONFIG_MTD_NAND_NFC_INIT_RESET=y
+ CONFIG_MV_PMU_PROC=y
+ CONFIG_MV_ETH_NETA=y
+ CONFIG_MV_ETH_PORTS_NUM=4
+@@ -41,17 +42,14 @@ CONFIG_CPU_SHEEVA_PJ4B_V7=y
+ CONFIG_SHEEVA_ERRATA_ARM_CPU_PMU_RESET=y
+ CONFIG_SHEEVA_DEEP_IDLE=y
+ CONFIG_STANDBY_UART_WAKE=y
+-CONFIG_ARMADA_XP_DEEP_IDLE_L2_WA=y
+ CONFIG_ARMADA_XP_DEEP_IDLE_UNMASK_INTS_WA=y
+-CONFIG_MV_SUPPORT_64KB_PAGE_SIZE=y
+ CONFIG_PCI_DEBUG=y
+ CONFIG_NO_HZ=y
+-CONFIG_HIGH_RES_TIMERS=y
+ CONFIG_SMP=y
+ CONFIG_SCHED_MC=y
+ CONFIG_SCHED_SMT=y
+-CONFIG_VMSPLIT_2G=y
+ CONFIG_AEABI=y
++CONFIG_HIGHMEM=y
+ CONFIG_UACCESS_WITH_MEMCPY=y
+ CONFIG_ZBOOT_ROM_TEXT=0x0
+ CONFIG_ZBOOT_ROM_BSS=0x0
+@@ -84,6 +82,8 @@ CONFIG_MTD_CFI_INTELEXT=y
+ CONFIG_MTD_CFI_STAA=y
+ CONFIG_MTD_PHYSMAP=y
+ CONFIG_MTD_M25P80=y
++CONFIG_MTD_NAND=y
++CONFIG_MTD_NAND_VERIFY_WRITE=y
+ CONFIG_MTD_UBI=y
+ CONFIG_BLK_DEV_LOOP=y
+ # CONFIG_SCSI_PROC_FS is not set
+-- 
+1.7.9.5
+

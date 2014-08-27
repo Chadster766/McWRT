@@ -1,0 +1,106 @@
+From df2f9fd59c96ecaaa344edfb31cb9ee6d47485db Mon Sep 17 00:00:00 2001
+From: Eli Nidam <elini@marvell.com>
+Date: Mon, 11 Mar 2013 15:54:32 +0200
+Subject: [PATCH 553/609] Code cleanup: removed unused PEX enabled functions
+
+Change-Id: I4883f93558459d922e48b41ed938c3c35c8526db
+Signed-off-by: Eli Nidam <elini@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1241
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Tested-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/ctrlEnv/sys/mvCpuIf.c         |   60 --------------------
+ .../armada_xp_family/ctrlEnv/sys/mvCpuIf.h         |    2 -
+ 2 files changed, 62 deletions(-)
+ mode change 100644 => 100755 arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.h
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
+index 3a406be..dbd355b 100755
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
+@@ -932,66 +932,6 @@ MV_VOID mvCpuIfAddDecShow(MV_VOID)
+ 	}
+ }
+ 
+-#if defined(MV_INCLUDE_PEX)
+-/*******************************************************************************
+-* mvCpuIfEnablePex - Enable PCI Express unit.
+-*
+-* DESCRIPTION:
+-*	This function enables PCI Express access to the device address
+-*	space.
+-*
+-* INPUT:
+-*	pexUnit	- PEX unit (0 - 3).
+-*
+-* OUTPUT:
+-*       None.
+-*
+-* RETURN:
+-*       None.
+-*
+-*******************************************************************************/
+-MV_VOID mvCpuIfEnablePex(MV_U32 pexUnit)
+-{
+-	MV_U32 socMaxPexUnit = mvCtrlPexMaxUnitGet();
+-
+-	if (pexUnit > socMaxPexUnit) {
+-		DB(mvOsPrintf("mvCpuIfEnablePex: Bad PEX unit ID (%x)\n", pexUnit));
+-		return;
+-	}
+-
+-	/* SOC config register Pex enable */
+-	MV_REG_BIT_SET(SOC_CTRL_REG, SCR_PEX_ENA_MASK(pexUnit));
+-}
+-
+-/*******************************************************************************
+-* mvCpuIfPex4x1Enable - Enable/Disable the 4x1 mode on PCI Express unit.
+-*
+-* DESCRIPTION:
+-*	This function enables/disables 4x1 mode on PCI Express unit 0 or 1
+-*
+-* INPUT:
+-*	pexUnit	- PEX unit (0 or 1).
+-*	enable	- enable (MV_TRUE) or disable (MV_FALSE) 4x1 mode
+-*
+-* OUTPUT:
+-*       None.
+-*
+-* RETURN:
+-*       None.
+-*
+-*******************************************************************************/
+-MV_VOID mvCpuIfPex4x1Enable(MV_U32 pexUnit, MV_BOOL enable)
+-{
+-	if (pexUnit == 0)
+-		MV_REG_BIT_SET(SOC_CTRL_REG, SCR_PEX0_4BY1_MASK);
+-	else if (pexUnit == 1)
+-		MV_REG_BIT_SET(SOC_CTRL_REG, SCR_PEX1_4BY1_MASK);
+-	else
+-		DB(mvOsPrintf("mvCpuIfPex4x1Enable: Bad PEX unit ID (%x)\n", pexUnit));
+-}
+-
+-#endif
+-
+ /*******************************************************************************
+ * mvCpuIfLvdsPadsEnable
+ *
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.h
+old mode 100644
+new mode 100755
+index 41ff25c..f5ed71f
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.h
+@@ -107,8 +107,6 @@ MV_TARGET mvCpuIfTargetOfBaseAddressGet(MV_U32 baseAddress);
+ MV_STATUS mvCpuIfSramWinDisable(MV_VOID);
+ #if defined(MV_INCLUDE_PEX)
+ MV_U32    mvCpuIfPexRemap(MV_TARGET pexTarget, MV_ADDR_WIN *pAddrDecWin);
+-MV_VOID   mvCpuIfEnablePex(MV_U32 pexUnit);
+-MV_VOID   mvCpuIfPex4x1Enable(MV_U32 pexUnit, MV_BOOL enable);
+ #endif
+ #if defined(MV_INCLUDE_PCI)
+ MV_U32 	  mvCpuIfPciRemap(MV_TARGET pciTarget, MV_ADDR_WIN *pAddrDecWin);
+-- 
+1.7.9.5
+

@@ -1,0 +1,145 @@
+--- a/configure.in
++++ b/configure.in
+@@ -40,8 +40,8 @@ if test "$OSTYPE" = "$OSREL" ; then
+   platform="\"$ostype\""
+ fi
+ 
+-AC_DEFINE_UNQUOTED(PR_BUILD_OPTS, "`echo "$ac_configure_args"`")
+-AC_DEFINE_UNQUOTED(PR_PLATFORM, $platform)
++AC_DEFINE_UNQUOTED(PR_BUILD_OPTS, "`echo "$ac_configure_args"`", [.])
++AC_DEFINE_UNQUOTED(PR_PLATFORM, $platform, [.])
+ AC_SUBST(OSREL)
+ AC_SUBST(OSTYPE)
+ 
+@@ -278,7 +278,7 @@ AC_ARG_WITH(lastlog,
+       fi
+ 
+       if test -n "$pr_lastlog_path" ; then
+-        AC_DEFINE_UNQUOTED(PR_LASTLOG_PATH, "`eval echo "$pr_lastlog_path"`")
++        AC_DEFINE_UNQUOTED(PR_LASTLOG_PATH, "`eval echo "$pr_lastlog_path"`", [.])
+       fi
+     fi
+   ])
+@@ -657,15 +657,6 @@ AC_ARG_ENABLE(dso,
+       LIB_DEPS="libltdl"
+       MODULE_DEPS="libltdl"
+       AC_DEFINE(PR_USE_DSO, 1, [Define if using DSO support.])
+-
+-      dnl Run configure scripts in subdirectories
+-      LT_CONFIG_LTDL_DIR([lib/libltdl])
+-      LTDL_INIT([convenience])
+-
+-      dnl Even though this macro is deprecated, we need to use it to
+-      dnl specifically tell ltdl that it is NOT to use any system directories,
+-      dnl and ONLY to use this bundled location.
+-      LTDL_CONVENIENCE([lib/libltdl])
+     fi
+   ])
+ 
+@@ -1029,9 +1020,9 @@ AC_ARG_ENABLE(scoreboard-updates,
+   [
+     if test x"$enableval" = xyes || test x"$enableval" = xno ; then
+       AC_MSG_WARN(scoreboard updates defaulting to 10)
+-      AC_DEFINE_UNQUOTED(PR_TUNABLE_XFER_SCOREBOARD_UPDATES, 10)
++      AC_DEFINE_UNQUOTED(PR_TUNABLE_XFER_SCOREBOARD_UPDATES, 10, [.])
+     else
+-      AC_DEFINE_UNQUOTED(PR_TUNABLE_XFER_SCOREBOARD_UPDATES, $enableval)
++      AC_DEFINE_UNQUOTED(PR_TUNABLE_XFER_SCOREBOARD_UPDATES, $enableval, [.])
+     fi
+   ])
+ 
+@@ -1267,13 +1258,13 @@ if test x"$force_shadow" != xno ; then
+         AC_DEFINE(PR_USE_SHADOW, 1, [Define if using shadow password support.])
+ 
+         AC_CHECK_MEMBER(struct spwd.sp_warn,
+-          [AC_DEFINE(HAVE_SPWD_SP_WARN)],,
++          [AC_DEFINE(HAVE_SPWD_SP_WARN, 1, [.])],,
+           [#include <shadow.h>])
+         AC_CHECK_MEMBER(struct spwd.sp_inact,
+-          [AC_DEFINE(HAVE_SPWD_SP_INACT)],,
++          [AC_DEFINE(HAVE_SPWD_SP_INACT, 1, [.])],,
+           [#include <shadow.h>])
+         AC_CHECK_MEMBER(struct spwd.sp_expire,
+-          [AC_DEFINE(HAVE_SPWD_SP_EXPIRE)],,
++          [AC_DEFINE(HAVE_SPWD_SP_EXPIRE, 1, [.])],,
+           [#include <shadow.h>])
+ 
+       fi ])
+@@ -2696,19 +2687,19 @@ pr_saved_exec_prefix="$exec_prefix"
+ test "x$prefix" = xNONE && prefix=$ac_default_prefix
+ test "x$exec_prefix" = xNONE && exec_prefix='${prefix}'
+ 
+-AC_DEFINE_UNQUOTED(PR_CONFIG_DIR, "`eval echo "${sysconfdir}"`")
+-AC_DEFINE_UNQUOTED(PR_INCLUDE_DIR, "`eval echo "${includedir}"`")
+-AC_DEFINE_UNQUOTED(PR_LIBEXEC_DIR, "`eval echo "${libexecdir}"`")
++AC_DEFINE_UNQUOTED(PR_CONFIG_DIR, "`eval echo "${sysconfdir}"`", [.])
++AC_DEFINE_UNQUOTED(PR_INCLUDE_DIR, "`eval echo "${includedir}"`", [.])
++AC_DEFINE_UNQUOTED(PR_LIBEXEC_DIR, "`eval echo "${libexecdir}"`", [.])
+ 
+ dnl We evaluate the string twice.  Once to go from $datadir to $prefix/share,
+ dnl and once more to substitute in the $prefix value.  What a pain.
+ locale_dir="`eval echo ${localedir}`"
+ locale_dir="`eval echo ${locale_dir}`"
+-AC_DEFINE_UNQUOTED(PR_LOCALE_DIR, "`eval echo "${locale_dir}"`")
++AC_DEFINE_UNQUOTED(PR_LOCALE_DIR, "`eval echo "${locale_dir}"`", [.])
+ 
+-AC_DEFINE_UNQUOTED(PR_RUN_DIR, "`eval echo "${localstatedir}"`")
+-AC_DEFINE_UNQUOTED(PR_CONFIG_FILE_PATH, "`eval echo "${sysconfdir}/proftpd.conf"`")
+-AC_DEFINE_UNQUOTED(PR_PID_FILE_PATH, "`eval echo "${localstatedir}/proftpd.pid"`")
++AC_DEFINE_UNQUOTED(PR_RUN_DIR, "`eval echo "${localstatedir}"`", [.])
++AC_DEFINE_UNQUOTED(PR_CONFIG_FILE_PATH, "`eval echo "${sysconfdir}/proftpd.conf"`", [.])
++AC_DEFINE_UNQUOTED(PR_PID_FILE_PATH, "`eval echo "${localstatedir}/proftpd.pid"`", [.])
+ 
+ prefix="$pr_saved_prefix"
+ exec_prefix="$pr_saved_exec_prefix"
+@@ -2764,11 +2755,11 @@ if test "$OSTYPE" = "-DDARWIN6" -o "$OST
+ fi
+ 
+ my_cflags="\"$CFLAGS\""
+-AC_DEFINE_UNQUOTED(PR_BUILD_CFLAGS, $my_cflags)
++AC_DEFINE_UNQUOTED(PR_BUILD_CFLAGS, $my_cflags, [.])
+ my_ldflags="\"$LDFLAGS $LIBDIRS\""
+-AC_DEFINE_UNQUOTED(PR_BUILD_LDFLAGS, $my_ldflags)
++AC_DEFINE_UNQUOTED(PR_BUILD_LDFLAGS, $my_ldflags, [.])
+ my_libs="\"$LIBRARIES $LIBS\""
+-AC_DEFINE_UNQUOTED(PR_BUILD_LIBS, $my_libs)
++AC_DEFINE_UNQUOTED(PR_BUILD_LIBS, $my_libs, [.])
+ 
+ dnl And finally, generate the appropriate Make* and config.h
+ AC_SUBST(ENABLE_NLS)
+--- /dev/null
++++ b/acinclude.m4
+@@ -0,0 +1 @@
++sinclude(m4/proftpd.m4)
+--- /dev/null
++++ b/lib/libltdl/acinclude.m4
+@@ -0,0 +1,7 @@
++sinclude(m4/argz.m4)
++sinclude(m4/libtool.m4)
++sinclude(m4/ltversion.m4)
++sinclude(m4/ltsugar.m4)
++sinclude(m4/ltoptions.m4)
++sinclude(m4/ltdl.m4)
++sinclude(m4/lt~obsolete.m4)
+--- a/lib/libltdl/Makefile.am
++++ b/lib/libltdl/Makefile.am
+@@ -50,19 +50,7 @@ AM_LDFLAGS	       += -no-undefined
+ LTDL_VERSION_INFO	= -version-info 9:0:2
+ 
+ noinst_LTLIBRARIES	+= $(LT_DLLOADERS)
+-
+-if INSTALL_LTDL
+-ltdlincludedir		= $(includedir)/libltdl
+-ltdlinclude_HEADERS	= libltdl/lt_system.h \
+-			  libltdl/lt_error.h \
+-			  libltdl/lt_dlloader.h
+-include_HEADERS	       += ltdl.h
+-lib_LTLIBRARIES	       += libltdl.la
+-endif
+-
+-if CONVENIENCE_LTDL
+ noinst_LTLIBRARIES     += libltdlc.la
+-endif
+ 
+ libltdl_la_SOURCES = libltdl/lt__alloc.h \
+ 			  libltdl/lt__dirent.h \

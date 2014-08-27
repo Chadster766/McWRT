@@ -1,0 +1,287 @@
+From a5cffe3a98f98d023e1ca35cae4c918a4abd2741 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Tue, 1 Jan 2013 16:18:01 +0200
+Subject: [PATCH 388/609] AMP: Fixed AMP support for GP board
+
+	Moved the resource allocation conditions from axp_db_init
+	to the per interface init function so that each board
+	that calls those functions runs the AMP resource allocation code
+
+Change-Id: I504a52119faa1885c00af05b9d1ed2525af52302
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/core.c |  120 +++++++++++++++++++++++------------------
+ 1 file changed, 68 insertions(+), 52 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index a34b2da..9285d10 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -550,6 +550,19 @@ static struct platform_device axp_i2c1 = {
+ };
+ #endif
+ 
++
++void __init armadaxp_i2c0_init(void)
++{
++	if (mvUnitMapIsMine(I2C0) == MV_TRUE)
++		platform_device_register(&axp_i2c0);
++}
++
++void __init armadaxp_i2c1_init(void)
++{
++	if (mvUnitMapIsMine(I2C1) == MV_TRUE)
++		platform_device_register(&axp_i2c1);
++}
++
+ /**********
+  * UART-0 *
+  **********/
+@@ -692,8 +705,11 @@ static struct platform_device mv_sdio_plat = {
+ 	.resource	= mvsdio_resources,
+ };
+ 
+-void __init sdio_initialize(void)
++void __init armadaxp_sdio_init(void)
+ {
++	if (mvUnitMapIsMine(SDIO) != MV_TRUE)
++		return;
++
+ 	if (MV_TRUE == mvCtrlPwrClckGet(SDIO_UNIT_ID, 0)) {
+ 		int irq_detect = mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_DETECT);
+ 		static MV_UNIT_WIN_INFO addrWinMap[MAX_TARGETS + 1];
+@@ -828,7 +844,9 @@ static struct resource axp_rtc_resource[] = {
+ 
+ static void __init rtc_init(void)
+ {
+-	platform_device_register_simple("rtc-mv", -1, axp_rtc_resource, 2);
++	if (mvUnitMapIsMine(RTC) == MV_TRUE)
++		platform_device_register_simple("rtc-mv", -1,
++				axp_rtc_resource, 2);
+ }
+ 
+ /********
+@@ -868,6 +886,8 @@ static struct platform_device armadaxp_sata = {
+ 
+ void __init armadaxp_sata_init(struct mv_sata_platform_data *sata_data)
+ {
++	if (mvUnitMapIsMine(SATA) != MV_TRUE)
++		return;
+ 
+ 	armadaxp_sata.dev.platform_data = sata_data;
+ 	sata_data->dram = &armadaxp_mbus_dram_info;
+@@ -879,7 +899,8 @@ void __init armadaxp_sata_init(struct mv_sata_platform_data *sata_data)
+  ****************************************************************************/
+ void __init armadaxp_hwmon_init(void)
+ {
+-	platform_device_register_simple("axp-temp", 0, NULL, 0);
++	if (mvUnitMapIsMine(HWMON) == MV_TRUE)
++		platform_device_register_simple("axp-temp", 0, NULL, 0);
+ }
+ 
+ /*************
+@@ -1061,6 +1082,9 @@ static struct platform_device axp_nfc = {
+ 
+ static void __init axp_db_nfc_init(void)
+ {
++	if (mvUnitMapIsMine(NAND) != MV_TRUE)
++		return;
++
+ 	/* Check for ganaged mode */
+ 	if (nfcConfig) {
+ 		if (strncmp(nfcConfig, "ganged", 6) == 0) {
+@@ -1275,6 +1299,9 @@ static struct platform_device armadaxp_xor01_channel = {
+ 
+ static void __init armadaxp_xor0_init(void)
+ {
++	if (mvUnitMapIsMine(XOR0) != MV_TRUE)
++		return;
++
+ 	platform_device_register(&armadaxp_xor0_shared);
+ 
+ 	/*
+@@ -1373,6 +1400,9 @@ static struct platform_device armadaxp_xor11_channel = {
+ 
+ static void __init armadaxp_xor1_init(void)
+ {
++	if (mvUnitMapIsMine(XOR1) != MV_TRUE)
++		return;
++
+ 	platform_device_register(&armadaxp_xor1_shared);
+ 
+ 	/*
+@@ -1584,8 +1614,7 @@ static void __init axp_db_init(void)
+ 	mv_gpio_init();
+ 
+ 	/* RTC */
+-	if(mvUnitMapIsMine(RTC) == MV_TRUE)
+-		rtc_init();
++	rtc_init();
+ 
+ #ifdef CONFIG_MV_INCLUDE_SPI
+ 	/* SPI */
+@@ -1598,38 +1627,31 @@ static void __init axp_db_init(void)
+ 
+ 	/* Sata */
+ #ifdef CONFIG_SATA_MV
+-	if(mvUnitMapIsMine(SATA) == MV_TRUE)
+-		armadaxp_sata_init(&dbdsmp_sata_data);
++	armadaxp_sata_init(&dbdsmp_sata_data);
+ #endif
+ #ifdef CONFIG_MTD_NAND_NFC
+ 	/* NAND */
+-	if(mvUnitMapIsMine(NAND) == MV_TRUE)
+-		axp_db_nfc_init();
++	axp_db_nfc_init();
+ #endif
+ 	/* HWMON */
+-	if(mvUnitMapIsMine(HWMON) == MV_TRUE)
+-		armadaxp_hwmon_init();
++	armadaxp_hwmon_init();
+ 
+ 	/* XOR */
+ #ifdef XOR0_ENABLE
+-	if(mvUnitMapIsMine(XOR0) == MV_TRUE)
+-		armadaxp_xor0_init();
++	armadaxp_xor0_init();
+ #endif
+-	if(mvUnitMapIsMine(XOR1) == MV_TRUE)
+-		armadaxp_xor1_init();
++	armadaxp_xor1_init();
+ 
+ 	/* I2C */
+-	if(mvUnitMapIsMine(I2C0) == MV_TRUE)
+-		platform_device_register(&axp_i2c0);
++	armadaxp_i2c0_init();
+ 
+ #ifdef CONFIG_FB_DOVE
+-      if ((lcd0_enable == 1) && (lcd_panel == 0 ) && (mvUnitMapIsMine(I2C1) == MV_TRUE))
+-        platform_device_register(&axp_i2c1);
++	if ((lcd0_enable == 1) && (lcd_panel == 0))
++		armadaxp_i2c1_init();
+ #endif
+ 	/* SDIO */
+ #if defined(CONFIG_MV_INCLUDE_SDIO)
+-	if(mvUnitMapIsMine(SDIO) == MV_TRUE)
+-		sdio_initialize();
++	armadaxp_sdio_init();
+ #endif
+ 
+ #ifdef CONFIG_MV_ETHERNET
+@@ -1749,6 +1771,12 @@ MACHINE_END
+  ****************************************************************************/
+ static void __init axp_gp_init(void)
+ {
++#ifdef CONFIG_MV_AMP_ENABLE
++	/* Init Resource sharing */
++	if (mvUnitMapIsRsrcLimited() == MV_FALSE)
++		mvUnitMapSetAllMine();
++#endif
++
+ 	/* Call Aurora/cpu special configurations */
+ 	cpu_fabric_common_init();
+ 
+@@ -1770,7 +1798,11 @@ static void __init axp_gp_init(void)
+ 	armadaxp_setup_cpu_mbus();
+ 
+ 	/* Init the CPU windows setting and the access protection windows. */
+-	if( mvCpuIfInit(mv_sys_map())) {
++#ifdef CONFIG_MV_AMP_ENABLE
++	if (mvAmpInitCpuIf()) {
++#else
++	if (mvCpuIfInit(mv_sys_map())) {
++#endif
+ 		printk( "Cpu Interface initialization failed.\n" );
+ 		return;
+ 	}
+@@ -1781,7 +1813,11 @@ static void __init axp_gp_init(void)
+ 
+ 	elf_hwcap &= ~HWCAP_JAVA;
+ 
++#ifndef CONFIG_MV_UART_PORT
+ 	serial_initialize(0);
++#else
++	serial_initialize(CONFIG_MV_UART_PORT);
++#endif
+ 
+ 	/* At this point, the CPU windows are configured according to default definitions in mvSysHwConfig.h */
+ 	/* and cpuAddrWinMap table in mvCpuIf.c. Now it's time to change defaults for each platform.         */
+@@ -1796,7 +1832,8 @@ static void __init axp_gp_init(void)
+ 
+ #ifdef CONFIG_MV_INCLUDE_SPI
+ 	/* SPI */
+-	mvSysSpiInit(0, _16M);
++	if (mvUnitMapIsMine(SPI) == MV_TRUE)
++		mvSysSpiInit(0, _16M);
+ #endif
+ 
+ 	/* ETH-PHY */
+@@ -1820,35 +1857,15 @@ static void __init axp_gp_init(void)
+ 	armadaxp_xor1_init();
+ 
+ 	/* I2C */
+-	platform_device_register(&axp_i2c0);
+-
++	armadaxp_i2c0_init();
+ 
+ #ifdef CONFIG_FB_DOVE
+-      if ((lcd0_enable == 1) && (lcd_panel == 0 ))
+-        platform_device_register(&axp_i2c1);
++	if ((lcd0_enable == 1) && (lcd_panel == 0))
++		armadaxp_i2c1_init();
+ #endif
+ 
+-
+-
+-
+ #if defined(CONFIG_MV_INCLUDE_SDIO)
+-	if (MV_TRUE == mvCtrlPwrClckGet(SDIO_UNIT_ID, 0)) {
+-		int irq_detect = mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_DETECT);
+-		static MV_UNIT_WIN_INFO addrWinMap[MAX_TARGETS + 1];
+-
+-		if (irq_detect != MV_ERROR) {
+-			mvsdio_data.gpio_card_detect = mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_DETECT);
+-			irq_int_type[mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_DETECT)+IRQ_AURORA_GPIO_START] = GPP_IRQ_TYPE_CHANGE_LEVEL;
+-		}
+-
+-		if(mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_WP) != MV_ERROR)
+-			mvsdio_data.gpio_write_protect = mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_WP);
+-
+-		if(MV_OK == mvCtrlAddrWinMapBuild(addrWinMap, MAX_TARGETS + 1))
+-			if (MV_OK == mvSdmmcWinInit(addrWinMap))
+-				mvsdio_data.clock = mvBoardTclkGet();
+-		platform_device_register(&mv_sdio_plat);
+-       }
++	armadaxp_sdio_init();
+ #endif
+ 
+ #ifdef CONFIG_MV_ETHERNET
+@@ -1963,12 +1980,11 @@ static void __init axp_rd_nas_init(void)
+ 	armadaxp_xor1_init();
+ 
+ 	/* I2C */
+-	platform_device_register(&axp_i2c0);
+-
++	armadaxp_i2c0_init();
+ 
+ #ifdef CONFIG_FB_DOVE
+-      if ((lcd0_enable == 1) && (lcd_panel == 0 ))
+-        platform_device_register(&axp_i2c1);
++	if ((lcd0_enable == 1) && (lcd_panel == 0))
++		armadaxp_i2c1_init();
+ #endif
+ 
+ #if defined(CONFIG_MV_INCLUDE_SDIO)
+@@ -2093,7 +2109,7 @@ static void __init axp_rdsrv_init(void)
+ 	armadaxp_hwmon_init();
+ 
+ 	/* I2C */
+-	platform_device_register(&axp_i2c0);
++	armadaxp_i2c0_init();
+ 
+ #if defined(CONFIG_MV_INCLUDE_SDIO)
+ 	if (MV_TRUE == mvCtrlPwrClckGet(SDIO_UNIT_ID, 0)) {
+-- 
+1.7.9.5
+

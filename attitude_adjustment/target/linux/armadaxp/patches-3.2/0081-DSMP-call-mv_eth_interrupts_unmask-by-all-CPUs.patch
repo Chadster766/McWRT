@@ -1,0 +1,25 @@
+From 678c94ed302045e72ded988c8fdade3d2ab1ae11 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Mon, 5 Mar 2012 00:50:47 +0200
+Subject: [PATCH 081/609] DSMP call mv_eth_interrupts_unmask by all CPUs
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_eth_switch.c |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_switch.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_switch.c
+index ebc8e72..65b88b4 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_switch.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_switch.c
+@@ -498,6 +498,7 @@ int    mv_eth_switch_start(struct net_device *dev)
+ 
+ 		/* unmask interrupts */
+ 		mv_eth_interrupts_unmask(priv);
++		smp_call_function_many(cpu_online_mask, (smp_call_func_t)mv_eth_interrupts_unmask, (void *)priv, 1);
+ 	}
+ 
+ 	mv_eth_switch_started++;
+-- 
+1.7.9.5
+

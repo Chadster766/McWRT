@@ -1,0 +1,173 @@
+#
+# OpenSSL configuration file.
+#
+dir = /etc/openssl/$ENV::ENTITY
+
+####################################################################
+[ ca ]
+default_ca	= CA_default		# The default ca section
+
+####################################################################
+[ CA_default ]
+#dir		= ./demoCA		         # Where everything is kept
+certs		= $dir/certs           # Where the issued certs are kept
+crl_dir		= $dir/crl           # Where the issued crl are kept
+database	= $dir/index.txt	   # database index file.
+#unique_subject	= no           # Set to 'no' to allow creation of
+                               # several ctificates with same subject.
+new_certs_dir	= $dir/newcerts  # default place for new certs.
+
+certificate	= $dir/cacert.crt 	# The CA certificate
+serial		= $dir/serial 		# The current serial number
+crlnumber	= $dir/crlnumber	# the current crl number
+					# must be commented out to leave a V1 CRL
+crl		= $dir/crl.pem 		# The current CRL
+private_key	= $dir/topsecret/cakey.pem# The private key
+RANDFILE	= $dir/private/.rand	# private random number file
+
+x509_extensions	= usr_cert		# The extentions to add to the cert
+
+# Comment out the following two lines for the "traditional"
+# (and highly broken) format.
+name_opt 	= ca_default		# Subject Name options
+cert_opt 	= ca_default		# Certificate field options
+
+# Extension copying option: use with caution.
+# copy_extensions = copy
+
+# Extensions to add to a CRL. Note: Netscape communicator chokes on V2 CRLs
+# so this is commented out by default to leave a V1 CRL.
+# crlnumber must also be commented out to leave a V1 CRL.
+# crl_extensions	= crl_ext
+
+default_days     = $ENV::KEY_EXPIRE     # how long to certify for
+default_crl_days = $ENV::KEY_CRLDAYS    # how long before next CRL
+default_md       = $ENV::KEY_MD         # which md to use.
+preserve         = no                   # keep passed DN ordering
+
+# A few difference way of specifying how similar the request should look
+# For type CA, the listed attributes must be the same, and the optional
+# and supplied fields are just that :-)
+policy		= policy_match
+
+# For the CA policy
+[ policy_match ]
+countryName             = $ENV::MATCH_COUNTRY
+stateOrProvinceName	    = $ENV::MATCH_PROVINCE
+organizationName	      = $ENV::MATCH_ORG
+organizationalUnitName	= $ENV::MATCH_ORG_UNIT
+commonName		          = $ENV::MATCH_COMMON
+emailAddress		        = $ENV::MATCH_EMAIL
+localityName            = $ENV::MATCH_CITY
+
+#countryName		= match
+#stateOrProvinceName	= match
+#organizationName	= match
+#organizationalUnitName	= optional
+#commonName		= supplied
+#emailAddress		= optional
+
+
+# For the 'anything' policy
+# At this point in time, you must list all acceptable 'object'
+# types.
+[ policy_anything ]
+countryName		= optional
+stateOrProvinceName	= optional
+localityName		= optional
+organizationName	= optional
+organizationalUnitName	= optional
+commonName		= supplied
+emailAddress		= optional
+
+[ req ]
+default_bits       = $ENV::KEY_SIZE			# Size of keys
+default_keyfile    = $dir/topsecret/cakey.pem		# name of generated keys
+default_md         = $ENV::KEY_MD				# message digest algorithm
+string_mask        = nombstr		# permitted characters
+distinguished_name = req_distinguished_name
+req_extensions     = v3_req
+#output_password    = $ENV::KEY_PASSWD
+#input_password     = $ENV::KEY_PASSWD
+
+[ req_distinguished_name ]
+# Variable name               Prompt string
+#-------------------------	  ----------------------------------
+0.organizationName          = Organization Name (company)
+organizationalUnitName      = Organizational Unit Name (department, division)
+emailAddress                = Email Address
+emailAddress_max            = 40
+localityName                = Locality Name (city, district)
+stateOrProvinceName         = State or Province Name (full name)
+countryName                 = Country Name (2 letter code)
+countryName_min             = 2 
+countryName_max             = 2 
+commonName                  = Common Name (hostname, IP, or your name)
+commonName_max              = 64
+
+# Default values for the above, for consistency and less typing.
+# Variable name                  Value
+#-----------------------------   ------------------------------
+0.organizationName_default     = $ENV::KEY_ORG
+organizationalUnitName_default = $ENV::KEY_ORG_UNIT
+localityName_default           = $ENV::KEY_CITY
+stateOrProvinceName_default    = $ENV::KEY_PROVINCE
+countryName_default            = $ENV::KEY_COUNTRY
+emailAddress_default           = $ENV::KEY_EMAIL
+commonName_default             = $ENV::KEY_COMMON_NAME
+ 
+[ usr_cert ]
+
+# These extensions are added when 'ca' signs a request.
+
+# This goes against PKIX guidelines but some CAs do it and some software
+# requires this to avoid interpreting an end user certificate as a CA.
+
+basicConstraints=CA:FALSE
+
+# Here are some examples of the usage of nsCertType. If it is omitted
+# the certificate can be used for anything *except* object signing.
+
+# This is OK for an SSL server.
+# nsCertType			= server
+
+# For an object signing certificate this would be used.
+# nsCertType = objsign
+
+# For normal client use this is typical
+# nsCertType = client, email
+
+# and for everything including object signing:
+# nsCertType = client, email, objsign
+
+# This is typical in keyUsage for a client certificate.
+# keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+
+# This will be displayed in Netscape's comment listbox.
+nsComment			= "OpenSSL Generated Certificate"
+
+# PKIX recommendations harmless if included in all certificates.
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid,issuer
+
+# This stuff is for subjectAltName and issuerAltname.
+# Import the email address.
+# subjectAltName=email:copy
+# An alternative to produce certificates that aren't
+# deprecated according to PKIX.
+# subjectAltName=email:move
+
+# Copy subject details
+# issuerAltName=issuer:copy
+
+#nsCaRevocationUrl		= http://www.domain.dom/ca-crl.pem
+#nsBaseUrl
+#nsRevocationUrl
+#nsRenewalUrl
+#nsCaPolicyUrl
+#nsSslServerName
+
+
+[ v3_req ]
+basicConstraints          = CA:FALSE
+subjectKeyIdentifier      = hash

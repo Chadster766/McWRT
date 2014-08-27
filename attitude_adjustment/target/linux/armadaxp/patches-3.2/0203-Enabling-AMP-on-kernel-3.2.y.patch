@@ -1,0 +1,676 @@
+From d69caa1623beda4e0ffaa4c295133a504d2df80b Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Thu, 5 Jul 2012 13:37:42 +0300
+Subject: [PATCH 203/609] Enabling AMP on kernel 3.2.y
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/configs/armada_xp_amp_g0_defconfig        |  235 +++++++++++++++++++
+ arch/arm/configs/armada_xp_amp_g1_defconfig        |  240 ++++++++++++++++++++
+ arch/arm/mach-armadaxp/core.c                      |    2 +-
+ arch/arm/mach-armadaxp/include/mach/memory.h       |    1 +
+ arch/arm/mach-armadaxp/irq.c                       |    2 +-
+ arch/arm/plat-armada/Kconfig                       |   56 +++--
+ .../mv_drivers_lsp/mv_ipc_net/ipc_net.c            |   12 -
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c   |    1 +
+ 8 files changed, 514 insertions(+), 35 deletions(-)
+ create mode 100644 arch/arm/configs/armada_xp_amp_g0_defconfig
+ create mode 100644 arch/arm/configs/armada_xp_amp_g1_defconfig
+
+diff --git a/arch/arm/configs/armada_xp_amp_g0_defconfig b/arch/arm/configs/armada_xp_amp_g0_defconfig
+new file mode 100644
+index 0000000..549513d
+--- /dev/null
++++ b/arch/arm/configs/armada_xp_amp_g0_defconfig
+@@ -0,0 +1,235 @@
++# CONFIG_ARM_PATCH_PHYS_VIRT is not set
++CONFIG_EXPERIMENTAL=y
++CONFIG_SYSVIPC=y
++CONFIG_POSIX_MQUEUE=y
++CONFIG_BLK_DEV_INITRD=y
++CONFIG_CC_OPTIMIZE_FOR_SIZE=y
++CONFIG_SYSCTL_SYSCALL=y
++CONFIG_EMBEDDED=y
++# CONFIG_PERF_EVENTS is not set
++CONFIG_SLAB=y
++CONFIG_PROFILING=y
++CONFIG_OPROFILE=y
++CONFIG_KPROBES=y
++CONFIG_MODULES=y
++CONFIG_MODULE_UNLOAD=y
++# CONFIG_BLK_DEV_BSG is not set
++CONFIG_ARCH_ARMADA_XP=y
++CONFIG_MV_INCLUDE_PCI=y
++# CONFIG_MV_INCLUDE_LEGACY_NAND is not set
++# CONFIG_MV_INCLUDE_SWITCH is not set
++CONFIG_MV_AMP_ENABLE=y
++CONFIG_MTD_NAND_NFC_INIT_RESET=y
++CONFIG_MV_PMU_PROC=y
++CONFIG_MV_ETH_NETA=y
++CONFIG_MV_ETH_PORTS_NUM=4
++CONFIG_MV_ETH_RXQ=8
++CONFIG_MV_ETH_TXQ=8
++CONFIG_NET_SKB_HEADROOM=96
++# CONFIG_MV_ETH_BM is not set
++# CONFIG_MV_ETH_PNC is not set
++CONFIG_MV_ETH_GRO_DEF=y
++CONFIG_MV_ETH_TSO_DEF=y
++# CONFIG_MV_ETH_STAT_INF is not set
++CONFIG_MV_ETH_RX_DESC_PREFETCH=y
++CONFIG_MV_ETH_RX_PKT_PREFETCH=y
++# CONFIG_MV_ETH_REDUCE_BURST_SIZE_WA is not set
++CONFIG_MV_CESA_TOOL=y
++CONFIG_MV_CESA_CHANNELS=2
++CONFIG_MV_CESA_CHAIN_MODE=y
++CONFIG_CPU_SHEEVA_PJ4B_V7=y
++# CONFIG_SWP_EMULATE is not set
++CONFIG_SHEEVA_ERRATA_ARM_CPU_PMU_RESET=y
++CONFIG_SHEEVA_DEEP_IDLE=y
++CONFIG_STANDBY_UART_WAKE=y
++CONFIG_ARMADA_XP_DEEP_IDLE_UNMASK_INTS_WA=y
++CONFIG_PCI_DEBUG=y
++CONFIG_NO_HZ=y
++CONFIG_SMP=y
++CONFIG_SCHED_MC=y
++CONFIG_SCHED_SMT=y
++CONFIG_AEABI=y
++CONFIG_HIGHMEM=y
++CONFIG_UACCESS_WITH_MEMCPY=y
++CONFIG_ZBOOT_ROM_TEXT=0x0
++CONFIG_ZBOOT_ROM_BSS=0x0
++CONFIG_CPU_IDLE=y
++CONFIG_VFP=y
++# CONFIG_CORE_DUMP_DEFAULT_ELF_HEADERS is not set
++CONFIG_NET=y
++CONFIG_PACKET=y
++CONFIG_UNIX=y
++CONFIG_INET=y
++CONFIG_IP_MULTICAST=y
++CONFIG_IP_PNP=y
++CONFIG_IP_PNP_DHCP=y
++CONFIG_IP_PNP_BOOTP=y
++CONFIG_IPV6=y
++CONFIG_NETFILTER=y
++# CONFIG_NETFILTER_ADVANCED is not set
++# CONFIG_NETFILTER_NETLINK_LOG is not set
++CONFIG_NF_CONNTRACK=y
++CONFIG_NF_CONNTRACK_FTP=y
++# CONFIG_NF_CONNTRACK_IRC is not set
++# CONFIG_NF_CONNTRACK_SIP is not set
++# CONFIG_NF_CT_NETLINK is not set
++# CONFIG_NETFILTER_XT_MARK is not set
++# CONFIG_NETFILTER_XT_TARGET_NFLOG is not set
++# CONFIG_NETFILTER_XT_TARGET_TCPMSS is not set
++# CONFIG_NETFILTER_XT_MATCH_CONNTRACK is not set
++# CONFIG_NETFILTER_XT_MATCH_POLICY is not set
++# CONFIG_NETFILTER_XT_MATCH_STATE is not set
++CONFIG_NF_CONNTRACK_IPV4=y
++CONFIG_IP_NF_IPTABLES=y
++CONFIG_IP_NF_FILTER=y
++CONFIG_IP_NF_TARGET_REJECT=y
++# CONFIG_IP_NF_TARGET_LOG is not set
++# CONFIG_IP_NF_TARGET_ULOG is not set
++CONFIG_NF_NAT=y
++CONFIG_IP_NF_TARGET_MASQUERADE=y
++# CONFIG_IP_NF_MANGLE is not set
++CONFIG_NF_CONNTRACK_IPV6=y
++CONFIG_IP6_NF_IPTABLES=y
++# CONFIG_IP6_NF_MATCH_IPV6HEADER is not set
++# CONFIG_IP6_NF_TARGET_LOG is not set
++CONFIG_IP6_NF_FILTER=y
++CONFIG_IP6_NF_TARGET_REJECT=y
++# CONFIG_IP6_NF_MANGLE is not set
++CONFIG_BRIDGE=y
++CONFIG_VLAN_8021Q=y
++CONFIG_NET_PKTGEN=m
++CONFIG_UEVENT_HELPER_PATH="/sbin/hotplug"
++CONFIG_DEVTMPFS=y
++CONFIG_MTD=y
++CONFIG_MTD_CMDLINE_PARTS=y
++CONFIG_MTD_CHAR=y
++CONFIG_MTD_BLOCK=y
++CONFIG_MTD_CFI=y
++CONFIG_MTD_JEDECPROBE=y
++CONFIG_MTD_CFI_ADV_OPTIONS=y
++CONFIG_MTD_CFI_GEOMETRY=y
++# CONFIG_MTD_MAP_BANK_WIDTH_4 is not set
++CONFIG_MTD_CFI_INTELEXT=y
++CONFIG_MTD_CFI_STAA=y
++CONFIG_MTD_PHYSMAP=y
++CONFIG_MTD_M25P80=y
++CONFIG_MTD_NAND=y
++CONFIG_MTD_NAND_VERIFY_WRITE=y
++CONFIG_MTD_UBI=y
++CONFIG_BLK_DEV_LOOP=y
++# CONFIG_SCSI_PROC_FS is not set
++CONFIG_BLK_DEV_SD=y
++CONFIG_BLK_DEV_SR=m
++CONFIG_CHR_DEV_SG=m
++CONFIG_ATA=y
++CONFIG_SATA_MV=y
++CONFIG_MD=y
++CONFIG_BLK_DEV_MD=y
++CONFIG_MD_LINEAR=y
++CONFIG_MD_RAID0=y
++CONFIG_MD_RAID1=y
++CONFIG_MD_RAID10=y
++CONFIG_MD_RAID456=y
++CONFIG_NETDEVICES=y
++# CONFIG_NET_VENDOR_3COM is not set
++CONFIG_E100=y
++CONFIG_E1000E=y
++CONFIG_SKY2=y
++CONFIG_PHYLIB=y
++CONFIG_PPP=y
++CONFIG_PPPOE=y
++# CONFIG_INPUT_KEYBOARD is not set
++# CONFIG_INPUT_MOUSE is not set
++# CONFIG_SERIO is not set
++# CONFIG_VT is not set
++CONFIG_LEGACY_PTY_COUNT=16
++# CONFIG_DEVKMEM is not set
++CONFIG_SERIAL_8250=y
++CONFIG_SERIAL_8250_CONSOLE=y
++# CONFIG_SERIAL_8250_PCI is not set
++CONFIG_SERIAL_8250_RUNTIME_UARTS=2
++CONFIG_SERIAL_8250_DW=y
++# CONFIG_HW_RANDOM is not set
++CONFIG_I2C=y
++CONFIG_I2C_CHARDEV=y
++CONFIG_I2C_MV64XXX=y
++CONFIG_SPI=y
++CONFIG_GPIO_SYSFS=y
++CONFIG_SENSORS_JC42=y
++CONFIG_HID_A4TECH=y
++CONFIG_HID_APPLE=y
++CONFIG_HID_BELKIN=y
++CONFIG_HID_CHERRY=y
++CONFIG_HID_CHICONY=y
++CONFIG_HID_CYPRESS=y
++CONFIG_HID_EZKEY=y
++CONFIG_HID_GYRATION=y
++CONFIG_HID_LOGITECH=y
++CONFIG_HID_MICROSOFT=y
++CONFIG_HID_MONTEREY=y
++CONFIG_HID_PANTHERLORD=y
++CONFIG_HID_PETALYNX=y
++CONFIG_HID_SAMSUNG=y
++CONFIG_HID_SONY=y
++CONFIG_HID_SUNPLUS=y
++CONFIG_USB=y
++CONFIG_USB_DEVICEFS=y
++CONFIG_USB_EHCI_HCD=y
++CONFIG_USB_EHCI_ROOT_HUB_TT=y
++CONFIG_USB_PRINTER=y
++CONFIG_USB_STORAGE=y
++CONFIG_USB_STORAGE_DATAFAB=y
++CONFIG_USB_STORAGE_FREECOM=y
++CONFIG_USB_STORAGE_SDDR09=y
++CONFIG_USB_STORAGE_SDDR55=y
++CONFIG_USB_STORAGE_JUMPSHOT=y
++CONFIG_USB_TEST=m
++CONFIG_MMC=y
++CONFIG_MMC_MVSDIO=y
++CONFIG_NEW_LEDS=y
++CONFIG_RTC_CLASS=y
++CONFIG_RTC_DRV_MV=y
++CONFIG_DMADEVICES=y
++CONFIG_EXT2_FS=y
++CONFIG_EXT3_FS=y
++# CONFIG_EXT3_DEFAULTS_TO_ORDERED is not set
++# CONFIG_EXT3_FS_XATTR is not set
++CONFIG_EXT4_FS=y
++# CONFIG_EXT4_FS_XATTR is not set
++CONFIG_XFS_FS=y
++CONFIG_ISO9660_FS=y
++CONFIG_JOLIET=y
++CONFIG_UDF_FS=m
++CONFIG_MSDOS_FS=y
++CONFIG_VFAT_FS=y
++CONFIG_TMPFS=y
++CONFIG_JFFS2_FS=y
++CONFIG_UBIFS_FS=y
++CONFIG_NFS_FS=y
++CONFIG_NFS_V3=y
++CONFIG_ROOT_NFS=y
++CONFIG_PARTITION_ADVANCED=y
++CONFIG_EFI_PARTITION=y
++CONFIG_NLS_CODEPAGE_437=y
++CONFIG_NLS_CODEPAGE_850=y
++CONFIG_NLS_ISO8859_1=y
++CONFIG_NLS_ISO8859_2=y
++CONFIG_NLS_UTF8=y
++CONFIG_MAGIC_SYSRQ=y
++CONFIG_DEBUG_FS=y
++CONFIG_DETECT_HUNG_TASK=y
++# CONFIG_SCHED_DEBUG is not set
++CONFIG_TIMER_STATS=y
++# CONFIG_DEBUG_BUGVERBOSE is not set
++CONFIG_DEBUG_INFO=y
++# CONFIG_FTRACE is not set
++# CONFIG_ARM_UNWIND is not set
++CONFIG_DEBUG_USER=y
++CONFIG_DEBUG_LL=y
++CONFIG_EARLY_PRINTK=y
++CONFIG_CRYPTO_CBC=m
++CONFIG_CRYPTO_ECB=m
++CONFIG_CRYPTO_PCBC=m
++# CONFIG_CRYPTO_ANSI_CPRNG is not set
++CONFIG_CRC_CCITT=y
++CONFIG_LIBCRC32C=y
+diff --git a/arch/arm/configs/armada_xp_amp_g1_defconfig b/arch/arm/configs/armada_xp_amp_g1_defconfig
+new file mode 100644
+index 0000000..26b739a
+--- /dev/null
++++ b/arch/arm/configs/armada_xp_amp_g1_defconfig
+@@ -0,0 +1,240 @@
++# CONFIG_ARM_PATCH_PHYS_VIRT is not set
++CONFIG_EXPERIMENTAL=y
++CONFIG_SYSVIPC=y
++CONFIG_POSIX_MQUEUE=y
++CONFIG_BLK_DEV_INITRD=y
++CONFIG_CC_OPTIMIZE_FOR_SIZE=y
++CONFIG_SYSCTL_SYSCALL=y
++CONFIG_EMBEDDED=y
++# CONFIG_PERF_EVENTS is not set
++CONFIG_SLAB=y
++CONFIG_PROFILING=y
++CONFIG_OPROFILE=y
++CONFIG_KPROBES=y
++CONFIG_MODULES=y
++CONFIG_MODULE_UNLOAD=y
++# CONFIG_BLK_DEV_BSG is not set
++CONFIG_ARCH_ARMADA_XP=y
++CONFIG_MV_INCLUDE_PCI=y
++# CONFIG_MV_INCLUDE_LEGACY_NAND is not set
++# CONFIG_MV_INCLUDE_SWITCH is not set
++CONFIG_MV_AMP_ENABLE=y
++CONFIG_MV_DRAM_BASE=0x20000000
++CONFIG_MV_UART_PORT=1
++CONFIG_MV_ZREL_ADDR=0x20008000
++CONFIG_MV_PARAM_PHYS=0x20000100
++CONFIG_MV_INITRD_PHYS=0x20800000
++CONFIG_MTD_NAND_NFC_INIT_RESET=y
++CONFIG_MV_PMU_PROC=y
++CONFIG_MV_ETH_NETA=y
++CONFIG_MV_ETH_PORTS_NUM=4
++CONFIG_MV_ETH_RXQ=8
++CONFIG_MV_ETH_TXQ=8
++CONFIG_NET_SKB_HEADROOM=96
++# CONFIG_MV_ETH_BM is not set
++# CONFIG_MV_ETH_PNC is not set
++CONFIG_MV_ETH_GRO_DEF=y
++CONFIG_MV_ETH_TSO_DEF=y
++# CONFIG_MV_ETH_STAT_INF is not set
++CONFIG_MV_ETH_RX_DESC_PREFETCH=y
++CONFIG_MV_ETH_RX_PKT_PREFETCH=y
++# CONFIG_MV_ETH_REDUCE_BURST_SIZE_WA is not set
++CONFIG_MV_CESA_TOOL=y
++CONFIG_MV_CESA_CHANNELS=2
++CONFIG_MV_CESA_CHAIN_MODE=y
++CONFIG_CPU_SHEEVA_PJ4B_V7=y
++# CONFIG_SWP_EMULATE is not set
++CONFIG_SHEEVA_ERRATA_ARM_CPU_PMU_RESET=y
++CONFIG_SHEEVA_DEEP_IDLE=y
++CONFIG_STANDBY_UART_WAKE=y
++CONFIG_ARMADA_XP_DEEP_IDLE_UNMASK_INTS_WA=y
++CONFIG_PCI_DEBUG=y
++CONFIG_NO_HZ=y
++CONFIG_SMP=y
++CONFIG_SCHED_MC=y
++CONFIG_SCHED_SMT=y
++CONFIG_AEABI=y
++CONFIG_HIGHMEM=y
++CONFIG_UACCESS_WITH_MEMCPY=y
++CONFIG_ZBOOT_ROM_TEXT=0x0
++CONFIG_ZBOOT_ROM_BSS=0x0
++CONFIG_CPU_IDLE=y
++CONFIG_VFP=y
++# CONFIG_CORE_DUMP_DEFAULT_ELF_HEADERS is not set
++CONFIG_NET=y
++CONFIG_PACKET=y
++CONFIG_UNIX=y
++CONFIG_INET=y
++CONFIG_IP_MULTICAST=y
++CONFIG_IP_PNP=y
++CONFIG_IP_PNP_DHCP=y
++CONFIG_IP_PNP_BOOTP=y
++CONFIG_IPV6=y
++CONFIG_NETFILTER=y
++# CONFIG_NETFILTER_ADVANCED is not set
++# CONFIG_NETFILTER_NETLINK_LOG is not set
++CONFIG_NF_CONNTRACK=y
++CONFIG_NF_CONNTRACK_FTP=y
++# CONFIG_NF_CONNTRACK_IRC is not set
++# CONFIG_NF_CONNTRACK_SIP is not set
++# CONFIG_NF_CT_NETLINK is not set
++# CONFIG_NETFILTER_XT_MARK is not set
++# CONFIG_NETFILTER_XT_TARGET_NFLOG is not set
++# CONFIG_NETFILTER_XT_TARGET_TCPMSS is not set
++# CONFIG_NETFILTER_XT_MATCH_CONNTRACK is not set
++# CONFIG_NETFILTER_XT_MATCH_POLICY is not set
++# CONFIG_NETFILTER_XT_MATCH_STATE is not set
++CONFIG_NF_CONNTRACK_IPV4=y
++CONFIG_IP_NF_IPTABLES=y
++CONFIG_IP_NF_FILTER=y
++CONFIG_IP_NF_TARGET_REJECT=y
++# CONFIG_IP_NF_TARGET_LOG is not set
++# CONFIG_IP_NF_TARGET_ULOG is not set
++CONFIG_NF_NAT=y
++CONFIG_IP_NF_TARGET_MASQUERADE=y
++# CONFIG_IP_NF_MANGLE is not set
++CONFIG_NF_CONNTRACK_IPV6=y
++CONFIG_IP6_NF_IPTABLES=y
++# CONFIG_IP6_NF_MATCH_IPV6HEADER is not set
++# CONFIG_IP6_NF_TARGET_LOG is not set
++CONFIG_IP6_NF_FILTER=y
++CONFIG_IP6_NF_TARGET_REJECT=y
++# CONFIG_IP6_NF_MANGLE is not set
++CONFIG_BRIDGE=y
++CONFIG_VLAN_8021Q=y
++CONFIG_NET_PKTGEN=m
++CONFIG_UEVENT_HELPER_PATH="/sbin/hotplug"
++CONFIG_DEVTMPFS=y
++CONFIG_MTD=y
++CONFIG_MTD_CMDLINE_PARTS=y
++CONFIG_MTD_CHAR=y
++CONFIG_MTD_BLOCK=y
++CONFIG_MTD_CFI=y
++CONFIG_MTD_JEDECPROBE=y
++CONFIG_MTD_CFI_ADV_OPTIONS=y
++CONFIG_MTD_CFI_GEOMETRY=y
++# CONFIG_MTD_MAP_BANK_WIDTH_4 is not set
++CONFIG_MTD_CFI_INTELEXT=y
++CONFIG_MTD_CFI_STAA=y
++CONFIG_MTD_PHYSMAP=y
++CONFIG_MTD_M25P80=y
++CONFIG_MTD_NAND=y
++CONFIG_MTD_NAND_VERIFY_WRITE=y
++CONFIG_MTD_UBI=y
++CONFIG_BLK_DEV_LOOP=y
++# CONFIG_SCSI_PROC_FS is not set
++CONFIG_BLK_DEV_SD=y
++CONFIG_BLK_DEV_SR=m
++CONFIG_CHR_DEV_SG=m
++CONFIG_ATA=y
++CONFIG_SATA_MV=y
++CONFIG_MD=y
++CONFIG_BLK_DEV_MD=y
++CONFIG_MD_LINEAR=y
++CONFIG_MD_RAID0=y
++CONFIG_MD_RAID1=y
++CONFIG_MD_RAID10=y
++CONFIG_MD_RAID456=y
++CONFIG_NETDEVICES=y
++# CONFIG_NET_VENDOR_3COM is not set
++CONFIG_E100=y
++CONFIG_E1000E=y
++CONFIG_SKY2=y
++CONFIG_PHYLIB=y
++CONFIG_PPP=y
++CONFIG_PPPOE=y
++# CONFIG_INPUT_KEYBOARD is not set
++# CONFIG_INPUT_MOUSE is not set
++# CONFIG_SERIO is not set
++# CONFIG_VT is not set
++CONFIG_LEGACY_PTY_COUNT=16
++# CONFIG_DEVKMEM is not set
++CONFIG_SERIAL_8250=y
++CONFIG_SERIAL_8250_CONSOLE=y
++# CONFIG_SERIAL_8250_PCI is not set
++CONFIG_SERIAL_8250_RUNTIME_UARTS=2
++CONFIG_SERIAL_8250_DW=y
++# CONFIG_HW_RANDOM is not set
++CONFIG_I2C=y
++CONFIG_I2C_CHARDEV=y
++CONFIG_I2C_MV64XXX=y
++CONFIG_SPI=y
++CONFIG_GPIO_SYSFS=y
++CONFIG_SENSORS_JC42=y
++CONFIG_HID_A4TECH=y
++CONFIG_HID_APPLE=y
++CONFIG_HID_BELKIN=y
++CONFIG_HID_CHERRY=y
++CONFIG_HID_CHICONY=y
++CONFIG_HID_CYPRESS=y
++CONFIG_HID_EZKEY=y
++CONFIG_HID_GYRATION=y
++CONFIG_HID_LOGITECH=y
++CONFIG_HID_MICROSOFT=y
++CONFIG_HID_MONTEREY=y
++CONFIG_HID_PANTHERLORD=y
++CONFIG_HID_PETALYNX=y
++CONFIG_HID_SAMSUNG=y
++CONFIG_HID_SONY=y
++CONFIG_HID_SUNPLUS=y
++CONFIG_USB=y
++CONFIG_USB_DEVICEFS=y
++CONFIG_USB_EHCI_HCD=y
++CONFIG_USB_EHCI_ROOT_HUB_TT=y
++CONFIG_USB_PRINTER=y
++CONFIG_USB_STORAGE=y
++CONFIG_USB_STORAGE_DATAFAB=y
++CONFIG_USB_STORAGE_FREECOM=y
++CONFIG_USB_STORAGE_SDDR09=y
++CONFIG_USB_STORAGE_SDDR55=y
++CONFIG_USB_STORAGE_JUMPSHOT=y
++CONFIG_USB_TEST=m
++CONFIG_MMC=y
++CONFIG_MMC_MVSDIO=y
++CONFIG_NEW_LEDS=y
++CONFIG_RTC_CLASS=y
++CONFIG_RTC_DRV_MV=y
++CONFIG_DMADEVICES=y
++CONFIG_EXT2_FS=y
++CONFIG_EXT3_FS=y
++# CONFIG_EXT3_DEFAULTS_TO_ORDERED is not set
++# CONFIG_EXT3_FS_XATTR is not set
++CONFIG_EXT4_FS=y
++# CONFIG_EXT4_FS_XATTR is not set
++CONFIG_XFS_FS=y
++CONFIG_ISO9660_FS=y
++CONFIG_JOLIET=y
++CONFIG_UDF_FS=m
++CONFIG_MSDOS_FS=y
++CONFIG_VFAT_FS=y
++CONFIG_TMPFS=y
++CONFIG_JFFS2_FS=y
++CONFIG_UBIFS_FS=y
++CONFIG_NFS_FS=y
++CONFIG_NFS_V3=y
++CONFIG_ROOT_NFS=y
++CONFIG_PARTITION_ADVANCED=y
++CONFIG_EFI_PARTITION=y
++CONFIG_NLS_CODEPAGE_437=y
++CONFIG_NLS_CODEPAGE_850=y
++CONFIG_NLS_ISO8859_1=y
++CONFIG_NLS_ISO8859_2=y
++CONFIG_NLS_UTF8=y
++CONFIG_MAGIC_SYSRQ=y
++CONFIG_DEBUG_FS=y
++CONFIG_DETECT_HUNG_TASK=y
++# CONFIG_SCHED_DEBUG is not set
++CONFIG_TIMER_STATS=y
++# CONFIG_DEBUG_BUGVERBOSE is not set
++CONFIG_DEBUG_INFO=y
++# CONFIG_FTRACE is not set
++# CONFIG_ARM_UNWIND is not set
++CONFIG_DEBUG_USER=y
++CONFIG_DEBUG_LL=y
++CONFIG_EARLY_PRINTK=y
++CONFIG_CRYPTO_CBC=m
++CONFIG_CRYPTO_ECB=m
++CONFIG_CRYPTO_PCBC=m
++# CONFIG_CRYPTO_ANSI_CPRNG is not set
++CONFIG_CRC_CCITT=y
++CONFIG_LIBCRC32C=y
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index 7c85baa..296e53d 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -1606,7 +1606,7 @@ void __init axp_tag_fixup_mem32(struct machine_desc *mdesc, struct tag *t,
+ 
+ MACHINE_START(ARMADA_XP_DB, "Marvell Armada XP Development Board")
+ 	/* MAINTAINER("MARVELL") */
+-	.atag_offset	= (PLAT_PHYS_OFFSET + 0x100),
++	.atag_offset	= BOOT_PARAMS_OFFSET,
+ 	.map_io		= axp_map_io,
+ 	.init_irq	= axp_init_irq,
+ 	.timer		= &axp_timer,
+diff --git a/arch/arm/mach-armadaxp/include/mach/memory.h b/arch/arm/mach-armadaxp/include/mach/memory.h
+index 61f84a0..86fe350 100644
+--- a/arch/arm/mach-armadaxp/include/mach/memory.h
++++ b/arch/arm/mach-armadaxp/include/mach/memory.h
+@@ -11,6 +11,7 @@
+ #define PLAT_PHYS_OFFSET		UL(0x00000000)
+ #endif
+ 
++#define BOOT_PARAMS_OFFSET      PLAT_PHYS_OFFSET + 0x100
+ /* #define __virt_to_bus(x)	__virt_to_phys(x) */
+ /* #define __bus_to_virt(x)	__phys_to_virt(x) */
+ 
+diff --git a/arch/arm/mach-armadaxp/irq.c b/arch/arm/mach-armadaxp/irq.c
+index 227a6f6..09fb924 100644
+--- a/arch/arm/mach-armadaxp/irq.c
++++ b/arch/arm/mach-armadaxp/irq.c
+@@ -202,7 +202,7 @@ MV_REG_WRITE(addr, temp);
+ 	}
+ #endif
+ #ifdef CONFIG_MV_AMP_ENABLE
+-       mvSemaLock(MV_SEMA_IRQ);
++	mvSemaUnlock(MV_SEMA_IRQ);
+ #else
+ spin_unlock(&irq_controller_lock);
+ #endif
+diff --git a/arch/arm/plat-armada/Kconfig b/arch/arm/plat-armada/Kconfig
+index 17ee416..4149d1b 100644
+--- a/arch/arm/plat-armada/Kconfig
++++ b/arch/arm/plat-armada/Kconfig
+@@ -186,21 +186,6 @@ config MV_AMP_ENABLE
+ 	depends on   (ARMADA_XP || (MV78XX0)) && (!ARMADA_XP_REV_Z1) && (SMP) && (!MV_ETH_BM) && (!ARMADAXP_USE_IRQ_INDIRECT_MODE)
+ 	default n
+ 
+-config MV_IPC_DRIVER
+-        bool "Enable IPC basic driver"
+-        depends on   MV_AMP_ENABLE
+-        default y
+-
+-config MV_IPC_NET
+-        bool "Enable IPC pseudo network driver"
+-        depends on   MV_IPC_DRIVER
+-        default y
+-
+-config MV_DRAM_BASE
+-        hex "Base address of physical memory (= PHYS_OFFSET)"
+-        depends on   MV_AMP_ENABLE
+-        default 0x00000000
+-
+ config MV_DRAM_BASE_G0
+         hex "Image 0 - Base address of physical memory"
+         depends on   MV_AMP_ENABLE
+@@ -211,12 +196,6 @@ config MV_DRAM_BASE_G1
+         depends on   MV_AMP_ENABLE
+         default 0x20000000
+ 
+-
+-config MV_UART_PORT
+-        int "UART port for prints"
+-        depends on   MV_AMP_ENABLE
+-        default 0
+-
+ config MV_UART_PORT_G0
+         int "Image 0 - UART port for prints"
+         depends on   MV_AMP_ENABLE
+@@ -227,6 +206,41 @@ config MV_UART_PORT_G1
+         depends on   MV_AMP_ENABLE
+         default 1
+ 
++config MV_IPC_DRIVER
++        bool "Enable IPC basic driver"
++        depends on   MV_AMP_ENABLE
++        default y
++
++config MV_IPC_NET
++        bool "Enable IPC pseudo network driver"
++        depends on   MV_IPC_DRIVER
++        default y
++
++config MV_DRAM_BASE
++       hex  "AMP build usage - Do not change"
++       depends on   MV_AMP_ENABLE
++       default 0x00000000
++
++config MV_UART_PORT
++        int "AMP build usage - Do not change"
++        depends on   MV_AMP_ENABLE
++        default 0
++
++config MV_ZREL_ADDR
++	hex "AMP build usage - Do not change"
++        depends on   MV_AMP_ENABLE
++        default 0x00008000
++
++config MV_PARAM_PHYS
++        hex "AMP build usage - Do not change"
++        depends on   MV_AMP_ENABLE
++        default 0x00000100
++
++config MV_INITRD_PHYS
++        hex "AMP build usage - Do not change"
++        depends on   MV_AMP_ENABLE
++        default 0x00800000
++
+ endmenu
+ 
+ 
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c
+index a6e07be..5c9d2a2 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c
+@@ -47,7 +47,6 @@
+ #define IPC_NET_ALLOC_TIME(ptr)     (ptr + 1)
+ #define IPC_NET_DATA_PTR(ptr)       (ptr + 2)
+ 
+-static void set_multicast_list(struct net_device *dev);
+ static void ipc_net_tx_timeout( struct net_device *dev);
+ int ipc_net_start(struct net_device *dev);
+ int ipc_net_stop( struct net_device *dev);
+@@ -81,23 +80,12 @@ static const struct net_device_ops mv_ipc_netdev_ops = {
+ 	.ndo_open = ipc_net_start,
+ 	.ndo_stop = ipc_net_stop,
+ 	.ndo_start_xmit = ipc_net_xmit,
+-	.ndo_set_multicast_list = set_multicast_list,
+ 	.ndo_set_mac_address = ipc_net_set_address,
+ 	.ndo_change_mtu = NULL,
+ 	.ndo_tx_timeout = ipc_net_tx_timeout,
+ 	.ndo_get_stats  = ipc_net_get_stats,
+ };
+ 
+-
+-
+-/****************************************************************************************
+- * set_multicast_list()                                 				        		*
+- *   fake multicast ability function 													*
+- ***************************************************************************************/
+-static void set_multicast_list(struct net_device *dev)
+-{
+-}
+-
+ /****************************************************************************************
+  * ipc_net_tx_timeout()                                 				        		*
+  *   transmit timeout function function (dummy)											*
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c
+index 5bee482..ec38cc3 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c
+@@ -62,6 +62,7 @@ static int mv_eth_start(struct net_device *dev)
+ {
+ 	struct eth_port *priv = MV_ETH_PRIV(dev);
+ 	int group;
++	printk("Seif %s %d ..\n",__func__,__LINE__);
+ 	/* in default link is down */
+ 	netif_carrier_off(dev);
+ 
+-- 
+1.7.9.5
+

@@ -1,0 +1,40 @@
+From 0779ef198ca54ade70bfaf45544fb4f805985a3b Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Tue, 26 Jun 2012 16:30:22 +0300
+Subject: [PATCH 200/609] DSMP - fixing some compile time errors.
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/Kconfig                       |    2 +-
+ arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c |    2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/plat-armada/Kconfig b/arch/arm/plat-armada/Kconfig
+index 8375296..17ee416 100644
+--- a/arch/arm/plat-armada/Kconfig
++++ b/arch/arm/plat-armada/Kconfig
+@@ -183,7 +183,7 @@ menu "Armada AMP options"
+ 
+ config MV_AMP_ENABLE
+         bool "Enable AMP support"
+-	epends on   (ARMADA_XP || (MV78XX0)) && (!ARMADA_XP_REV_Z1) && (SMP) && (!MV_ETH_BM) && (!ARMADAXP_USE_IRQ_INDIRECT_MODE)
++	depends on   (ARMADA_XP || (MV78XX0)) && (!ARMADA_XP_REV_Z1) && (SMP) && (!MV_ETH_BM) && (!ARMADAXP_USE_IRQ_INDIRECT_MODE)
+ 	default n
+ 
+ config MV_IPC_DRIVER
+diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c
+index e2095ae..8e7bc04 100755
+--- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c
++++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c
+@@ -770,7 +770,7 @@ void mvNetaCpuDump(int port, int cpu, int rxTx)
+        static const char  *qType[] = {"RXQ", "TXQ"};
+ 
+        if (rxTx > 1 || rxTx < 0) {
+-		OsPrintf("Error - invalid queue type %d , valid values are 0 for TXQ or 1 for RXQ\n", rxTx);
++		mvOsPrintf("Error - invalid queue type %d , valid values are 0 for TXQ or 1 for RXQ\n", rxTx);
+ 		return;
+        }
+ 
+-- 
+1.7.9.5
+

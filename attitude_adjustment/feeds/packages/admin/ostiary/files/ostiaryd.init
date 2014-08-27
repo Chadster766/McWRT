@@ -1,0 +1,27 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2008-2012 OpenWrt.org
+
+START=85
+MYSERVICE=ostiaryd
+
+
+start() {
+    echo starting $MYSERVICE...
+    /usr/bin/$MYSERVICE
+    sleep 1
+    echo done
+}
+
+stop() {
+
+        if ps ax | grep -v grep | grep -v rc.common | grep $MYSERVICE> /dev/null
+        then
+                echo "stopping $MYSERVICE..."
+                pkill -9 $MYSERVICE
+                sleep 1
+                echo done
+        else
+                echo "$MYSERVICE is not running"
+        fi
+}
+

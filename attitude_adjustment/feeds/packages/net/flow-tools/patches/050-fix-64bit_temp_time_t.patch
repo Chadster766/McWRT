@@ -1,0 +1,41 @@
+diff --git a/lib/ftfile.c b/lib/ftfile.c
+index f25e849..ec17771 100644
+--- a/lib/ftfile.c
++++ b/lib/ftfile.c
+@@ -413,16 +413,17 @@ void ftfile_pathname(char *buf, int bsiz
+  int done, u_int32 ftime)
+ {
+   struct tm *tm;
++  time_t _t = (time_t) ftime;
+   char *prefix, dbuf[64];
+   long gmt_val;
+   char gmt_sign;
+   int tm_gmtoff;
+   
+-  if (!(tm = localtime ((time_t*)&ftime))) {
++  if (!(tm = localtime (&_t))) {
+     snprintf(buf, bsize, ".");
+   }
+ 
+-  tm_gmtoff = get_gmtoff(ftime);
++  tm_gmtoff = get_gmtoff(_t);
+ 
+   /* compute GMT offset */
+   if (tm_gmtoff >= 0) {
+@@ -502,6 +503,7 @@ void ftfile_pathname(char *buf, int bsiz
+ int ftfile_mkpath(u_int32 ftime, int nest)
+ {
+   struct tm *tm;
++  time_t _t = (time_t) ftime;
+   char buf[32];
+ 
+   /* no directories */
+@@ -512,7 +514,7 @@ int ftfile_mkpath(u_int32 ftime, int nes
+   if ((nest > 3) || (nest < -3))
+     return -1;
+ 
+-  if (!(tm = localtime ((time_t*)&ftime)))
++  if (!(tm = localtime (&_t)))
+     return -1;
+ 
+   if (nest == -1)

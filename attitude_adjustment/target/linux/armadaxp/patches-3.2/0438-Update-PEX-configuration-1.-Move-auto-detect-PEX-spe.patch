@@ -1,0 +1,682 @@
+From 613d5bb59b9d6c8bfc3e25162537e0456ec0dae9 Mon Sep 17 00:00:00 2001
+From: Eli Nidam <elini@marvell.com>
+Date: Thu, 29 Nov 2012 13:31:58 +0200
+Subject: [PATCH 438/609] Update PEX configuration 1. Move auto detect PEX
+ speed GEN1/2 to bin header 2. Move auto detect PEX
+ width X1/X4 to bin header 3. Remove duplicate code
+ of SERDES configuraton in u-boot (replace it with
+ new code read relevant configuration from SERDES
+ registers)
+
+Change-Id: I20ad8414cd285d1a2127c0a3a564cac286ba30b8
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/boardEnv/mvBoardEnvLib.c      |  142 +-----------------
+ .../armada_xp_family/boardEnv/mvBoardEnvLib.h      |    5 -
+ .../armada_xp_family/boardEnv/mvBoardEnvSpec.c     |   91 +-----------
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvLib.c        |  156 +++++++-------------
+ arch/arm/plat-armada/mv_hal/pex/mvPex.c            |    5 +-
+ arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h        |    1 +
+ 6 files changed, 60 insertions(+), 340 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+index ff0a788..fbcf267 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+@@ -2579,6 +2579,7 @@ MV_VOID mvBoardSerdesZ1ASupport(void)
+ {
+ 	gSerdesZ1AMode = 1;
+ }
++
+ /*******************************************************************************
+ * mvBoardSmiScanModeGet - Get Switch SMI scan mode
+ *
+@@ -2606,65 +2607,6 @@ MV_32 mvBoardSmiScanModeGet(MV_U32 switchIdx)
+ 
+ 	return BOARD_INFO(boardId)->pSwitchInfo[switchIdx].smiScanMode;
+ }
+-
+-/*******************************************************************************
+-* mvBoardIsSerdesConfigurationEnabled
+-*
+-* DESCRIPTION:
+-*       Check if Serdes configuration is enabled on this board.
+-*
+-* INPUT:
+-*       None.
+-*
+-* OUTPUT:
+-*       None.
+-*
+-* RETURN:
+-*       MV_STATUS - MV_OK, MV_ERROR.
+-*
+-*******************************************************************************/
+-MV_BOOL mvBoardIsSerdesConfigurationEnabled(void)
+-{
+-
+-	 MV_U32 boardId = mvBoardIdGet();
+-
+-	 if (!((boardId >= BOARD_ID_BASE) && (boardId < MV_MAX_BOARD_ID))) {
+-                mvOsPrintf("mvBoardIsSerdesConfigurationEnabled:Board unknown.\n");
+-                return MV_ERROR;
+-        }
+-	return (BOARD_INFO(boardId)->pBoardSerdesConfigValue->enableSerdesConfiguration);
+-}
+-
+-
+-/*******************************************************************************
+-* mvBoardSerdesConfigurationEnableSet
+-*
+-* DESCRIPTION:
+-*	Check if Serdes configuration is enabled on this board.
+-*
+-* INPUT:
+-*       None.
+-*
+-* OUTPUT:
+-*       None.
+-*
+-* RETURN:
+-*       MV_STATUS - MV_OK, MV_ERROR.
+-*
+-*******************************************************************************/
+-MV_STATUS  mvBoardSerdesConfigurationEnableSet(MV_BOOL enableSerdesConfiguration)
+-{
+-
+-	MV_U32 boardId = mvBoardIdGet();
+-	if (!((boardId >= BOARD_ID_BASE) && (boardId < MV_MAX_BOARD_ID))) {
+-		mvOsPrintf("mvBoardIsSerdesConfigurationEnabled:Board unknown.\n");
+-		return MV_ERROR;
+-        }
+-	BOARD_INFO(boardId)->pBoardSerdesConfigValue->enableSerdesConfiguration=enableSerdesConfiguration;
+-	return MV_OK;
+-}
+-
+-
+ /*******************************************************************************
+ * mvBoardSledCpuNumGet - Get board SERDES configuration
+ *
+@@ -2689,88 +2631,6 @@ MV_U32 mvBoardSledCpuNumGet(MV_VOID)
+ }
+ 
+ /*******************************************************************************
+-* mvBoardMppGet - Get board SERDES configuration
+-*
+-* DESCRIPTION:
+-*
+-* INPUT:
+-*
+-* OUTPUT:
+-*       None.
+-*
+-* RETURN:
+-*       SERDES configuration structure or NULL on error
+-*
+-*******************************************************************************/
+-MV_SERDES_CFG *mvBoardSerdesCfgGet(void)
+-{
+-	MV_U32 boardId;
+-	MV_U32 serdesCfg = 0; /* default */
+-	int pex0 = 1;
+-	int pex1 = 1;
+-
+-	MV_BOOL moduleConnected = mvBoardIsPexModuleConnected();
+-	MV_U16 pexMode = mvBoardPexModeGet();
+-
+-	switch (pexMode) {
+-	case 0:
+-		pex0 = 1;
+-		pex1 = 1;
+-		break;
+-	case 1:
+-		pex0 = 4;
+-		pex1 = 1;
+-		break;
+-	case 2:
+-		pex0 = 1;
+-		pex1 = 4;
+-		break;
+-	case 3:
+-		pex0 = 4;
+-		pex1 = 4;
+-		break;
+-	}
+-
+-	boardId = mvBoardIdGet();
+-
+-	switch (boardId) {
+-	case DB_88F78XX0_BP_ID:
+-		if (moduleConnected)
+-			serdesCfg = 1;
+-		/* If backword compatability for Z1A is needed */
+-		if (gSerdesZ1AMode)
+-			serdesCfg += 2;
+-		break;
+-	case RD_78460_SERVER_ID:
+-	case RD_78460_SERVER_REV2_ID:
+-		if (mvBoardSledCpuNumGet() > 0)
+-			serdesCfg = 1;
+-		break;
+-	case DB_88F78XX0_BP_REV2_ID:
+-		if ( (!moduleConnected) && (pex0 == 1)) /*if the module is not connected the PEX1 mode is not relevant*/
+-			serdesCfg = 0;
+-		if ( (moduleConnected) && (pex0 == 1) && (pex1 == 1))
+-			serdesCfg = 1;
+-		if ( (!moduleConnected) && (pex0 == 4))  /*if the module is not connected the PEX1 mode is not relevant*/
+-			serdesCfg = 2;
+-		if ( (moduleConnected) && (pex0 == 4) && (pex1 == 1))
+-			serdesCfg = 3;
+-		if ( (moduleConnected) && (pex0 == 1) && (pex1 == 4))
+-			serdesCfg = 4;
+-		if ( (moduleConnected) && (pex0 == 4) && (pex1 == 4))
+-			serdesCfg = 5;
+-		break;
+-	case RD_78460_NAS_ID:
+-		if (mvBoardIsSwitchModuleConnected())
+-			serdesCfg = 1;
+-		break;
+-	}
+-
+-	return &BOARD_INFO(boardId)->pBoardSerdesConfigValue[serdesCfg];
+-}
+-
+-
+-/*******************************************************************************
+ * mvBoardPexInfoGet - Get board PEX Info
+ *
+ * DESCRIPTION:
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
+index 50742b5..c8cffd4 100755
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
+@@ -298,8 +298,6 @@ typedef struct _boardInfo {
+ 	MV_BOARD_MODULE_TYPE_INFO *pBoardModTypeValue;
+ 	MV_U8 numBoardMppConfigValue;
+ 	MV_BOARD_MPP_INFO *pBoardMppConfigValue;
+-	MV_U8 numBoardSerdesConfigValue;
+-	MV_SERDES_CFG *pBoardSerdesConfigValue;
+ 	MV_U32 intsGppMaskLow;
+ 	MV_U32 intsGppMaskMid;
+ 	MV_U32 intsGppMaskHigh;
+@@ -444,9 +442,6 @@ MV_STATUS mvBoardTwsiMuxChannelSet(MV_U8 muxChNum);
+ MV_STATUS mvBoardTwsiReadByteThruMux(MV_U8 muxChNum, MV_U8 chNum, MV_TWSI_SLAVE *pTwsiSlave, MV_U8 *data);
+ MV_BOARD_MAC_SPEED mvBoardMacSpeedGet(MV_U32 ethPortNum);
+ MV_VOID mvBoardSerdesZ1ASupport(void);
+-MV_BOOL mvBoardIsSerdesConfigurationEnabled(void);
+-MV_STATUS  mvBoardSerdesConfigurationEnableSet(MV_BOOL enableSerdesconfig);
+-MV_SERDES_CFG *mvBoardSerdesCfgGet(void);
+ MV_BOARD_PEX_INFO *mvBoardPexInfoGet(void);
+ MV_STATUS mvBoardConfIdSet(MV_U16 conf);
+ MV_U16 mvBoardPexModeGet(MV_VOID);
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+index ea46f13..ddd8a45 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+@@ -181,15 +181,6 @@ MV_BOARD_MPP_INFO db88f78XX0InfoBoardMppConfigValue[] = {
+ 	} },
+ };
+ 
+-MV_SERDES_CFG db88f78XX0InfoBoardSerdesConfigValue[] = {
+-	/* Z1B */
+-	{MV_TRUE, 0x32221111, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED,PEX_BUS_MODE_X4, PEX_BUS_MODE_X4, 0x00000030},	/* Default */
+-	{MV_TRUE, 0x31211111, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_MODE_X1,PEX_BUS_MODE_X4, PEX_BUS_MODE_X4, 0x00000030},	/* PEX module */
+-	/* Z1A */
+-	{MV_TRUE, 0x32220000, 0x00000000, PEX_BUS_DISABLED, PEX_BUS_DISABLED,PEX_BUS_DISABLED, PEX_BUS_DISABLED, 0x00000030},	/* Default - Z1A */
+-	{MV_TRUE, 0x31210000, 0x00000000, PEX_BUS_DISABLED, PEX_BUS_MODE_X1,PEX_BUS_DISABLED, PEX_BUS_DISABLED, 0x00000030}	/* PEX module - Z1A */
+-};
+-
+ MV_BOARD_TDM_INFO	db88f78XX0Tdm880[]	= { {1}, {2} };
+ MV_BOARD_TDM_INFO	db88f78XX0Tdm792[]	= { {1}, {2}, {3}, {4}, {6}, {7} };
+ MV_BOARD_TDM_INFO	db88f78XX0Tdm3215[]	= { {1} };
+@@ -200,8 +191,6 @@ MV_BOARD_INFO db88f78XX0Info = {
+ 	.pBoardModTypeValue		= db88f78XX0InfoBoardModTypeInfo,
+ 	.numBoardMppConfigValue		= ARRSZ(db88f78XX0InfoBoardMppConfigValue),
+ 	.pBoardMppConfigValue		= db88f78XX0InfoBoardMppConfigValue,
+-	.numBoardSerdesConfigValue	= ARRSZ(db88f78XX0InfoBoardSerdesConfigValue),
+-	.pBoardSerdesConfigValue	= db88f78XX0InfoBoardSerdesConfigValue,
+ 	.intsGppMaskLow			= 0,
+ 	.intsGppMaskMid			= 0,
+ 	.intsGppMaskHigh		= 0,
+@@ -371,16 +360,6 @@ MV_BOARD_MPP_INFO db88f78XX0rev2InfoBoardMppConfigValue[] = {
+ 	} },
+ };
+ 
+-MV_SERDES_CFG db88f78XX0rev2InfoBoardSerdesConfigValue[] = {
+-	/* A0 */
+-	{MV_TRUE, 0x33221111, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED, PEX_BUS_MODE_X4, PEX_BUS_MODE_X4, 0x00000030},/* Default: No Pex module, PEX0 x1, disabled*/
+-	{MV_TRUE, 0x33211111, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_MODE_X1,  PEX_BUS_MODE_X4, PEX_BUS_MODE_X4, 0x00000030},/* Pex module, PEX0 x1, PEX1 x1*/
+-	{MV_TRUE, 0x33221111, 0x11111111, PEX_BUS_MODE_X4, PEX_BUS_DISABLED, PEX_BUS_MODE_X4, PEX_BUS_MODE_X4, 0x00000030},/* no Pex module, PEX0 x4, PEX1 disabled*/
+-	{MV_TRUE, 0x33211111, 0x11111111, PEX_BUS_MODE_X4, PEX_BUS_MODE_X1,  PEX_BUS_MODE_X4, PEX_BUS_MODE_X4, 0x00000030},/* Pex module, PEX0 x4, PEX1 x1*/
+-	{MV_TRUE, 0x11111111, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_MODE_X4,  PEX_BUS_MODE_X4, PEX_BUS_MODE_X4, 0x00000030},/* Pex module, PEX0 x1, PEX1 x4*/
+-	{MV_TRUE, 0x11111111, 0x11111111, PEX_BUS_MODE_X4, PEX_BUS_MODE_X4,  PEX_BUS_MODE_X4, PEX_BUS_MODE_X4, 0x00000030},/* Pex module, PEX0 x4, PEX1 x4*/
+-};
+-
+ MV_BOARD_TDM_INFO	db88f78XX0rev2Tdm880[]	= { {1}, {2} };
+ MV_BOARD_TDM_INFO	db88f78XX0rev2Tdm792[]	= { {1}, {2}, {3}, {4}, {6}, {7} };
+ MV_BOARD_TDM_INFO	db88f78XX0rev2Tdm3215[]	= { {1} };
+@@ -391,8 +370,6 @@ MV_BOARD_INFO db88f78XX0rev2Info = {
+ 	.pBoardModTypeValue		= db88f78XX0rev2InfoBoardModTypeInfo,
+ 	.numBoardMppConfigValue		= ARRSZ(db88f78XX0rev2InfoBoardMppConfigValue),
+ 	.pBoardMppConfigValue		= db88f78XX0rev2InfoBoardMppConfigValue,
+-	.numBoardSerdesConfigValue	= ARRSZ(db88f78XX0rev2InfoBoardSerdesConfigValue),
+-	.pBoardSerdesConfigValue	= db88f78XX0rev2InfoBoardSerdesConfigValue,
+ 	.intsGppMaskLow			= 0,
+ 	.intsGppMaskMid			= 0,
+ 	.intsGppMaskHigh		= 0,
+@@ -503,19 +480,12 @@ MV_BOARD_MPP_INFO rd78460nasInfoBoardMppConfigValue[] = {
+ 	} }
+ };
+ 
+-MV_SERDES_CFG rd78460nasInfoBoardSerdesConfigValue[] = {
+-	{MV_TRUE, 0x00223001, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED,PEX_BUS_MODE_X4, PEX_BUS_MODE_X4, 0x00000030},	/* Default */
+-	{MV_TRUE, 0x33320201, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED,PEX_BUS_MODE_X4, PEX_BUS_MODE_X4, 0x000000f4},	/* Switch module */
+-};
+-
+ MV_BOARD_INFO rd78460nasInfo = {
+ 	.boardName			= "RD-AXP-NAS rev 1.0",
+ 	.numBoardMppTypeValue		= ARRSZ(rd78460nasInfoBoardModTypeInfo),
+ 	.pBoardModTypeValue		= rd78460nasInfoBoardModTypeInfo,
+ 	.numBoardMppConfigValue		= ARRSZ(rd78460nasInfoBoardMppConfigValue),
+ 	.pBoardMppConfigValue		= rd78460nasInfoBoardMppConfigValue,
+-	.numBoardSerdesConfigValue	= ARRSZ(rd78460nasInfoBoardSerdesConfigValue),
+-	.pBoardSerdesConfigValue	= rd78460nasInfoBoardSerdesConfigValue,
+ 	.intsGppMaskLow			= 0,
+ 	.intsGppMaskMid			= 0,
+ 	.intsGppMaskHigh		= 0,
+@@ -615,19 +585,12 @@ MV_BOARD_MPP_INFO rd78460InfoBoardMppConfigValue[] = {
+ 	} }
+ };
+ 
+-MV_SERDES_CFG rd78460InfoBoardSerdesConfigValue[] = {
+-	{MV_TRUE, 0x22321111, 0x00000000, PEX_BUS_MODE_X4, PEX_BUS_DISABLED,PEX_BUS_DISABLED, PEX_BUS_DISABLED, 0x00000010},	/* CPU0 */
+-	{MV_TRUE, 0x00321111, 0x00000000, PEX_BUS_MODE_X4, PEX_BUS_DISABLED,PEX_BUS_DISABLED, PEX_BUS_DISABLED, 0x00000010}	/* CPU1-3 */
+-};
+-
+ MV_BOARD_INFO rd78460Info = {
+  .boardName				= "RD-78460-SERVER",
+  .numBoardMppTypeValue			= ARRSZ(rd78460InfoBoardModTypeInfo),
+  .pBoardModTypeValue			= rd78460InfoBoardModTypeInfo,
+  .numBoardMppConfigValue		= ARRSZ(rd78460InfoBoardMppConfigValue),
+  .pBoardMppConfigValue			= rd78460InfoBoardMppConfigValue,
+- .numBoardSerdesConfigValue		= ARRSZ(rd78460InfoBoardSerdesConfigValue),
+- .pBoardSerdesConfigValue		= rd78460InfoBoardSerdesConfigValue,
+  .intsGppMaskLow			= 0,
+  .intsGppMaskMid			= 0,
+  .intsGppMaskHigh			= 0,
+@@ -721,19 +684,12 @@ MV_BOARD_MPP_INFO rd78460ServerRev2InfoBoardMppConfigValue[] = {
+ 	} }
+ };
+ 
+-MV_SERDES_CFG rd78460ServerRev2InfoBoardSerdesConfigValue[] = {
+-	{MV_TRUE, 0x00321111, 0x00000000, PEX_BUS_MODE_X4, PEX_BUS_DISABLED,PEX_BUS_DISABLED, PEX_BUS_DISABLED, 0x00000010},	/* CPU0 */
+-	{MV_TRUE, 0x00321111, 0x00000000, PEX_BUS_MODE_X4, PEX_BUS_DISABLED,PEX_BUS_DISABLED, PEX_BUS_DISABLED, 0x00000010}	/* CPU1-3 */
+-};
+-
+ MV_BOARD_INFO rd78460ServerRev2Info = {
+  .boardName				= "RD-78460-SERVER-REV2",
+  .numBoardMppTypeValue			= ARRSZ(rd78460ServerRev2InfoBoardModTypeInfo),
+  .pBoardModTypeValue			= rd78460ServerRev2InfoBoardModTypeInfo,
+  .numBoardMppConfigValue		= ARRSZ(rd78460ServerRev2InfoBoardMppConfigValue),
+  .pBoardMppConfigValue			= rd78460ServerRev2InfoBoardMppConfigValue,
+- .numBoardSerdesConfigValue		= ARRSZ(rd78460ServerRev2InfoBoardSerdesConfigValue),
+- .pBoardSerdesConfigValue		= rd78460ServerRev2InfoBoardSerdesConfigValue,
+  .intsGppMaskLow			= 0,
+  .intsGppMaskMid			= 0,
+  .intsGppMaskHigh			= 0,
+@@ -841,11 +797,6 @@ MV_BOARD_MPP_INFO db78X60pcacInfoBoardMppConfigValue[] = {
+ 	} }
+ };
+ 
+-MV_SERDES_CFG db78X60pcacInfoBoardSerdesConfigValue[] = {
+-	 {MV_TRUE, 0x22321111, 0x00000000, PEX_BUS_MODE_X4, PEX_BUS_DISABLED,PEX_BUS_DISABLED, PEX_BUS_DISABLED, 0x00000010} /* Default */
+-};
+-
+-
+ MV_BOARD_TDM_INFO	db78X60pcacTdm880[]		= { {1}, {2} };
+ MV_BOARD_TDM_INFO	db78X60pcacTdm792[]		= { {1}, {2}, {3}, {4}, {6}, {7} };
+ MV_BOARD_TDM_INFO	db78X60pcacTdm3215[]	= { {1} };
+@@ -856,8 +807,6 @@ MV_BOARD_INFO db78X60pcacInfo = {
+ 	.pBoardModTypeValue		= db78X60pcacInfoBoardModTypeInfo,
+ 	.numBoardMppConfigValue		= ARRSZ(db78X60pcacInfoBoardMppConfigValue),
+ 	.pBoardMppConfigValue		= db78X60pcacInfoBoardMppConfigValue,
+-	.numBoardSerdesConfigValue	= ARRSZ(db78X60pcacInfoBoardSerdesConfigValue),
+-	.pBoardSerdesConfigValue	= db78X60pcacInfoBoardSerdesConfigValue,
+ 	.intsGppMaskLow			= 0,
+ 	.intsGppMaskMid			= 0,
+ 	.intsGppMaskHigh		= 0,
+@@ -960,18 +909,12 @@ MV_BOARD_MPP_INFO db78X60pcacrev2InfoBoardMppConfigValue[] = {
+ 	} }
+ };
+ 
+-MV_SERDES_CFG db78X60pcacrev2InfoBoardSerdesConfigValue[] = {
+-	 {MV_TRUE, 0x23321111, 0x00000000, PEX_BUS_MODE_X4, PEX_BUS_DISABLED, PEX_BUS_DISABLED, PEX_BUS_DISABLED, 0x00000010} /* Default */
+-};
+-
+ MV_BOARD_INFO db78X60pcacrev2Info = {
+ 	.boardName			= "DB-78460-PCAC-REV2",
+ 	.numBoardMppTypeValue		= ARRSZ(db78X60pcacrev2InfoBoardModTypeInfo),
+ 	.pBoardModTypeValue		= db78X60pcacrev2InfoBoardModTypeInfo,
+ 	.numBoardMppConfigValue		= ARRSZ(db78X60pcacrev2InfoBoardMppConfigValue),
+ 	.pBoardMppConfigValue		= db78X60pcacrev2InfoBoardMppConfigValue,
+-	.numBoardSerdesConfigValue	= ARRSZ(db78X60pcacrev2InfoBoardSerdesConfigValue),
+-	.pBoardSerdesConfigValue	= db78X60pcacrev2InfoBoardSerdesConfigValue,
+ 	.intsGppMaskLow			= 0,
+ 	.intsGppMaskMid			= 0,
+ 	.intsGppMaskHigh		= 0,
+@@ -1038,10 +981,10 @@ MV_BOARD_TWSI_INFO	fpga88f78XX0InfoBoardTwsiDev[] = {
+ 
+ MV_BOARD_MAC_INFO fpga88f78XX0InfoBoardMacInfo[] = {
+ 	/* {{MV_BOARD_MAC_SPEED	boardMacSpeed, MV_U8 boardEthSmiAddr}} */
+-	{BOARD_MAC_SPEED_AUTO, 0x1,0x0},
+-	{BOARD_MAC_SPEED_AUTO, 0x2,0x0},
+-	{BOARD_MAC_SPEED_AUTO, 0x3,0x0},
+-	{BOARD_MAC_SPEED_AUTO, 0x4,0x0}
++	{BOARD_MAC_SPEED_AUTO, 0x1,0x0,0x0},
++	{BOARD_MAC_SPEED_AUTO, 0x2,0x0,0x0},
++	{BOARD_MAC_SPEED_AUTO, 0x3,0x0,0x0},
++	{BOARD_MAC_SPEED_AUTO, 0x4,0x0,0x0}
+ };
+ 
+ MV_BOARD_MODULE_TYPE_INFO fpga88f78XX0InfoBoardModTypeInfo[] = {
+@@ -1077,10 +1020,6 @@ MV_BOARD_MPP_INFO fpga88f78XX0InfoBoardMppConfigValue[] = {
+ 	} }
+ };
+ 
+-MV_SERDES_CFG fpga88f78XX0InfoBoardSerdesConfigValue[] = {
+-	{MV_TRUE, 0x00000000, 0x00000000, PEX_BUS_DISABLED, PEX_BUS_DISABLED, PEX_BUS_DISABLED, PEX_BUS_DISABLED, 0x00000000} /* No PEX in FPGA */
+-};
+-
+ MV_BOARD_TDM_INFO	fpga88f78XX0Tdm880[]	= { {1}, {2} };
+ MV_BOARD_TDM_INFO	fpga88f78XX0Tdm792[]	= { {1}, {2}, {3}, {4}, {6}, {7} };
+ MV_BOARD_TDM_INFO	fpga88f78XX0Tdm3215[]	= { {1} };
+@@ -1091,8 +1030,6 @@ MV_BOARD_INFO fpga88f78XX0Info = {
+ 	.pBoardModTypeValue		= fpga88f78XX0InfoBoardModTypeInfo,
+ 	.numBoardMppConfigValue		= ARRSZ(fpga88f78XX0InfoBoardMppConfigValue),
+ 	.pBoardMppConfigValue		= fpga88f78XX0InfoBoardMppConfigValue,
+-	.numBoardSerdesConfigValue	= ARRSZ(fpga88f78XX0InfoBoardSerdesConfigValue),
+-	.pBoardSerdesConfigValue	= fpga88f78XX0InfoBoardSerdesConfigValue,
+ 	.intsGppMaskLow			= 0,
+ 	.intsGppMaskMid			= 0,
+ 	.intsGppMaskHigh		= 0,
+@@ -1201,11 +1138,6 @@ MV_BOARD_MPP_INFO db78X60amcInfoBoardMppConfigValue[] = {
+ 	} }
+ };
+ 
+-MV_SERDES_CFG db78X60amcInfoBoardSerdesConfigValue[] = {
+-	 {MV_TRUE, 0x23111111, 0x11111111, PEX_BUS_MODE_X4, PEX_BUS_MODE_X1, PEX_BUS_MODE_X4, PEX_BUS_MODE_X4, 0x00000030} /* Default */
+-};
+-
+-
+ MV_BOARD_TDM_INFO	db78X60amcTdm880[]	= {};
+ MV_BOARD_TDM_INFO	db78X60amcTdm792[]	= {};
+ MV_BOARD_TDM_INFO	db78X60amcTdm3215[]	= {};
+@@ -1216,8 +1148,6 @@ MV_BOARD_INFO db78X60amcInfo = {
+ 	.pBoardModTypeValue		= db78X60amcInfoBoardModTypeInfo,
+ 	.numBoardMppConfigValue		= ARRSZ(db78X60amcInfoBoardMppConfigValue),
+ 	.pBoardMppConfigValue		= db78X60amcInfoBoardMppConfigValue,
+-	.numBoardSerdesConfigValue	= ARRSZ(db78X60amcInfoBoardSerdesConfigValue),
+-	.pBoardSerdesConfigValue	= db78X60amcInfoBoardSerdesConfigValue,
+ 	.intsGppMaskLow			= 0,
+ 	.intsGppMaskMid			= 0,
+ 	.intsGppMaskHigh		= 0,
+@@ -1329,18 +1259,12 @@ MV_BOARD_MPP_INFO rd78460gpInfoBoardMppConfigValue[] = {
+ 	} }
+ };
+ 
+-MV_SERDES_CFG rd78460gpInfoBoardSerdesConfigValue[] = {
+-	{MV_TRUE, 0x00223001, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED,PEX_BUS_MODE_X4, PEX_BUS_MODE_X4, 0x00000030},	/* Default */
+-};
+-
+ MV_BOARD_INFO rd78460gpInfo = {
+ 	.boardName			= "RD-AXP-GP rev 1.0",
+ 	.numBoardMppTypeValue		= ARRSZ(rd78460gpInfoBoardModTypeInfo),
+ 	.pBoardModTypeValue		= rd78460gpInfoBoardModTypeInfo,
+ 	.numBoardMppConfigValue		= ARRSZ(rd78460gpInfoBoardMppConfigValue),
+ 	.pBoardMppConfigValue		= rd78460gpInfoBoardMppConfigValue,
+-	.numBoardSerdesConfigValue	= ARRSZ(rd78460gpInfoBoardSerdesConfigValue),
+-	.pBoardSerdesConfigValue	= rd78460gpInfoBoardSerdesConfigValue,
+ 	.intsGppMaskLow			= 0,
+ 	.intsGppMaskMid			= 0,
+ 	.intsGppMaskHigh		= 0,
+@@ -1450,19 +1374,12 @@ MV_BOARD_MPP_INFO rd78460customerInfoBoardMppConfigValue[] = {
+ 	} }
+ };
+ 
+-MV_SERDES_CFG rd78460customerInfoBoardSerdesConfigValue[] = {
+-	{MV_TRUE, 0x00223001, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED,PEX_BUS_MODE_X4, PEX_BUS_MODE_X4, 0x00000030},	/* Default */
+-	{MV_TRUE, 0x33320201, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED,PEX_BUS_MODE_X4, PEX_BUS_MODE_X4, 0x00000030},	/* Switch module */
+-};
+-
+ MV_BOARD_INFO rd78460customerInfo = {
+ 	.boardName			= "RD-AXP-CUSTOMER",
+ 	.numBoardMppTypeValue		= ARRSZ(rd78460customerInfoBoardModTypeInfo),
+ 	.pBoardModTypeValue		= rd78460customerInfoBoardModTypeInfo,
+ 	.numBoardMppConfigValue		= ARRSZ(rd78460customerInfoBoardMppConfigValue),
+ 	.pBoardMppConfigValue		= rd78460customerInfoBoardMppConfigValue,
+-	.numBoardSerdesConfigValue	= ARRSZ(rd78460customerInfoBoardSerdesConfigValue),
+-	.pBoardSerdesConfigValue	= rd78460customerInfoBoardSerdesConfigValue,
+ 	.intsGppMaskLow			= 0,
+ 	.intsGppMaskMid			= 0,
+ 	.intsGppMaskHigh		= 0,
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
+index 09deea4..4315530 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
+@@ -2022,13 +2022,15 @@ static const MV_U8 serdesCfg[][8] = SERDES_CFG;
+ *******************************************************************************/
+ MV_STATUS mvCtrlSerdesPhyConfig(MV_VOID)
+ {
++	MV_U32		socCtrlReg, RegX4, serdesLine0_7;
+ 	MV_U32		serdesLineCfg;
+ 	MV_U8		serdesLineNum;
+-	MV_U8		pexUnit, pexLineNum;
++	MV_U8		pexIf;
++	MV_U8		pexUnit;
++	MV_STATUS	status = MV_OK;
++	MV_U32 		pexIfNum = mvCtrlPexMaxIfGet();
+ 	MV_U8		maxSerdesLines = mvCtrlSerdesMaxLinesGet();
+-	MV_SERDES_CFG	*pSerdesInfo = mvBoardSerdesCfgGet();
+ 	MV_BOARD_PEX_INFO 	*boardPexInfo = mvBoardPexInfoGet();
+-	MV_STATUS	status = MV_OK;
+ 
+ /* this is a mapping of the final power management clock gating control register value @ 0x18220.*/
+ 	MV_U32	powermngmntctrlregmap = 0x0;
+@@ -2038,120 +2040,62 @@ MV_STATUS mvCtrlSerdesPhyConfig(MV_VOID)
+ 	if (maxSerdesLines == 0)
+ 		return MV_OK;
+ 
+-	if (pSerdesInfo == NULL) {
+-		DB(mvOsPrintf("%s: Error reading SERDES configuration!\n", __func__));
+-		return MV_ERROR;
+-	}
+-
+ 	memset(boardPexInfo, 0, sizeof(MV_BOARD_PEX_INFO));
++	socCtrlReg = MV_REG_READ(SOC_CTRL_REG);
++	RegX4 = MV_REG_READ(GEN_PURP_RES_2_REG);
++	boardPexInfo->pexUnitCfg[0].pexCfg = ((RegX4 & 0x0F) == 0x0F) ? PEX_BUS_MODE_X4: PEX_BUS_MODE_X1;
++	boardPexInfo->pexUnitCfg[1].pexCfg = ((RegX4 & 0x0F0) == 0x0F0) ? PEX_BUS_MODE_X4: PEX_BUS_MODE_X1;
++	boardPexInfo->pexUnitCfg[2].pexCfg = ((RegX4 & 0x0F00) == 0x0F00) ? PEX_BUS_MODE_X4: PEX_BUS_MODE_X1;
++	boardPexInfo->pexUnitCfg[3].pexCfg = ((RegX4 & 0x0F000) == 0x0F000) ? PEX_BUS_MODE_X4: PEX_BUS_MODE_X1;
+ 
+ 	/* Prepare PHY parameters for each step according to  MUX selection */
+-	for (serdesLineNum = 0; serdesLineNum < maxSerdesLines; serdesLineNum++) {
++	for (pexIf = 0; pexIf < pexIfNum; pexIf++) {
+ 		/* for each serdes lane*/
+-		MV_U8	sgmiiPort = 0;
+-
+-		if (serdesLineNum < 8)
+-			serdesLineCfg = (pSerdesInfo->serdesLine0_7 >> (serdesLineNum << 2)) & 0xF;
+-		else
+-			serdesLineCfg = (pSerdesInfo->serdesLine8_15 >> ((serdesLineNum - 8) << 2)) & 0xF;
+-
+-		if (serdesLineCfg == serdesCfg[serdesLineNum][SERDES_UNIT_PEX]) {
+-			pexUnit    = serdesLineNum >> 2;
+-			pexLineNum = serdesLineNum % 4;
+-
+-			/* Map the PCI-E interfaces according to their HW mapping
+-			   Map PCI-E virtual intrefaces in an array where we have information about
+-			   every interface (e.g. HW mapping, x1,x4,x8 ( disabled) .. )
+-			*/
+-			switch (pexUnit) {
+-			case 0:
+-				boardPexInfo->pexUnitCfg[pexUnit].pexCfg = pSerdesInfo->pex0Mod;
+-				break;
+-			case 1:
+-				boardPexInfo->pexUnitCfg[pexUnit].pexCfg = pSerdesInfo->pex1Mod;
+-				break;
+-			case 2:
+-				boardPexInfo->pexUnitCfg[pexUnit].pexCfg = pSerdesInfo->pex2Mod;
+-				break;
+-			case 3:
+-				boardPexInfo->pexUnitCfg[pexUnit].pexCfg = pSerdesInfo->pex3Mod;
+-				break;
+-			}
+-			if ((pexUnit < 2) && (boardPexInfo->pexUnitCfg[pexUnit].pexCfg == PEX_BUS_MODE_X1)) {
+-
+-				boardPexInfo->pexMapping[boardPexInfo->boardPexIfNum] = pexUnit * 4 + pexLineNum;
+-				boardPexInfo->boardPexIfNum++;
+-				boardPexInfo->pexUnitCfg[pexUnit].pexLaneStat[pexLineNum] = 0x1;
+-				powermngmntctrlregmap = powermngmntctrlregmap | (0x1<<(serdesLineNum+5));
+-			} else if ((pexUnit < 4) &&
+-				(boardPexInfo->pexUnitCfg[pexUnit].pexCfg == PEX_BUS_MODE_X4) &&
+-				(pexLineNum == 0)) {
+-
+-				switch (pexUnit) {
+-				case 0:
+-				case 1:
+-					boardPexInfo->pexMapping[boardPexInfo->boardPexIfNum] = pexUnit*4 + pexLineNum;
+-					powermngmntctrlregmap = powermngmntctrlregmap | (0x1 << (serdesLineNum+5));
+-					break;
+-				case 2:
+-				case 3:
+-					boardPexInfo->pexMapping[boardPexInfo->boardPexIfNum] = PEX2_0x4 + (pexUnit - 2);
+-					powermngmntctrlregmap = powermngmntctrlregmap | (0x1 << (pexUnit+24));
+-					break;
+-				}
+-
++		pexUnit    = (pexIf<9)? (pexIf >> 2) : 3;
++		if ((socCtrlReg & (1<< pexUnit)) == 0){
++			boardPexInfo->pexUnitCfg[pexUnit].pexCfg = PEX_BUS_DISABLED;
++		   continue;
++		   }
++		   boardPexInfo->pexMapping[boardPexInfo->boardPexIfNum] = pexIf;
+ 				boardPexInfo->boardPexIfNum++;
++		   boardPexInfo->pexUnitCfg[pexUnit].pexLaneStat[pexIf] = 0x1;
++		   powermngmntctrlregmap = powermngmntctrlregmap | (0x1<<(pexIf+5));
++		   if (pexIf < 8) {
++			   if (boardPexInfo->pexUnitCfg[pexUnit].pexCfg == PEX_BUS_MODE_X4){
++				   powermngmntctrlregmap |= (0xf<<(pexIf+5));
++				   pexIf += 3;
++			   }
++			   else
++				   powermngmntctrlregmap |= (0x1<<(pexIf+5));
++		   }
++		   else
++			   powermngmntctrlregmap |= (0x1<<(18+pexIf));
++	}
++	serdesLine0_7 = MV_REG_READ(SERDES_LINE_MUX_REG_0_7);
+ 
+-			} else if ((pexUnit == 3) &&
+-				(pSerdesInfo->pex3Mod == PEX_BUS_MODE_X8) &&
+-				(pexLineNum == 0)) {
+-
+-				boardPexInfo->pexMapping[boardPexInfo->boardPexIfNum] = PEX3_0x4;
+-				boardPexInfo->boardPexIfNum++;
+-			}
+-
+-			/* Needed for PEX_PHY_ACCESS_REG macro */
+-			if ((serdesLineNum > 7) && (pSerdesInfo->pex3Mod == PEX_BUS_MODE_X8))
+-				pexUnit = 3; /* lines 8 - 15 are belong to PEX3 in x8 mode */
++	for (serdesLineNum = 0; serdesLineNum < 8; serdesLineNum++) {
+ 
+-		} else if (serdesLineCfg == serdesCfg[serdesLineNum][SERDES_UNIT_SATA]) {
++		serdesLineCfg =(serdesLine0_7 >> (serdesLineNum << 2)) & 0xF;
+ 
+-			MV_U8	sataPort;
++		if (serdesLineCfg == serdesCfg[serdesLineNum][SERDES_UNIT_SATA]) {
+ 
+-			if ((serdesLineNum == 4) || (serdesLineNum == 6)) {
+-				sataPort = 0;
+-				powermngmntctrlregmap = powermngmntctrlregmap | PMC_SATASTOPCLOCK_MASK(sataPort);
+-			} else if (serdesLineNum == 5) {
+-				sataPort = 1;
+-				powermngmntctrlregmap = powermngmntctrlregmap | PMC_SATASTOPCLOCK_MASK(sataPort);
+-			} else
++			if ((serdesLineNum == 4) || (serdesLineNum == 6))
++				powermngmntctrlregmap |= PMC_SATASTOPCLOCK_MASK(0);
++			else if (serdesLineNum == 5)
++				powermngmntctrlregmap |= PMC_SATASTOPCLOCK_MASK(1);
++			else
+ 				goto err_cfg;
+ 
+-		} else {
+-
+-			if (serdesLineCfg == serdesCfg[serdesLineNum][SERDES_UNIT_SGMII0]) {
+-				sgmiiPort = 0;
+-				powermngmntctrlregmap = powermngmntctrlregmap | PMC_GESTOPCLOCK_MASK(sgmiiPort);
+-			} else if (serdesLineCfg == serdesCfg[serdesLineNum][SERDES_UNIT_SGMII1]) {
+-				sgmiiPort = 1;
+-				powermngmntctrlregmap = powermngmntctrlregmap | PMC_GESTOPCLOCK_MASK(sgmiiPort);
+-			} else if (serdesLineCfg == serdesCfg[serdesLineNum][SERDES_UNIT_SGMII2]) {
+-				sgmiiPort = 2;
+-				powermngmntctrlregmap = powermngmntctrlregmap | PMC_GESTOPCLOCK_MASK(sgmiiPort);
+-			} else if (serdesLineCfg == serdesCfg[serdesLineNum][SERDES_UNIT_SGMII3]) {
+-				sgmiiPort = 3;
+-				powermngmntctrlregmap = powermngmntctrlregmap | PMC_GESTOPCLOCK_MASK(sgmiiPort);
+-			} else if (serdesLineCfg == serdesCfg[serdesLineNum][SERDES_UNIT_QSGMII]) {
+-				sgmiiPort = 0;
+-				powermngmntctrlregmap = powermngmntctrlregmap | \
+-										PMC_GESTOPCLOCK_MASK(0) | PMC_GESTOPCLOCK_MASK(1) | \
+-										PMC_GESTOPCLOCK_MASK(2) | PMC_GESTOPCLOCK_MASK(3);
+-			} else if (serdesLineCfg == serdesCfg[serdesLineNum][SERDES_UNIT_UNCONNECTED])
+-				continue;
+-
+-
+-		}
+-
++		} else if (serdesLineCfg == serdesCfg[serdesLineNum][SERDES_UNIT_SGMII0])
++				powermngmntctrlregmap |= PMC_GESTOPCLOCK_MASK(0);
++			else if (serdesLineCfg == serdesCfg[serdesLineNum][SERDES_UNIT_SGMII1])
++				powermngmntctrlregmap |=  PMC_GESTOPCLOCK_MASK(1);
++			else if (serdesLineCfg == serdesCfg[serdesLineNum][SERDES_UNIT_SGMII2])
++				powermngmntctrlregmap |= PMC_GESTOPCLOCK_MASK(2);
++			else if (serdesLineCfg == serdesCfg[serdesLineNum][SERDES_UNIT_SGMII3])
++				powermngmntctrlregmap |= PMC_GESTOPCLOCK_MASK(3);
++			else if (serdesLineCfg == serdesCfg[serdesLineNum][SERDES_UNIT_QSGMII])
++				powermngmntctrlregmap |= PMC_GESTOPCLOCK_MASK(0) | PMC_GESTOPCLOCK_MASK(1) | PMC_GESTOPCLOCK_MASK(2) | PMC_GESTOPCLOCK_MASK(3);
+ 	}
+ 
+ #if defined(MV_INCLUDE_CLK_PWR_CNTRL)
+diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPex.c b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
+index 24930e4..f0113f1 100755
+--- a/arch/arm/plat-armada/mv_hal/pex/mvPex.c
++++ b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
+@@ -200,7 +200,10 @@ MV_U32 mvPexModeGet(MV_U32 pexIf, MV_PEX_MODE *pexMode)
+ 	}
+ 
+ 	/* Check if we have link */
+-	if (MV_REG_READ(PEX_STATUS_REG(pexIf)) & PXSR_DL_DOWN) {
++/*	if (MV_REG_READ(PEX_STATUS_REG(pexIf)) & PXSR_DL_DOWN) { */
++
++	if ((MV_REG_READ(PEX_DBG_STATUS_REG(pexIf)) & 0x7f) != 0x7E) {
++
+ 		pexMode->pexLinkUp = MV_FALSE;
+ 
+ 		/* If there is no link, the auto negotiation data is worthless */
+diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h b/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h
+index 869bdbd..040c9dd 100755
+--- a/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h
++++ b/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h
+@@ -185,6 +185,7 @@ extern "C" {
+ #define PEX_TL_CTRL_REG(pexIf)				(MV_PEX_IF_REGS_BASE(pexIf) - (pexIf)*0x10000)
+ #define PEX_RAM_PARITY_CTRL_REG(pexIf) 			((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A50)
+ #define PEX_DBG_CTRL_REG(pexIf) 			((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A60)
++#define PEX_DBG_STATUS_REG(pexIf)           ((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A64)
+ 
+ #define PEX_LINK_CTRL_STATUS_REG(pexIf) 		((MV_PEX_IF_REGS_BASE(pexIf)) + 0x70)
+ 
+-- 
+1.7.9.5
+

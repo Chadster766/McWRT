@@ -1,0 +1,47 @@
+From 49bb22f2ca6d507c65f688fa7a1ee7bf33b59dde Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Sun, 7 Apr 2013 10:16:15 +0300
+Subject: [PATCH 587/609] XP,DSMP: Fix booting of the secondary CPUs after PM
+ related changes to the SMP
+
+- Primary CPU is configuring temporary page tables and other initial data
+  for the secondary CPUs to use during boot but the secondary CPUs were unable
+  to read that data after waking up as it was located in the primary's CPU
+  cache.
+  Flushing primary CPU's cache just before waking up other CPUs is necassary to
+  maintain memory consistency in the system during the initial stage of the SMP
+  initialization.
+
+Signed-off-by: Zbigniew Bodek <zbb@semihalf.com>
+
+Bug fix for BTS #230, #261, #308, #309
+
+Change-Id: I466248716402b91a768ff277351821ad3e5de70d
+Signed-off-by: Marcin Wojtas <mw@semihalf.com>
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1443
+Reviewed-by: Star_Automation <star@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/platsmp.c |    5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/arch/arm/mach-armadaxp/platsmp.c b/arch/arm/mach-armadaxp/platsmp.c
+index 87a0593..3d266ac 100644
+--- a/arch/arm/mach-armadaxp/platsmp.c
++++ b/arch/arm/mach-armadaxp/platsmp.c
+@@ -114,6 +114,11 @@ int  boot_secondary(unsigned int cpu, struct task_struct *idle)
+ 
+ 	/* send ipi to wake cpu in case it is in offline state */
+ 	axp_smp_cross_call(cpumask_of(cpu), 0);
++	/*
++	 * Make memory consistent for secondary CPUs
++	 * before waking them up and enabling memory coherency.
++	 */
++	flush_cache_all();
+ 
+ 	/* Set resume control and address */
+ 	MV_REG_WRITE(AXP_CPU_RESUME_CTRL_REG, 0x0);
+-- 
+1.7.9.5
+

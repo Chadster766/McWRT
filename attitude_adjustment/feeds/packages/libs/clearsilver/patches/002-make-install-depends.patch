@@ -1,0 +1,99 @@
+--- a/Makefile
++++ b/Makefile
+@@ -35,7 +35,7 @@ cs: output_dir
+ 	  fi; \
+ 	done
+ 
+-install: all
++install:
+ 	./mkinstalldirs $(DESTDIR)$(cs_includedir)
+ 	./mkinstalldirs $(DESTDIR)$(bindir)
+ 	./mkinstalldirs $(DESTDIR)$(libdir)
+--- a/cgi/Makefile
++++ b/cgi/Makefile
+@@ -38,7 +38,7 @@ $(STATIC_CSO): $(STATIC_OBJ) $(DEP_LIBS)
+ $(CGICSTEST_EXE): $(CGICSTEST_OBJ) $(DEP_LIBS)
+ 	$(LD) $@ $(CGICSTEST_OBJ) $(LDFLAGS) $(DLIBS) $(LIBS)
+ 
+-install: all
++install:
+ 	$(NEOTONIC_ROOT)/mkinstalldirs $(DESTDIR)$(cs_includedir)/cgi
+ 	$(INSTALL) -m 644 cgi.h $(DESTDIR)$(cs_includedir)/cgi
+ 	$(INSTALL) -m 644 cgiwrap.h $(DESTDIR)$(cs_includedir)/cgi
+--- a/cs/Makefile
++++ b/cs/Makefile
+@@ -89,7 +89,7 @@ test: $(CSTEST_EXE) $(CS_TESTS)
+ 	@touch test
+ 	@echo "Passed"
+ 	
+-install: all
++install:
+ 	$(NEOTONIC_ROOT)/mkinstalldirs $(DESTDIR)$(cs_includedir)/cs
+ 	$(INSTALL) -m 644 cs.h $(DESTDIR)$(cs_includedir)/cs
+ 	$(INSTALL) -m 644 $(CS_LIB) $(DESTDIR)$(libdir)
+--- a/dso/Makefile
++++ b/dso/Makefile
+@@ -21,7 +21,7 @@ $(NEO_SO): $(NEO_STATIC_LIBS) $(DEP_LIBS
+ 
+ #	$(LDSHARED) -o $@ $(LDFLAGS) -Wl,-whole-archive $(DLIBS)
+ 
+-install: all
++install:
+ 	$(NEOTONIC_ROOT)/mkinstalldirs $(DESTDIR)$(PYTHON_SITE)
+ 	$(INSTALL) $(TARGETS) $(DESTDIR)$(PYTHON_SITE)
+ 
+--- a/java-jni/Makefile
++++ b/java-jni/Makefile
+@@ -74,7 +74,7 @@ $(NEO_UTIL_SO): $(NEO_UTIL_JAVA_JAR) $(N
+ 	$(LDSHARED) -o $@ $(LDFLAGS) $(NEO_UTIL_OBJ) $(LIBS)
+ 
+ # I guess we'll just stick the .jar file in the lib directory
+-install: all
++install:
+ 	$(INSTALL) $(NEO_UTIL_SO) $(DESTDIR)$(libdir)
+ 	$(INSTALL) $(NEO_UTIL_JAVA_JAR) $(DESTDIR)$(libdir)
+ 
+--- a/mod_ecs/Makefile
++++ b/mod_ecs/Makefile
+@@ -19,7 +19,7 @@ all: $(TARGETS)
+ $(MOD_ECS_SO): $(MOD_ECS_SRC) $(DEP_LIBS)
+ 	$(APXS) -c -o $@ $(MOD_ECS_SRC)
+ 
+-install: all
++install:
+ 	$(NEOTONIC_ROOT)/mkinstalldirs $(DESTDIR)$(libexecdir)
+ 	$(INSTALL) $(MOD_ECS_SO) $(DESTDIR)$(libexecdir)
+ 
+--- a/python/Makefile
++++ b/python/Makefile
+@@ -40,7 +40,7 @@ $(NEO_UTIL_PYD): $(NEO_UTIL_OBJ) $(DEP_L
+ 		--target=i386-mingw32 \
+ 		$(LDFLAGS) $(PYTHON_LIB) $(LIBS)
+ 
+-install: all
++install:
+ 	$(NEOTONIC_ROOT)/mkinstalldirs $(DESTDIR)$(PYTHON_SITE)
+ 	$(INSTALL) $(TARGETS) $(DESTDIR)$(PYTHON_SITE)
+ 
+--- a/ruby/Makefile
++++ b/ruby/Makefile
+@@ -40,7 +40,7 @@ testrb: ext/hdf/hdf.so
+ 	@echo  "Passed ruby test"
+ 
+ 
+-install: all
++install:
+ 	$(RUBY) install.rb install
+ 
+ clean:
+--- a/util/Makefile
++++ b/util/Makefile
+@@ -21,7 +21,7 @@ $(UTL_LIB): $(UTL_OBJ)
+ 	$(AR) $@ $(UTL_OBJ)
+ 	$(RANLIB) $@
+ 
+-install: all
++install:
+ 	$(NEOTONIC_ROOT)/mkinstalldirs $(DESTDIR)$(cs_includedir)/util
+ 	$(INSTALL) -m 644 $(UTL_HDR) $(DESTDIR)$(cs_includedir)/util
+ 	$(INSTALL) -m 644 $(UTL_LIB) $(DESTDIR)$(libdir)

@@ -1,0 +1,37 @@
+From fa3c7bf171cf1697f26df1169ccd1a13bb8b0afd Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Mon, 25 Feb 2013 13:59:51 +0200
+Subject: [PATCH 535/609] sflash: Define writebuffer size for MTD subsystem to
+ use.
+
+- writebuffer size has to be defined in order to mount SPI flash partition using
+  MTD subsystem device.
+  Set minimal value of 1.
+
+Signed-off-by: Zbigniew Bodek <zbb@semihalf.com>
+
+Change-Id: Ia917205c7f40f45f43daadbe4e9c61074ada7fe4
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1183
+Reviewed-by: Lior Amsalem <alior@marvell.com>
+Reviewed-by: Maen Suleiman <maen@marvell.com>
+Tested-by: Maen Suleiman <maen@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../arm/plat-armada/mv_drivers_lsp/mv_mtd/sflash.c |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/sflash.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/sflash.c
+index e61b0e0..03cd33b 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/sflash.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/sflash.c
+@@ -174,6 +174,7 @@ static struct mtd_info *sflash_probe(struct map_info *map)
+ 	mtd->flags = (MTD_WRITEABLE | MTD_BIT_WRITEABLE); /* just like MTD_CAP_NORFLASH */
+ 	mtd->name = map->name;
+ 	mtd->writesize = 1;
++	mtd->writebufsize = 1; /* Set write buffer size to minimal */
+ 	
+ 	map->fldrv = &sflash_chipdrv;
+ 	map->fldrv_priv = sflash;
+-- 
+1.7.9.5
+

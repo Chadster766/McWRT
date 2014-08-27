@@ -1,0 +1,382 @@
+diff -urN nstx-1.1-beta6/Makefile nstx-1.1-beta6.new/Makefile
+--- nstx-1.1-beta6/Makefile	2004-06-27 23:46:38.000000000 +0200
++++ nstx-1.1-beta6.new/Makefile	2006-12-24 12:15:23.000000000 +0100
+@@ -1,4 +1,4 @@
+-CFLAGS += -ggdb -Wall -Werror
++CFLAGS += -ggdb -Wall -Werror -Wsign-compare 
+ 
+ NSTXD_SRCS = nstxd.c nstx_encode.c nstx_pstack.c nstx_dns.c nstx_tuntap.c nstx_queue.c
+ NSTXD_OBJS = ${NSTXD_SRCS:.c=.o}
+diff -urN nstx-1.1-beta6/nstx_dns.c nstx-1.1-beta6.new/nstx_dns.c
+--- nstx-1.1-beta6/nstx_dns.c	2004-06-27 23:43:34.000000000 +0200
++++ nstx-1.1-beta6.new/nstx_dns.c	2006-12-24 12:15:23.000000000 +0100
+@@ -6,6 +6,7 @@
+ #include <fcntl.h>
+ #include <syslog.h>
+ #include <unistd.h>
++#include <assert.h>
+ 
+ #include "nstxfun.h"
+ #include "nstxdns.h"
+@@ -58,7 +59,7 @@
+  * DNS-packet 'msg'. */
+ 
+ static char *
+-decompress_label(const char *msg, int msglen, const char *lbl)
++decompress_label(const char *msg, unsigned int msglen, const char *lbl)
+ {
+    const char *ptr = lbl;
+    char *buf;
+@@ -69,7 +70,7 @@
+    
+    while ((chunklen = *ptr)) {
+       if (chunklen > 63) {
+-	 if ((ptr-msg) >= (msglen-1)) {
++	 if ((ptr-msg) >= ((signed int)msglen-1)) {
+ 	    DEBUG("Bad pointer at end of msg");
+ 	    if (buf)
+ 	      free(buf);
+@@ -104,13 +105,15 @@
+ 	 ptr += chunklen + 1;
+       }
+    }
+-   buf[buflen] = 0;
+-   buflen++;
++   if (buf) {
++     buf[buflen] = 0;
++     buflen++;
++   }
+    return buf;
+ }
+ 
+ static const unsigned char *
+-_cstringify(const unsigned char *data, int *dlen, int clen)
++_cstringify(const unsigned char *data, int *dlen, unsigned int clen)
+ {
+    static unsigned char *buf;
+    
+@@ -143,7 +146,7 @@
+ {
+    int len;
+    
+-   len = strlen(data);
++   len = strlen((char*)data);
+    return _cstringify(data, &len, 63);
+ }
+ 
+@@ -183,24 +186,24 @@
+ static const unsigned char *
+ lbl2data (const unsigned char *data, size_t len)
+ {
+-   static unsigned char *buf;
+-   
++   static signed char *buf = NULL;
+    const unsigned char *s = data;
+-   unsigned char *d;
+-   unsigned int llen;
++   signed char *d;
++   signed int llen;
+    
+    d = buf = realloc(buf, len);
++   assert(d);
+    do
+      {
+ 	llen = *s++;
+-	if ((llen > 63) || (llen > len - (s - data)))
+-	  return NULL;
++	if ((llen > 63) || (llen > (signed int)(len - (s - data))))
++	  break;
+ 	memcpy(d, s, llen);
+ 	s += llen;
+ 	d += llen;
+      } while (llen);
+    *d = '\0';
+-   return buf;
++   return (const unsigned char*)buf;
+ }
+ 
+ /* New DNS-Code */
+@@ -318,7 +321,7 @@
+    const char *ptr;
+    static char *fqdn;
+    
+-   ptr = data2lbl(data);
++   ptr = (char*)data2lbl((unsigned char*)data);
+    fqdn = realloc(fqdn, strlen(ptr)+strlen(suffix)+1);
+    strcpy(fqdn, ptr);
+    strcat(fqdn, suffix);
+@@ -336,8 +339,9 @@
+      free(buf);
+    
+    off = strstr(fqdn, suffix);
+-   if (off)
+-	buf = strdup(lbl2data(fqdn, off - fqdn));
++   /* only parse if the fqdn was found, and there is more than the fqdn */
++   if (off && off != fqdn)
++	buf = strdup((char*)lbl2data((unsigned char*)fqdn, off - fqdn));
+    else
+ 	/* Our suffix not found... */
+   	buf = NULL; 
+@@ -364,7 +368,7 @@
+    const char *ptr;
+    char *buf;
+    
+-   ptr = data2txt(data, &len);
++   ptr = (char*)data2txt((unsigned char*)data, &len);
+    buf = malloc(len);
+    memcpy(buf, ptr, len);
+    
+@@ -477,7 +481,7 @@
+      {
+ 	offsets[i++] = ptr - buf;
+ 	rrp = _new_listitem(&pkt->query);
+-	rrp->data = decompress_label(buf, len, ptr);
++	rrp->data = decompress_label((char*)buf, len, (char*)ptr);
+ 	if (!rrp->data)
+ 	  {
+ 	     syslog(LOG_ERR, "dns_extractpkt: decompress_label choked in qd\n");
+@@ -517,8 +521,9 @@
+ 	     if (j < i)
+ 	       rrp->link = j;
+ 	  }
+-	ptr = _skip_lbl(ptr, &remain);
+-	rrp->len = ptr[8]*256+ptr[9];
++	//	ptr = _skip_lbl(ptr, &remain);
++	//	rrp->len = ptr[8]*256+ptr[9];
++	rrp->len = ptr[10]*256+ptr[11];
+ 	ptr += 12;
+ 	remain -= 12;
+ 	if (remain < rrp->len)
+diff -urN nstx-1.1-beta6/nstx_encode.c nstx-1.1-beta6.new/nstx_encode.c
+--- nstx-1.1-beta6/nstx_encode.c	2004-06-27 23:43:34.000000000 +0200
++++ nstx-1.1-beta6.new/nstx_encode.c	2006-12-24 12:15:23.000000000 +0100
+@@ -30,11 +30,11 @@
+ 
+ void init_revmap (void)
+ {
+-   int i;
++   unsigned int i;
+    
+    revmap = malloc(256);
+    
+-   for (i = 0; i < strlen(map); i++)
++   for (i = 0; i < strlen((char*)map); i++)
+      revmap[map[i]] = i;
+ }
+    
+@@ -70,11 +70,11 @@
+    if (!revmap)
+      init_revmap();
+    
+-   len = strlen(data)-1;
+-   
++   len = strlen((char*)data);
++
+    buf = realloc(buf, ((len+3)/4)*3);
+    
+-   while (off < len) {
++   while (off+3 < len) {
+       buf[i+0] = (revmap[data[off]]<<2)|((revmap[data[off+1]]&48)>>4);
+       buf[i+1] = ((revmap[data[off+1]]&15)<<4)|((revmap[data[off+2]]&60)>>2);
+       buf[i+2] = ((revmap[data[off+2]]&3)<<6)|(revmap[data[off+3]]);
+diff -urN nstx-1.1-beta6/nstx_pstack.c nstx-1.1-beta6.new/nstx_pstack.c
+--- nstx-1.1-beta6/nstx_pstack.c	2004-06-27 23:43:34.000000000 +0200
++++ nstx-1.1-beta6.new/nstx_pstack.c	2006-12-24 12:15:23.000000000 +0100
+@@ -49,7 +49,7 @@
+    char *netpacket;
+    int netpacketlen;
+    
+-   if ((!ptr) || len < sizeof(struct nstxhdr))
++   if ((!ptr) || (signed int) len < (signed int) sizeof(struct nstxhdr))
+      return;
+ 
+    if (!nstxpkt->id)
+diff -urN nstx-1.1-beta6/nstx_tuntap.c nstx-1.1-beta6.new/nstx_tuntap.c
+--- nstx-1.1-beta6/nstx_tuntap.c	2004-06-27 23:43:34.000000000 +0200
++++ nstx-1.1-beta6.new/nstx_tuntap.c	2006-12-24 12:15:23.000000000 +0100
+@@ -215,7 +215,7 @@
+ 
+ struct nstxmsg *nstx_select (int timeout)
+ {
+-   int peerlen;
++   unsigned peerlen;
+    fd_set set;
+    struct timeval tv;
+    static struct nstxmsg *ret = NULL;
+diff -urN nstx-1.1-beta6/nstxcd.8 nstx-1.1-beta6.new/nstxcd.8
+--- nstx-1.1-beta6/nstxcd.8	1970-01-01 01:00:00.000000000 +0100
++++ nstx-1.1-beta6.new/nstxcd.8	2006-12-24 12:15:23.000000000 +0100
+@@ -0,0 +1,36 @@
++.TH NSTXCD "8" "May 2004" "nstx 1.1-beta4" "User Commands"
++.SH NAME
++nstxcd \- IP over DNS tunneling client
++
++.SH SYNOPSIS
++.B "nstxcd \fIDOMAIN\fR \fIIPADDRESS\fR"
++
++.SH DESCRIPTION
++.B nstxcd
++tunnels IP packets over DNS, allowing them to be sent to a server without
++any protocols other than DNS being used.
++
++.SH OPTIONS
++.B nstxcd
++takes the following options:
++.IP "domain"
++The domain that nstxcd will send requests to. This domain must be delegated
++to a machine that is running nstxd.
++.IP "IP address"
++The IP address of a DNS server that can be reached from the current machine.
++
++.SH USAGE
++.Bnstxcd
++should be run against a domain that has been delegated to a machine running
++nstxd. It will then take any packets that are sent to the tun0 interface and
++send them over DNS to the other tunnel endpoint. Responses will appear on 
++the tun0 interface.
++
++.SH AUTHORS
++
++.IP 
++Florian Heinz <sky@sysv.de>
++.IP 
++Julien Oster <frodo@sysv.de>
++.IP 
++http://nstx.dereference.de/nstx/
+diff -urN nstx-1.1-beta6/nstxcd.c nstx-1.1-beta6.new/nstxcd.c
+--- nstx-1.1-beta6/nstxcd.c	2004-06-27 23:43:34.000000000 +0200
++++ nstx-1.1-beta6.new/nstxcd.c	2006-12-24 12:15:23.000000000 +0100
+@@ -63,7 +63,7 @@
+ int main (int argc, char * argv[]) {
+   struct nstxmsg *msg;
+   const char	*device = NULL;
+-  char		 ch;
++  int 		 ch;
+ 
+   nsid = time(NULL);
+  
+@@ -110,11 +110,11 @@
+    const char *data;
+    int datalen;
+    
+-   pkt = dns_extractpkt (reply, len);
++   pkt = dns_extractpkt ((unsigned char*)reply, len);
+    if (!pkt)
+      return;
+    while ((data = dns_getanswerdata(pkt, &datalen))) {
+-      data = txt2data(data, &datalen);
++      data = (char*)txt2data((unsigned char*)data, &datalen);
+       nstx_handlepacket (data, datalen, &sendtun);
+    }
+    dequeueitem(pkt->id);
+@@ -159,9 +159,9 @@
+     data += l;
+     datalen -= l;
+     
+-    dns_addquery(pkt, dns_data2fqdn(nstx_encode(p, sizeof(nh)+l)));
++    dns_addquery(pkt, dns_data2fqdn(nstx_encode((unsigned char*)p, sizeof(nh)+l)));
+     free(p);
+-    p = dns_constructpacket(pkt, &l);
++    p = (char*)dns_constructpacket(pkt, &l);
+     sendns(p, l, NULL);
+     free(p);
+ 
+diff -urN nstx-1.1-beta6/nstxd.8 nstx-1.1-beta6.new/nstxd.8
+--- nstx-1.1-beta6/nstxd.8	1970-01-01 01:00:00.000000000 +0100
++++ nstx-1.1-beta6.new/nstxd.8	2006-12-24 12:15:23.000000000 +0100
+@@ -0,0 +1,47 @@
++.TH NSTXD "7" "Mar 2005" "nstx 1.1-beta6" "User Commands"
++.SH NAME
++nstxd \- IP over DNS tunneling daemon
++
++.SH SYNOPSIS
++.B "nstxd \fIOPTION\fR \fIDOMAIN\fR"
++
++.SH DESCRIPTION
++.B nstxd
++listens for well formed DNS requests and translates them into IP packets.
++Responses are sent in the form of DNS replies. This allows clients to
++tunnel IP packets over the DNS protocol.
++
++.SH OPTIONS
++.B nstxd
++takes the following option:
++.IP \-d tun-device
++Use this tun device instead of tun0
++.IP \-i ipaddr
++Bind to this IP address rather than every available address
++.IP \-C dir
++Chroot to this directory on startup
++.IP \-D
++Daemonize on startup
++.IP \-g
++Switch on debug messages
++.IP \-u user
++Run as the following user
++.IP "domain"
++The domain that nstxd will listen to requests for. This should be a domain
++that is delegated to the machine running nstxd.
++
++.SH USAGE
++A domain should be delegated to the machine that will run nstxd. nstxd should
++then be run giving that domain as the only argument. nstxd will then listen
++for requests and translate them into IP packets that will appear on the tun0
++interface. Packets sent to the tun0 interface will be transferred back to
++the client as DNS answers.
++
++.SH AUTHORS
++
++.IP 
++Florian Heinz <sky@sysv.de>
++.IP 
++Julien Oster <frodo@sysv.de>
++.IP 
++http://nstx.dereference.de/nstx/
+diff -urN nstx-1.1-beta6/nstxd.c nstx-1.1-beta6.new/nstxd.c
+--- nstx-1.1-beta6/nstxd.c	2004-06-27 23:55:17.000000000 +0200
++++ nstx-1.1-beta6.new/nstxd.c	2006-12-24 12:15:23.000000000 +0100
+@@ -67,7 +67,7 @@
+ }
+ 
+ int main (int argc, char *argv[]) {
+-   char		 ch;
++   signed char	 ch;
+    const char	*device = NULL, *dir = NULL;
+    in_addr_t	 bindto = INADDR_ANY;
+    uid_t	 uid = 0;
+@@ -172,7 +172,7 @@
+    dns_setid(pkt, q->id);
+    dns_settype(pkt, DNS_RESPONSE);
+    dns_addanswer(pkt, "\xb4\x00\x00\x00", 4, dns_addquery(pkt, q->name));
+-   buf = dns_constructpacket (pkt, &len);
++   buf = (char*)dns_constructpacket (pkt, &len);
+    sendns(buf, len, &q->peer);
+    free(buf);
+ }  
+@@ -188,7 +188,7 @@
+    
+    if (msg) {
+      if (msg->src == FROMNS) {
+-	pkt = dns_extractpkt(msg->data, msg->len);
++	pkt = dns_extractpkt((unsigned char*)msg->data, msg->len);
+ 	if (pkt)
+ 	  {
+ 	     name = dns_getquerydata(pkt);
+@@ -198,7 +198,7 @@
+ 			name);
+ 		  queueitem(pkt->id, name, &msg->peer);
+ 		  if ((data = dns_fqdn2data(name)) &&
+-		      (buf = nstx_decode(data, &len)))
++		      (buf = nstx_decode((unsigned char*)data, &len)))
+ 		    {
+ 		       nstx_handlepacket(buf, len, &sendtun);
+ 		    }
+@@ -220,7 +220,7 @@
+       len = dns_getfreespace(pkt, DNS_RESPONSE);
+       buf = dequeue_senditem(&len);
+       dns_addanswer(pkt, buf, len, link);
+-      buf = dns_constructpacket(pkt, &len);
++      buf = (char*)dns_constructpacket(pkt, &len);
+       sendns(buf, len, &qitem->peer);
+    }
+    timeoutqueue(do_timeout);

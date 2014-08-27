@@ -1,0 +1,22 @@
+--- a/acinclude.m4
++++ b/acinclude.m4
+@@ -363,7 +363,7 @@ AC_DEFUN([SIPSAK_GCC_STACK_PROTECT_CC],[
+     AC_MSG_CHECKING([whether ${CC} accepts -fstack-protector])
+     ssp_old_cflags="$CFLAGS"
+     CFLAGS="$CFLAGS -fstack-protector"
+-    AC_TRY_COMPILE(,,, ssp_cc=no)
++    AC_TRY_LINK(,,, ssp_cc=no)
+     echo $ssp_cc
+     if test "X$ssp_cc" = "Xno"; then
+       CFLAGS="$ssp_old_cflags"
+--- a/configure
++++ b/configure
+@@ -2923,7 +2923,7 @@ main ()
+ _ACEOF
+ rm -f conftest.$ac_objext
+ if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+-  (eval $ac_compile) 2>conftest.er1
++  (eval $ac_link) 2>conftest.er1
+   ac_status=$?
+   grep -v '^ *+' conftest.er1 >conftest.err
+   rm -f conftest.er1

@@ -1,0 +1,88 @@
+From 6017efbac9a501a8c86212ce1740ab0dedec0b14 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Mon, 5 Mar 2012 00:45:39 +0200
+Subject: [PATCH 079/609] DSMP NETA-final-rxhash-flow-support.patch -( by Rami
+ R.)
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c   |   50 +++++++++++++++++++-
+ 1 file changed, 49 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c
+index df28415..f280d1e 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c
+@@ -53,7 +53,6 @@ disclaimer.
+ 
+ #include "mv_switch.h"
+ #include "mv_netdev.h"
+-#include "mv_eth_tool.h"
+ 
+ #include "mvOs.h"
+ #include "mvSysHwConfig.h"
+@@ -786,6 +785,52 @@ int mv_eth_tool_get_stats_count(struct net_device *netdev)
+ 	return 0;
+ }
+ 
++static int mv_eth_tool_get_rxfh_indir(struct net_device *netdev,
++										struct ethtool_rxfh_indir *indir)
++{
++#if defined(MV_ETH_PNC_LB) && defined(CONFIG_MV_ETH_PNC)
++	struct eth_port 	*priv = MV_ETH_PRIV(netdev);
++	size_t copy_size =
++		min_t(size_t, indir->size, ARRAY_SIZE(priv->rx_indir_table));
++
++	indir->size = ARRAY_SIZE(priv->rx_indir_table);
++
++	memcpy(indir->ring_index, priv->rx_indir_table,
++	       copy_size * sizeof(indir->ring_index[0]));
++	return 0;
++#else
++	return -EOPNOTSUPP;
++#endif
++}
++
++static int mv_eth_tool_set_rxfh_indir(struct net_device *netdev,
++							   const struct ethtool_rxfh_indir *indir)
++{
++#if defined(MV_ETH_PNC_LB) && defined(CONFIG_MV_ETH_PNC)
++	int i;
++	struct eth_port 	*priv = MV_ETH_PRIV(netdev);
++	for (i = 0; i < indir->size; i++) {
++		priv->rx_indir_table[i] = indir->ring_index[i];
++		mvPncLbRxqSet(i, priv->rx_indir_table[i]);
++	}
++	return 0;
++#else
++	return -EOPNOTSUPP;
++#endif
++}
++
++static int mv_eth_tool_get_rxnfc(struct net_device *dev, struct ethtool_rxnfc *info,
++									void *rules)
++{
++	if (info->cmd == ETHTOOL_GRXRINGS) {
++		struct eth_port *pp = MV_ETH_PRIV(dev);
++		if (pp)
++			info->data = ARRAY_SIZE(pp->rx_indir_table);
++	}
++	return 0;
++}
++
++
+ /******************************************************************************
+ * mv_eth_tool_get_ethtool_stats
+ * Description:
+@@ -833,5 +878,8 @@ const struct ethtool_ops mv_eth_tool_ops = {
+ 	.get_stats_count			= mv_eth_tool_get_stats_count,
+ #endif
+ 	.get_ethtool_stats			= mv_eth_tool_get_ethtool_stats,
++	.get_rxfh_indir				= mv_eth_tool_get_rxfh_indir,
++	.set_rxfh_indir				= mv_eth_tool_set_rxfh_indir,
++	.get_rxnfc                  = mv_eth_tool_get_rxnfc,
+ };
+ 
+-- 
+1.7.9.5
+

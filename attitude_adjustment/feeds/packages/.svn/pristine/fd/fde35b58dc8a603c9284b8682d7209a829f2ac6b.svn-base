@@ -1,0 +1,24 @@
+diff -ruN ettercap-NG-0.7.3-old/configure ettercap-NG-0.7.3-new/configure
+--- ettercap-NG-0.7.3-old/configure	2006-10-03 18:24:09.000000000 +0200
++++ ettercap-NG-0.7.3-new/configure	2006-10-03 18:28:57.000000000 +0200
+@@ -31759,7 +31759,7 @@
+ 
+    OLDLDFLAGS="${LDFLAGS}"
+    OLDLIBS="${LIBS}"
+-   LDFLAGS="$LNETLIB"
++   LDFLAGS="$LDFLAGS $LNETLIB"
+    LIBS="$LIBS"
+ 
+ echo "$as_me:$LINENO: checking for libnet_adv_free_packet in -lnet" >&5
+diff -ruN ettercap-NG-0.7.3-old/configure.in ettercap-NG-0.7.3-new/configure.in
+--- ettercap-NG-0.7.3-old/configure.in	2006-10-03 18:24:09.000000000 +0200
++++ ettercap-NG-0.7.3-new/configure.in	2006-10-03 18:26:45.000000000 +0200
+@@ -500,7 +500,7 @@
+ ]
+ )
+ 
+-EC_CHECK_FUNC(net, libnet_adv_free_packet, $LNETLIB, $LIBS,, AC_MSG_ERROR([Incorrect libnet version. libnet >= 1.1.2.1 required]))
++EC_CHECK_FUNC(net, libnet_adv_free_packet, $LDFLAGS $LNETLIB, $LIBS,, AC_MSG_ERROR([Incorrect libnet version. libnet >= 1.1.2.1 required]))
+ 
+ dnl ------------------
+ dnl Checks for openssl

@@ -1,0 +1,29 @@
+--- a/tctdb.c
++++ b/tctdb.c
+@@ -20,6 +20,26 @@
+ #include "tctdb.h"
+ #include "myconf.h"
+ 
++#ifdef __UCLIBC__
++# include <features.h>
++# if __UCLIBC_MINOR__ <= 9 && __UCLIBC_SUBLEVEL__ <= 30
++
++size_t strlen(const char *s);
++long double strtold(const char *nptr, char **endptr);
++static inline long double nanl(const char *tagp)
++{
++        if (tagp[0] != '\0') {
++                char buf[6 + strlen(tagp)];
++                sprintf(buf, "NAN(%s)", tagp);
++                return strtold(buf, NULL);
++        }
++        return NAN;
++}
++
++# endif /* __UCLIBC_MINOR__ <= 9 && __UCLIBC_SUBLEVEL__ <= 30 */
++#endif /* __UCLIBC__ */
++
++
+ #define TDBOPAQUESIZ   64                // size of using opaque field
+ #define TDBLEFTOPQSIZ  64                // size of left opaque field
+ #define TDBPAGEBUFSIZ  32768             // size of a buffer to read each page

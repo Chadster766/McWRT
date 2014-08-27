@@ -1,0 +1,107 @@
+From 57a30e69d416630d7ed4f1c12567e07d3a331945 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Thu, 13 Sep 2012 01:54:08 -0400
+Subject: [PATCH 296/609] Fix bug in tx_done timer invocation in SMP
+ environment
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |   16 ++++++++--------
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h     |    4 ++--
+ 2 files changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index c13b32e..13a89ef 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -1761,6 +1761,7 @@ static int mv_eth_tx(struct sk_buff *skb, struct net_device *dev)
+ 
+ 	if (!test_bit(MV_ETH_F_STARTED_BIT, &(pp->flags))) {
+ 		STAT_INFO(pp->stats.netdev_stop++);
++
+ #ifdef CONFIG_MV_ETH_DEBUG_CODE
+ 		if (pp->flags & MV_ETH_F_DBG_TX)
+ 			printk(KERN_ERR "%s: STARTED_BIT = 0, packet is dropped.\n", __func__);
+@@ -2326,10 +2327,9 @@ inline u32 mv_eth_tx_done_gbe(struct eth_port *pp, u32 cause_tx_done, int *tx_to
+ 			tx_done += mv_eth_txq_done(pp, txq_ctrl);
+ 			*tx_todo += txq_ctrl->txq_count;
+ 		}
++		cause_tx_done &= ~((1 << txq) << NETA_CAUSE_TXQ_SENT_DESC_OFFS);
+ 
+ 		mv_eth_unlock(txq_ctrl, flags);
+-
+-		cause_tx_done &= ~((1 << txq) << NETA_CAUSE_TXQ_SENT_DESC_OFFS);
+ 	}
+ 
+ 	STAT_DIST((tx_done < pp->dist_stats.tx_done_dist_size) ? pp->dist_stats.tx_done_dist[tx_done]++ : 0);
+@@ -2720,7 +2720,7 @@ int mv_eth_poll(struct napi_struct *napi, int budget)
+ 	int rx_done = 0;
+ 	MV_U32 causeRxTx;
+ 	struct eth_port *pp = MV_ETH_PRIV(napi->dev);
+-
++	struct cpu_ctrl *cpuCtrl = pp->cpu_config[smp_processor_id()];
+ 
+ #ifdef CONFIG_MV_ETH_DEBUG_CODE
+ 	if (pp->flags & MV_ETH_F_DBG_POLL) {
+@@ -2761,7 +2761,7 @@ int mv_eth_poll(struct napi_struct *napi, int budget)
+ 
+ 		MV_REG_WRITE(NETA_INTR_MISC_CAUSE_REG(pp->port), 0);
+ 	}
+-	causeRxTx |= pp->cpu_config[smp_processor_id()]->causeRxTx;
++	causeRxTx |= cpuCtrl->causeRxTx;
+ 
+ #ifdef CONFIG_MV_ETH_TXDONE_ISR
+ 	if (causeRxTx & MV_ETH_TXDONE_INTR_MASK) {
+@@ -2820,7 +2820,7 @@ int mv_eth_poll(struct napi_struct *napi, int budget)
+ 
+ 		local_irq_restore(flags);
+ 	}
+-	pp->cpu_config[smp_processor_id()]->causeRxTx = causeRxTx;
++	cpuCtrl->causeRxTx = causeRxTx;
+ 	return rx_done;
+ }
+ 
+@@ -5381,15 +5381,15 @@ void mv_eth_port_status_print(unsigned int port)
+ 	       (pp->flags & MV_ETH_F_MH) ? "Enabled" : "Disabled", pp->tx_mh, pp->hw_cmd);
+ 
+ 	printk(KERN_CONT "\n");
+-	printk(KERN_CONT "CPU:   txq_def   causeRxTx    napi	cpuTxqMask	cpuTxqOwner\n");
++	printk(KERN_CONT "CPU:  txq  causeRxTx   napi txqMask txqOwner flags  timer\n");
+ 	{
+ 		int cpu;
+ 		for_each_possible_cpu(cpu) {
+ 			cpuCtrl = pp->cpu_config[cpu];
+ 			if (MV_BIT_CHECK(pp->cpuMask, cpu))
+-				printk(KERN_ERR "  %d:      %d      0x%08x     %d	0x%02x		0x%02x\n",
++				printk(KERN_ERR "  %d:   %d   0x%08x   %d    0x%02x    0x%02x    0x%02x    %d\n",
+ 					cpu, cpuCtrl->txq, cpuCtrl->causeRxTx, test_bit(NAPI_STATE_SCHED, &cpuCtrl->napi->state),
+-					cpuCtrl->cpuTxqMask, cpuCtrl->cpuTxqOwner);
++					cpuCtrl->cpuTxqMask, cpuCtrl->cpuTxqOwner, (unsigned)cpuCtrl->flags, timer_pending(&cpuCtrl->tx_done_timer));
+ 		}
+ 	}
+ 
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+index bdf0c95..1f9ed9f 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+@@ -602,7 +602,7 @@ static inline void mv_eth_add_cleanup_timer(struct cpu_ctrl *cpuCtrl)
+ {
+ 	if (test_and_set_bit(MV_ETH_F_CLEANUP_TIMER_BIT, &(cpuCtrl->flags)) == 0) {
+ 		cpuCtrl->cleanup_timer.expires = jiffies + ((HZ * CONFIG_MV_ETH_CLEANUP_TIMER_PERIOD) / 1000); /* ms */
+-		add_timer(&cpuCtrl->cleanup_timer);
++		add_timer_on(&cpuCtrl->cleanup_timer, smp_processor_id());
+ 	}
+ }
+ 
+@@ -611,7 +611,7 @@ static inline void mv_eth_add_tx_done_timer(struct cpu_ctrl *cpuCtrl)
+ 	if (test_and_set_bit(MV_ETH_F_TX_DONE_TIMER_BIT, &(cpuCtrl->flags)) == 0) {
+ 
+ 		cpuCtrl->tx_done_timer.expires = jiffies + ((HZ * CONFIG_MV_ETH_TX_DONE_TIMER_PERIOD) / 1000); /* ms */
+-		add_timer(&cpuCtrl->tx_done_timer);
++		add_timer_on(&cpuCtrl->tx_done_timer, smp_processor_id());
+ 	}
+ }
+ 
+-- 
+1.7.9.5
+

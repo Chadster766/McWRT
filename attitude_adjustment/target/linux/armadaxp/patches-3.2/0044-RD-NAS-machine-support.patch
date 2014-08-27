@@ -1,0 +1,195 @@
+From 5a8e5589597fc0ad2bb550babd0174479125a349 Mon Sep 17 00:00:00 2001
+From: Lior Amsalem <alior@marvell.com>
+Date: Tue, 27 Dec 2011 10:22:30 +0200
+Subject: [PATCH 044/609] RD-NAS machine support
+
+Signed-off-by: Lior Amsalem <alior@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/Kconfig |    5 ++
+ arch/arm/mach-armadaxp/core.c  |  140 ++++++++++++++++++++++++++++++++++++++++
+ arch/arm/tools/mach-types      |    1 +
+ 3 files changed, 146 insertions(+)
+
+diff --git a/arch/arm/mach-armadaxp/Kconfig b/arch/arm/mach-armadaxp/Kconfig
+index d708256..5d65643 100644
+--- a/arch/arm/mach-armadaxp/Kconfig
++++ b/arch/arm/mach-armadaxp/Kconfig
+@@ -55,6 +55,11 @@ config MACH_ARMADA_XP_RDSRV
+ 	default y
+ 	help
+ 
++config MACH_ARMADA_XP_RD_NAS
++	bool "Marvell Armada XP NAS RD Board"
++	default y
++	help
++
+ config MACH_ARMADA_XP_FPGA
+ 	bool "Marvell Armada XP FPGA Board"	
+ 	depends on !MACH_ARMADA_XP_DB && !MACH_ARMADA_XP_RDSRV
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index 761f223..f323e3f 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -1502,6 +1502,146 @@ MACHINE_START(ARMADA_XP_DB, "Marvell Armada XP Development Board")
+ #endif /* CONFIG_FB_DOVE */
+ MACHINE_END
+ 
++/*****************************************************************************
++ * RD NAS BOARD
++ ****************************************************************************/
++static void __init axp_rd_nas_init(void)
++{
++	/* Call Aurora/cpu special configurations */
++	cpu_fabric_common_init();
++
++	/* Select appropriate Board ID for Machine */
++	gBoardId = RD_78460_NAS_ID;
++
++	/* Bypass serdes reconfiguration since already done at bootloader */
++        mvBoardSerdesConfigurationEnableSet(MV_FALSE);
++
++	/* init the Board environment */
++	mvBoardEnvInit();
++
++	/* init the controller environment */
++	if( mvCtrlEnvInit() ) {
++		printk( "Controller env initialization failed.\n" );
++		return;
++	}
++
++	armadaxp_setup_cpu_mbus();
++
++	/* Init the CPU windows setting and the access protection windows. */
++	if( mvCpuIfInit(mv_sys_map())) {
++		printk( "Cpu Interface initialization failed.\n" );
++		return;
++	}
++
++	/* Init Tclk & SysClk */
++	mvTclk = mvBoardTclkGet();
++	mvSysclk = mvBoardSysClkGet();
++
++	elf_hwcap &= ~HWCAP_JAVA;
++
++	serial_initialize(0);
++
++	/* At this point, the CPU windows are configured according to default definitions in mvSysHwConfig.h */
++	/* and cpuAddrWinMap table in mvCpuIf.c. Now it's time to change defaults for each platform.         */
++	/*mvCpuIfAddDecShow();*/
++
++	print_board_info();
++
++	mv_gpio_init();
++
++	/* RTC */
++	rtc_init();
++
++	/* SPI */
++	mvSysSpiInit(0, _16M);
++
++	/* ETH-PHY */
++	mvSysEthPhyInit();
++
++	/* Sata */
++#ifdef CONFIG_SATA_MV
++	armadaxp_sata_init(&dbdsmp_sata_data);
++#endif
++#ifdef CONFIG_MTD_NAND_NFC
++	/* NAND */
++	axp_db_nfc_init();
++#endif
++	/* HWMON */
++	armadaxp_hwmon_init();
++
++	/* XOR */
++#ifdef XOR0_ENABLE
++	armadaxp_xor0_init();
++#endif
++	armadaxp_xor1_init();
++
++	/* I2C */
++	platform_device_register(&axp_i2c0);
++
++
++#ifdef CONFIG_FB_DOVE
++      if ((lcd0_enable == 1) && (lcd_panel == 0 ))
++        platform_device_register(&axp_i2c1);
++#endif
++
++
++
++
++#if defined(CONFIG_MV_INCLUDE_SDIO)
++	if (MV_TRUE == mvCtrlPwrClckGet(SDIO_UNIT_ID, 0)) {
++		int irq_detect = mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_DETECT);
++		MV_UNIT_WIN_INFO addrWinMap[MAX_TARGETS + 1];
++
++		if (irq_detect != MV_ERROR) {
++			mvsdio_data.gpio_card_detect = mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_DETECT);
++			irq_int_type[mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_DETECT)+IRQ_AURORA_GPIO_START] = GPP_IRQ_TYPE_CHANGE_LEVEL;
++		}
++
++		if(mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_WP) != MV_ERROR)
++			mvsdio_data.gpio_write_protect = mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_WP);
++
++		if(MV_OK == mvCtrlAddrWinMapBuild(addrWinMap, MAX_TARGETS + 1))
++			if (MV_OK == mvSdmmcWinInit(addrWinMap))
++				mvsdio_data.clock = mvBoardTclkGet();
++		platform_device_register(&mv_sdio_plat);
++       }
++#endif
++
++#ifdef CONFIG_MV_ETHERNET
++	/* Ethernet */
++	eth_init();
++#endif
++
++#ifdef CONFIG_FB_DOVE
++	kw_lcd0_dmi.dram = &armadaxp_mbus_dram_info;
++	if (lcd_panel) {
++		kw_lcd0_dmi.lvds_info.enabled = 1;
++		kw_lcd0_dmi.fixed_full_div = 1;
++		kw_lcd0_dmi.full_div_val = 7;
++//		kw_lcd0_dmi.lcd_ref_clk = 27000000;
++		printk(KERN_INFO "LCD Panel enabled.\n");
++	}
++	clcd_platform_init(&kw_lcd0_dmi, &kw_lcd0_vid_dmi, &dsmp_backlight_data);
++#endif
++
++	return;
++}
++
++MACHINE_START(ARMADA_XP_RD_NAS, "Marvell Armada XP RD NAS Board")
++	/* MAINTAINER("MARVELL") */
++	//.phys_io	= INTER_REGS_PHYS_BASE,
++	//.io_pg_offst	= ((INTER_REGS_BASE) >> 18) & 0xfffc,
++	.boot_params	= 0x00000100,
++	.map_io		= axp_map_io,
++	.init_irq	= axp_init_irq,
++	.timer		= &axp_timer,
++	.init_machine	= axp_rd_nas_init,
++#ifdef CONFIG_FB_DOVE
++	/* reserve memory for LCD */
++	.fixup		= axp_tag_fixup_mem32,
++#endif /* CONFIG_FB_DOVE */
++MACHINE_END
++
+ 
+ /*****************************************************************************
+ * RDSRV BOARD: Main Initialization
+diff --git a/arch/arm/tools/mach-types b/arch/arm/tools/mach-types
+index 64422d2..c342973 100644
+--- a/arch/arm/tools/mach-types
++++ b/arch/arm/tools/mach-types
+@@ -3003,6 +3003,7 @@ at91cap7xdk		MACH_AT91CAP7XDK	AT91CAP7XDK		3032
+ at91cap7stk		MACH_AT91CAP7STK	AT91CAP7STK		3033
+ kt_sbc_sam9_1		MACH_KT_SBC_SAM9_1	KT_SBC_SAM9_1		3034
+ armada_xp_db		MACH_ARMADA_XP_DB	ARMADA_XP_DB		3036
++armada_xp_rd_nas	MACH_ARMADA_XP_RD_NAS	ARMADA_XP_RD_NAS	3500
+ spdm			MACH_SPDM		SPDM			3037
+ gtib			MACH_GTIB		GTIB			3038
+ dgm3240			MACH_DGM3240		DGM3240			3039
+-- 
+1.7.9.5
+

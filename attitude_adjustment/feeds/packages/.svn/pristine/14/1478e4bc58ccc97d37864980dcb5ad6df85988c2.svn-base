@@ -1,0 +1,59 @@
+diff -urN osiris-4.2.1/src/libosiris/filter_ripemd.c osiris-4.2.1.new/src/libosiris/filter_ripemd.c
+--- osiris-4.2.1/src/libosiris/filter_ripemd.c	2006-07-28 03:22:37.000000000 +0200
++++ osiris-4.2.1.new/src/libosiris/filter_ripemd.c	2006-11-29 12:16:00.000000000 +0100
+@@ -55,9 +55,9 @@
+         {
+             context->filter_argument += 2;
+         }
+-
++#ifndef OPENSSL_NO_RIPEMD
+         hash_file_ripemd( file_path, context->file_handle, hash, sizeof(hash) );
+-
++#endif
+         if( strcmp( hash, context->filter_argument ) == 0 )
+         {
+             return TRUE;
+diff -urN osiris-4.2.1/src/libosiris/ssl_utilities.c osiris-4.2.1.new/src/libosiris/ssl_utilities.c
+--- osiris-4.2.1/src/libosiris/ssl_utilities.c	2006-07-28 03:22:37.000000000 +0200
++++ osiris-4.2.1.new/src/libosiris/ssl_utilities.c	2006-11-29 12:17:33.000000000 +0100
+@@ -51,7 +51,9 @@
+ #include <openssl/rand.h>
+ #include <openssl/md5.h>
+ #include <openssl/sha.h>
++#ifndef OPENSSL_NO_RIPEMD
+ #include <openssl/ripemd.h>
++#endif
+ 
+ #ifdef WIN32
+ #include <winsock.h>
+@@ -348,6 +350,7 @@
+ int hash_file_ripemd( const char *file_path, FILE *file,
+                       char *buffer, int buffer_size )
+ {
++#ifndef OPENSSL_NO_RIPEMD
+     int fno;
+     FILE *file_to_hash  = file;
+     RIPEMD160_CTX context;
+@@ -430,7 +433,7 @@
+         osi_strlcpy( buffer, file_hash, buffer_size );
+         return 0;
+     }
+-
++#endif
+     return -1;
+ }
+ 
+diff -urN osiris-4.2.1/src/libosiris/utilities.c osiris-4.2.1.new/src/libosiris/utilities.c
+--- osiris-4.2.1/src/libosiris/utilities.c	2006-07-28 03:22:37.000000000 +0200
++++ osiris-4.2.1.new/src/libosiris/utilities.c	2006-11-29 12:16:38.000000000 +0100
+@@ -60,8 +60,9 @@
+ 
+ #include <openssl/md5.h>
+ #include <openssl/sha.h>
++#ifndef OPENSSL_NO_RIPEMD
+ #include <openssl/ripemd.h>
+-
++#endif
+ #include "utilities.h"
+ #include "error.h"
+ 

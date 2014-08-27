@@ -1,0 +1,52 @@
+---
+ kernel/ztdummy.c |   18 +++++++++++++++---
+ 1 file changed, 15 insertions(+), 3 deletions(-)
+
+--- a/kernel/ztdummy.c
++++ b/kernel/ztdummy.c
+@@ -54,7 +54,7 @@
+  * the #define USE_RTC should be commented out.
+  */
+ #if defined(__i386__) || defined(__x86_64__)
+-#if LINUX_VERSION_CODE >= VERSION_CODE(2,6,13)
++#if LINUX_VERSION_CODE >= VERSION_CODE(2,6,15)
+ /* The symbol hrtimer_forward is only exported as of 2.6.22: */
+ #if defined(CONFIG_HIGH_RES_TIMERS) && LINUX_VERSION_CODE >= VERSION_CODE(2,6,22)
+ #define USE_HIGHRESTIMER
+@@ -90,6 +90,18 @@
+ #endif
+ #include "ztdummy.h"
+ 
++#if defined(USE_HIGHRESTIMER) && ( LINUX_VERSION_CODE < KERNEL_VERSION(2,6,28) )
++/* compatibility with new hrtimer interface */
++static inline ktime_t hrtimer_get_expires(const struct hrtimer *timer)
++{
++       return timer->expires;
++}
++
++static inline void hrtimer_set_expires(struct hrtimer *timer, ktime_t time)
++{
++       timer->expires = time;
++}
++#endif
+ 
+ static struct ztdummy *ztd;
+ 
+@@ -199,7 +211,7 @@ static enum hrtimer_restart ztdummy_hr_i
+ 	 * expired.
+ 	 * We should worry if overrun is 2 or more; then we really missed 
+ 	 * a tick */
+-	overrun = hrtimer_forward(&zaptimer, htmr->expires, 
++	overrun = hrtimer_forward(&zaptimer, hrtimer_get_expires(htmr),
+ 			ktime_set(0, ZAPTEL_TIME_NS));
+ 	if(overrun > 1) {
+ 		if(printk_ratelimit())
+@@ -222,7 +234,7 @@ static enum hrtimer_restart ztdummy_hr_i
+ /* use kernel system tick timer if PC architecture RTC is not available */
+ static void ztdummy_timer(unsigned long param)
+ {
+-	timer.expires = jiffies + 1;
++	hrtimer_set_expires(timer, jiffies + 1);
+ 	add_timer(&timer);
+ 
+ 	ztd->counter += ZAPTEL_TIME;

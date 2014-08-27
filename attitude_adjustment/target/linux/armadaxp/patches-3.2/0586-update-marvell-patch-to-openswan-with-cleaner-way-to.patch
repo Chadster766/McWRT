@@ -1,0 +1,161 @@
+From 0134138d92dbbd9ad2f0e280af006622f168eff4 Mon Sep 17 00:00:00 2001
+From: Eran Ben-Avi <benavi@marvell.com>
+Date: Thu, 4 Apr 2013 14:50:03 +0300
+Subject: [PATCH 586/609] update marvell patch to openswan with cleaner way to
+ call crypto_dispatch in case of smp
+
+Change-Id: I55da90ad59bb29d24bda3e3fcb175e873e3e8faa
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1431
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Tested-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ cesa/openswan/0001-mv_openswan_2_6_37.patch |   58 ++++++++++++++++++---------
+ 1 file changed, 38 insertions(+), 20 deletions(-)
+
+diff --git a/cesa/openswan/0001-mv_openswan_2_6_37.patch b/cesa/openswan/0001-mv_openswan_2_6_37.patch
+index 77d9583..06a2a5f 100644
+--- a/cesa/openswan/0001-mv_openswan_2_6_37.patch
++++ b/cesa/openswan/0001-mv_openswan_2_6_37.patch
+@@ -1,17 +1,16 @@
+-From 23539bae8648396a5065f4604af27e89f119dfdc Mon Sep 17 00:00:00 2001
++From 1c8e3f5122c13bf0ed5cd50526e70b72d2cd0d68 Mon Sep 17 00:00:00 2001
+ From: Eran Ben-Avi <benavi@marvell.com>
+-Date: Tue, 1 Jan 2013 17:34:52 +0200
+-Subject: [PATCH] mv_openswan_2_6_37
++Date: Thu, 14 Mar 2013 19:08:52 +0200
++Subject: [PATCH] marvell patch to openswan 2_6_37
+ 
+-Change-Id: I44152ab50a412ee7d6218d31f9acf76a04786063
+-Signed-off-by: Eran Ben-Avi <benavi@marvell.com>
++Change-Id: Ifd361b84c0ddd89bca841e9d8d2822506f0c7b24
+ ---
+- Makefile.inc                    |    4 +--
+- linux/net/ipsec/defconfig       |    4 +--
+- linux/net/ipsec/ipsec_ocf.c     |   76 ++++++++++++++++++++++++++-------------
++ Makefile.inc                    |    4 +-
++ linux/net/ipsec/defconfig       |    4 +-
++ linux/net/ipsec/ipsec_ocf.c     |   89 ++++++++++++++++++++++++++++-----------
+  packaging/linus/config-all.h    |    3 +-
+  packaging/makefiles/module.defs |    2 +-
+- 5 files changed, 59 insertions(+), 30 deletions(-)
++ 5 files changed, 72 insertions(+), 30 deletions(-)
+ 
+ diff --git a/Makefile.inc b/Makefile.inc
+ index f314c80..8af42d6 100644
+@@ -48,10 +47,29 @@ index 3f744ce..c23e808 100644
+ +CONFIG_KLIPS_OCF=y
+ 
+ diff --git a/linux/net/ipsec/ipsec_ocf.c b/linux/net/ipsec/ipsec_ocf.c
+-index 58d8d9c..4c10436 100644
++index 58d8d9c..c8f1bad 100644
+ --- a/linux/net/ipsec/ipsec_ocf.c
+ +++ b/linux/net/ipsec/ipsec_ocf.c
+-@@ -82,12 +82,10 @@ static void ipsec_ocf_skbq_process(unsigned long arg)
++@@ -76,18 +76,29 @@ MODULE_PARM_DESC(ipsec_ocf_cbimm,
++ static struct tasklet_struct ipsec_ocf_task;
++ static struct sk_buff_head ipsec_ocf_skbq;
++
+++#ifdef CONFIG_SMP
+++static void ipsec_crypto_dispatch_wrapper(struct cryptop *crp)
+++{
+++	int err;
+++
+++	if ((err = crypto_dispatch(crp))) {
+++			KLIPS_PRINT(debug_rcv, "crypto_dispatch failure %u\n", err);
+++			crypto_freereq(crp);
+++		}
+++
+++	return;
+++}
+++#endif
++ static void ipsec_ocf_skbq_process(unsigned long arg)
++ {
++	void (*func)(void *arg);
+ 	void *this;
+ 	struct sk_buff *skb;
+ 
+@@ -65,7 +83,7 @@ index 58d8d9c..4c10436 100644
+ 	}
+  }
+ 
+-@@ -101,7 +99,7 @@ static void ipsec_ocf_queue_init(void)
++@@ -101,7 +112,7 @@ static void ipsec_ocf_queue_init(void)
+ 	((void **) (&(this)->skb->cb[0]))[0] = func; \
+ 	((void **) (&(this)->skb->cb[0]))[1] = this; \
+ 	skb_queue_tail(&ipsec_ocf_skbq, (this)->skb); \
+@@ -74,7 +92,7 @@ index 58d8d9c..4c10436 100644
+ 
+  #endif
+ 
+-@@ -539,6 +537,7 @@ ipsec_ocf_rcv(struct ipsec_rcv_state *irs)
++@@ -539,6 +550,7 @@ ipsec_ocf_rcv(struct ipsec_rcv_state *irs)
+ 	struct ipsec_sa *ipsp;
+ 	int req_count = 0;
+ 	int rc, err;
+@@ -82,7 +100,7 @@ index 58d8d9c..4c10436 100644
+ 
+ 	KLIPS_PRINT(debug_rcv, "klips_debug:ipsec_ocf_rcv\n");
+ 
+-@@ -735,7 +734,7 @@ ipsec_ocf_rcv(struct ipsec_rcv_state *irs)
++@@ -735,7 +747,7 @@ ipsec_ocf_rcv(struct ipsec_rcv_state *irs)
+ 	crp->crp_olen = irs->skb->len; /* Total output length */
+ 	crp->crp_flags =
+ 			CRYPTO_F_SKBUF |
+@@ -91,7 +109,7 @@ index 58d8d9c..4c10436 100644
+ 			(ipsec_ocf_batch ? CRYPTO_F_BATCH : 0) |
+ 			0;
+ 	crp->crp_buf = (caddr_t) irs->skb;
+-@@ -743,16 +742,30 @@ ipsec_ocf_rcv(struct ipsec_rcv_state *irs)
++@@ -743,16 +755,30 @@ ipsec_ocf_rcv(struct ipsec_rcv_state *irs)
+ 	crp->crp_sid = ipsp->ocf_cryptoid;
+ 	crp->crp_opaque = (caddr_t) irs;
+    rcv_migrate:
+@@ -111,7 +129,7 @@ index 58d8d9c..4c10436 100644
+ -		goto rcv_migrate;
+ +
+ +	if (cpu < NR_CPUS)
+-+		smp_call_function_single(cpu, (void*)crypto_dispatch, (void*)crp, 0);
+++		smp_call_function_single(cpu, (void*)ipsec_crypto_dispatch_wrapper, (void*)crp, 0);
+ +	else {
+ +#endif
+ +		if ((err = crypto_dispatch(crp))){
+@@ -130,7 +148,7 @@ index 58d8d9c..4c10436 100644
+ 
+ 	return(IPSEC_RCV_PENDING);
+  }
+-@@ -966,7 +979,7 @@ ipsec_ocf_xmit(struct ipsec_xmit_state *ixs)
++@@ -966,7 +992,7 @@ ipsec_ocf_xmit(struct ipsec_xmit_state *ixs)
+ 	struct ipsec_sa *ipsp;
+ 	int req_count, payload_size;
+ 	int err;
+@@ -139,7 +157,7 @@ index 58d8d9c..4c10436 100644
+ 
+ 	KLIPS_PRINT(debug_tunnel & DB_TN_XMIT, "klips_debug:ipsec_ocf_xmit\n");
+ 
+-@@ -1160,7 +1173,7 @@ ipsec_ocf_xmit(struct ipsec_xmit_state *ixs)
++@@ -1160,7 +1186,7 @@ ipsec_ocf_xmit(struct ipsec_xmit_state *ixs)
+ 	crp->crp_olen = ixs->skb->len; /* Total output length */
+ 	crp->crp_flags =
+ 			CRYPTO_F_SKBUF |
+@@ -148,7 +166,7 @@ index 58d8d9c..4c10436 100644
+ 			(ipsec_ocf_batch ? CRYPTO_F_BATCH : 0) |
+ 			0;
+ 	crp->crp_buf = (caddr_t) ixs->skb;
+-@@ -1168,17 +1181,32 @@ ipsec_ocf_xmit(struct ipsec_xmit_state *ixs)
++@@ -1168,17 +1194,32 @@ ipsec_ocf_xmit(struct ipsec_xmit_state *ixs)
+ 	crp->crp_sid = ipsp->ocf_cryptoid;
+ 	crp->crp_opaque = (caddr_t) ixs;
+    xmit_migrate:
+@@ -170,7 +188,7 @@ index 58d8d9c..4c10436 100644
+ -		goto xmit_migrate;
+ +
+ +	if (cpu < NR_CPUS)
+-+		smp_call_function_single(cpu, (void*)crypto_dispatch, (void*)crp, 0);
+++		smp_call_function_single(cpu, (void*)ipsec_crypto_dispatch_wrapper, (void*)crp, 0);
+ +	else {
+ +#endif
+ +		if ((err = crypto_dispatch(crp))){
+-- 
+1.7.9.5
+

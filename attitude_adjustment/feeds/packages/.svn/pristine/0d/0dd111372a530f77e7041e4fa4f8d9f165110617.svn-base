@@ -1,0 +1,61 @@
+--- a/src/cardif/linux/cardif_atmel_driver.c
++++ b/src/cardif/linux/cardif_atmel_driver.c
+@@ -109,7 +109,6 @@
+ #include <unistd.h>
+ #include <errno.h>
+ #include <stdint.h>
+-#include <linux/wireless.h>
+ 
+ #ifdef USE_EFENCE
+ #include <efence.h>
+--- a/src/cardif/linux/cardif_linux.c
++++ b/src/cardif/linux/cardif_linux.c
+@@ -180,7 +180,6 @@
+ #include <errno.h>
+ #include <unistd.h>
+ #include <linux/rtnetlink.h>
+-#include <linux/wireless.h>
+ 
+ #include "xsupconfig.h"
+ #include "profile.h"
+--- a/src/cardif/linux/cardif_linux_rtnetlink.c
++++ b/src/cardif/linux/cardif_linux_rtnetlink.c
+@@ -207,10 +207,8 @@
+ #include <sys/ioctl.h>
+ #include "netlink.h"
+ #include "rtnetlink.h"
+-#include <linux/if.h>
+ #include <linux/if_packet.h>
+ #include <math.h>
+-#include <linux/wireless.h>
+ 
+ #include "profile.h"
+ #include "xsupconfig.h"
+--- a/src/cardif/linux/cardif_linux_wext.c
++++ b/src/cardif/linux/cardif_linux_wext.c
+@@ -203,7 +203,6 @@
+ #include <netinet/in.h>
+ #include <linux/types.h>
+ #include <linux/socket.h>
+-#include <linux/wireless.h>
+ #include <iwlib.h>
+ #include <linux/if_packet.h>
+ #include <linux/netlink.h>
+--- a/configure
++++ b/configure
+@@ -4759,7 +4759,6 @@ cat >>conftest.$ac_ext <<_ACEOF
+    #ifndef __user
+    #define __user
+    #endif
+-   #include <linux/wireless.h>
+ 
+ #include <$ac_header>
+ _ACEOF
+@@ -4823,7 +4822,6 @@ cat >>conftest.$ac_ext <<_ACEOF
+ 		   #ifndef __user
+ 		   #define __user
+ 		   #endif
+-                   #include <linux/wireless.h>
+                    #include <iwlib.h>
+ int
+ main ()

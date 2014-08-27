@@ -1,0 +1,26 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2012 OpenWrt.org
+
+START=60
+
+IPT=/usr/sbin/iptables
+
+set_rules() {
+	. /lib/functions/network.sh
+
+	local device
+	network_get_device device wan && {
+		$IPT $1 input_rule -i $device -p tcp --dport 1863:1864 -j ACCEPT
+		$IPT $1 input_rule -i $device -p tcp --dport 4443 -j ACCEPT
+		$IPT $1 input_rule -i $device -p tcp --dport 5566 -j ACCEPT
+		$IPT $1 input_rule -i $device -p tcp --dport 40000:40099 -j ACCEPT
+	}
+}
+
+start() {
+	service_start /usr/sbin/reaim && set_rules -A
+}
+
+stop() {
+	service_stop /usr/sbin/reaim && set_rules -D
+}

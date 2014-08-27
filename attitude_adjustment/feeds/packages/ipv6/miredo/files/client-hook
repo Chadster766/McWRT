@@ -1,0 +1,70 @@
+#! /bin/sh
+#
+# Miredo client hook script for Linux/iproute2
+# Copyright © 2007 Rémi Denis-Courmont.
+# Distributed under the terms of the GNU General Public License version 2.
+
+# Linux iproute2 path:
+IP="/usr/sbin/ip"
+
+# Linux default route default metric is 1024
+# (we put 1029 so that Teredo is used as a last resort):
+METRIC=1029
+
+# Linux routing table ID
+# (possible values: 1-252 from /etc/iproute/rt_tables):
+TABLE="teredo"
+
+# Linux routing rule priority
+# (possible values: 1-32765, lowest number is highest priority):
+PRIO=32765
+
+# MTU for the tunnel interface
+# (default: specified by the Teredo server, or 1280)
+#MTU=1400
+
+if ! test -x "$IP"; then
+	echo "$0: iproute2 is required! Please install it." >&2
+	exit 1
+fi
+
+# Nothing to do with destroy event
+if test "$STATE" = "destroy"; then exit 0; fi
+
+# If the source routing table is not configured, ignore it.
+if ! "$IP" route show table "$TABLE" >/dev/null 2>&1; then
+	unset TABLE
+else
+	if test "$OLD_ADDRESS"; then
+		"$IP" -6 rule del from "$OLD_ADDRESS" \
+			prio "$PRIO" table "$TABLE" 2>/dev/null
+	fi
+	"$IP" -6 route flush table "$TABLE" 2>/dev/null
+fi
+
+"$IP" -6 route flush dev "$IFACE" 2>/dev/null
+"$IP" -6 address flush dev "$IFACE" 2>/dev/null
+
+"$IP" -6 link set dev "$IFACE" "$STATE"
+if test "$MTU"; then
+	"$IP" link set dev "$IFACE" mtu "$MTU"
+fi
+
+case "$STATE" in
+	up)
+		"$IP" -6 address add "${LLADDRESS}/64" dev "$IFACE"
+		"$IP" -6 address add "${ADDRESS}/32" dev "$IFACE"
+		"$IP" -6 route add default dev "$IFACE" metric "$METRIC"
+
+		if test "$TABLE"; then
+			"$IP" -6 route add default dev "$IFACE" table "$TABLE"
+			"$IP" -6 rule add from "$ADDRESS" \
+				prio "$PRIO" table "$TABLE"
+		fi
+esac
+
+# This should be required when changing policy routing rules, but it
+# seems to confuse certain kernels into removing our default route!
+#"$IP" -6 route flush cache 2>/dev/null
+
+exit 0

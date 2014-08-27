@@ -1,0 +1,59 @@
+From 96d482451bd118e86db7722fc5d10481f090d820 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Thu, 22 Dec 2011 11:31:48 -0500
+Subject: [PATCH 047/609] NETA: GRO changes
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |   28 ++++----------------
+ 1 file changed, 5 insertions(+), 23 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index f39f8e0..89057a6 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -430,18 +430,6 @@ void mv_eth_skb_save(struct sk_buff *skb, const char *s)
+ }
+ #endif /* ETH_SKB_DEBUG */
+ 
+-#ifdef CONFIG_MV_ETH_GRO
+-static INLINE unsigned int mv_eth_dev_ip(struct net_device *dev)
+-{
+-	struct in_device *ip = dev->ip_ptr;
+-	if (ip && ip->ifa_list)
+-		return ip->ifa_list->ifa_address;
+-
+-	return 0;
+-
+-}
+-#endif /* CONFIG_MV_ETH_GRO */
+-
+ struct eth_port *mv_eth_port_by_id(unsigned int port)
+ {
+ 	if (port < mv_eth_ports_num)
+@@ -1584,17 +1572,11 @@ static inline int mv_eth_rx(struct eth_port *pp, int rx_todo, int rxq)
+ 
+ #ifdef CONFIG_MV_ETH_GRO
+ 		if (skb && (dev->features & NETIF_F_GRO)) {
+-			if (!(rx_status & NETA_RX_IP4_FRAG_MASK) && (NETA_RX_L4_IS_TCP(rx_status))) {
+-				struct iphdr *iph = (struct iphdr *)skb->data;
+-				if (iph->daddr == mv_eth_dev_ip(dev)) {
+-					rx_status = 0;
+-					STAT_DBG(pp->stats.rx_gro++);
+-					STAT_DBG(pp->stats.rx_gro_bytes += skb->len);
+-
+-					napi_gro_receive(pp->napi[smp_processor_id()], skb);
+-					skb = NULL;
+-				}
+-			}
++			STAT_DBG(pp->stats.rx_gro++);
++			STAT_DBG(pp->stats.rx_gro_bytes += skb->len);
++
++			rx_status = napi_gro_receive(pp->napi[smp_processor_id()], skb);
++			skb = NULL;
+ 		}
+ #endif /* CONFIG_MV_ETH_GRO */
+ 
+-- 
+1.7.9.5
+

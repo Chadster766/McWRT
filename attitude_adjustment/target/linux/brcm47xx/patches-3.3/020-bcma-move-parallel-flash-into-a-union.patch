@@ -1,0 +1,60 @@
+--- a/arch/mips/bcm47xx/nvram.c
++++ b/arch/mips/bcm47xx/nvram.c
+@@ -50,6 +50,9 @@ static void early_nvram_init(void)
+ #ifdef CONFIG_BCM47XX_BCMA
+ 	case BCM47XX_BUS_TYPE_BCMA:
+ 		bcma_cc = &bcm47xx_bus.bcma.bus.drv_cc;
++		if (bcma_cc->flash_type != BCMA_PFLASH)
++			return;
++
+ 		base = bcma_cc->pflash.window;
+ 		lim = bcma_cc->pflash.window_size;
+ 		break;
+--- a/drivers/bcma/driver_mips.c
++++ b/drivers/bcma/driver_mips.c
+@@ -218,6 +218,7 @@ static void bcma_core_mips_flash_detect(
+ 		break;
+ 	case BCMA_CC_FLASHT_PARA:
+ 		bcma_info(bus, "found parallel flash.\n");
++		bus->drv_cc.flash_type = BCMA_PFLASH;
+ 		bus->drv_cc.pflash.window = 0x1c000000;
+ 		bus->drv_cc.pflash.window_size = 0x02000000;
+ 
+--- a/include/linux/bcma/bcma_driver_chipcommon.h
++++ b/include/linux/bcma/bcma_driver_chipcommon.h
+@@ -562,6 +562,12 @@
+ #define BCMA_RES_4314_HT_AVAIL			BIT(28)
+ #define BCMA_RES_4314_MACPHY_CLK_AVAIL		BIT(29)
+ 
++#define	BCMA_FLASH2			0x1c000000	/* Flash Region 2 (region 1 shadowed here) */
++#define	BCMA_FLASH2_SZ			0x02000000	/* Size of Flash Region 2 */
++#define	BCMA_FLASH1			0x1fc00000	/* MIPS Flash Region 1 */
++#define	BCMA_FLASH1_SZ			0x00400000	/* MIPS Size of Flash Region 1 */
++
++
+ /* Data for the PMU, if available.
+  * Check availability with ((struct bcma_chipcommon)->capabilities & BCMA_CC_CAP_PMU)
+  */
+@@ -571,6 +577,10 @@ struct bcma_chipcommon_pmu {
+ };
+ 
+ #ifdef CONFIG_BCMA_DRIVER_MIPS
++enum bcma_flash_type {
++	BCMA_PFLASH,
++};
++
+ struct bcma_pflash {
+ 	u8 buswidth;
+ 	u32 window;
+@@ -597,7 +607,10 @@ struct bcma_drv_cc {
+ 	u16 fast_pwrup_delay;
+ 	struct bcma_chipcommon_pmu pmu;
+ #ifdef CONFIG_BCMA_DRIVER_MIPS
+-	struct bcma_pflash pflash;
++	enum bcma_flash_type flash_type;
++	union {
++		struct bcma_pflash pflash;
++	};
+ 
+ 	int nr_serial_ports;
+ 	struct bcma_serial_port serial_ports[4];

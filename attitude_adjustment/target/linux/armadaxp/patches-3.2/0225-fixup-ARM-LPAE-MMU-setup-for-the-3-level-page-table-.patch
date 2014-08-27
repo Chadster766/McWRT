@@ -1,0 +1,32 @@
+From 240b915076d4b7eaf67d6358664d40b0963b917b Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Thu, 19 Jul 2012 10:35:19 +0300
+Subject: [PATCH 225/609] fixup! ARM: LPAE: MMU setup for the 3-level page
+ table format Fix non-LPAE boot regression. It was
+ introduced by
+ 407f8b4cb07cbc5c1c7cc386f231224e2524ccea ARM: LPAE:
+ MMU setup for the 3-level page table format
+
+Signed-off-by: Vasily Khoruzhick <anarsoul@gmail.com>
+Signed-off-by: Catalin Marinas <catalin.marinas@arm.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/kernel/head.S |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/kernel/head.S b/arch/arm/kernel/head.S
+index 087b57a..2584396 100644
+--- a/arch/arm/kernel/head.S
++++ b/arch/arm/kernel/head.S
+@@ -206,7 +206,7 @@ __create_page_tables:
+ 1:	orr	r3, r7, r5, lsl #SECTION_SHIFT	@ flags + kernel base
+ 	str	r3, [r4, r5, lsl #PMD_ORDER]	@ identity mapping
+ 	cmp	r5, r6
+-	addlo   r5, r5, #SECTION_SHIFT >> 20    @ next section
++	addlo   r5, r5, #1    @ next section
+ 	blo	1b
+ 
+ 	/*
+-- 
+1.7.9.5
+

@@ -1,0 +1,27 @@
+diff -ruN aprx-2.00_r421.orig/Makefile.in aprx-2.00_r421/Makefile.in
+--- aprx-2.00_r421.orig/Makefile.in	2010-06-19 15:13:47.000000000 +0000
++++ aprx-2.00_r421/Makefile.in	2010-08-22 00:14:35.000000000 +0000
+@@ -27,8 +27,9 @@
+ CFLAGS=		@CFLAGS@
+ 
+ # Linker and flags
+-LD=		@LD@
++LD=		@CC@
+ LDFLAGS=	@LDFLAGS@ $(PROF)
++datarootdir = @datarootdir@
+ 
+ INSTALL=	$(srcdir)/install-sh
+ INSTALL_PROGRAM=$(INSTALL)  -m 755
+@@ -89,10 +90,10 @@
+ 
+ 
+ $(PROGAPRX):	$(OBJSAPRX) VERSION Makefile
+-		$(LD) $(LDFLAGS) -o $@ $(OBJSAPRX) $(LIBS)
++		$(CC) $(CFLAGS) -o $@ $(OBJSAPRX) $(LIBS)
+ 
+ $(PROGSTAT):	$(OBJSSTAT) VERSION Makefile
+-		$(LD) $(LDFLAGS) -o $@ $(OBJSSTAT) $(LIBS)
++		$(CC) $(CFLAGS) -o $@ $(OBJSSTAT) $(LIBS)
+ 
+ .PHONY:		man
+ man:		$(MAN)

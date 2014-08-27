@@ -1,0 +1,119 @@
+From 5ee8c19bf59a73b72dd8ba23cb52f85b42c4695d Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Thu, 13 Dec 2012 19:43:45 +0200
+Subject: [PATCH 474/609] Armada300,include: Fix indentation in include files.
+
+Change-Id: Ic997471e65011d31e8a0ce6fe8893e968ffc9717
+Signed-off-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ include/linux/fs.h         |    4 ++--
+ include/linux/miscdevice.h |    4 ++--
+ include/linux/skbuff.h     |    6 +++---
+ include/linux/socket.h     |    2 +-
+ include/linux/splice.h     |    3 +--
+ 5 files changed, 9 insertions(+), 10 deletions(-)
+
+diff --git a/include/linux/fs.h b/include/linux/fs.h
+index 88bce43..8e6d37c 100644
+--- a/include/linux/fs.h
++++ b/include/linux/fs.h
+@@ -1630,7 +1630,7 @@ struct file_operations {
+ 	ssize_t (*splice_write)(struct pipe_inode_info *, struct file *, loff_t *, size_t, unsigned int);
+ 	ssize_t (*splice_read)(struct file *, loff_t *, struct pipe_inode_info *, size_t, unsigned int);
+ 	ssize_t (*splice_from_socket)(struct file *, struct socket *,
+-				     loff_t __user *ppos, size_t count);
++				      loff_t __user *ppos, size_t count);
+ 	int (*setlease)(struct file *, long, struct file_lock **);
+ 	long (*fallocate)(struct file *file, int mode, loff_t offset,
+ 			  loff_t len);
+@@ -2457,7 +2457,7 @@ extern ssize_t generic_splice_sendpage(struct pipe_inode_info *pipe,
+ extern long do_splice_direct(struct file *in, loff_t *ppos, struct file *out,
+ 		size_t len, unsigned int flags);
+ extern ssize_t generic_splice_from_socket(struct file *file, struct socket *sock,
+-				     loff_t __user *ppos, size_t count);
++					  loff_t __user *ppos, size_t count);
+ 
+ extern void
+ file_ra_state_init(struct file_ra_state *ra, struct address_space *mapping);
+diff --git a/include/linux/miscdevice.h b/include/linux/miscdevice.h
+index a36ad09..1b0e905 100644
+--- a/include/linux/miscdevice.h
++++ b/include/linux/miscdevice.h
+@@ -39,13 +39,13 @@
+ #define MWAVE_MINOR		219	/* ACP/Mwave Modem */
+ #define MPT_MINOR		220
+ #define MPT2SAS_MINOR		221
+-#define UINPUT_MINOR           	223
++#define UINPUT_MINOR		223
+ #define HPET_MINOR		228
+ #define FUSE_MINOR		229
+ #define KVM_MINOR		232
+ #define BTRFS_MINOR		234
+ #define AUTOFS_MINOR		235
+-#define MAPPER_CTRL_MINOR       236
++#define MAPPER_CTRL_MINOR	236
+ #define LOOP_CTRL_MINOR		237
+ #define MISC_DYNAMIC_MINOR	255
+ 
+diff --git a/include/linux/skbuff.h b/include/linux/skbuff.h
+index 4733d12..0fe33a8 100644
+--- a/include/linux/skbuff.h
++++ b/include/linux/skbuff.h
+@@ -420,7 +420,7 @@ struct sk_buff {
+ 
+ 	void			(*destructor)(struct sk_buff *skb);
+ #ifdef CONFIG_NET_SKB_RECYCLE
+-	int				(*skb_recycle) (struct sk_buff *skb);
++	int			(*skb_recycle) (struct sk_buff *skb);
+ 	void			*hw_cookie;
+ #endif /* CONFIG_NET_SKB_RECYCLE */
+ #if defined(CONFIG_NF_CONNTRACK) || defined(CONFIG_NF_CONNTRACK_MODULE)
+@@ -2093,7 +2093,7 @@ extern unsigned int    datagram_poll(struct file *file, struct socket *sock,
+ extern int	       skb_copy_datagram_iovec(const struct sk_buff *from,
+ 					       int offset, struct iovec *to,
+ 					       int size);
+-extern int	       skb_copy_datagram_to_kernel_iovec(const struct sk_buff *from,
++extern int		skb_copy_datagram_to_kernel_iovec(const struct sk_buff *from,
+ 					       int offset, struct iovec *to,
+ 					       int size);
+ extern int	       skb_copy_and_csum_datagram_iovec(struct sk_buff *skb,
+@@ -2536,7 +2536,7 @@ static inline bool skb_is_recycleable(const struct sk_buff *skb, int skb_size)
+ 	if (skb_end_pointer(skb) - skb->head < skb_size)
+ 		return false;
+ 
+-	if (skb_shared(skb) || skb_cloned(skb)|| skb_has_frag_list(skb))
++	if (skb_shared(skb) || skb_cloned(skb) || skb_has_frag_list(skb))
+ 		return false;
+ 
+ 	return true;
+diff --git a/include/linux/socket.h b/include/linux/socket.h
+index 6ca591f..326b641 100644
+--- a/include/linux/socket.h
++++ b/include/linux/socket.h
+@@ -266,7 +266,7 @@ struct ucred {
+ #define MSG_MORE	0x8000	/* Sender will send more */
+ #define MSG_WAITFORONE	0x10000	/* recvmmsg(): block until 1+ packets avail */
+ #define MSG_SENDPAGE_NOTLAST 0x20000 /* sendpage() internal : not the last page */
+-#define MSG_KERNSPACE   0x40000
++#define MSG_KERNSPACE	0x40000
+ #define MSG_NOCATCHSIG	0x80000
+ #define MSG_EOF         MSG_FIN
+ 
+diff --git a/include/linux/splice.h b/include/linux/splice.h
+index da53d13..30b8f66 100644
+--- a/include/linux/splice.h
++++ b/include/linux/splice.h
+@@ -58,8 +58,7 @@ struct splice_pipe_desc {
+ 	void (*spd_release)(struct splice_pipe_desc *, unsigned int);
+ };
+ 
+-struct recvfile_ctl_blk
+-{
++struct recvfile_ctl_blk {
+ 	struct page *rv_page;
+ 	loff_t rv_pos;
+ 	size_t rv_count;
+-- 
+1.7.9.5
+

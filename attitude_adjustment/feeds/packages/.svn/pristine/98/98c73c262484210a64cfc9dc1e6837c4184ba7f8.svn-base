@@ -1,0 +1,26 @@
+--- a/GNUmakefile
++++ b/GNUmakefile
+@@ -28,6 +28,7 @@ RM = rm -f
+ DEBUG_CFLAGS = -O0 -g
+ OBJS = ezxml.o
+ LIB = libezxml.a
++DYN = libezxml.so
+ TEST = ezxmltest
+ ifdef NOMMAP
+ CFLAGS += -D EZXML_NOMMAP
+@@ -36,11 +37,14 @@ ifdef DEBUG
+ CFLAGS += $(DEBUG_CFLAGS)
+ endif
+ 
+-all: $(LIB)
++all: $(LIB) $(DYN)
+ 
+ $(LIB): $(OBJS)
+ 	$(AR) rcs $(LIB) $(OBJS)
+ 
++$(DYN): $(OBJS)
++	$(CC) -shared -o $(DYN) $(OBJS)
++
+ nommap: CFLAGS += -D EZXML_NOMMAP
+ nommap: all
+ 

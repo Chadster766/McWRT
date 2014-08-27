@@ -1,0 +1,59 @@
+From 3f8da9b2d38e7f5fbe664aba515485444336aaff Mon Sep 17 00:00:00 2001
+From: Rami Rosen <rosenr@marvell.com>
+Date: Mon, 30 Jan 2012 16:34:26 +0200
+Subject: [PATCH 101/609] NETA: add ndo_select_queue() and use
+ alloc_etherdev_mq()
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |   13 +++++++++++--
+ 1 file changed, 11 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index b7da532..ff01e53 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -73,7 +73,7 @@ unsigned int ext_switch_port_mask = 0;
+ 
+ void handle_group_affinity(int port);
+ void set_rxq_affinity(struct eth_port *pp, MV_U32 rxqAffinity, int group);
+-
++static inline int mv_eth_tx_policy(struct eth_port *pp, struct sk_buff *skb);
+ 
+ /* uncomment if you want to debug the SKB recycle feature */
+ /* #define ETH_SKB_DEBUG */
+@@ -760,6 +760,13 @@ void mv_eth_rx_special_proc_func(int port, void (*func)(int port, int rxq, struc
+ }
+ #endif /* CONFIG_MV_ETH_RX_SPECIAL */
+ 
++static inline u16 mv_eth_select_txq(struct net_device *dev,
++									struct sk_buff *skb)
++{
++	struct eth_port *pp = MV_ETH_PRIV(dev);
++	return mv_eth_tx_policy(pp, skb);
++}
++
+ static const struct net_device_ops mv_eth_netdev_ops = {
+ 	.ndo_open = mv_eth_open,
+ 	.ndo_stop = mv_eth_stop,
+@@ -769,6 +776,7 @@ static const struct net_device_ops mv_eth_netdev_ops = {
+ 	.ndo_set_mac_address = mv_eth_set_mac_addr,
+ 	.ndo_change_mtu = mv_eth_change_mtu,
+ 	.ndo_tx_timeout = mv_eth_tx_timeout,
++	.ndo_select_queue = mv_eth_select_txq,
+ };
+ 
+ #ifdef CONFIG_MV_ETH_SWITCH
+@@ -3035,7 +3043,8 @@ struct net_device *mv_eth_netdev_init(struct eth_port *pp, int mtu, u8 *mac)
+ 	struct net_device *dev;
+ 	struct eth_dev_priv *dev_priv;
+ 
+-	dev = alloc_etherdev(sizeof(struct eth_dev_priv));
++
++	dev = alloc_etherdev_mq(sizeof(struct eth_dev_priv), CONFIG_MV_ETH_TXQ);
+ 	if (!dev)
+ 		return NULL;
+ 
+-- 
+1.7.9.5
+

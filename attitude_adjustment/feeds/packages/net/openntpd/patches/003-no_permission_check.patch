@@ -1,0 +1,11 @@
+--- a/ntp.c
++++ b/ntp.c
+@@ -111,8 +111,6 @@ ntp_main(int pipe_prnt[2], struct ntpd_c
+ 
+ 	if (stat(chrootdir, &stb) == -1)
+ 		fatal("stat");
+-	if (stb.st_uid != 0 || (stb.st_mode & (S_IWGRP|S_IWOTH)) != 0)
+-		fatal("bad privsep dir permissions");
+ 	if (chroot(chrootdir) == -1)
+ 		fatal("chroot");
+ 	if (chdir("/") == -1)

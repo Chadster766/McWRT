@@ -1,0 +1,134 @@
+--- a/src/pepper.c
++++ b/src/pepper.c
+@@ -389,7 +389,7 @@ static int set_env(char *name, char *val
+   }
+   else if(mac != NULL)
+   {
+-    (void) snprintf(s, sizeof(s) - 1, "%.2X-%.2X-%.2X-%.2X-%.2X-%.2X",
++    (void) snprintf(s, sizeof(s) - 1, "%.2hX-%.2hX-%.2hX-%.2hX-%.2hX-%.2hX",
+                     mac[0], mac[1],
+                     mac[2], mac[3],
+                     mac[4], mac[5]);
+@@ -447,7 +447,7 @@ static int set_envv6(char *name, char *v
+   }
+   else if(mac != NULL)
+   {
+-    (void) snprintf(s, sizeof(s) - 1, "%.2X-%.2X-%.2X-%.2X-%.2X-%.2X",
++    (void) snprintf(s, sizeof(s) - 1, "%.2hX-%.2hX-%.2hX-%.2hX-%.2hX-%.2hX",
+                     mac[0], mac[1],
+                     mac[2], mac[3],
+                     mac[4], mac[5]);
+@@ -958,7 +958,7 @@ static int set_macallowed(char *macallow
+     for(i = 0; i < strlen(p1); i++)
+       if(!isxdigit(p1[i])) p1[i] = 0x20;
+ 
+-    if(sscanf(p1, "%2x %2x %2x %2x %2x %2x",
++    if(sscanf(p1, "%2hhx %2hhx %2hhx %2hhx %2hhx %2hhx",
+                 &options.macok[options.macoklen][0],
+                 &options.macok[options.macoklen][1],
+                 &options.macok[options.macoklen][2],
+@@ -973,7 +973,7 @@ static int set_macallowed(char *macallow
+     }
+     if(options.debug & DEBUG_CONF)
+     {
+-      printf("Macallowed address #%d: %.2X-%.2X-%.2X-%.2X-%.2X-%.2X\n",
++      printf("Macallowed address #%d: %.2hhX-%.2hhX-%.2hhX-%.2hhX-%.2hhX-%.2hhX\n",
+              options.macoklen,
+              options.macok[options.macoklen][0],
+              options.macok[options.macoklen][1],
+--- a/src/redir.c
++++ b/src/redir.c
+@@ -178,7 +178,7 @@ static int redir_hextochar(char *src, in
+ {
+   char x[3];
+   int n = 0;
+-  int y = 0;
++  unsigned int y = 0;
+   int nb = len / 2;
+ 
+   for(n = 0 ; n < nb ; n++)
+--- a/src/radius.c
++++ b/src/radius.c
+@@ -971,7 +971,7 @@ int radius_getattr(struct radius_packet_
+       }
+       offset +=  t->l;
+     }
+-    while(offset < (ntohs(pack->length) - RADIUS_HDRSIZE)); /* TODO */
++    while(offset < ((int)ntohs(pack->length) - RADIUS_HDRSIZE)); /* TODO */
+   }
+   else       /* Need to check pack -> length */
+   {
+@@ -992,7 +992,7 @@ int radius_getattr(struct radius_packet_
+       }
+       offset +=  t->l;
+     }
+-    while(offset < (ntohs(pack->length) - RADIUS_HDRSIZE)); /* TODO */
++    while(offset < ((int)ntohs(pack->length) - RADIUS_HDRSIZE)); /* TODO */
+   }
+ 
+   return -1; /* Not found */
+@@ -1040,7 +1040,7 @@ int radius_getattrv6(struct radius_packe
+       }
+       offset +=  t->l;
+     }
+-    while(offset < (ntohs(pack->length) - RADIUS_HDRSIZE)); /* TODO */
++    while(offset < ((int)ntohs(pack->length) - RADIUS_HDRSIZE)); /* TODO */
+   }
+   else       /* Need to check pack -> length */
+   {
+@@ -1061,7 +1061,7 @@ int radius_getattrv6(struct radius_packe
+       }
+       offset +=  t->l;
+     }
+-    while(offset < (ntohs(pack->length) - RADIUS_HDRSIZE)); /* TODO */
++    while(offset < ((int)ntohs(pack->length) - RADIUS_HDRSIZE)); /* TODO */
+   }
+ 
+   return -1; /* Not found */
+@@ -1090,7 +1090,7 @@ int radius_getattrv6(struct radius_packe
+     }
+     offset +=  2 + t->l;
+   }
+-  while(offset < ntohs(pack->length));
++  while(offset < (int)ntohs(pack->length));
+ 
+   if(0) printf("Count %d\n", count);
+   return count;
+@@ -1903,7 +1903,7 @@ int radius_decaps(struct radius_t *this)
+     return -1;
+   }
+ 
+-  if(ntohs(pack.length) != status)
++  if((int)ntohs(pack.length) != status)
+   {
+     sys_err(LOG_WARNING, __FILE__, __LINE__, errno,
+             "Received radius packet with wrong length field %d != %d!",
+@@ -2107,7 +2107,7 @@ int radius_proxy_ind(struct radius_t *th
+     return -1;
+   }
+ 
+-  if(ntohs(pack.length) != status)
++  if((int)ntohs(pack.length) != status)
+   {
+     sys_err(LOG_WARNING, __FILE__, __LINE__, 0,
+             "Received radius packet with wrong length field %d != %d!",
+--- a/src/dhcp.c
++++ b/src/dhcp.c
+@@ -240,7 +240,7 @@ static int dhcp_tcp_checkv6(struct dhcp_
+   struct dhcp_tcphdr_t *tcph = NULL;
+   int tcp_len = 0;
+ 
+-  if(ntohs(pack->ip6h.payload_length) > (length - DHCP_ETH_HLEN))
++  if((int)ntohs(pack->ip6h.payload_length) > (length - DHCP_ETH_HLEN))
+     return -1; /* Wrong length of packet */
+ 
+   tcp_len = ntohs(pack->ip6h.payload_length);
+@@ -347,7 +347,7 @@ static int dhcp_tcp_check(struct dhcp_ip
+   struct dhcp_tcphdr_t *tcph;
+   int tcp_len = 0;
+ 
+-  if(ntohs(pack->iph.tot_len) > (length - DHCP_ETH_HLEN))
++  if((int)ntohs(pack->iph.tot_len) > (length - DHCP_ETH_HLEN))
+     return -1; /* Wrong length of packet */
+ 
+   tcp_len = ntohs(pack->iph.tot_len) - pack->iph.ihl * 4;

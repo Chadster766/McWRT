@@ -1,0 +1,26 @@
+From 506f82fa0e22c89f8e2ab1b43aed7515f216df7b Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Sun, 9 Sep 2012 09:56:48 +0300
+Subject: [PATCH 272/609] PERF_EVENTS compilation fix
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/kernel/perf_event_pj4b.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/kernel/perf_event_pj4b.c b/arch/arm/kernel/perf_event_pj4b.c
+index 3946c7c..246f912 100644
+--- a/arch/arm/kernel/perf_event_pj4b.c
++++ b/arch/arm/kernel/perf_event_pj4b.c
+@@ -510,7 +510,7 @@ static irqreturn_t mrvl_pj4b_pmu_handle_irq(int irq, void *arg)
+ 		}
+ 
+ 		hwc = &event->hw;
+-		armpmu_event_update(event, hwc, i,1);
++		armpmu_event_update(event, hwc, i);
+ 		data.period = event->hw.last_period;
+ 
+ 		if (!armpmu_event_set_period(event, hwc, i)) {		
+-- 
+1.7.9.5
+

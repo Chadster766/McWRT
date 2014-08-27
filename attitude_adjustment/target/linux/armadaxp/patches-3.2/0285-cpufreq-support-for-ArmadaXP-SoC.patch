@@ -1,0 +1,704 @@
+From bd32cf59465e6f95b04302e57c67edb21fcfb862 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Tue, 11 Sep 2012 15:48:17 +0300
+Subject: [PATCH 285/609] cpufreq support for ArmadaXP SoC
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/Kconfig                                   |    1 +
+ arch/arm/configs/armada_xp_defconfig               |    1 -
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h       |   11 +
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h       |    1 +
+ .../armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h     |   12 +
+ arch/arm/mach-armadaxp/platsmp.c                   |   91 +++---
+ arch/arm/mm/Kconfig                                |    4 +
+ arch/arm/plat-armada/Makefile                      |    1 +
+ arch/arm/plat-armada/cpufreq.c                     |  327 ++++++++++++++++++++
+ 9 files changed, 399 insertions(+), 50 deletions(-)
+ create mode 100644 arch/arm/plat-armada/cpufreq.c
+
+diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+index 6c7c60c..5319779 100644
+--- a/arch/arm/Kconfig
++++ b/arch/arm/Kconfig
+@@ -567,6 +567,7 @@ config ARCH_LPC32XX
+ config ARCH_ARMADA_XP
+ 	bool "Marvell Armada XP"
+ 	select PCI
++	select ARCH_HAS_CPUFREQ
+ 	select ARCH_SUPPORTS_MSI
+ 	select ARCH_REQUIRE_GPIOLIB
+ 	select GENERIC_GPIO
+diff --git a/arch/arm/configs/armada_xp_defconfig b/arch/arm/configs/armada_xp_defconfig
+index d25c3b2..793070e 100644
+--- a/arch/arm/configs/armada_xp_defconfig
++++ b/arch/arm/configs/armada_xp_defconfig
+@@ -195,7 +195,6 @@ CONFIG_RTC_DRV_MV=y
+ CONFIG_DMADEVICES=y
+ CONFIG_MV_XOR=y
+ CONFIG_NET_DMA=y
+-CONFIG_SPLICE_NET_DMA_SUPPORT=y
+ CONFIG_ASYNC_TX_DMA=y
+ CONFIG_EXT2_FS=y
+ CONFIG_EXT3_FS=y
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
+index 53c7044..cdf83ec 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
+@@ -97,6 +97,7 @@ extern "C" {
+ #define MV_L2C_NFABRIC_PWR_DOWN_FLOW_CTRL_REG	(MV_PMU_NFABRIC_UNIT_SERV_OFFSET + 0x8)
+ 
+ #define PM_CONTROL_AND_CONFIG_REG(cpu)		(MV_CPU_PMU_UNIT_SERV_OFFSET(cpu) + 0x4)
++#define PM_CONTROL_AND_CONFIG_DFS_REQ		(1 << 18)
+ #define PM_CONTROL_AND_CONFIG_PWDDN_REQ		(1 << 16)
+ #define PM_CONTROL_AND_CONFIG_L2_PWDDN		(1 << 20)
+ 
+@@ -109,6 +110,10 @@ extern "C" {
+ #define PM_STATUS_AND_MASK_IRQ_MASK		(1 << 24)
+ #define PM_STATUS_AND_MASK_FIQ_MASK		(1 << 25)
+ 
++#define PM_EVENT_STATUS_AND_MASK_REG(cpu)		(MV_CPU_PMU_UNIT_SERV_OFFSET(cpu) + 0x20)
++#define PM_EVENT_STATUS_AND_MASK_DFS_DONE_OFFS			1
++#define PM_EVENT_STATUS_AND_MASK_DFS_DONE_MASK_OFFS		17
++
+ #define PM_CPU_BOOT_ADDR_REDIRECT(cpu)		(MV_CPU_PMU_UNIT_SERV_OFFSET(cpu) + 0x24)
+ 
+ /* Power Management Memory Power Down Registers 1 - 6 */
+@@ -247,6 +252,12 @@ extern "C" {
+ #define L2C_MTCMOS_CONTROL_0_REG    0x22F00
+ #define L2C_MTCMOS_CONTROL_1_REG    0x22F04
+ 
++#define PMU_DFS_CTRL_REG(cpu)			(MV_RUNIT_PMU_REGS_OFFSET + 0x54 + ((cpu) * 0x4))
++#define PMU_DFS_CTRL_INIT_RATIO_OFFS	24
++#define PMU_DFS_CTRL_INIT_RATIO_MASK	0x3F
++#define PMU_DFS_CTRL_RATIO_OFFS			16
++#define PMU_DFS_CTRL_RATIO_MASK			0x3F
++
+ #define PMC_TDMSTOPCLOCK_OFFS			25
+ #define PMC_TDMSTOPCLOCK_MASK			(1 << PMC_TDMSTOPCLOCK_OFFS)
+ #define PMC_TDMSTOPCLOCK_EN			(1 << PMC_TDMSTOPCLOCK_OFFS)
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
+index 1c05c74..eae4081 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
+@@ -100,6 +100,7 @@ extern "C" {
+ #define MV_GPP_REGS_OFFSET(unit)		(0x18100 + ((unit) * 0x40))
+ #endif
+ #define MV_MISC_REGS_OFFSET			(0x18200)
++#define MV_CLK_CMPLX_REGS_OFFSET	(0x18700)
+ #define MV_MBUS_REGS_OFFSET			(0x20000)
+ #define MV_COHERENCY_FABRIC_OFFSET		(0x20200)
+ #define MV_CIB_CTRL_STATUS_OFFSET		(0x20280)
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
+index 11f3025..096b076 100755
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
+@@ -74,6 +74,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+ #define MV_CPUIF_REGS_BASE(cpu)			(MV_CPUIF_REGS_OFFSET(cpu))
+ #define MV_MISC_REGS_BASE			(MV_MISC_REGS_OFFSET)
++#define MV_CLK_CMPLX_REGS_BASE		(MV_CLK_CMPLX_REGS_OFFSET)
+ #define MV_L2C_REGS_BASE			(MV_AURORA_L2_REGS_OFFSET)
+ #define MV_CPUIF_SHARED_REGS_BASE		(MV_MBUS_REGS_OFFSET)
+ #define MV_COHERENCY_FABRIC_REGS_BASE		(MV_COHERENCY_FABRIC_OFFSET)
+@@ -300,6 +301,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define CPU_MAIN_INT_CAUSE_TWSI(i)			(31 + i)
+ 
+ #define CPU_CF_LOCAL_MASK_REG(cpu)			(MV_CPUIF_REGS_BASE(cpu) + 0xc4)
++#define CPU_CF_LOCAL_MASK_PMU_MASK_OFFS		18
+ #define CPU_INT_SOURCE_CONTROL_REG(i)		(MV_CPUIF_SHARED_REGS_BASE + 0xB00 + (i * 0x4))
+ 
+ #define CPU_INT_SOURCE_CONTROL_ENA_OFFS		28
+@@ -329,6 +331,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define CPU_ARM_TO_HOST_DRBL_REG(cpu)		(MV_CPUIF_REGS_BASE(cpu) + 0x70)
+ #define CPU_ARM_TO_HOST_MASK_REG(cpu)		(MV_CPUIF_REGS_BASE(cpu) + 0x74)
+ 
++/*******************************************/
++/* CLOCK Complex Registers Map			   */
++/*******************************************/
++
++#define CPU_DIV_CLK_CTRL0_REG				(MV_CLK_CMPLX_REGS_OFFSET)
++#define CPU_DIV_CLK_CTRL0_RESET_MASK_OFFS	8
++#define CPU_DIV_CLK_CTRL2_RATIO_FULL0_REG	(MV_CLK_CMPLX_REGS_OFFSET + 0x8)
++#define CPU_DIV_CLK_CTRL2_NB_RATIO_OFFS		16
++#define CPU_DIV_CLK_CTRL3_RATIO_FULL1_REG	(MV_CLK_CMPLX_REGS_OFFSET + 0xC)
++#define CPU_DIV_CLK_CTRL3_CPU_RATIO_OFFS	8
+ 
+ /* CPU control register map */
+ /* Set bits means value is about to change according to new value */
+diff --git a/arch/arm/mach-armadaxp/platsmp.c b/arch/arm/mach-armadaxp/platsmp.c
+index e82bf48..ce6ec1d 100644
+--- a/arch/arm/mach-armadaxp/platsmp.c
++++ b/arch/arm/mach-armadaxp/platsmp.c
+@@ -25,7 +25,7 @@
+ extern void axp_secondary_startup(void);
+ extern void second_cpu_init(void);
+ extern void second_cpu_msi_init(void);
+-extern MV_CPU_DEC_WIN* mv_sys_map(void);
++extern MV_CPU_DEC_WIN *mv_sys_map(void);
+ extern unsigned long mv_cpu_count;
+ extern void armadaxp_fabric_restore_deepIdle(void);
+ 
+@@ -37,14 +37,14 @@ unsigned int group_cpu_mask = ((1 << NR_CPUS) - 1);
+  */
+ static inline void axp_smp_cross_call(const struct cpumask *mask, unsigned int irqnr)
+ {
+-        unsigned long map = *cpus_addr(*mask);
+-        void __iomem *addr = (void __iomem *)(AXP_SW_TRIG_IRQ);
++	unsigned long map = *cpus_addr(*mask);
++	void __iomem *addr = (void __iomem *)(AXP_SW_TRIG_IRQ);
+ 
+ 	map = get_hw_cpu_mask(map);
+ 
+-        writel( ( ((map & 0xf) << 8) | irqnr ), addr);
++	writel((((map & 0xf) << 8) | irqnr), addr);
+ 
+-        return;
++	return;
+ }
+ 
+ 
+@@ -159,10 +159,6 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
+ 	return pen_release != -1 ? -ENOSYS : 0;
+ }
+ 
+-#define AXP_CPU_DIVCLK_CTRL0			0x18700
+-#define AXP_CPU_DIVCLK_CTRL2_RATIO_FULL0	0x18708
+-#define AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1	0x1870C
+-
+ static void __init wakeup_cpus(void)
+ {
+ 	MV_U32 val = 0;
+@@ -172,52 +168,50 @@ static void __init wakeup_cpus(void)
+ #ifndef CONFIG_MACH_ARMADA_XP_FPGA
+ #ifndef CONFIG_ARMADA_XP_REV_Z1
+ 	/* Scale up CPU#1 clock to max */
+-	MV_U32 divider = MV_REG_READ(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1);
+-	divider = ( divider & 0x3F );
++	MV_U32 divider = MV_REG_READ(CPU_DIV_CLK_CTRL3_RATIO_FULL1_REG);
++	divider = (divider & 0x3F);
+ 
+-	for(cpu_id = master_cpu_id + 1; cpu_id < (master_cpu_id + ncores); cpu_id++){
++	for (cpu_id = master_cpu_id + 1; cpu_id < (master_cpu_id + ncores); cpu_id++) {
+ 		if (cpu_id == 1) {
+-			val = MV_REG_READ(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1);
++			val = MV_REG_READ(CPU_DIV_CLK_CTRL3_RATIO_FULL1_REG);
+ 			val &= ~(0x0000FF00); 	/* cpu1 clkdiv ratio; cpu0 based on SAR */
+ 			val |= divider << 8;
+-			MV_REG_WRITE(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1, val);
+-		}
+-		else if (cpu_id == 2) {
+-			val = MV_REG_READ(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1);
++			MV_REG_WRITE(CPU_DIV_CLK_CTRL3_RATIO_FULL1_REG, val);
++		} else if (cpu_id == 2) {
++			val = MV_REG_READ(CPU_DIV_CLK_CTRL3_RATIO_FULL1_REG);
+ 			val &= ~(0x00FF0000);   /* cpu1 clkdiv ratio; cpu0 based on SAR */
+ 			val |= divider << 16;
+-			MV_REG_WRITE(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1, val);
+-		}
+-		else if (cpu_id == 3) {
+-			val = MV_REG_READ(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1);
++			MV_REG_WRITE(CPU_DIV_CLK_CTRL3_RATIO_FULL1_REG, val);
++		} else if (cpu_id == 3) {
++			val = MV_REG_READ(CPU_DIV_CLK_CTRL3_RATIO_FULL1_REG);
+ 			val &= ~0xFF000000;	/* cpus 3 clkdiv ratios */
+ 			val |= divider << 24;
+-			MV_REG_WRITE(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1, val);
++			MV_REG_WRITE(CPU_DIV_CLK_CTRL3_RATIO_FULL1_REG, val);
+ 		}
+ 	}
+ #else /*CONFIG_ARMADA_XP_REV_Z1*/
+        /* Scale up CPU#1 clock to max */
+ 	if (ncores > 1) {
+-		val = MV_REG_READ(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL0);
++		val = MV_REG_READ(CPU_DIV_CLK_CTRL2_RATIO_FULL0_REG);
+ 		val &= ~(0xFF000000);   /* cpu1 clkdiv ratio; cpu0 based on SAR */
+ 		val |= 0x1 << 24;
+-		MV_REG_WRITE(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL0, val);
++		MV_REG_WRITE(CPU_DIV_CLK_CTRL2_RATIO_FULL0_REG, val);
+ 	}
+ 
+ 	/* Scale up CPU#2 clock to max */
+ 	if (ncores > 2) {
+-		val = MV_REG_READ(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1);
++		val = MV_REG_READ(CPU_DIV_CLK_CTRL3_RATIO_FULL1_REG);
+ 		val &= ~0x00FF0000;     /* cpus 2 clkdiv ratios */
+ 		val |= 0x1 << 16;
+-		MV_REG_WRITE(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1, val);
++		MV_REG_WRITE(CPU_DIV_CLK_CTRL3_RATIO_FULL1_REG, val);
+ 	}
+ 
+ 	/* Scale up CPU#3 clock to max */
+ 	if (ncores > 3) {
+-		val = MV_REG_READ(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1);
++		val = MV_REG_READ(CPU_DIV_CLK_CTRL3_RATIO_FULL1_REG);
+ 		val &= ~0xFF000000;     /* cpus 3 clkdiv ratios */
+ 		val |= 0x1 << 24;
+-		MV_REG_WRITE(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1, val);
++		MV_REG_WRITE(CPU_DIV_CLK_CTRL3_RATIO_FULL1_REG, val);
+ 	}
+ #endif/*CONFIG_ARMADA_XP_REV_Z1*/
+ 
+@@ -227,19 +221,19 @@ static void __init wakeup_cpus(void)
+ 	mvSemaLock(MV_SEMA_CLOCK);
+ #endif
+ 	/* Set clock devider reload smooth bit mask */
+-	val = MV_REG_READ(AXP_CPU_DIVCLK_CTRL0);
++	val = MV_REG_READ(CPU_DIV_CLK_CTRL0_REG);
+ 	val |= (cpu_mask) << 21;
+-	MV_REG_WRITE(AXP_CPU_DIVCLK_CTRL0, val);
++	MV_REG_WRITE(CPU_DIV_CLK_CTRL0_REG, val);
+ 
+ 	/* Request clock devider reload */
+-	val = MV_REG_READ(AXP_CPU_DIVCLK_CTRL0);
++	val = MV_REG_READ(CPU_DIV_CLK_CTRL0_REG);
+ 	val |= 1 << 24;
+-	MV_REG_WRITE(AXP_CPU_DIVCLK_CTRL0, val);
++	MV_REG_WRITE(CPU_DIV_CLK_CTRL0_REG, val);
+ 
+ 	/* Wait for clocks to settle down then release reload request */
+ 	udelay(100);
+ 	val &= ~(0xf << 21);
+-	MV_REG_WRITE(AXP_CPU_DIVCLK_CTRL0, val);
++	MV_REG_WRITE(CPU_DIV_CLK_CTRL0_REG, val);
+ 	udelay(100);
+ #ifdef CONFIG_MV_AMP_ENABLE
+ 	mvSemaUnlock(MV_SEMA_CLOCK);
+@@ -249,16 +243,15 @@ static void __init wakeup_cpus(void)
+ 	/* Set resume control and address */
+ 	MV_REG_WRITE(AXP_CPU_RESUME_CTRL_REG, 0x0);
+ 
+-	for(cpu_id = master_cpu_id + 1; cpu_id < (master_cpu_id + ncores); cpu_id++){
++	for (cpu_id = master_cpu_id + 1; cpu_id < (master_cpu_id + ncores); cpu_id++)
+ 		MV_REG_WRITE(AXP_CPU_RESUME_ADDR_REG(cpu_id), virt_to_phys(axp_secondary_startup));
+-	}
+ 
+ 	/* nobody is to be released from the pen yet */
+ 	pen_release = -1;
+ 
+ 	/* Kick secondary CPUs */
+-	for(cpu_id = master_cpu_id + 1; cpu_id < (master_cpu_id + ncores); cpu_id++){
+-		// TODO YY - check that the core is activated in coherency fabric
++	for (cpu_id = master_cpu_id + 1; cpu_id < (master_cpu_id + ncores); cpu_id++) {
++		/* TODO YY - check that the core is activated in coherency fabric */
+ 		printk("SMP: CPU %d Waking up CPU %d\n", master_cpu_id, cpu_id);
+ 		val = MV_REG_READ(AXP_CPU_RESET_REG(cpu_id)) & ~(1 << AXP_CPU_RESET_OFFS);
+ 		MV_REG_WRITE(AXP_CPU_RESET_REG(cpu_id), val);
+@@ -310,8 +303,8 @@ void __init smp_init_cpus(void)
+ 	master_cpu_id  = hard_smp_processor_id();
+ 
+ 	/* Set CPU address decoding */
+-	if( mvCpuIfInit(mv_sys_map())) {
+-		printk( "Cpu Interface initialization failed.\n" );
++	if (mvCpuIfInit(mv_sys_map())) {
++		printk("Cpu Interface initialization failed.\n");
+ 		return;
+ 	}
+ 	/*mvCpuIfAddDecShow();*/
+@@ -346,13 +339,13 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
+ 
+ 	if ((ncores + master_cpu_id) > NR_CPUS) {
+ 		printk(KERN_WARNING
+-		       "Bad core count (%d) for SMP group starting at cpu no (%d). There is no CPU %d. Clipping\n", ncores, master_cpu_id, ncores + master_cpu_id);
+-
++		       "Bad core count (%d) for SMP group starting at cpu no (%d). There is no CPU %d. Clipping\n",
++				ncores, master_cpu_id, ncores + master_cpu_id);
+ 		ncores = (NR_CPUS - master_cpu_id);
+ 	}
+ 
+-	if(ncores > get_sample_at_reset_core_count())
+-		ncores=get_sample_at_reset_core_count();
++	if (ncores > get_sample_at_reset_core_count())
++		ncores = get_sample_at_reset_core_count();
+ 
+ 	/* Adjust core count in case fixing was done */
+ 	set_core_count(ncores);
+@@ -363,21 +356,21 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
+ 	if (max_cpus > ncores)
+ 		max_cpus = ncores;
+ 
+-	for (i = 0; i < NR_CPUS; i++){
+-                set_cpu_possible(i, false);
+-		set_cpu_present (i, false);
++	for (i = 0; i < NR_CPUS; i++) {
++		set_cpu_possible(i, false);
++		set_cpu_present(i, false);
+ 	}
+ 	/*
+ 	 * Initialise the present map, which describes the set of CPUs
+ 	 * actually populated at the present time.
+ 	 */
+-	for (i = 0; i < max_cpus; i++){
++	for (i = 0; i < max_cpus; i++) {
+ 		set_cpu_possible(i, true);
+ 		set_cpu_present(i, true);
+ 	}
+-	if (max_cpus > 1) {	
++	if (max_cpus > 1) {
+ 		flush_cache_all();
+-		wakeup_cpus();		
++		wakeup_cpus();
+ 	}
+ 	initialize_bridge();
+ }
+diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
+index e0b8df0..4c41984 100644
+--- a/arch/arm/mm/Kconfig
++++ b/arch/arm/mm/Kconfig
+@@ -1100,6 +1100,10 @@ config SHEEVA_DEEP_IDLE
+ 	bool "Enable CPU/L2 Deep Idle Power Management"
+ 	depends on ARCH_ARMADA_XP && CPU_IDLE
+ 
++config CPU_FREQ_ARMADA_XP
++	bool "Enable CPU frequency scaling"
++	depends on ARCH_ARMADA_XP && CPU_FREQ
++
+ config STANDBY_UART_WAKE
+ 	bool "Enable wake up from standby by UART"
+ 	depends on ARCH_ARMADA_XP && CPU_IDLE && HOTPLUG_CPU
+diff --git a/arch/arm/plat-armada/Makefile b/arch/arm/plat-armada/Makefile
+index e0a9ec5..19b86f5 100644
+--- a/arch/arm/plat-armada/Makefile
++++ b/arch/arm/plat-armada/Makefile
+@@ -14,3 +14,4 @@ obj-$(CONFIG_HOTPLUG_CPU)               += hotplug.o
+ obj-$(CONFIG_ARCH_ARMADA_XP)		+= pmu.o
+ obj-$(CONFIG_PCI_MSI)			+= msi.o
+ obj-$(CONFIG_ERROR_HANDLING)		+=error_handling.o
++obj-$(CONFIG_CPU_FREQ_ARMADA_XP)	+= cpufreq.o
+\ No newline at end of file
+diff --git a/arch/arm/plat-armada/cpufreq.c b/arch/arm/plat-armada/cpufreq.c
+new file mode 100644
+index 0000000..c75b5f9
+--- /dev/null
++++ b/arch/arm/plat-armada/cpufreq.c
+@@ -0,0 +1,327 @@
++/*
++ * arch/arm/plat-armada/cpufreq.c
++ *
++ * Clock scaling for ArmadaXP SoC
++ *
++ * This file is licensed under the terms of the GNU General Public
++ * License version 2. This program is licensed "as is" without any
++ * warranty of any kind, whether express or implied.
++ */
++
++#include <linux/kernel.h>
++#include <linux/init.h>
++#include <linux/cpufreq.h>
++#include <linux/io.h>
++#include <linux/proc_fs.h>
++#include <config/mvSysHwConfig.h>
++#include "mvCommon.h"
++#include "mvOs.h"
++#include "ctrlEnv/mvCtrlEnvLib.h"
++#include "boardEnv/mvBoardEnvLib.h"
++#include "cpu/mvCpu.h"
++
++#undef DEBUG
++#ifdef DEBUG
++#define DB(x)	x
++#else
++#define DB(x)
++#endif
++
++extern struct proc_dir_entry *mv_pm_proc_entry;
++
++enum armadaxp_cpufreq_range {
++	ARMADAXP_CPUFREQ_LOW	= 0,
++	ARMADAXP_CPUFREQ_HIGH	= 1
++};
++
++static struct cpufreq_frequency_table armadaxp_freqs[] = {
++	{ ARMADAXP_CPUFREQ_LOW, 0                  },
++	{ ARMADAXP_CPUFREQ_HIGH, 0                  },
++	{ 0, CPUFREQ_TABLE_END  }
++};
++
++static void armadaxp_set_freq_handler(void *data)
++{
++	u32 reg;
++	u32 cpu = smp_processor_id();
++	unsigned long flags;
++
++	local_irq_save(flags);
++
++	/* Configure the *WaitMask fields in the CPUx PM Status & Mask Register	(Set the CPUIdleMask fields) */
++	reg = MV_REG_READ(PM_STATUS_AND_MASK_REG(cpu));
++	/* set WaitMask fields */
++	reg |= PM_STATUS_AND_MASK_CPU_IDLE_WAIT;
++	/* Mask interrupts */
++	reg |= PM_STATUS_AND_MASK_IRQ_MASK | PM_STATUS_AND_MASK_FIQ_MASK;
++	MV_REG_WRITE(PM_STATUS_AND_MASK_REG(cpu), reg);
++
++	/* Configure the MP_PMU: "CPU PM Control and Configuration", UnitDfsReq field to 1. */
++	reg = MV_REG_READ(PM_CONTROL_AND_CONFIG_REG(cpu));
++	reg |= PM_CONTROL_AND_CONFIG_DFS_REQ;
++	MV_REG_WRITE(PM_CONTROL_AND_CONFIG_REG(cpu), reg);
++
++	wfi();
++
++	/* cancel Enable wakeup events */
++	reg = MV_REG_READ(PM_STATUS_AND_MASK_REG(cpu));
++	reg &= ~PM_STATUS_AND_MASK_CPU_IDLE_WAIT;
++	/* UnMask interrupts */
++	reg &= ~(PM_STATUS_AND_MASK_IRQ_MASK | PM_STATUS_AND_MASK_FIQ_MASK);
++	MV_REG_WRITE(PM_STATUS_AND_MASK_REG(cpu), reg);
++
++	local_irq_restore(flags);
++}
++
++/*
++ * Power management function: set or unset powersave mode
++ */
++static inline void armadaxp_set_powersave(unsigned int cpu, u8 on)
++{
++	void __iomem *addr = (void __iomem *)(AXP_SW_TRIG_IRQ);
++	u32 reg, fabric_div, target_div;
++	unsigned long timeout;
++	struct call_single_data cp;
++
++	DB(printk(KERN_DEBUG "cpufreq: Setting PowerSaveState to %s\n", on ? "on" : "off"));
++
++	fabric_div = ((MV_REG_READ(CPU_DIV_CLK_CTRL2_RATIO_FULL0_REG) &
++		(0x3F << CPU_DIV_CLK_CTRL2_NB_RATIO_OFFS)) >> CPU_DIV_CLK_CTRL2_NB_RATIO_OFFS);
++
++	if (on)
++		target_div = fabric_div;
++	else
++		target_div = fabric_div/2;
++
++	if (target_div == 0)
++		target_div = 1;
++
++	/* Configure the DEV_PMU: "PMU DFS Control %n" register, DfsRatio%n field, to the future required ratio. */
++	reg = MV_REG_READ(PMU_DFS_CTRL_REG(cpu));
++	reg &= ~(PMU_DFS_CTRL_RATIO_MASK << PMU_DFS_CTRL_RATIO_OFFS);
++	reg |= (target_div << PMU_DFS_CTRL_RATIO_OFFS);
++	MV_REG_WRITE(PMU_DFS_CTRL_REG(cpu), reg);
++
++	reg = MV_REG_READ(PM_EVENT_STATUS_AND_MASK_REG(cpu));
++	reg &= ~(1 << PM_EVENT_STATUS_AND_MASK_DFS_DONE_OFFS);
++	MV_REG_WRITE(PM_EVENT_STATUS_AND_MASK_REG(cpu), reg);
++
++	/* Unmask DFS Done interrupt */
++	reg = MV_REG_READ(PM_EVENT_STATUS_AND_MASK_REG(cpu));
++	reg |= (1 << PM_EVENT_STATUS_AND_MASK_DFS_DONE_MASK_OFFS);
++	MV_REG_WRITE(PM_EVENT_STATUS_AND_MASK_REG(cpu), reg);
++
++	/* Mask reset signals at frequency change */
++	reg = MV_REG_READ(CPU_DIV_CLK_CTRL0_REG);
++	MV_REG_WRITE(CPU_DIV_CLK_CTRL0_REG, reg | (0xFF << CPU_DIV_CLK_CTRL0_RESET_MASK_OFFS));
++
++	/* Generate IPI CPUFREQ message to the traget cpu */
++	cp.func = armadaxp_set_freq_handler;
++	cp.info = 0;
++	cp.flags = 0;
++	cp.priv = 0;
++
++	__smp_call_function_single(cpu, &cp, 0);
++
++	/* Wait for DFS end indication */
++	timeout = jiffies + (10 * HZ);
++	while (time_before(jiffies, timeout)) {
++		if (MV_REG_READ(PM_EVENT_STATUS_AND_MASK_REG(cpu)) & (1 << PM_EVENT_STATUS_AND_MASK_DFS_DONE_OFFS))
++			break;
++		udelay(10);
++	}
++
++	/* Mask DFS Done interrupt */
++	reg = MV_REG_READ(PM_EVENT_STATUS_AND_MASK_REG(cpu));
++	reg &= ~(1 << PM_EVENT_STATUS_AND_MASK_DFS_DONE_MASK_OFFS);
++	MV_REG_WRITE(PM_EVENT_STATUS_AND_MASK_REG(cpu), reg);
++
++	DB(printk(KERN_DEBUG "cpufreq: CPU %d finished setting CPU %d Frequency to %d \n",
++		smp_processor_id(), cpu, target_div));
++
++}
++
++static int armadaxp_cpufreq_verify(struct cpufreq_policy *policy)
++{
++	if (unlikely(!cpu_online(policy->cpu)))
++		return -ENODEV;
++
++	return cpufreq_frequency_table_verify(policy, armadaxp_freqs);
++}
++
++/*
++ * Get the current frequency for a given cpu.
++ */
++static unsigned int armadaxp_cpufreq_get(unsigned int cpu)
++{
++	unsigned int freq;
++	u32 cur_div_val, fabric_div;
++
++	if (unlikely(!cpu_online(cpu)))
++		return -ENODEV;
++
++	/* To get the current frequency, we have to check if
++	* the powersave mode is set. */
++	cur_div_val = (((MV_REG_READ(CPU_DIV_CLK_CTRL3_RATIO_FULL1_REG) &
++		(0x3F << (cpu * CPU_DIV_CLK_CTRL3_CPU_RATIO_OFFS))) >> (cpu * CPU_DIV_CLK_CTRL3_CPU_RATIO_OFFS)) & 0x3F);
++	fabric_div = ((MV_REG_READ(CPU_DIV_CLK_CTRL2_RATIO_FULL0_REG) &
++		(0x3F << CPU_DIV_CLK_CTRL2_NB_RATIO_OFFS)) >> CPU_DIV_CLK_CTRL2_NB_RATIO_OFFS);
++
++	if (cur_div_val == fabric_div)
++		freq = armadaxp_freqs[ARMADAXP_CPUFREQ_LOW].frequency;
++	else
++		freq = armadaxp_freqs[ARMADAXP_CPUFREQ_HIGH].frequency;
++
++	DB(printk(KERN_DEBUG "armadaxp_cpufreq_get: CPU %d freq is %u MHz\n", cpu, freq));
++
++	return freq;
++}
++
++/*
++ * Set the frequency for a given cpu.
++ */
++static int armadaxp_cpufreq_target(struct cpufreq_policy *policy,
++		unsigned int target_freq, unsigned int relation)
++{
++	unsigned int index;
++	struct cpufreq_freqs freqs;
++
++	if (unlikely(!cpu_online(policy->cpu)))
++		return -ENODEV;
++
++	/* Lookup the next frequency */
++	if (unlikely(cpufreq_frequency_table_target(policy,
++		armadaxp_freqs, target_freq, relation, &index)))
++		return -EINVAL;
++
++	freqs.old = policy->cur;
++	freqs.new = armadaxp_freqs[index].frequency;
++	freqs.cpu = policy->cpu;
++
++	DB(printk(KERN_DEBUG "cpufreq: CPU %d is setting CPU %d Frequency to %u KHz\n", smp_processor_id(),
++			policy->cpu, freqs.new));
++
++	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
++
++	if (freqs.new == armadaxp_freqs[ARMADAXP_CPUFREQ_LOW].frequency)
++		armadaxp_set_powersave(policy->cpu, 1);
++	else
++		armadaxp_set_powersave(policy->cpu, 0);
++
++	cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
++
++	return 0;
++}
++
++static int armadaxp_cpufreq_cpu_init(struct cpufreq_policy *policy)
++{
++	if (unlikely(!cpu_online(policy->cpu)))
++		return -ENODEV;
++
++	armadaxp_freqs[ARMADAXP_CPUFREQ_HIGH].frequency = mvCpuPclkGet()/1000000;
++	/* policy->cpu low frequency is the DDR frequency. */
++	armadaxp_freqs[ARMADAXP_CPUFREQ_LOW].frequency  = mvBoardSysClkGet()/1000000;
++
++	DB(printk(KERN_DEBUG
++			"cpufreq: High frequency: %uKHz - Low frequency: %uMHz\n",
++			armadaxp_freqs[ARMADAXP_CPUFREQ_HIGH].frequency,
++			armadaxp_freqs[ARMADAXP_CPUFREQ_LOW].frequency));
++
++	policy->cpuinfo.transition_latency = 5000;
++	policy->cur = armadaxp_cpufreq_get(0);
++	policy->governor = CPUFREQ_DEFAULT_GOVERNOR;
++
++	cpufreq_frequency_table_get_attr(armadaxp_freqs, policy->cpu);
++
++	return cpufreq_frequency_table_cpuinfo(policy, armadaxp_freqs);
++}
++
++
++static int armadaxp_cpufreq_cpu_exit(struct cpufreq_policy *policy)
++{
++	cpufreq_frequency_table_put_attr(policy->cpu);
++	return 0;
++}
++
++static struct freq_attr *armadaxp_freq_attr[] = {
++	&cpufreq_freq_attr_scaling_available_freqs,
++	NULL,
++};
++
++
++static struct cpufreq_driver armadaxp_freq_driver = {
++	.name           = "armadaxp_cpufreq",
++	.init           = armadaxp_cpufreq_cpu_init,
++	.verify         = armadaxp_cpufreq_verify,
++	.exit			= armadaxp_cpufreq_cpu_exit,
++	.target         = armadaxp_cpufreq_target,
++	.get            = armadaxp_cpufreq_get,
++	.attr           = armadaxp_freq_attr,
++};
++
++#ifdef CONFIG_MV_PMU_PROC
++static int mv_cpu_freq_write(struct file *file, const char *buffer,
++		unsigned long count, void *data)
++{
++	struct cpufreq_policy policy;
++	int cpu;
++
++	/* Reading / Writing from system controller internal registers */
++	if (!strncmp (buffer, "enable", strlen("enable"))) {
++		cpufreq_register_driver(&armadaxp_freq_driver);
++	} else if (!strncmp (buffer, "disable", strlen("disable"))) {
++		cpufreq_get_policy(&policy, smp_processor_id());
++		armadaxp_cpufreq_target(&policy, armadaxp_freqs[ARMADAXP_CPUFREQ_HIGH].frequency, CPUFREQ_RELATION_H);
++		cpufreq_unregister_driver(&armadaxp_freq_driver);
++	} else if (!strncmp (buffer, "fast", strlen("fast"))) {
++		for_each_online_cpu(cpu)
++			armadaxp_set_powersave(cpu, 0);
++	} else if (!strncmp (buffer, "slow", strlen("slow"))) {
++		for_each_online_cpu(cpu)
++			armadaxp_set_powersave(cpu, 1);
++	}
++
++	return count;
++}
++
++
++static int mv_cpu_freq_read(char *buffer, char **buffer_location, off_t offset,
++		int buffer_length, int *zero, void *ptr)
++{
++	if (offset > 0)
++		return 0;
++	return sprintf(buffer, "enable - Enable policy->cpu-Freq framework.\n"
++				"disable - Disable policy->cpu-Freq framework.\n"
++				"fast - Manually set the policy->cpu to fast frequency mode (in Disable mode).\n"
++				"slow - Manually set the policy->cpu to slow frequency mode (in Disable mode).\n");
++}
++
++#endif /* CONFIG_MV_PMU_PROC */
++
++static int __init armadaxp_cpufreq_init(void)
++{
++#ifdef CONFIG_MV_PMU_PROC
++	struct proc_dir_entry *cpu_freq_proc;
++#endif /* CONFIG_MV_PMU_PROC */
++
++	printk(KERN_INFO "cpufreq: Init ArmadaXP cpufreq driver\n");
++
++#ifdef CONFIG_MV_PMU_PROC
++	/* Create proc entry. */
++	cpu_freq_proc = create_proc_entry("cpu_freq", 0666, NULL);
++	cpu_freq_proc->read_proc = mv_cpu_freq_read;
++	cpu_freq_proc->write_proc = mv_cpu_freq_write;
++	cpu_freq_proc->nlink = 1;
++#endif /* CONFIG_MV_PMU_PROC */
++
++	return cpufreq_register_driver(&armadaxp_freq_driver);
++}
++
++static void __exit armadaxp_cpufreq_exit(void)
++{
++	cpufreq_unregister_driver(&armadaxp_freq_driver);
++}
++
++device_initcall(armadaxp_cpufreq_init);
++
++
+-- 
+1.7.9.5
+

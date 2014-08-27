@@ -1,0 +1,130 @@
+From fe0b987054cfb1d53eec3903c1147a3b6a2e01f3 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Tue, 20 Dec 2011 19:18:15 +0200
+Subject: [PATCH 038/609] Enabling 2 more XOR channel on A0, keeping Z1
+ backward compatible
+
+Signed-off-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/core.c                  |   25 +++++++++++++-----------
+ arch/arm/mach-armadaxp/include/mach/armadaxp.h |    4 ++--
+ arch/arm/mach-armadaxp/include/mach/irqs.h     |    8 ++++----
+ 3 files changed, 20 insertions(+), 17 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index 2080a2f..ae73ddb 100644
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -129,8 +129,13 @@ MV_U16 mvMtu[CONFIG_MV_ETH_PORTS_NUM] = {0};
+ struct mbus_dram_target_info armadaxp_mbus_dram_info;
+ 
+ /* XOR0 is disabled in Z1 Silicone */
++#ifdef CONFIG_ARMADA_XP_REV_Z1
++ /* XOR0 is disabled in Z1 Silicone */
+ #undef XOR0_ENABLE
+-
++#else
++ /* XOR0 is disabled in A0 Silicone */
++#define XOR0_ENABLE
++#endif
+ 
+ /*********************************************************************************/
+ /**************                 Early Printk Support                **************/
+@@ -950,8 +955,8 @@ static struct platform_device armadaxp_xor0_shared = {
+ 
+ static struct resource armadaxp_xor00_resources[] = {
+ 	[0] = {
+-		.start	= IRQ_AURORA_XOR0,
+-		.end	= IRQ_AURORA_XOR0,
++		.start	= IRQ_AURORA_XOR00,
++		.end	= IRQ_AURORA_XOR00,
+ 		.flags	= IORESOURCE_IRQ,
+ 	},
+ };
+@@ -976,8 +981,8 @@ static struct platform_device armadaxp_xor00_channel = {
+ 
+ static struct resource armadaxp_xor01_resources[] = {
+ 	[0] = {
+-		.start	= IRQ_AURORA_XOR1,
+-		.end	= IRQ_AURORA_XOR1,
++		.start	= IRQ_AURORA_XOR01,
++		.end	= IRQ_AURORA_XOR01,
+ 		.flags	= IORESOURCE_IRQ,
+ 	},
+ };
+@@ -1048,8 +1053,8 @@ static struct platform_device armadaxp_xor1_shared = {
+ 
+ static struct resource armadaxp_xor10_resources[] = {
+ 	[0] = {
+-		.start	= IRQ_AURORA_XOR0,
+-		.end	= IRQ_AURORA_XOR0,
++		.start	= IRQ_AURORA_XOR10,
++		.end	= IRQ_AURORA_XOR10,
+ 		.flags	= IORESOURCE_IRQ,
+ 	},
+ };
+@@ -1074,8 +1079,8 @@ static struct platform_device armadaxp_xor10_channel = {
+ 
+ static struct resource armadaxp_xor11_resources[] = {
+ 	[0] = {
+-		.start	= IRQ_AURORA_XOR1,
+-		.end	= IRQ_AURORA_XOR1,
++		.start	= IRQ_AURORA_XOR11,
++		.end	= IRQ_AURORA_XOR11,
+ 		.flags	= IORESOURCE_IRQ,
+ 	},
+ };
+@@ -1331,8 +1336,6 @@ void __init axp_tag_fixup_mem32(struct machine_desc *mdesc, struct tag *t,
+ 
+ MACHINE_START(ARMADA_XP_DB, "Marvell Armada XP Development Board")
+ 	/* MAINTAINER("MARVELL") */
+-	//.phys_io	= INTER_REGS_PHYS_BASE,
+-	//.io_pg_offst	= ((INTER_REGS_BASE) >> 18) & 0xfffc,
+ 	.atag_offset	= 0x00000100,
+ 	.map_io		= axp_map_io,
+ 	.init_irq	= axp_init_irq,
+diff --git a/arch/arm/mach-armadaxp/include/mach/armadaxp.h b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
+index a3d8844..9fce9a1 100644
+--- a/arch/arm/mach-armadaxp/include/mach/armadaxp.h
++++ b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
+@@ -158,8 +158,8 @@
+ #define CRYPT_ENG_VIRT_BASE(chan)	((chan == 0) ? 0xFEB00000 : 0xFEB10000)
+ #define CRYPT_ENG_SIZE			_64K
+ 
+-#define XOR0_PHYS_BASE			(INTER_REGS_PHYS_BASE | 0x60800)
+-#define XOR1_PHYS_BASE			(INTER_REGS_PHYS_BASE | 0x60900)
++#define XOR0_PHYS_BASE			(INTER_REGS_PHYS_BASE | 0x60900)
++#define XOR1_PHYS_BASE			(INTER_REGS_PHYS_BASE | 0xF0900)
+ #define XOR0_HIGH_PHYS_BASE		(INTER_REGS_PHYS_BASE | 0x60B00)
+ #define XOR1_HIGH_PHYS_BASE		(INTER_REGS_PHYS_BASE | 0xF0B00)
+ 
+diff --git a/arch/arm/mach-armadaxp/include/mach/irqs.h b/arch/arm/mach-armadaxp/include/mach/irqs.h
+index fc441e6..7f805a7 100644
+--- a/arch/arm/mach-armadaxp/include/mach/irqs.h
++++ b/arch/arm/mach-armadaxp/include/mach/irqs.h
+@@ -64,8 +64,8 @@
+ 
+ #define IRQ_AURORA_RTC		50
+ 
+-#define IRQ_AURORA_XOR0		51
+-#define IRQ_AURORA_XOR1		52
++#define IRQ_AURORA_XOR00	51
++#define IRQ_AURORA_XOR01	52
+ 
+ #define IRQ_AURORA_BM		53
+ #define IRQ_AURORA_SDIO		54
+@@ -110,8 +110,8 @@
+ #define IRQ_AURORA_GPIO_56_63	90
+ #define IRQ_AURORA_GPIO_64_66	91
+ 
+-#define IRQ_AURORA_XOR2		94
+-#define IRQ_AURORA_XOR3		95
++#define IRQ_AURORA_XOR10	94
++#define IRQ_AURORA_XOR11	95
+ 
+ #define IRQ_AURORA_SHARE_INB_DB0	96
+ #define IRQ_AURORA_SHARE_INB_DB1	97
+-- 
+1.7.9.5
+

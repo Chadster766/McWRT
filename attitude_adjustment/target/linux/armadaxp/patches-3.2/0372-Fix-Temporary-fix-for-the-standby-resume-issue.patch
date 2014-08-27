@@ -1,0 +1,37 @@
+From efdc8180f01a3ccd175321d9bf76fb10f9c2e341 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Tue, 25 Dec 2012 13:49:56 +0200
+Subject: [PATCH 372/609] Fix: Temporary fix for the standby resume issue
+
+This patch adds large delay to the powerUpDelay variable at the PMU
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/boardEnv/mvBoardEnvSpec.c     |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+index c1030cc..e47ac51 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+@@ -406,7 +406,7 @@ MV_BOARD_INFO db88f78XX0rev2Info = {
+ 
+ 	/* PMU Power */
+ 	.pmuPwrUpPolarity		= 0,
+-	.pmuPwrUpDelay			= 80000,
++	.pmuPwrUpDelay			= 0xFFFFF,
+ 
+ 	/* GPP values */
+ 	.gppOutEnValLow			= DB_88F78XX0_REV2_GPP_OUT_ENA_LOW,
+@@ -1325,7 +1325,7 @@ MV_BOARD_INFO rd78460gpInfo = {
+ 
+ 	/* PMU Power */
+ 	.pmuPwrUpPolarity		= 0,
+-	.pmuPwrUpDelay			= 80000,
++	.pmuPwrUpDelay			= 0xFFFFF,
+ 
+ 	/* GPP values */
+ 	.gppOutEnValLow			= RD_78460_GP_GPP_OUT_ENA_LOW,
+-- 
+1.7.9.5
+

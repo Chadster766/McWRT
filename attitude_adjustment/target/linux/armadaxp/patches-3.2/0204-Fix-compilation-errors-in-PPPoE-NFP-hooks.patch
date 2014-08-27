@@ -1,0 +1,68 @@
+From 2126a668817d17f436f397d9e88503682ea4c49a Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Tue, 10 Jul 2012 05:46:54 -0400
+Subject: [PATCH 204/609] Fix compilation errors in PPPoE NFP hooks
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ drivers/net/ppp/ppp_generic.c |    1 +
+ drivers/net/ppp/pppoe.c       |   13 ++++++++-----
+ 2 files changed, 9 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/net/ppp/ppp_generic.c b/drivers/net/ppp/ppp_generic.c
+index 5bf7b72..784776f 100644
+--- a/drivers/net/ppp/ppp_generic.c
++++ b/drivers/net/ppp/ppp_generic.c
+@@ -51,6 +51,7 @@
+ #include <linux/atomic.h>
+ 
+ #include <linux/nsproxy.h>
++#include <linux/mv_nfp.h>
+ #include <net/net_namespace.h>
+ #include <net/netns/generic.h>
+ 
+diff --git a/drivers/net/ppp/pppoe.c b/drivers/net/ppp/pppoe.c
+index daff053..405648f 100644
+--- a/drivers/net/ppp/pppoe.c
++++ b/drivers/net/ppp/pppoe.c
+@@ -79,6 +79,8 @@
+ #include <linux/seq_file.h>
+ 
+ #include <linux/nsproxy.h>
++#include <linux/mv_nfp.h>
++
+ #include <net/net_namespace.h>
+ #include <net/netns/generic.h>
+ #include <net/sock.h>
+@@ -589,14 +591,15 @@ static int pppoe_release(struct socket *sock)
+ 	net = sock_net(sk);
+ 	pn = pppoe_pernet(net);
+ 
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++	if (nfp_mgr_p->nfp_hook_ppp_info_del)
++		nfp_mgr_p->nfp_hook_ppp_info_del((u32)&po->chan);
++#endif /* CONFIG_MV_ETH_NFP_LEARN || CONFIG_MV_ETH_NFP_LEARN_MODULE */
++
+ 	/*
+ 	 * protect "po" from concurrent updates
+ 	 * on pppoe_flush_dev
+ 	 */
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+-	f (nfp_mgr_p->nfp_hook_ppp_info_del)
+-		p_mgr_p->nfp_hook_ppp_info_del((u32)&po->chan);
+-#endif
+ 
+ 	delete_item(pn, po->pppoe_pa.sid, po->pppoe_pa.remote,
+ 		    po->pppoe_ifindex);
+@@ -701,7 +704,7 @@ static int pppoe_connect(struct socket *sock, struct sockaddr *uservaddr,
+ 
+ #if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 	if (nfp_mgr_p->nfp_hook_ppp_half_set)
+-		p_mgr_p->nfp_hook_ppp_half_set(sp->sa_addr.pppoe.sid, (u32)&po->chan, dev, po->pppoe_pa.remote);
++		nfp_mgr_p->nfp_hook_ppp_half_set(sp->sa_addr.pppoe.sid, (u32)&po->chan, dev, po->pppoe_pa.remote);
+ #endif /* CONFIG_MV_ETH_NFP_LEARN || CONFIG_MV_ETH_NFP_LEARN_MODULE */
+ 
+ 	}
+-- 
+1.7.9.5
+

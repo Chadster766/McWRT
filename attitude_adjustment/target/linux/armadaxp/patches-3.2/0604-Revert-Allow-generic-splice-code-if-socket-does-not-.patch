@@ -1,0 +1,32 @@
+From f3c674d615739fb78110f860b74205e71cff1039 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Tue, 7 May 2013 18:22:39 +0300
+Subject: [PATCH 604/609] Revert "Allow generic splice code if socket does not
+ have the splice_from_socket function set."
+
+This reverts commit 2ddc0b7008aae74e745adeddb549366adda43ac2.
+
+This patch is reverted due to SAMBA instability
+
+Change-Id: Ib76db0d21cb66f10817479b373aa5197bdbb4dbb
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ fs/splice.c |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/fs/splice.c b/fs/splice.c
+index 47e47ff..2700e55 100644
+--- a/fs/splice.c
++++ b/fs/splice.c
+@@ -2124,6 +2124,7 @@ done:
+ 		if(out)
+ 			fput_light(out, fput_out);
+ 		fput(sock->file);
++		return error;
+ 	}
+ 
+ 	in = fget_light(fd_in, &fput_in);
+-- 
+1.7.9.5
+

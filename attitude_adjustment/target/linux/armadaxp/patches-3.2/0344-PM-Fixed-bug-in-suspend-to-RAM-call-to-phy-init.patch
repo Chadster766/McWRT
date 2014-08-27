@@ -1,0 +1,54 @@
+From f0f988aa6401361ce9fcc9e67d457b2e3809f081 Mon Sep 17 00:00:00 2001
+From: Uri Eliyahu <uriel@marvell.com>
+Date: Thu, 15 Nov 2012 11:05:05 +0200
+Subject: [PATCH 344/609] PM Fixed bug in suspend to RAM call to phy init
+
+Signed-off-by: Uri Eliyahu <uriel@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/core.c |    8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index ad9da8d..523dce8 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -63,6 +63,7 @@
+ #include "plat/gpio.h"
+ #include "cpu/mvCpu.h"
+ 
++
+ #if defined(CONFIG_MV_INCLUDE_SDIO)
+ #include "sdmmc/mvSdmmc.h"
+ #include <plat/mvsdio.h>
+@@ -84,6 +85,7 @@
+ 
+ /* Eth Phy */
+ #include "mvSysEthPhyApi.h"
++#include "eth-phy/mvEthPhy.h"
+ 
+ /* LCD */
+ #include <video/dovefb.h>
+@@ -1456,6 +1458,7 @@ static int mvAmpInitCpuIf()
+  * ****************************************************************************/
+ void axp_db_restore(void)
+ {
++	int maxPorts, port;
+ 
+ 	/* init the Board environment */
+ 	mvBoardEnvInit();
+@@ -1484,7 +1487,10 @@ void axp_db_restore(void)
+ #ifdef CONFIG_MV_INCLUDE_USB
+ 	mvUsbPllInit();
+ #endif
+-	mvSysEthPhyInit();
++	maxPorts =  mvCtrlEthMaxPortGet();
++
++	for (port = 0; port < maxPorts; port++)
++		mvEthPhyInit(port, MV_FALSE);
+ 
+ 	/* TODO - timer should be restored by kernel hook */
+ 	axp_timer_resume();
+-- 
+1.7.9.5
+

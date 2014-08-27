@@ -1,0 +1,48 @@
+--- a/configure
++++ b/configure
+@@ -23332,8 +23332,7 @@ echo $ECHO_N "checking for field domainn
+   { { echo "$as_me:$LINENO: error: cannot run test program while cross compiling
+ See \`config.log' for more details." >&5
+ echo "$as_me: error: cannot run test program while cross compiling
+-See \`config.log' for more details." >&2;}
+-   { (exit 1); exit 1; }; }
++See \`config.log' for more details." >&2;} }
+ else
+   cat >conftest.$ac_ext <<_ACEOF
+ /* confdefs.h.  */
+--- a/configure.in
++++ b/configure.in
+@@ -104,32 +104,7 @@ AC_REPLACE_FUNCS(strdup strerror strcase
+ AC_CHECK_FUNCS(flock fcntl uname gethostname sysinfo getdomainname)
+ AC_CHECK_FUNCS(stricmp random rand snprintf vsnprintf)
+ 
+-if test "$ac_cv_func_uname" = 'yes'
+-then
+-	AC_MSG_CHECKING([for field domainname in struct utsname])
+-	AC_TRY_RUN([
+-	#include <sys/utsname.h>
+-	
+-	main(int argc, char **argv)
+-	{
+-		struct utsname uts;
+-		uts.domainname[0] = '\0';
+-	}
+-	],
+-	AC_MSG_RESULT(yes)
+-	AC_DEFINE(HAVE_STRUCT_UTSNAME_DOMAINNAME),
+-	AC_MSG_RESULT(no)
+-	)
+-fi
+-
+-AC_MSG_CHECKING([for /dev/urandom])
+-if test -c /dev/urandom
+-then
+-	AC_MSG_RESULT(yes)
+-	AC_DEFINE(HAVE_DEV_URANDOM)
+-else
+-	AC_MSG_RESULT(no)
+-fi
++AC_DEFINE(HAVE_DEV_URANDOM)
+ 
+ dnl Determine PATH setting
+ echo $ac_n "using the following PATH setting for exec'ed programs... $ac_c" 1>&6

@@ -1,0 +1,64 @@
+Index: matrixssl/src/os/linux/linux.c
+===================================================================
+--- matrixssl.orig/src/os/linux/linux.c	2010-11-02 21:01:53.702000002 +0100
++++ matrixssl/src/os/linux/linux.c	2010-11-02 21:02:37.657009753 +0100
+@@ -39,8 +39,12 @@
+ 
+ #include "../osLayer.h"
+ 
++#ifndef CLK_TCK
++# define CLK_TCK	CLOCKS_PER_SEC
++#endif
++
+ #if defined(__i386__) || defined(RDTSC)
+-#include <asm/timex.h>
++//#include <asm/timex.h>
+ /*
+ 	As defined in asm/timex.h for x386:
+ */
+@@ -51,7 +55,7 @@
+ static sslTime_t	hiresStart; 	/* zero-time */
+ static sslTime_t	hiresFreq; 		/* tics per second */
+ #else /* __i386__ */
+-static unsigned	int32 prevTicks; 		/* Check wrap */
++static uint32		prevTicks; 		/* Check wrap */
+ static sslTime_t	elapsedTime; 	/* Last elapsed time */
+ #endif
+ 
+Index: matrixssl/src/Makefile
+===================================================================
+--- matrixssl.orig/src/Makefile	2010-11-02 21:02:42.312000001 +0100
++++ matrixssl/src/Makefile	2010-11-02 21:04:21.979001189 +0100
+@@ -63,13 +63,6 @@
+ endif
+ 
+ #
+-#	Override variables for compilation on x86-64 (AMD64, Nacona, etc)
+-#
+-ifeq ($(shell uname -m),x86_64)
+-DFLAGS  += -march=k8 -fPIC -DFP_64BIT -DTFM_X86_64 -DRDTSC
+-endif
+-
+-#
+ #	Compile options
+ #
+ SHARED	= -shared
+@@ -77,18 +70,6 @@
+ LDFLAGS = -lc -lpthread -Wl,-soname,$(SONAME)
+ 
+ #
+-#	Override variables for compilation on Mac OS X (Darwin)
+-#
+-ifeq ($(shell uname),Darwin)
+-CC	= cc
+-SO	= .dylib
+-SHARED	= -dynamiclib
+-CFLAGS += -DOSX -isystem -I/usr/include
+-LDFLAGS = -flat_namespace -install_name @executable_path/../src/$(LIBRARY)
+-STRIP = test
+-endif
+-
+-#
+ #	Override variables for compilation on uClinux (example only)
+ #
+ ifdef UCLINUX

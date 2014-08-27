@@ -1,0 +1,55 @@
+package quicktun
+
+config quicktun sample_config
+
+	# Set to 1 to enable this instance:
+	option enabled 0
+
+	# IP address or hostname of the local end, optional
+#	option local_address 0.0.0.0
+
+	# Local UDP port
+	option local_port 2998
+
+	# IP address or hostname of the remote end
+	# Use 0.0.0.0 for a floating/dynamic endpoint
+	option remote_address 0.0.0.0
+
+	# Remote UDP port
+	option remote_port 2998
+
+	# Allows the remote address and port to change when properly
+	# encrypted packets are received even when a remote address
+	# is set
+	option remote_float 0
+
+	# "proto raw" uses no encryption
+	# "proto nacl0" uses NaCl encryption without nonce
+	# "proto nacltai" uses NaCl encryption with nonce
+	option protocol raw
+
+	# "tun_mode 0" will create an ethernet tunnel (tap device),
+	# "tun_mode 1" will create an IP tunnel (tun device).
+	option tun_mode 0
+
+	# Set the name of the tunnel interface to use
+	option interface "tap0"
+#	option interface "tun0"
+#	option interface "qt0"
+
+	# The local private key and the remote public key
+	# A keypair can be generated with quicktun.keygen
+	# (nacl0 and nacltai protocols only)
+	#option private_key 0000000000000000000000000000000000000000000000000000000000000000
+	#option public_key 0000000000000000000000000000000000000000000000000000000000000000
+
+	# allowed time window for first received packet in seconds,
+	# positive number allows packets from history
+	# (nacltai protocol only)
+	#option time_window 0
+
+	# command to configure IP addresses etc. after the tunnel is up; $1 will be the interface name (optional)
+#	option up ""
+
+	# command to execute before the tunnel is set down; $1 will be the interface name (optional)
+#	option down ""

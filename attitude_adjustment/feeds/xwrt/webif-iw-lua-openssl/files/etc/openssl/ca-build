@@ -1,0 +1,8 @@
+#!/bin/sh
+. /etc/openssl/read_uci
+#openssl req -days 3650 -batch \
+openssl req -days 3650 -nodes -batch \
+	-new -x509 \
+	-keyout /etc/openssl/$ENTITY/topsecret/cakey.pem \
+	-out /etc/openssl/$ENTITY/cacert.crt \
+	-config /etc/openssl/openssl.cnf

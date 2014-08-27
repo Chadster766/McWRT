@@ -1,0 +1,68 @@
+From bc0098731d49d662c8a25ab777161684cfabbf91 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Thu, 29 Nov 2012 17:24:38 +0200
+Subject: [PATCH 351/609] PM: Fix Hotplug and Standby
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/platsmp.c |    3 +++
+ arch/arm/plat-armada/cpuidle.c   |   15 +++++++++------
+ 2 files changed, 12 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/platsmp.c b/arch/arm/mach-armadaxp/platsmp.c
+index 7fc3f42..87a0593 100644
+--- a/arch/arm/mach-armadaxp/platsmp.c
++++ b/arch/arm/mach-armadaxp/platsmp.c
+@@ -112,6 +112,9 @@ int  boot_secondary(unsigned int cpu, struct task_struct *idle)
+ 
+ 	printk("SMP: CPU %d Waking up CPU %d\n", master_cpu_id, cpu);
+ 
++	/* send ipi to wake cpu in case it is in offline state */
++	axp_smp_cross_call(cpumask_of(cpu), 0);
++
+ 	/* Set resume control and address */
+ 	MV_REG_WRITE(AXP_CPU_RESUME_CTRL_REG, 0x0);
+ 	MV_REG_WRITE(AXP_CPU_RESUME_ADDR_REG(cpu),
+diff --git a/arch/arm/plat-armada/cpuidle.c b/arch/arm/plat-armada/cpuidle.c
+index 5c42577..4e8da4b 100644
+--- a/arch/arm/plat-armada/cpuidle.c
++++ b/arch/arm/plat-armada/cpuidle.c
+@@ -46,7 +46,6 @@ extern unsigned char armadaxp_deep_idle_exit_end;
+ #ifdef	CONFIG_CPU_IDLE
+ static int device_registered;
+ 
+-#if 0
+ static void hw_sem_lock(void)
+ {
+ 	unsigned int cpu = hard_smp_processor_id();
+@@ -58,7 +57,6 @@ static void hw_sem_unlock(void)
+ {
+ 	writeb(0xff, INTER_REGS_BASE + MV_CPU_HW_SEM_OFFSET);
+ }
+-#endif
+ 
+ unsigned long suspend_phys_addr(void * physaddr)
+ {
+@@ -169,10 +167,15 @@ void armadaxp_fabric_prepare_hotplug(void)
+ 	reg |= PM_CONTROL_AND_CONFIG_PWDDN_REQ;
+ 	MV_REG_WRITE(PM_CONTROL_AND_CONFIG_REG(processor_id), reg);
+ 
+-	/* Disable snoop disable by HW */
+-	reg = MV_REG_READ(MV_CPU_PMU_UNIT_SERV_OFFSET(processor_id) + 0x8);
+-	reg |= 0x1;
+-	MV_REG_WRITE(MV_CPU_PMU_UNIT_SERV_OFFSET(processor_id) + 0x8, reg);
++#if defined CONFIG_AURORA_IO_CACHE_COHERENCY
++	hw_sem_lock();
++	/* Disable delivery of snoop requests to the CPU core by setting */
++	reg = MV_REG_READ(MV_COHERENCY_FABRIC_CTRL_REG);
++	reg &= ~(1 << (24 + processor_id));
++	MV_REG_WRITE(MV_COHERENCY_FABRIC_CTRL_REG, reg);
++	hw_sem_unlock();
++#endif
++
+ }
+ #endif
+ 
+-- 
+1.7.9.5
+

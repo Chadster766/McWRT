@@ -1,0 +1,30 @@
+serial=0,115200n8
+boot    =/dev/loop1
+disk    =/dev/loop1
+  bios  =0x80
+  sectors =63
+  heads   =255
+  cylinders =999
+lba32
+compact
+install =mount/boot/boot.b
+map     =mount/boot/map
+
+prompt
+delay   =1
+timeout =100
+message =mount/etc/boot.msg
+
+
+image   =mount/vmlinuz
+  label   =openwrt
+  append  =" rootfs=/dev/discs/disc0/disc console=ttyS0,115200n81 "
+  
+image   =mount/vmlinuz
+  label   =ramdisk
+  append  =" console=ttyS0,115200n81"
+  
+image   =mount/vmlinuz
+  label   =failsafe
+  append  =" FAILSAFE=MenuRequest console=ttyS0,115200n81"
+  

@@ -1,0 +1,46 @@
+--- /dev/null
++++ b/acinclude.m4
+@@ -0,0 +1 @@
++sinclude(acinclude.m4.in)
+--- a/acinclude.m4.in
++++ b/acinclude.m4.in
+@@ -120,7 +120,7 @@ else
+     esac
+ fi
+ msg="enabled"
+-AC_DEFINE(DEBUG)
++AC_DEFINE([DEBUG], [], [Enable debugging])
+ ],[
+ if test ".$ac_cv_prog_gcc" = ".yes"; then
+ case "$CFLAGS" in
+--- a/configure.in
++++ b/configure.in
+@@ -13,18 +13,16 @@ AC_REVISION([1.0])
+ 
+ 
+ dnl> acconfig.h is deprecated 
+-AH_TEMPLATE([ HAVE_UINT64_T ],)
+-AH_TEMPLATE([ HAVE_U_INT64_T ],)
+-AH_TEMPLATE([ HAVE_U_INT32_T ],)
+-AH_TEMPLATE([ HAVE_U_INT16_T ],)
+-AH_TEMPLATE([ HAVE_U_INT8_T ],)
+-AH_TEMPLATE([ HAVE_INT64_T ],)
+-AH_TEMPLATE([ HAVE_INT32_T ],)
+-AH_TEMPLATE([ HAVE_INT16_T ],)
+-AH_TEMPLATE([ HAVE_INT8_T ],)
+-AH_TEMPLATE([ u_int],)
+-AH_TEMPLATE([ HAVE_ZLIB ], [ Define if you have zlib ])
+-AH_TEMPLATE([ DEBUG ], [ Define if you want a debugging version.])
++AC_DEFINE([HAVE_UINT64_T], [], [Define if you have uint64_t])
++AC_DEFINE([HAVE_U_INT64_T], [], [Define if you have u_int64_t])
++AC_DEFINE([HAVE_U_INT32_T], [], [Define if you have u_int32_t])
++AC_DEFINE([HAVE_U_INT16_T], [], [Define if you have u_int16_t])
++AC_DEFINE([HAVE_U_INT8_T], [], [Define if you have u_int8_t])
++AC_DEFINE([HAVE_INT64_T], [], [Define if you have int64_t])
++AC_DEFINE([HAVE_INT32_T], [], [Define if you have int32_t])
++AC_DEFINE([HAVE_INT16_T], [], [Define if you have int16_t])
++AC_DEFINE([HAVE_INT8_T], [], [Define if you have int8_t])
++AC_DEFINE([HAVE_ZLIB], [], [Define if you have zlib])
+ 
+ echo
+ echo "Welcome to $PACKAGE_NAME, Version $PACKAGE_VERSION"

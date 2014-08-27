@@ -1,0 +1,11 @@
+--- pypcap-1.1-old/pcap.pyx 2005-10-16 18:00:11.000000000 -0500
++++ pypcap-1.1/pcap.pyx     2007-06-12 11:11:41.000000000 -0500
+@@ -285,7 +285,7 @@
+                           <unsigned char *>&ctx)
+         if ctx.got_exc:
+             exc = sys.exc_info()
+-            raise exc[0], exc[1], exc[2]
++            raise OSError, "%s [%s]" % (exc[0], exc[1]), exc[2]
+         return n
+ 
+     def loop(self, callback, *args):

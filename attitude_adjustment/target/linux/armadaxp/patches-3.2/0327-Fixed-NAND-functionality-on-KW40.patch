@@ -1,0 +1,232 @@
+From 23b482411bcdd258b524bf7ef6e0421638db8d30 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 24 Oct 2012 15:30:03 +0200
+Subject: [PATCH 327/609] Fixed NAND functionality on KW40
+
+	1. Added MTD_NAND and NFC_INIT_RESET defconfigs
+	2. Fixed bad #ifdef's in NAND code
+	3. Added usefull debug prints
+
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/configs/armada_370_defconfig              |    2 ++
+ .../plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.c   |   17 ++++++------
+ .../plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.h   |    2 +-
+ arch/arm/plat-armada/mv_hal/nfc/mvNfc.c            |   29 ++++++++++++++++----
+ arch/arm/plat-armada/mv_hal/nfc/mvNfc.h            |    6 ++--
+ 5 files changed, 39 insertions(+), 17 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.c
+index d34e237..f810600 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.c
+@@ -16,9 +16,6 @@
+ #include <linux/platform_device.h>
+ #include <linux/dma-mapping.h>
+ #include <linux/delay.h>
+-#if 0
+-#include <linux/clk.h>
+-#endif
+ #include <linux/mtd/mtd.h>
+ #include <linux/mtd/nand.h>
+ #include <linux/mtd/partitions.h>
+@@ -30,7 +27,7 @@
+ #include "mvCommon.h"
+ #include "mvOs.h"
+ 
+-#ifdef MV_INCLUDE_PDMA
++#ifdef CONFIG_MV_INCLUDE_PDMA
+ #include <asm/hardware/pxa-dma.h>
+ #include "pdma/mvPdma.h"
+ #include "pdma/mvPdmaRegs.h"
+@@ -953,8 +950,8 @@ static int orion_nfc_do_cmd_pio(struct orion_nfc_info *info)
+ 		/* Fallback - in case the NFC did not reach the idle state */
+ 		ndcr = MV_REG_READ(NFC_CONTROL_REG);
+ 		if (ndcr & NFC_CTRL_ND_RUN_MASK) {
+-			printk(KERN_DEBUG "WRONG NFC STAUS: command %d, NDCR=0x%08x, NDSR=0x%08x, NDECCCTRL=0x%08x)\n", 
+-		       	info->cmd, MV_REG_READ(NFC_CONTROL_REG), MV_REG_READ(NFC_STATUS_REG), MV_REG_READ(NFC_ECC_CONTROL_REG));
++			NFC_DPRINT((PRINT_LVL "WRONG NFC STAUS: command %d, NDCR=0x%08x, NDSR=0x%08x, NDECCCTRL=0x%08x)\n",
++			info->cmd, MV_REG_READ(NFC_CONTROL_REG), MV_REG_READ(NFC_STATUS_REG), MV_REG_READ(NFC_ECC_CONTROL_REG)));
+ 			MV_REG_WRITE(NFC_CONTROL_REG, (ndcr & ~NFC_CTRL_ND_RUN_MASK));
+ 		}
+ 	}
+@@ -1457,6 +1454,7 @@ static int orion_nfc_probe(struct platform_device *pdev)
+ 	char * stat[2] = {"Disabled", "Enabled"};
+ 	char * ecc_stat[] = {"Hamming", "BCH 4bit", "BCH 8bit", "BCH 12bit", "BCH 16bit", "No"};
+ 	MV_NFC_INFO nfcInfo;
++	MV_STATUS status;
+ 
+ 	pdata = dev_get_platdata(&pdev->dev);
+ 
+@@ -1567,8 +1565,11 @@ static int orion_nfc_probe(struct platform_device *pdev)
+ 	nfcInfo.dataPdmaIntMask = MV_PDMA_END_OF_RX_INTR_EN | MV_PDMA_END_INTR_EN;
+ 	nfcInfo.cmdPdmaIntMask = 0x0;
+ #endif
+-	if (mvNfcInit(&nfcInfo, &info->nfcCtrl) != MV_OK) {
+-		dev_err(&pdev->dev, "mvNfcInit() failed.\n");
++
++	status = mvNfcInit(&nfcInfo, &info->nfcCtrl);
++	if (status != MV_OK) {
++		dev_err(&pdev->dev, "mvNfcInit() failed. Returned %d\n",
++				status);
+ 		goto fail_put_clk;
+ 	}
+ 
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.h
+index df1cdb1..1038c60 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.h
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.h
+@@ -5,7 +5,7 @@
+ #include <linux/mtd/partitions.h>
+ #include "mvCommon.h"
+ #include "mvOs.h"
+-#ifdef MV_INCLUDE_PDMA
++#ifdef CONFIG_MV_INCLUDE_PDMA
+ #include "pdma/mvPdma.h"
+ #endif
+ #include "nfc/mvNfc.h"
+diff --git a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
+index ee5c19c..cee49ac 100644
+--- a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
++++ b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
+@@ -67,7 +67,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #include "ctrlEnv/mvCtrlEnvSpec.h"
+ #include "mvSysNfcConfig.h"
+ #include "mvNfcRegs.h"
+-#ifdef MV_INCLUDE_PDMA
++#ifdef CONFIG_MV_INCLUDE_PDMA
+ #include "pdma/mvPdma.h"
+ #include "pdma/mvPdmaRegs.h"
+ #endif
+@@ -666,17 +666,24 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo, MV_NFC_CTRL *nfcCtrl)
+ 	/* Write registers before device detection */
+ 	MV_REG_WRITE(NFC_CONTROL_REG, ctrl_reg);
+ 
+-#ifdef MTD_NAND_NFC_INIT_RESET
++#ifdef CONFIG_MTD_NAND_NFC_INIT_RESET
+ 	/* reset the device */
+ 	ret = mvNfcReset();
++
+ 	if (ret != MV_OK)
++	{
++		mvOsPrintf("mvNfcReset failed. Returned %d\n", ret);
+ 		return ret;
++	}
+ #endif
+ 
+ 	/* Read the device ID */
+ 	ret = mvNfcReadIdNative(nfcCtrl->currCs, &read_id);
+ 	if (ret != MV_OK)
++	{
++		mvOsPrintf("mvNfcReadIdNative failed. Returned %d\n", ret);
+ 		return ret;
++	}
+ 
+ 	/* Look for device ID in knwon device table */
+ 	for (i = 0; i < (sizeof(flashDeviceInfo) / sizeof(MV_NFC_FLASH_INFO)); i++) {
+@@ -692,7 +699,10 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo, MV_NFC_CTRL *nfcCtrl)
+ 	if (flashDeviceInfo[i].flags & NFC_FLAGS_ONFI_MODE_3_SET) {
+ 		ret = mvNfcDeviceModeSet(nfcCtrl, MV_NFC_ONFI_MODE_3);
+ 		if (ret != MV_OK)
++		{
++			mvOsPrintf("mvNfcDeviceModeSet failed. Returned %d\n", ret);
+ 			return ret;
++		}
+ 	}
+ 
+ 	/* Critical Initialization done. Raise NFC clock if needed */
+@@ -710,7 +720,10 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo, MV_NFC_CTRL *nfcCtrl)
+ 	/* calculate Timing parameters */
+ 	ret = mvNfcTimingSet(nand_clock, &flashDeviceInfo[i]);
+ 	if (ret != MV_OK)
++	{
++		mvOsPrintf("mvNfcTimingSet failed. Returned %d\n", ret);
+ 		return ret;
++	}
+ 
+ 	/* Configure the control register based on the device detected */
+ 	ctrl_reg = MV_REG_READ(NFC_CONTROL_REG);
+@@ -779,7 +792,7 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo, MV_NFC_CTRL *nfcCtrl)
+ 	/* Write the updated control register */
+ 	MV_REG_WRITE(NFC_CONTROL_REG, ctrl_reg);
+ 
+-#ifdef MV_INCLUDE_PDMA
++#ifdef CONFIG_MV_INCLUDE_PDMA
+ 	/* DMA resource allocation */
+ 	if (nfcInfo->ioMode == MV_NFC_PDMA_ACCESS) {
+ 		/* Allocate command buffer */
+@@ -842,7 +855,7 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo, MV_NFC_CTRL *nfcCtrl)
+ 	nfcCtrl->ifMode = nfcInfo->ifMode;
+ 	nfcCtrl->currCs = MV_NFC_CS_NONE;
+ 	nfcCtrl->regsPhysAddr = nfcInfo->regsPhysAddr;
+-#ifdef MV_INCLUDE_PDMA
++#ifdef CONFIG_MV_INCLUDE_PDMA
+ 	nfcCtrl->dataPdmaIntMask = nfcInfo->dataPdmaIntMask;
+ 	nfcCtrl->cmdPdmaIntMask = nfcInfo->cmdPdmaIntMask;
+ #endif
+@@ -2495,7 +2508,7 @@ static MV_STATUS mvNfcDeviceModeSet(MV_NFC_CTRL *nfcCtrl, MV_NFC_ONFI_MODE mode)
+ }
+ 
+ 
+-#ifdef MTD_NAND_NFC_INIT_RESET
++#ifdef CONFIG_MTD_NAND_NFC_INIT_RESET
+ MV_STATUS mvNfcReset(void)
+ {
+ 	MV_U32 reg;
+@@ -2514,7 +2527,10 @@ MV_STATUS mvNfcReset(void)
+ 	/* Wait for Command WRITE request */
+ 	errCode = mvDfcWait4Complete(NFC_SR_WRCMDREQ_MASK, 1);
+ 	if (errCode != MV_OK)
++	{
++		mvOsPrintf("%s() - Failed wait for NFC_SR_WRCMDREQ_MASK\n", __func__ );
+ 		goto Error;
++	}
+ 
+ 	/* Send Command */
+ 	MV_REG_WRITE(NFC_COMMAND_BUFF_0_REG, 0x00A000FF);	/* DFC_NDCB0_RESET */
+@@ -2524,7 +2540,10 @@ MV_STATUS mvNfcReset(void)
+ 	/* Wait for Command completion */
+ 	errCode = mvDfcWait4Complete(NFC_SR_RDY0_MASK, 1000);
+ 	if (errCode != MV_OK)
++	{
++		mvOsPrintf("%s() - Failed wait for NFC_SR_RDY0_MASK\n", __func__ );
+ 		goto Error;
++	}
+ 
+ 	/* Wait for ND_RUN bit to get cleared. */
+ 	while (timeout > 0) {
+diff --git a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.h b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.h
+index 5d7e9e5..dbb318a 100644
+--- a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.h
++++ b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.h
+@@ -254,7 +254,7 @@ typedef struct {
+ 	MV_BOOL			readyBypass;
+ 	MV_VOID			*osHandle;
+ 	MV_U32			regsPhysAddr;
+-#ifdef MV_INCLUDE_PDMA
++#ifdef CONFIG_MV_INCLUDE_PDMA
+ 	MV_U32			dataPdmaIntMask;
+ 	MV_U32			cmdPdmaIntMask;
+ #endif
+@@ -328,7 +328,7 @@ typedef struct {
+ 	MV_NFC_ECC_MODE eccMode;
+ 	MV_NFC_IF_MODE 	ifMode;
+ 	MV_NFC_CHIP_SEL currCs;
+-#ifdef MV_INCLUDE_PDMA
++#ifdef CONFIG_MV_INCLUDE_PDMA
+ 	MV_PDMA_CHANNEL dataChanHndl;
+ 	MV_PDMA_CHANNEL cmdChanHndl;
+ #endif
+@@ -336,7 +336,7 @@ typedef struct {
+ 	MV_BUF_INFO	cmdDescBuff;
+ 	MV_BUF_INFO	dataDescBuff;
+ 	MV_U32		regsPhysAddr;
+-#ifdef MV_INCLUDE_PDMA
++#ifdef CONFIG_MV_INCLUDE_PDMA
+ 	MV_U32		dataPdmaIntMask;
+ 	MV_U32		cmdPdmaIntMask;
+ #endif
+-- 
+1.7.9.5
+

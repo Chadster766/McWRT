@@ -1,0 +1,32 @@
+--- a/ubi-utils/Makefile
++++ b/ubi-utils/Makefile
+@@ -22,7 +22,7 @@ $(TARGETS): $(addprefix $(BUILDDIR)/,\
+ #	$(CC) $(CFLAGS) $(filter %.o, $^) -L. -lubi -o $@
+ 
+ $(BUILDDIR)/ubicrc32: $(addprefix $(BUILDDIR)/,\
+-	ubicrc32.o)
++	../lib/libcrc32.o ubicrc32.o)
+ #	$(CC) $(CFLAGS) -o $@ $^
+ 
+ $(BUILDDIR)/ubinize: $(addprefix $(BUILDDIR)/,\
+@@ -30,16 +30,17 @@ $(BUILDDIR)/ubinize: $(addprefix $(BUILD
+ #	$(CC) $(CFLAGS) $(filter %.o, $^) -L. -liniparser -lubigen -o $@
+ 
+ $(BUILDDIR)/mtdinfo: $(addprefix $(BUILDDIR)/,\
+-	libubigen.a ubiutils-common.o)
++	../lib/libmtd.o ../lib/libmtd_legacy.o libubigen.a ubiutils-common.o)
+ #	$(CC) $(CFLAGS) $(filter %.o, $^) -L. -lmtd -lubigen -o $@
+ 
+ $(BUILDDIR)/ubiformat: $(addprefix $(BUILDDIR)/,\
+-	ubiformat.o ubiutils-common.o libscan.a libubi.a libubigen.a)
++	../lib/libmtd.o ../lib/libmtd_legacy.o ubiformat.o ubiutils-common.o libscan.a libubi.a libubigen.a)
+ #	$(CC) $(CFLAGS) $(filter %.o, $^) -L. -lmtd -lscan -lubi -lubigen -o $@
+ 
+ $(BUILDDIR)/libubi.a: $(BUILDDIR)/libubi.o
+ 
+-$(BUILDDIR)/libubigen.a: $(BUILDDIR)/libubigen.o
++$(BUILDDIR)/libubigen.a: $(addprefix $(BUILDDIR)/,\
++	../lib/libcrc32.o libubigen.o)
+ 
+ $(BUILDDIR)/libiniparser.a: $(addprefix $(BUILDDIR)/,\
+ 	libiniparser.o dictionary.o)

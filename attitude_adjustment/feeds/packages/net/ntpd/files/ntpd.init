@@ -1,0 +1,21 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2011 OpenWrt.org
+
+START=65
+STOP=65
+
+SERVICE_USE_PID=1
+
+start() {
+#	ln -sf /dev/ttyS0 /dev/gps0
+#	/usr/sbin/setgarmin -d /dev/gps -c /etc/setgarmin.conf
+	user_exists ntp 123 || user_add ntp 123 123 ntp /var/lib/ntp
+	group_exists ntp 123 || group_add ntp 123
+	mkdir -p /var/lib/ntp
+	chown -R ntp:ntp /var/lib/ntp
+	service_start /sbin/ntpd -g -u ntp:ntp -p /var/run/ntpd.pid
+}
+
+stop() {
+	service_stop /sbin/ntpd
+}

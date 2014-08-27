@@ -1,0 +1,66 @@
+--- a/configure.in
++++ b/configure.in
+@@ -1128,63 +1128,6 @@ if test "x$with_mysql" != "xno"; then
+     fi
+   fi
+ 
+-  AC_MSG_CHECKING([for mysql default client reconnect])
+-
+-  AC_RUN_IFELSE(
+-  [AC_LANG_PROGRAM(
+-  [[
+-  #include <mysql.h>
+-  ]],
+-  [[
+-      if (mysql_get_client_version() < 50003)
+-          return 1;
+-  ]])],
+-  [mysql_default_reconnect="no"],
+-  [mysql_default_reconnect="yes"])
+-
+-  AC_MSG_RESULT($mysql_default_reconnect)
+-
+-  if test "x$mysql_default_reconnect" = "xno"; then
+-      AC_MSG_CHECKING([for mysql reconnect option])
+-
+-      AC_RUN_IFELSE(
+-      [AC_LANG_PROGRAM(
+-      [[
+-      #include <mysql.h>
+-      ]],
+-      [[
+-          if (mysql_get_client_version() < 50013)
+-              return 1;
+-      ]])],
+-      [mysql_has_reconnect="yes"],
+-      [mysql_has_reconnect="no"])
+-
+-      AC_MSG_RESULT($mysql_has_reconnect)
+-
+-      if test "x$mysql_has_reconnect" = "xyes"; then
+-          AC_DEFINE([MYSQL_HAS_OPT_RECONNECT],[1],[For MySQL versions 5.0.13 and greater])
+-
+-          AC_MSG_CHECKING([for mysql setting of reconnect option before connect bug])
+-
+-          AC_RUN_IFELSE(
+-          [AC_LANG_PROGRAM(
+-          [[
+-          #include <mysql.h>
+-          ]],
+-          [[
+-              if (mysql_get_client_version() < 50019)
+-                  return 1;
+-          ]])],
+-          [mysql_has_reconnect_bug="no"],
+-          [mysql_has_reconnect_bug="yes"])
+-
+-          AC_MSG_RESULT($mysql_has_reconnect_bug)
+-
+-          if test "x$mysql_has_reconnect_bug" = "xyes"; then
+-              AC_DEFINE([MYSQL_HAS_OPT_RECONNECT_BUG],[1],[For MySQL versions 5.0.13 to 5.0.18])
+-          fi
+-      fi
+-  fi
+ fi
+ 
+ AC_ARG_WITH(odbc,

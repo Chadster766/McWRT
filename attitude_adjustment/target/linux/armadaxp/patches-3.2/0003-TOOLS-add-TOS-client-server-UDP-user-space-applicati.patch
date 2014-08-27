@@ -1,0 +1,330 @@
+From f6dd83fae9480f09f718b650f4d6bfa90d3280d3 Mon Sep 17 00:00:00 2001
+From: Rami Rosen <rosenr@marvell.com>
+Date: Wed, 27 Jul 2011 15:40:39 +0300
+Subject: [PATCH 003/609] TOOLS: add TOS client/server UDP user space
+ application for P2P testing TOS Signed-off-by: Rami
+ Rosen <rosenr@marvell.com>
+
+Signed-off-by: Seif Mazareeb <seif@seif-desktop.(none)>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ tools/tos/Makefile     |   13 ++++
+ tools/tos/udpRecvTos.c |  109 +++++++++++++++++++++++++++++++
+ tools/tos/udpSendTos.c |  169 ++++++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 291 insertions(+)
+ create mode 100644 tools/tos/Makefile
+ create mode 100644 tools/tos/udpRecvTos.c
+ create mode 100644 tools/tos/udpSendTos.c
+
+diff --git a/tools/tos/Makefile b/tools/tos/Makefile
+new file mode 100644
+index 0000000..5ba7836
+--- /dev/null
++++ b/tools/tos/Makefile
+@@ -0,0 +1,13 @@
++CFLAGS  := $(EXTRA_CFLAGS)
++
++CC := $(CROSS_COMPILE)gcc
++LD := $(CROSS_COMPILE)ld
++
++TARGETS=udpSendTos udpRecvTos
++
++all: $(TARGETS)
++
++udpSendTos: udpSendTos.c
++	$(CC) $(CFLAGS) -lpthread udpSendTos.c -o udpSendTos
++udpRecvTos: udpRecvTos.c
++	$(CC) $(CFLAGS) udpRecvTos.c -o udpRecvTos
+diff --git a/tools/tos/udpRecvTos.c b/tools/tos/udpRecvTos.c
+new file mode 100644
+index 0000000..714878f
+--- /dev/null
++++ b/tools/tos/udpRecvTos.c
+@@ -0,0 +1,109 @@
++/* udpRecvTos.c */
++
++#include<netinet/in.h>
++#include<errno.h>
++#include<netdb.h>
++#include<stdio.h>
++#include<netinet/ip_icmp.h>
++#include<netinet/udp.h>
++#include<netinet/tcp.h>
++#include<netinet/ip.h>
++#include<sys/socket.h>
++#include<arpa/inet.h>
++#include<sys/ioctl.h>
++#include<sys/time.h>
++#include<sys/types.h>
++#include<unistd.h>
++#include <stdlib.h>
++#include <string.h>
++
++void ProcessPacket(unsigned char* , int);
++void print_ip_header(unsigned char* , int);
++void print_udp_header(unsigned char* , int);
++void print_udp_packet(unsigned char *Buffer , int Size);
++
++int tos1;
++int tos2;
++int tos1counter = 0;
++int tos2counter = 0;
++
++int sock_raw;
++int tcp = 0, udp = 0, icmp = 0, others = 0, igmp = 0, total = 0, i, j;
++struct sockaddr_in source, dest;
++
++int main(int argc, char **argv)
++{
++    int saddr_size , data_size;
++    struct sockaddr_in saddr;
++    struct in_addr in;
++	char *settos1;
++	char *settos2;
++
++    unsigned char *buffer = (unsigned char *)malloc(65536);
++	if (argc < 3) {
++		printf("usage: ./udpRecvTos tos1 tos2\n");
++		exit(0);
++		}
++
++	settos1    = *++argv;
++	settos2    = *++argv;
++
++	tos1 = atoi(settos1);
++	tos2 = atoi(settos2);
++
++    printf("**** Starting...listening on port 9999\n");
++    sock_raw = socket(AF_INET , SOCK_RAW , IPPROTO_UDP);
++    if (sock_raw < 0) {
++		printf("Socket Error");
++		return 1;
++    }
++
++
++    while (1) {
++		saddr_size = sizeof saddr;
++		data_size = recvfrom(sock_raw , buffer , 65536 , 0 ,
++							 (struct sockaddr *)&saddr,
++							 &saddr_size);
++		if (data_size < 0) {
++			printf("read error , failed to get packetsn");
++			return 1;
++			}
++		ProcessPacket(buffer , data_size);
++		}
++    close(sock_raw);
++    printf("Finished");
++    return 0;
++}
++
++void ProcessPacket(unsigned char *buffer, int size)
++{
++    struct iphdr *iph = (struct iphdr *)buffer;
++
++    ++total;
++    switch (iph->protocol) {
++    case 17: /* UDP Protocol */
++		++udp;
++		print_udp_packet(buffer , size);
++		break;
++	 }
++}
++
++void print_udp_packet(unsigned char *Buffer , int Size)
++{
++
++    unsigned short iphdrlen;
++	static int counter = 0;
++
++    struct iphdr *iph = (struct iphdr *)Buffer;
++    iphdrlen = iph->ihl*4;
++    struct udphdr *udph = (struct udphdr *)(Buffer + iphdrlen);
++	if (ntohs(udph->dest) == 9999) {
++		counter++;
++		if (!(counter%100))
++			printf("tos1counter=%d, tos2counter=%d \n", tos1counter, tos2counter);
++		if ((unsigned int)iph->tos == tos1)
++			tos1counter++;
++		if ((unsigned int)iph->tos == tos2)
++			tos2counter++;
++	}
++}
+diff --git a/tools/tos/udpSendTos.c b/tools/tos/udpSendTos.c
+new file mode 100644
+index 0000000..0098285
+--- /dev/null
++++ b/tools/tos/udpSendTos.c
+@@ -0,0 +1,169 @@
++/* udpsend.c */
++
++#include <stdlib.h>
++
++#include <netdb.h>
++#include <string.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <sys/types.h>
++#include <sys/socket.h>
++#include <netinet/in.h>
++#include <sys/time.h>
++
++#include <string.h>
++#include <netdb.h>
++#include <pthread.h>
++
++#include <signal.h>
++#define NUM_THREADS 2
++
++char *ipAddress;
++int numeberOfPackets;
++int packetSize1;
++int packetSize2;
++
++pthread_t threads[NUM_THREADS];
++
++#define MAX_BUF 1024
++
++char buf1[9000];
++
++int sendUDP(char *ipAddress, int settosInt)
++{
++    int i, j, n, s, len;
++
++    char *buf = "start";
++    char *hostname;
++    char *command[1024];
++
++    struct servent *sp;
++    struct sockaddr_in name;
++    struct sockaddr_in from;
++
++    struct hostent *hp;
++	int state = 1;
++    printf("Sending...\n");
++    fflush(stdout);
++	hp = gethostbyname(ipAddress);
++    if (hp == NULL) {
++		fprintf(stderr, "%s: Unknown host\n", hostname);
++		exit(0);
++		}
++	s = socket(AF_INET, SOCK_DGRAM, 0);
++    if (s < 0) {
++		perror("socket");
++		exit(0);
++		}
++	if (setsockopt(s, IPPROTO_IP, IP_TOS,
++				(char *)&settosInt, sizeof(int)) < 0) {
++			perror(" error setting QOS sockopts");
++	}
++
++   memset(&name, 0, sizeof(struct sockaddr_in));
++   name.sin_family = AF_INET;
++   name.sin_port = htons(9999);
++   memcpy(&name.sin_addr, hp->h_addr_list[0], hp->h_length);
++   for (j = 0; j < numeberOfPackets; j++)
++	   sendto(s, buf1, packetSize1, 0, (struct sockaddr *) &name, sizeof(struct sockaddr_in));
++
++    if (n < 0) {
++       perror("sendTO");
++       exit(1);
++       }
++  close(s);
++}
++
++
++
++
++
++void *sendThread1(void *arg)
++{
++   int *tos_ptr;
++   int tos;
++
++   tos_ptr = (int *) arg;
++   tos = *tos_ptr;
++
++	printf("tos = %d in %s\n", tos, __func__);
++	sendUDP(ipAddress, tos);
++}
++
++void *sendThread2(void *arg)
++{
++   int *tos_ptr;
++   int tos;
++
++   tos_ptr = (int *) arg;
++   tos = *tos_ptr;
++
++	printf("tos = %d in %s\n", tos, __func__);
++	sendUDP(ipAddress, tos);
++}
++
++
++int main(int argc, char **argv)
++{
++	char *settos1;
++	char *settos2;
++	char *packetSize1Ptr1;
++	char *packetSize1Ptr2;
++	char *numeberOfPacketsPtr;
++	int j, t;
++	int res;
++	int *tos[NUM_THREADS];
++    tos[0] = (int *) malloc(sizeof(int));
++	tos[1] = (int *) malloc(sizeof(int));
++
++	for (j = 0; j < 180; j++)
++		/* 50 bytes*/
++		strcat(buf1, "0123456789ABCDEFGHIJKLMNOPQRS000000000000000000000");
++
++	if (argc < 7) {
++		printf("usage: udpsend ipAddress numeberOfPackets tos1 packetSize1 tos2 packetSize1\n");
++		exit(0);
++		}
++
++	ipAddress = *++argv;
++	numeberOfPacketsPtr = *++argv;
++	numeberOfPackets = atoi(numeberOfPacketsPtr);
++	settos1    = *++argv;
++
++	packetSize1Ptr1 = *++argv;
++	packetSize1 = atoi(packetSize1Ptr1);
++	if (packetSize1 >= 9000) {
++		printf("packetSize2 must be lower then 9000! exiting\n");
++		exit(0);
++	}
++	settos2    = *++argv;
++	packetSize1Ptr2 = *++argv;;
++	packetSize2 = atoi(packetSize1Ptr2);
++	if (packetSize2 >= 9000) {
++		printf("packetSize2 must be lower then 9000! exiting\n");
++		exit(0);
++	}
++
++	*tos[0] = atoi(settos1);
++	*tos[1] = atoi(settos2);
++	printf("sending with tos1=%d , tos2=%d %s\n", *tos[0], *tos[1], __func__);
++    res = pthread_create(&threads[0], NULL, sendThread1, (void *) tos[0]);
++
++    if (res) {
++      printf("ERROR; return code from pthread_create() sendThread1 is %d\n", res);
++      exit(-1);
++      }
++
++    res = pthread_create(&threads[1], NULL, sendThread2, (void *) tos[1]);
++
++    if (res) {
++      printf("ERROR; return code from pthread_create() sendThread2 is %d\n", res);
++      exit(-1);
++      }
++
++    pthread_join(threads[0], NULL);
++    pthread_join(threads[1], NULL);
++	printf("%d packets were sent with tos=%d and %d packets were sent with tos=%d \n", numeberOfPackets, *tos[0],
++			numeberOfPackets, *tos[1]);
++
++}
+-- 
+1.7.9.5
+

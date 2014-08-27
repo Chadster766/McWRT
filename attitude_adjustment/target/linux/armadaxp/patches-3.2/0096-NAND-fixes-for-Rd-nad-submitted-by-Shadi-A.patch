@@ -1,0 +1,86 @@
+From dbdd1e1c8a4e60a5962db16a3364ab37cc3cc6b2 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Thu, 26 Jan 2012 16:23:53 +0200
+Subject: [PATCH 096/609] NAND fixes for Rd nad - submitted by Shadi A.
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/boardEnv/mvBoardEnvSpec.h     |    2 +-
+ .../plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.c   |    5 +++++
+ arch/arm/plat-armada/mv_hal/nfc/mvNfc.c            |    4 ++--
+ arch/arm/plat-armada/mv_hal/nfc/mvNfc.h            |    1 +
+ 4 files changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
+index 5167309..03a04d2 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
+@@ -183,7 +183,7 @@ MPP#	NAME			IN/OUT
+ #define RD_78460_NAS_MPP24_31		0x11000000 /* bits[27:24] = 0x5 to enable PMm for CPU0 */
+ #define RD_78460_NAS_MPP32_39		0x11111111
+ #define RD_78460_NAS_MPP40_47		0x00221100 /* bits[3:0] = 0x3 to enable PM for CPU1 */
+-#define RD_78460_NAS_MPP48_55		0x00000000
++#define RD_78460_NAS_MPP48_55		0x00000003
+ #define RD_78460_NAS_MPP56_63		0x00000000 /* bits[7:4] = 0x1 to enable PM for CPU2/3 */
+ #define RD_78460_NAS_MPP64_67		0x00000000
+ 
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.c
+index c886baf..8606d8f 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.c
+@@ -1125,6 +1125,7 @@ static void orion_nfc_cmdfunc(struct mtd_info *mtd, unsigned command,
+ 
+ 		break;
+ 	case NAND_CMD_RESET:
++#if 0
+ 		info->column = 0;
+ 		info->page_addr = 0;
+ 		info->cmd = MV_NFC_CMD_RESET;
+@@ -1151,6 +1152,10 @@ static void orion_nfc_cmdfunc(struct mtd_info *mtd, unsigned command,
+ 			ndcr = MV_REG_READ(NFC_CONTROL_REG);
+ 			MV_REG_WRITE(NFC_CONTROL_REG, ndcr & ~NFC_CTRL_ND_RUN_MASK);
+ 		}
++#else
++		if (mvNfcReset() != MV_OK)
++			printk(KERN_ERR "Device reset failed.\n");
++#endif
+ 		break;
+ 	default:
+ 		printk(KERN_ERR "non-supported command.\n");
+diff --git a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
+index 89a6a9a..4979573 100644
+--- a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
++++ b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
+@@ -532,7 +532,7 @@ static MV_STATUS mvNfcReadIdNative(MV_NFC_CHIP_SEL cs, MV_U16 *id);
+ static MV_STATUS mvNfcTimingSet(MV_U32 tclk, MV_NFC_FLASH_INFO *flInfo);
+ static MV_U32 mvNfcColBits(MV_U32 pg_size);
+ /* #ifdef CONFIG_MTD_NAND_NFC_INIT_RESET */
+-static MV_STATUS mvNfcReset(void);
++/*static MV_STATUS mvNfcReset(void);*/
+ /* #endif */
+ static MV_STATUS mvNfcDeviceFeatureSet(MV_NFC_CTRL *nfcCtrl, MV_U8 cmd, MV_U8 addr, MV_U32 data0, MV_U32 data1);
+ static MV_STATUS mvNfcDeviceFeatureGet(MV_NFC_CTRL *nfcCtrl, MV_U8 cmd, MV_U8 addr, MV_U32 *data0, MV_U32 *data1);
+@@ -2466,7 +2466,7 @@ static MV_STATUS mvNfcDeviceModeSet(MV_NFC_CTRL *nfcCtrl, MV_NFC_ONFI_MODE mode)
+ 
+ 
+ /* #ifdef CONFIG_MTD_NAND_NFC_INIT_RESET */
+-static MV_STATUS mvNfcReset(void)
++MV_STATUS mvNfcReset(void)
+ {
+ 	MV_U32 reg;
+ 	MV_U32 errCode = MV_OK;
+diff --git a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.h b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.h
+index 7579ee6..5d7e9e5 100644
+--- a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.h
++++ b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.h
+@@ -416,6 +416,7 @@ MV_STATUS mvNfcFlashIdGet(MV_NFC_CTRL *nfcCtrl, MV_U32 *flashId);
+ MV_STATUS mvNfcUnitStateStore(MV_U32 *stateData, MV_U32 *len);
+ MV_NFC_ECC_MODE mvNfcEccModeSet(MV_NFC_CTRL *nfcCtrl, MV_NFC_ECC_MODE eccMode);
+ MV_U32 	  mvNfcBadBlockPageNumber(MV_NFC_CTRL *nfcCtrl);
++MV_STATUS mvNfcReset(void);
+ 
+ #ifdef __cplusplus
+ }
+-- 
+1.7.9.5
+

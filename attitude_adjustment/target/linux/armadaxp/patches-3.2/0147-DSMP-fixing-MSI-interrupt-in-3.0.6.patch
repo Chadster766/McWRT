@@ -1,0 +1,25 @@
+From f8e142e3233ba74c33679f4f0905ea20460b04be Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Sun, 29 Apr 2012 19:19:56 +0300
+Subject: [PATCH 147/609] DSMP: fixing MSI interrupt in 3.0.6
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/msi.c |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm/plat-armada/msi.c b/arch/arm/plat-armada/msi.c
+index b74b5d1..241c6bd 100644
+--- a/arch/arm/plat-armada/msi.c
++++ b/arch/arm/plat-armada/msi.c
+@@ -64,6 +64,7 @@ again:
+ 		goto again;
+ 
+ 	dynamic_irq_init(irq);
++	irq_clear_status_flags(irq, IRQ_NOREQUEST);
+ 	
+ 	return irq;
+ }
+-- 
+1.7.9.5
+

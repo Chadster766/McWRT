@@ -1,0 +1,26 @@
+From 44b32ee0fff1e9ebc2a5c9ad3e1355d6441fa2b2 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Sun, 30 Dec 2012 10:53:22 +0200
+Subject: [PATCH 379/609] PM: Fix standby - mask the wakeup UART IRQ on CPUs
+ other than CPU0
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/pm.c |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm/mach-armadaxp/pm.c b/arch/arm/mach-armadaxp/pm.c
+index 7c16339..ce4b44d 100644
+--- a/arch/arm/mach-armadaxp/pm.c
++++ b/arch/arm/mach-armadaxp/pm.c
+@@ -54,6 +54,7 @@ static int armadaxp_pm_enter(suspend_state_t state)
+ 		/* Reenable the Uart IRQ in order to wake from it */
+ 		/* Enable Uart IRQ */
+ 		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0));
++		reg &= ~0xF;
+ 		reg |= 0x1;
+ 		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0), reg);
+ 
+-- 
+1.7.9.5
+

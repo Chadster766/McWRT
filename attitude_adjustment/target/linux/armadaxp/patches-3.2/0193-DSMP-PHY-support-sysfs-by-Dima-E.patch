@@ -1,0 +1,329 @@
+From d15b25193e8150a9228df76e68a95b118e07ec33 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Thu, 31 May 2012 09:39:45 +0300
+Subject: [PATCH 193/609] DSMP-PHY-support-sysfs(by Dima E.)
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/Makefile                    |    2 +
+ arch/arm/mach-armadaxp/config/mvRules.mk           |    7 +-
+ .../plat-armada/mv_drivers_lsp/mv_phy/phy_sysfs.c  |  181 ++++++++++++++++++++
+ arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c     |   32 ++--
+ arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.h     |    5 +
+ 5 files changed, 211 insertions(+), 16 deletions(-)
+ create mode 100644 arch/arm/plat-armada/mv_drivers_lsp/mv_phy/phy_sysfs.c
+
+diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
+index b4d7831..6eccd13 100644
+--- a/arch/arm/mach-armadaxp/Makefile
++++ b/arch/arm/mach-armadaxp/Makefile
+@@ -124,6 +124,8 @@ obj-$(CONFIG_MV_ETH_L2FW)               += $(LSP_L2FW_DIR)/l2fw_sysfs.o $(LSP_L2
+ obj-$(CONFIG_MV_ETH_L2SEC)              += $(LSP_L2FW_DIR)/mv_eth_l2sec.o
+ endif
+ 
++obj-y                                  += $(LSP_PHY_DIR)/phy_sysfs.o
++
+ obj-$(CONFIG_MV_USE_XOR_ENGINE) 	+= $(PLAT_DRIVERS)/mv_xor/
+ obj-$(CONFIG_MV_CESA) 			+= $(PLAT_DRIVERS)/mv_cesa/
+ obj-$(CONFIG_MV_IPC_DRIVER)		+= $(PLAT_DRIVERS)/mv_ipc/
+diff --git a/arch/arm/mach-armadaxp/config/mvRules.mk b/arch/arm/mach-armadaxp/config/mvRules.mk
+index 16852a3..4881d57 100644
+--- a/arch/arm/mach-armadaxp/config/mvRules.mk
++++ b/arch/arm/mach-armadaxp/config/mvRules.mk
+@@ -57,7 +57,6 @@ LSP_BM_DIR        = $(LSP_NETWORK_DIR)/bm
+ LSP_PMT_DIR       = $(LSP_NETWORK_DIR)/pmt
+ LSP_HWF_DIR       = $(LSP_NETWORK_DIR)/hwf
+ LSP_L2FW_DIR      = $(LSP_NETWORK_DIR)/l2fw
+-LSP_SWITCH_DIR    = $(PLAT_DRIVERS)/mv_switch
+ endif
+ 
+ ifeq ($(CONFIG_MV_ETH_LEGACY),y)
+@@ -95,10 +94,12 @@ ifeq ($(CONFIG_MV_INCLUDE_AUDIO),y)
+ HAL_AUDIO_DIR     = $(HAL_DIR)/audio
+ endif
+ ifeq ($(CONFIG_MV_INCLUDE_NFC),y)
+-HAL_NFC_DIR     = $(HAL_DIR)/nfc
++HAL_NFC_DIR       = $(HAL_DIR)/nfc
+ endif
+ 
+-LSP_TRACE_DIR   = $(PLAT_DRIVERS)/mv_trace
++LSP_TRACE_DIR     = $(PLAT_DRIVERS)/mv_trace
++LSP_SWITCH_DIR    = $(PLAT_DRIVERS)/mv_switch
++LSP_PHY_DIR       = $(PLAT_DRIVERS)/mv_phy
+ 
+ # Environment components
+ AXP_FAM_DIR	= armada_xp_family
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_phy/phy_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_phy/phy_sysfs.c
+new file mode 100644
+index 0000000..0345322
+--- /dev/null
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_phy/phy_sysfs.c
+@@ -0,0 +1,181 @@
++/*******************************************************************************
++Copyright (C) Marvell International Ltd. and its affiliates
++
++This software file (the "File") is owned and distributed by Marvell
++International Ltd. and/or its affiliates ("Marvell") under the following
++alternative licensing terms.  Once you have made an election to distribute the
++File under one of the following license alternatives, please (i) delete this
++introductory statement regarding license alternatives, (ii) delete the two
++license alternatives that you have not elected to use and (iii) preserve the
++Marvell copyright notice above.
++
++
++********************************************************************************
++Marvell GPL License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File in accordance with the terms and conditions of the General
++Public License Version 2, June 1991 (the "GPL License"), a copy of which is
++available along with the File in the license.txt file or by writing to the Free
++Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
++on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++
++THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
++DISCLAIMED.  The GPL License provides additional details about this warranty
++disclaimer.
++*******************************************************************************/
++#include <linux/module.h>
++#include <linux/kernel.h>
++#include <linux/types.h>
++#include <linux/capability.h>
++#include <linux/kernel.h>
++#include <linux/platform_device.h>
++
++#include "gbe/mvNeta.h"
++#include "net_dev/mv_netdev.h"
++#include "../eth-phy/mvEthPhy.h"
++
++static ssize_t phy_help(char *buf)
++{
++	int off = 0;
++
++	off += sprintf(buf+off, "echo a       > status        - print port Speed, Duplex, Auto-negotiation, Link, <a-phy address>. \n");
++	off += sprintf(buf+off, "echo a r     > read_reg      - read ethernet phy <a-phy address> register <r-hex>\n");
++	off += sprintf(buf+off, "echo a r v   > write_reg     - write value <v-hex> to ethernet phy register <r-hex>\n");
++	off += sprintf(buf+off, "echo p       > phy_init      - init phy <p-port> .\n");
++	off += sprintf(buf+off, "echo a       > restart_an    - restart ethernet Phy <a-phy address> Auto-Negotiationinit.\n");
++
++	return off;
++}
++
++static ssize_t phy_show(struct device *dev,
++				  struct device_attribute *attr, char *buf)
++{
++	int          err = 0;
++	const char   *name = attr->attr.name;
++
++	if (!capable(CAP_NET_ADMIN))
++		return -EPERM;
++
++	if (!strcmp(name, "help"))
++		return phy_help(buf);
++	else {
++		err = 1;
++		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
++	}
++	return err;
++}
++
++static ssize_t phy_store_hex(struct device *dev,
++				   struct device_attribute *attr, const char *buf, size_t len)
++{
++	const char    *name = attr->attr.name;
++	unsigned int  err = 0, p = 0;
++
++	if (!capable(CAP_NET_ADMIN))
++		return -EPERM;
++
++	sscanf(buf, "%x", &p);
++
++
++	if (!strcmp(name, "status")) {
++		err = mvEthPhyPrintStatus(p);
++	} else if (!strcmp(name, "phy_init")) {
++		err = mvEthPhyInit(p, 0/* eeeEnable */);
++	} else if (!strcmp(name, "restart_an")) {
++		err = mvEthPhyRestartAN(p, 0 /* time out */);
++	} else {
++		err = 1;
++		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
++	}
++
++	return err ? -EINVAL : len;
++}
++
++
++static ssize_t phy_3_hex_store(struct device *dev,
++				   struct device_attribute *attr, const char *buf, size_t len)
++{
++	const char      *name = attr->attr.name;
++	int             err;
++	unsigned int    p, reg, val;
++	unsigned long   flags;
++
++	if (!capable(CAP_NET_ADMIN))
++		return -EPERM;
++
++	err = p = reg = val = 0;
++	sscanf(buf, "%d %x %x", &p, &reg, &val);
++
++	local_irq_save(flags);
++
++	if (!strcmp(name, "read_reg")) {
++		err = mvEthPhyRegPrint(p, reg);
++	} else if (!strcmp(name, "write_reg")) {
++		err = mvEthPhyRegWrite(p, reg, val);
++	} else {
++		err = 1;
++		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
++	}
++
++	local_irq_restore(flags);
++
++	return err ? -EINVAL : len;
++}
++
++
++
++static DEVICE_ATTR(status, S_IWUSR, NULL, phy_store_hex);
++static DEVICE_ATTR(restart_an, S_IWUSR, NULL, phy_store_hex);
++static DEVICE_ATTR(read_reg, S_IWUSR, NULL, phy_3_hex_store);
++static DEVICE_ATTR(write_reg, S_IWUSR, NULL, phy_3_hex_store);
++static DEVICE_ATTR(phy_init, S_IWUSR, NULL, phy_store_hex);
++static DEVICE_ATTR(help,   S_IRUSR, phy_show, NULL);
++
++
++static struct attribute *phy_attrs[] = {
++	&dev_attr_status.attr,
++	&dev_attr_read_reg.attr,
++	&dev_attr_write_reg.attr,
++	&dev_attr_restart_an.attr,
++	&dev_attr_help.attr,
++	&dev_attr_phy_init.attr,
++	NULL
++};
++
++static struct attribute_group phy_group = {
++	.name = "phy",
++	.attrs = phy_attrs,
++};
++
++int __devinit phy_sysfs_init(void)
++{
++		int err;
++		struct device *pd;
++
++		pd = bus_find_device_by_name(&platform_bus_type, NULL, "neta");
++		if (!pd) {
++			platform_device_register_simple("neta", -1, NULL, 0);
++			pd = bus_find_device_by_name(&platform_bus_type, NULL, "neta");
++		}
++
++		if (!pd) {
++			printk(KERN_ERR "%s: cannot find neta device\n", __func__);
++			pd = &platform_bus;
++		}
++
++		err = sysfs_create_group(&pd->kobj, &phy_group);
++		if (err) {
++			printk(KERN_INFO "sysfs group failed %d\n", err);
++			goto out;
++		}
++out:
++		return err;
++}
++
++module_init(phy_sysfs_init);
++
++MODULE_AUTHOR("Uri Eliyahu");
++MODULE_DESCRIPTION("Phy sysfs commands");
++MODULE_LICENSE("GPL");
+diff --git a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
+index 3f79634..9796c7f 100755
+--- a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
++++ b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
+@@ -199,19 +199,6 @@ MV_STATUS mvEthPhyInit(MV_U32 ethPortNum, MV_BOOL eeeEnable)
+ 	return MV_OK;
+ }
+ 
+-void    rdPhy(MV_U32 phyAddr, MV_U32 regOffs)
+-{
+-	MV_U16      data;
+-	MV_STATUS   status;
+-
+-	status = mvEthPhyRegRead(phyAddr, regOffs, &data);
+-	if (status == MV_OK)
+-		mvOsPrintf("reg=%d: 0x%04x\n", regOffs, data);
+-	else
+-		mvOsPrintf("Read failed\n");
+-}
+-
+-
+ /*******************************************************************************
+ * mvEthPhyRegRead - Read from ethernet phy register.
+ *
+@@ -286,6 +273,20 @@ MV_STATUS mvEthPhyRegRead(MV_U32 phyAddr, MV_U32 regOffs, MV_U16 *data)
+ 	return MV_OK;
+ }
+ 
++MV_STATUS mvEthPhyRegPrint(MV_U32 phyAddr, MV_U32 regOffs)
++{
++	MV_U16      data;
++	MV_STATUS   status;
++
++	status = mvEthPhyRegRead(phyAddr, regOffs, &data);
++	if (status == MV_OK)
++		mvOsPrintf("reg=%d: 0x%04x\n", regOffs, data);
++	else
++		mvOsPrintf("Read failed\n");
++
++	return status;
++}
++
+ /*******************************************************************************
+ * mvEthPhyRegWrite - Write to ethernet phy register.
+ *
+@@ -1923,7 +1924,12 @@ MV_VOID mvEthE1512PhyBasicInit(MV_U32 ethPortNum)
+ 		mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x14, 0x8001);
+ 	}
+ 	mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x16, 0x0000);
++}
+ 
++MV_U32 mvEthPhyAddGet(MV_U32 ethPortNum)
++{
++       /* TODO Port num validation */
++       return ethphyHalData.phyAddr[ethPortNum];
+ }
+ 
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.h b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.h
+index 864b02c..039e079 100755
+--- a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.h
++++ b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.h
+@@ -115,7 +115,9 @@ typedef struct {
+ MV_STATUS 	mvEthPhyHalInit(MV_ETHPHY_HAL_DATA *halData);
+ MV_STATUS	mvEthPhyInit(MV_U32 ethPortNum, MV_BOOL eeeEnable);
+ MV_STATUS	mvEthPhyRegRead(MV_U32 phyAddr, MV_U32 regOffs, MV_U16 *data);
++MV_STATUS	mvEthPhyRegPrint(MV_U32 phyAddr, MV_U32 regOffs);
+ MV_STATUS 	mvEthPhyRegWrite(MV_U32 phyAddr, MV_U32 regOffs, MV_U16 data);
++MV_U32 		mvEthPhyAddGet(MV_U32 ethPortNum);
+ MV_STATUS 	mvEthPhyReset(MV_U32 phyAddr, int timeout);
+ MV_STATUS 	mvEthPhyRestartAN(MV_U32 phyAddr, int timeout);
+ MV_STATUS 	mvEthPhyDisableAN(MV_U32 phyAddr, int speed, int duplex);
+@@ -141,8 +143,11 @@ MV_VOID		mvEthInternalGEPhyBasicInit(MV_U32 ethPortNum);
+ MV_VOID		mvEth1540PhyBasicInit(MV_U32 ethPortNum, MV_BOOL eeeEnable);
+ MV_VOID		mvEth1340PhyBasicInit(void);
+ MV_VOID		mvEthE1512PhyBasicInit(MV_U32 ethPortNum);
++
+ /* MV_VOID		mvEthInternal3FEPhyBasicInit(MV_U32 port); */
+ 
++
++
+ #ifdef __cplusplus
+ }
+ #endif
+-- 
+1.7.9.5
+

@@ -1,0 +1,157 @@
+From bf7b9c3cb24472b398f1ab1a2b9afd406afedaad Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Sun, 4 Mar 2012 20:35:31 +0200
+Subject: [PATCH 062/609] DSMP adding defined
+ CONFIG_SHEEVA_ERRATA_ARM_CPU_6076
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mm/Kconfig                                |   53 +++++++++++++-------
+ arch/arm/mm/cache-v7.S                             |    4 +-
+ arch/arm/mm/proc-sheeva_pj4bv7.S                   |    8 +--
+ .../plat-armada/mv_drivers_lsp/mv_xor/mv_netdma.c  |    2 +-
+ 4 files changed, 42 insertions(+), 25 deletions(-)
+
+diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
+index cd80ba5..f729537 100644
+--- a/arch/arm/mm/Kconfig
++++ b/arch/arm/mm/Kconfig
+@@ -988,27 +988,44 @@ config SHEEVA_ERRATA_ARM_CPU_6043
+ 
+ config SHEEVA_ERRATA_ARM_CPU_6075
+ 
+-        bool "Sheeva Errata 6075: clean operations can cause victim data to be written out of order"
++        bool "Sheeva Errata 6075: Barriers fail to enforce ordering among pended loads to non-cacheable memory"
+         depends on  CPU_SHEEVA_PJ4B_V7 && ARMADA_XP_REV_A0
+         default y
+         help
+-	When a DMB or DSB is used, the architecture requires that the barrier order explicit memory accesses from before the
+-	barrier to ones after the barrier.  Because non-cacheable accesses are permitted to pend to the memory buffers, there
+-	exists a rare scenario where the prescribed ordering is not honored.  Consider the following multiprocessor example:
+-	Processor 0:
+-	STR Data
+-	DMB
+-	STR Flag
+-	Processor 1:
+-	LDR Unrelated
+-	LDR Flag
+-	DMB
+-	LDR Data ; Data & Unrelated in same non-cacheable chunk
+-	In the above scenario, the LDR Data happens to pend and return the stale (prior to Flag update by Processor 0)
+-	version of data.
+-	Workaround
+-	This issue can be avoided by replacing a DMB with a DSB SYS.
+-
++		When a DMB or DSB is used, the architecture requires that the barrier order explicit memory accesses from before the
++		barrier to ones after the barrier.  Because non-cacheable accesses are permitted to pend to the memory buffers, there
++		exists a rare scenario where the prescribed ordering is not honored.  Consider the following multiprocessor example:
++		Processor 0:
++		STR Data
++		DMB
++		STR Flag
++		Processor 1:
++		LDR Unrelated
++		LDR Flag
++		DMB
++		LDR Data ; Data & Unrelated in same non-cacheable chunk
++		In the above scenario, the LDR Data happens to pend and return the stale (prior to Flag update by Processor 0)
++		version of data.
++		Workaround
++		This issue can be avoided by replacing a DMB with a DSB SYS.
++
++
++config SHEEVA_ERRATA_ARM_CPU_6076
++
++        bool "Sheeva Errata 6076: Multiple writeback entries hit by snoops can result in data corruption"
++        depends on  CPU_SHEEVA_PJ4B_V7 && ARMADA_XP_REV_A0
++        default y
++        help
++		In a rare case where a L1 cache eviction (either a WriteEvict or WriteBack) is allocated concurrently with a previous
++		WriteClean request to the same address (as the result of a cache maintenance clean operation), both sets of victim
++		data can be hit by an incoming snoop.  Under a specific scenario, this may result in the WriteBack actually being
++		considered complete.  A future fetch to memory can then potentially read stale data prior to the writeback occurring.
++		Workaround
++		Replacing all clean cache maintenance operations with clean & invalidate will avoid the issue
++		NOTE: This errata is rare and was hit in a scenario where 7/8 ways of the L1 cache were locked to force additional L1
++		cache evictions to the same address.  If L1 locking is not used, this bug is unlikely to occur.
++		Fix
++		-
+ config SHEEVA_ERRATA_ARM_CPU_PMU_RESET
+ 	bool "Sheeva Errata CPU Performance counters reset"
+ 	depends on CPU_SHEEVA_PJ4B_V6 || CPU_SHEEVA_PJ4B_V7
+diff --git a/arch/arm/mm/cache-v7.S b/arch/arm/mm/cache-v7.S
+index 700d465..165fed8 100644
+--- a/arch/arm/mm/cache-v7.S
++++ b/arch/arm/mm/cache-v7.S
+@@ -189,7 +189,7 @@ ENTRY(v7_coherent_user_range)
+ 	ALT_UP(W(nop))
+ #endif
+ 1:
+-#ifdef SHEEVA_ERRATA_ARM_CPU_6043
++#if defined SHEEVA_ERRATA_ARM_CPU_6043 || defined SHEEVA_ERRATA_ARM_CPU_6076
+ 	USER(  mcr     p15, 0, r12, c7, c14, 1 )       @ clean & invalidate D line to the point of unification
+ #else
+ 	USER(	mcr	p15, 0, r12, c7, c11, 1	)	@ clean D line to the point of unification
+@@ -317,7 +317,7 @@ v7_dma_clean_range:
+ 	ALT_UP(W(nop))
+ #endif
+ 1:
+-#ifdef SHEEVA_ERRATA_ARM_CPU_6043
++#if defined SHEEVA_ERRATA_ARM_CPU_6043 || defined SHEEVA_ERRATA_ARM_CPU_6076
+ 	mcr     p15, 0, r12, c7, c14, 1         @ clean & invalidate D line to the point of unification
+ #else
+ 	mcr	p15, 0, r0, c7, c10, 1		@ clean D / U line
+diff --git a/arch/arm/mm/proc-sheeva_pj4bv7.S b/arch/arm/mm/proc-sheeva_pj4bv7.S
+index 30dbf1a..6368683 100644
+--- a/arch/arm/mm/proc-sheeva_pj4bv7.S
++++ b/arch/arm/mm/proc-sheeva_pj4bv7.S
+@@ -110,7 +110,7 @@ ENTRY(cpu_pj4bv7_dcache_clean_area)
+ #ifndef TLB_CAN_READ_FROM_L1_CACHE
+ 	dcache_line_size r2, r3
+ 1:
+-#if defined SHEEVA_ERRATA_ARM_CPU_6043 || defined SHEEVA_ERRATA_ARM_CPU_6076
++#ifdef SHEEVA_ERRATA_ARM_CPU_6043 || defined SHEEVA_ERRATA_ARM_CPU_6076
+ 	mcr     p15, 0, r0, c7, c14, 1          @ clean & invalidate D entry
+ #else
+ 	mcr	p15, 0, r0, c7, c10, 1		@ clean D entry
+@@ -230,7 +230,7 @@ str	r1, [r0]			@ linux version
+ 	str     r3, [r0, #20]
+ 	str     r3, [r0, #24]
+ 	str     r3, [r0, #28]
+-#if defined SHEEVA_ERRATA_ARM_CPU_6043 || defined SHEEVA_ERRATA_ARM_CPU_6076
++#ifdef SHEEVA_ERRATA_ARM_CPU_6043 || defined SHEEVA_ERRATA_ARM_CPU_6076
+         mcr     p15, 0, r0, c7, c14, 1          @ clean & invalidate D entry
+ #else
+ 	mcr	p15, 0, r0, c7, c10, 1		@ flush_pte
+@@ -244,13 +244,13 @@ str	r1, [r0]			@ linux version
+ 	str     r3, [r0, #20]
+ 	str     r3, [r0, #24]
+ 	str     r3, [r0, #28]
+-#if defined SHEEVA_ERRATA_ARM_CPU_6043 || defined SHEEVA_ERRATA_ARM_CPU_6076
++#ifdef SHEEVA_ERRATA_ARM_CPU_6043 || defined SHEEVA_ERRATA_ARM_CPU_6076
+         mcr     p15, 0, r0, c7, c14, 1          @ clean & invalidate D entry
+ #else
+ 	mcr	p15, 0, r0, c7, c10, 1		@ flush_pte
+ #endif
+ #else
+-#if defined SHEEVA_ERRATA_ARM_CPU_6043 || defined SHEEVA_ERRATA_ARM_CPU_6076
++#ifdef SHEEVA_ERRATA_ARM_CPU_6043 || defined SHEEVA_ERRATA_ARM_CPU_6076
+         mcr     p15, 0, r0, c7, c14, 1          @ clean & invalidate D entry
+ #else
+ 	mcr	p15, 0, r0, c7, c10, 1		@ flush_pte
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_xor/mv_netdma.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_xor/mv_netdma.c
+index da40daf..c67f00c 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_xor/mv_netdma.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_xor/mv_netdma.c
+@@ -512,7 +512,7 @@ static inline void dmac_clean_dcache_line(void* addr)
+ {
+ //#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,26)
+ 
+-#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043
++#if defined CONFIG_SHEEVA_ERRATA_ARM_CPU_6043 || defined CONFIG_SHEEVA_ERRATA_ARM_CPU_6076
+ 	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));
+ #else
+ 	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 1" : : "r" (addr));
+-- 
+1.7.9.5
+

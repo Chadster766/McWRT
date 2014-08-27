@@ -1,0 +1,80 @@
+var disappeardelay=250
+var verticaloffset=0
+var enablearrowhead=1
+var arrowheadimg=["/images/arrwd.gif", "/images/arrwu.gif"]
+var arrowheadheight=11
+var ie=document.all
+var ns6=document.getElementById&&!document.all
+verticaloffset=(enablearrowhead)? verticaloffset+arrowheadheight : verticaloffset
+function getposOffset(what, offsettype){ var totaloffset=(offsettype=="left")? what.offsetLeft : what.offsetTop; var parentEl=what.offsetParent; while (parentEl!=null){ totaloffset=(offsettype=="left")? totaloffset+parentEl.offsetLeft : totaloffset+parentEl.offsetTop; parentEl=parentEl.offsetParent;}
+return totaloffset;}
+function showhide(obj, e){ dropmenuobj.style.left=dropmenuobj.style.top="-500px"
+if (e.type=="mouseover")
+obj.visibility="visible"
+}
+function iecompattest(){ return (document.compatMode && document.compatMode!="BackCompat")? document.documentElement : document.body
+}
+function clearbrowseredge(obj, whichedge){ if (whichedge=="rightedge"){ edgeoffsetx=0
+var windowedge=ie && !window.opera? iecompattest().scrollLeft+iecompattest().clientWidth-15 : window.pageXOffset+window.innerWidth-15
+dropmenuobj.contentmeasure=dropmenuobj.offsetWidth
+if (windowedge-dropmenuobj.x < dropmenuobj.contentmeasure)
+edgeoffsetx=dropmenuobj.contentmeasure-obj.offsetWidth
+return edgeoffsetx
+}
+else{ edgeoffsety=0
+var topedge=ie && !window.opera? iecompattest().scrollTop : window.pageYOffset
+var windowedge=ie && !window.opera? iecompattest().scrollTop+iecompattest().clientHeight-15 : window.pageYOffset+window.innerHeight-18
+dropmenuobj.contentmeasure=dropmenuobj.offsetHeight
+if (windowedge-dropmenuobj.y < dropmenuobj.contentmeasure)
+edgeoffsety=dropmenuobj.contentmeasure+obj.offsetHeight+(verticaloffset*2)
+return edgeoffsety
+}
+}
+function displayballoontip(obj, e){ if (window.event) event.cancelBubble=true
+else if (e.stopPropagation) e.stopPropagation()
+if (typeof dropmenuobj!="undefined")
+dropmenuobj.style.visibility="hidden"
+clearhidemenu()
+dropmenuobj=document.getElementById(obj.getAttribute("rel"))
+showhide(dropmenuobj.style, e)
+dropmenuobj.x=getposOffset(obj, "left")
+dropmenuobj.y=getposOffset(obj, "top")+verticaloffset
+dropmenuobj.style.left=dropmenuobj.x-clearbrowseredge(obj, "rightedge")+"px"
+dropmenuobj.style.top=dropmenuobj.y-clearbrowseredge(obj, "bottomedge")+obj.offsetHeight+"px"
+if (enablearrowhead)
+displaytiparrow()
+}
+function displaytiparrow(){ tiparrow=document.getElementById("arrowhead")
+tiparrow.src=(edgeoffsety!=0)? arrowheadimg[0] : arrowheadimg[1]
+var ieshadowwidth=(dropmenuobj.filters && dropmenuobj.filters[0])? dropmenuobj.filters[0].Strength-1 : 0
+tiparrow.style.left=(edgeoffsetx!=0)? parseInt(dropmenuobj.style.left)+dropmenuobj.offsetWidth-tiparrow.offsetWidth-10+"px" : parseInt(dropmenuobj.style.left)+5+"px"
+tiparrow.style.top=(edgeoffsety!=0)? parseInt(dropmenuobj.style.top)+dropmenuobj.offsetHeight-tiparrow.offsetHeight-ieshadowwidth+arrowheadheight+"px" : parseInt(dropmenuobj.style.top)-arrowheadheight+"px"
+tiparrow.style.visibility="visible"
+}
+function delayhidemenu(){ delayhide=setTimeout("dropmenuobj.style.visibility='hidden'; dropmenuobj.style.left=0; if (enablearrowhead) tiparrow.style.visibility='hidden'",disappeardelay)
+}
+function clearhidemenu(){ if (typeof delayhide!="undefined")
+clearTimeout(delayhide)
+}
+function reltoelement(linkobj){ var relvalue=linkobj.getAttribute("rel")
+return (relvalue!=null && relvalue!="" && document.getElementById(relvalue)!=null && document.getElementById(relvalue).className=="balloonstyle")? true : false
+}
+function initalizetooltip(){ var all_links=document.getElementsByTagName("a")
+if (enablearrowhead){ tiparrow=document.createElement("img")
+tiparrow.setAttribute("src", arrowheadimg[0])
+tiparrow.setAttribute("id", "arrowhead")
+document.body.appendChild(tiparrow)
+}
+for (var i=0; i<all_links.length; i++){ if (reltoelement(all_links[i])){ all_links[i].onmouseover=function(e){ var evtobj=window.event? window.event : e
+displayballoontip(this, evtobj)
+}
+all_links[i].onmouseout=delayhidemenu
+}
+}
+}
+if (window.addEventListener)
+window.addEventListener("load", initalizetooltip, false)
+else if (window.attachEvent)
+window.attachEvent("onload", initalizetooltip)
+else if (document.getElementById)
+window.onload=initalizetooltip

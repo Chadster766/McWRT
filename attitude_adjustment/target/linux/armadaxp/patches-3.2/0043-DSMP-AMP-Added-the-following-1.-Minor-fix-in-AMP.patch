@@ -1,0 +1,459 @@
+From 719ec4ce8c384777848779f05a305d5d507d7253 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Wed, 29 Feb 2012 16:48:22 +0200
+Subject: [PATCH 043/609] DSMP: AMP: Added the following: 1. Minor fix in AMP
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/ctrlEnv/mvSemaphore.c         |   35 +++++++
+ .../armada_xp_family/ctrlEnv/mvSemaphore.h         |   14 ++-
+ arch/arm/mach-armadaxp/core.c                      |   52 ++++++++--
+ arch/arm/mach-armadaxp/include/mach/smp.h          |    5 +-
+ arch/arm/mach-armadaxp/time.c                      |   11 +-
+ arch/arm/mm/cache-aurora-l2.c                      |  108 ++++++++++++++------
+ tools/amp/amp_make.pl                              |   17 +--
+ 7 files changed, 183 insertions(+), 59 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
+index 264d4f1..0f7843e 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
+@@ -112,3 +112,38 @@ MV_BOOL mvSemaUnlock(MV_32 num)
+ 	MV_REG_BYTE_WRITE(MV_SEMA_REG_BASE+(num), 0xFF);
+ 	return MV_TRUE;
+ }
++
++
++MV_VOID mvHwBarrier(MV_32 cpuCount)
++{
++	MV_U32 cpuId;
++	MV_U32 myCpuId = whoAmI();
++
++	/* Let all the rest know i arrived */
++	mvSemaLock(MV_SEMA_BARRIER(myCpuId));
++
++	cpuCount--;
++
++	/* Now try to find all the rest */
++	while(cpuCount > 0){
++		/* Scan all CPUs to see who arrived */
++		for(cpuId = 0; cpuId < NR_CPUS; cpuId++){
++			if(cpuId == myCpuId)
++				continue;
++
++			if(mvSemaTryLock(MV_SEMA_BARRIER(cpuId)) == MV_TRUE)
++				mvSemaUnlock(MV_SEMA_BARRIER(cpuId));
++			else
++				cpuCount--;
++		}
++
++		/* Wait some cycles before retry to avoid overloading bus */
++		if(cpuCount > 0)
++			udelay(1);
++	}
++
++	/* Release my semaphore so we can use it again */
++	/* wait a little before leaving to allow other to see you */
++	udelay(1);
++	mvSemaUnlock(MV_SEMA_BARRIER(myCpuId));
++}
+\ No newline at end of file
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h
+index ff002dd..8b9f09d 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h
+@@ -74,11 +74,23 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define MV_SEMA_BRIDGE 		3
+ #define MV_SEMA_IRQ 		4
+ #define MV_SEMA_CLOCK		5
++#define MV_SEMA_L2		6
+ 
+ #define MV_SEMA_IPC_SNORT 	10
+ 
++#define MV_SEMA_BARRIER(cpu)	(50 + cpu)
++
+ MV_BOOL mvSemaLock(MV_32 num);
+ MV_BOOL mvSemaTryLock(MV_32 num);
+ MV_BOOL mvSemaUnlock(MV_32 num);
++MV_VOID mvHwBarrier(MV_32 cpuCount);
++
++/* Turn on HW semapores only if AMP is enabled */
++#ifndef CONFIG_MV_AMP_ENABLE
++#define mvSemaLock
++#define mvSemaTryLock
++#define mvSemaUnlock
++#define mvHwBarrier
++#endif /* CONFIG_MV_AMP_ENABLE */
+ 
+-#endif
++#endif /* mvsemaphore_h */
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index aab118b..761f223 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -110,6 +110,7 @@ extern u32 mv_crypto_virt_base_get(u8 chan);
+ #endif
+ extern void axp_init_irq(void);
+ extern void __init set_core_count(unsigned int cpu_count);
++extern unsigned int group_cpu_mask;
+ 
+ /* for debug putstr */
+ static char arr[256];
+@@ -342,6 +343,7 @@ static int __init nfcConfig_setup(char *s)
+ }
+ __setup("nfcConfig=", nfcConfig_setup);
+ 
++#ifdef CONFIG_SMP
+ unsigned long mv_cpu_count = NR_CPUS;
+ static int __init mv_cpu_count_setup(char *s)
+ {
+@@ -378,9 +380,7 @@ static int __init mv_rsrc_setup(char *s)
+ 	return 1;
+ }
+ __setup("mv_rsrc=", mv_rsrc_setup);
+-
+-
+-
++#endif /* CONFIG_SMP */
+ 
+ void __init armadaxp_setup_cpu_mbus(void)
+ {
+@@ -653,10 +653,46 @@ static struct platform_device mv88fx_neta = {
+ 
+ static void __init eth_init(void)
+ {
++ struct netaSmpGroupStruct *netaSmpGroupStruct;
++        int cpu, found = 0, portMask;
++
++        netaSmpGroupStruct = kzalloc(sizeof(struct netaSmpGroupStruct), GFP_KERNEL);
++
++        if (!netaSmpGroupStruct) {
++                        printk(KERN_ERR "no memory for private data\n");
++                        return;
++        }
++        else {
++
++#ifdef  CONFIG_SMP
++                netaSmpGroupStruct->cpuMask  = group_cpu_mask;
++#else
++                netaSmpGroupStruct->cpuMask  = 1;
++#endif
++
++                portMask  = (mvUnitMapIsMine(ETH0) == MV_TRUE);
++                portMask |= (mvUnitMapIsMine(ETH1) == MV_TRUE) << 1;
++                portMask |= (mvUnitMapIsMine(ETH2) == MV_TRUE) << 2;
++                portMask |= (mvUnitMapIsMine(ETH3) == MV_TRUE) << 3;
++
++                netaSmpGroupStruct->portMask = portMask;
++        }
++
++        for (cpu = 0; cpu < CONFIG_NR_CPUS; cpu++) {
++                if (MV_BIT_CHECK(netaSmpGroupStruct->cpuMask, cpu))
++                        found = 1;
++        }
++        if (!found) {
++                printk(KERN_ERR "%s: cpuMask does not contain any of the CPUs \n", __func__);
++                printk(KERN_ERR "%s: not initializing network driver\n", __func__);
++                return;
++        }
++        mv88fx_neta.dev.platform_data = netaSmpGroupStruct;
++
+ #if defined(CONFIG_MV_ETH_LEGACY)
+-	platform_device_register(&mv88fx_eth);
++        platform_device_register(&mv88fx_eth);
+ #elif defined(CONFIG_MV_ETH_NETA)
+-	platform_device_register(&mv88fx_neta);
++        platform_device_register(&mv88fx_neta);
+ #endif /* Ethernet mode: legacy or NETA */
+ }
+ 
+@@ -1355,8 +1391,7 @@ static void __init axp_db_init(void)
+ 		mvSysSpiInit(0, _16M);
+ 
+ 	/* ETH-PHY */
+-	if(mvUnitMapIsMine(ETH0) == MV_TRUE) //YY - What to do with PHY ??
+-		mvSysEthPhyInit();
++	mvSysEthPhyInit();
+ 
+ 	/* Sata */
+ #ifdef CONFIG_SATA_MV
+@@ -1396,8 +1431,7 @@ static void __init axp_db_init(void)
+ 
+ #ifdef CONFIG_MV_ETHERNET
+ 	/* Ethernet */
+-	if(mvUnitMapIsMine(ETH0) == MV_TRUE) //YY - Change to per port init
+-		eth_init();
++	eth_init();
+ #endif
+ 
+ #ifdef CONFIG_FB_DOVE
+diff --git a/arch/arm/mach-armadaxp/include/mach/smp.h b/arch/arm/mach-armadaxp/include/mach/smp.h
+index cc9a141..2a14048 100644
+--- a/arch/arm/mach-armadaxp/include/mach/smp.h
++++ b/arch/arm/mach-armadaxp/include/mach/smp.h
+@@ -15,7 +15,8 @@ extern unsigned int group_cpu_mask;
+ 		cpunum &= 0x0F;				\
+ 	})
+ 
+-#define get_hw_cpu_mask(cpu_mask)	((cpu_mask << master_cpu_id) & group_cpu_mask);
+-#define get_hw_cpu_id(cpu)		(cpu + master_cpu_id);
++#define get_hw_cpu_mask(cpu_mask)	((cpu_mask << master_cpu_id) & group_cpu_mask)
++#define get_hw_cpu_id(cpu)		(cpu + master_cpu_id)
++#define is_primary_amp()		(master_cpu_id == 0 ? 1 : 0)
+ 
+ #endif //ASMARM_ARCH_SMP_H
+diff --git a/arch/arm/mach-armadaxp/time.c b/arch/arm/mach-armadaxp/time.c
+index 1d1b840..ea7e52f 100644
+--- a/arch/arm/mach-armadaxp/time.c
++++ b/arch/arm/mach-armadaxp/time.c
+@@ -67,8 +67,9 @@ extern unsigned int master_cpu_id;
+ #define  LCL_TIMER_CAUSE	(LCL_TIMER_BASE + 0x0028)
+ #define   LCL_INT_TIMER0_CLR 	~(1 << 0)
+ #define   LCL_INT_TIMER1_CLR	~(1 << 8)
+-
+ #define LCL_TIMER_TURN_25MHZ	(1 << 11)
++
++#define TIMER_TURN_25MHZ(x)	(1 << (11 + x))
+ #define BRIDGE_CAUSE		(MV_MBUS_REGS_OFFSET | 0x0260)
+ #define BRIDGE_MASK		(MV_MBUS_REGS_OFFSET | 0x10c4)
+ #define BRIDGE_INT_TIMER(x)	(1 << (24 + x))
+@@ -236,7 +237,11 @@ void __init axp_time_init(unsigned int fabric_clk)
+ {
+ 	u32 u;
+ 
+-	soc_timer_id = (master_cpu_id == 0 ? 0 : 1); //YY - can't use timer 2 and 3. why ?
++#ifdef CONFIG_MV_AMP_ENABLE
++	soc_timer_id = (master_cpu_id == 0 ? 0 : 1);
++#else
++	soc_timer_id = 0;
++#endif
+ 
+ 	printk("Initializing ArmadaXP SOC Timer %d\n", soc_timer_id);
+ 
+@@ -252,7 +257,7 @@ void __init axp_time_init(unsigned int fabric_clk)
+ 	MV_REG_WRITE(BRIDGE_MASK, u);
+ 	u = MV_REG_READ(TIMER_CTRL);
+ #if !defined (CONFIG_ARMADA_XP_REV_Z1) && !defined (CONFIG_MACH_ARMADA_XP_FPGA)
+-	u |= (TIMER_EN(soc_timer_id) | TIMER_RELOAD_EN(soc_timer_id) | LCL_TIMER_TURN_25MHZ);
++	u |= (TIMER_EN(soc_timer_id) | TIMER_RELOAD_EN(soc_timer_id) | TIMER_TURN_25MHZ(soc_timer_id));
+ #else
+ 	u |= (TIMER_EN(soc_timer_id) | TIMER_RELOAD_EN(soc_timer_id));
+ #endif
+diff --git a/arch/arm/mm/cache-aurora-l2.c b/arch/arm/mm/cache-aurora-l2.c
+index 68959bd..b6297c0 100644
+--- a/arch/arm/mm/cache-aurora-l2.c
++++ b/arch/arm/mm/cache-aurora-l2.c
+@@ -13,6 +13,7 @@
+  */
+ 
+ #include <linux/init.h>
++#include <linux/delay.h>
+ #include <asm/cacheflush.h>
+ #include <linux/proc_fs.h>
+ 
+@@ -20,6 +21,8 @@
+ #include <asm/io.h>
+ #include <mach/smp.h>
+ #include "ctrlEnv/mvCtrlEnvSpec.h"
++#include "ctrlEnv/mvCtrlEnvLib.h"
++#include "ctrlEnv/mvSemaphore.h"
+ 
+ /*
+  * L2 registers offsets
+@@ -526,6 +529,33 @@ static void __init enable_cache(u32 mask)
+ 	set_cr(cr1 | mask);
+ }
+ 
++#ifdef CONFIG_MV_AMP_ENABLE
++static bool is_l2_enabled(void)
++{
++	u32  reg;
++	bool enabled;
++
++	/* Read and return enable bit */
++	reg 	= readl(auroraL2_base + L2_CONTROL);
++	enabled = (reg & 0x1);
++
++	return enabled;
++}
++
++static void wait_l2_enabled(void)
++{
++	u32 usec_timeout = 1000;
++
++	while((is_l2_enabled() == 0) && (usec_timeout > 0))
++	{
++		udelay(1);
++		usec_timeout--;
++	}
++
++	if(usec_timeout == 0)
++		printk(KERN_ERR "AMP: Waiting too long for L2 enable\n");
++}
++#endif /* CONFIG_MV_AMP_ENABLE */
+ 
+ static void __init enable_l2(void)
+ {
+@@ -542,11 +572,25 @@ static void __init enable_l2(void)
+ 	__asm__ __volatile__("mcr p15, 1, %0, c15, c2, 0\n" : : "r" (u));
+ 
+ 	u = readl(auroraL2_base+L2_CONTROL);
++#ifdef CONFIG_MV_AMP_ENABLE
++	if ((!(u & 1)) || (is_primary_amp() == 0)) {
++#else
+ 	if (!(u & 1)) {
++#endif
+ 		printk(KERN_INFO "Aurora L2 Cache Enabled\n");
+ 		u |= 1;
+ 		mask = invalidate_and_disable_cache();
++
++#ifdef CONFIG_MV_AMP_ENABLE
++		mvHwBarrier(2); // Wait for all AMP groups YY - why 2 CPUs ??
++
++		if(is_primary_amp())
++			writel(u, auroraL2_base + L2_CONTROL);
++		else
++			wait_l2_enabled();
++#else
+ 		writel(u, auroraL2_base+L2_CONTROL);
++#endif
+ 		enable_cache(mask);
+ 	}
+ }
+@@ -620,9 +664,8 @@ int aurora_l2_pm_exit(void)
+ }
+ 
+ int __init aurora_l2_init(void __iomem *base)
+-{	
++{
+ 	__u32 aux;
+-	u32 u;
+ 
+ #ifdef CONFIG_PROC_FS
+ 	struct proc_dir_entry *res;
+@@ -646,7 +689,7 @@ int __init aurora_l2_init(void __iomem *base)
+ 	if (!res)
+ 		return -ENOMEM;
+ 
+-	res_file->read_proc = proc_auroraL2_counter_read;    
++	res_file->read_proc = proc_auroraL2_counter_read;
+ 	res_file->write_proc = proc_auroraL2_counter_write;
+ #endif /* CONFIG_CACHE_AURORAL2_EVENT_MONITOR_ENABLE */
+ #endif
+@@ -656,38 +699,45 @@ int __init aurora_l2_init(void __iomem *base)
+ 	outer_cache.clean_range = aurora_l2_clean_range;
+ 	outer_cache.flush_range = aurora_l2_flush_range;
+ #endif
+-	
++
+ 	auroraL2_base = base;
+-        					 		
+-	/* 1. Write to AuroraL2 Auxiliary Control Register, 0x104
+-	 *    Setting up Associativity, Way Size, and Latencies
+-	 */	
+-	aux = readl(auroraL2_base + L2_AUX_CTRL_REG);
+-	aux &= ~L2ACR_REPLACEMENT_MASK;
+-	aux |= l2rep;
++
++#ifdef CONFIG_MV_AMP_ENABLE
++	if(is_primary_amp())
++#endif
++	{
++
++		/* 1. Write to AuroraL2 Auxiliary Control Register, 0x104
++		*    Setting up Associativity, Way Size, and Latencies
++		*/
++		aux = readl(auroraL2_base + L2_AUX_CTRL_REG);
++		aux &= ~L2ACR_REPLACEMENT_MASK;
++		aux |= l2rep;
+ #ifdef CONFIG_MV_SUPPORT_L2_DEPOSIT
+-	aux &= ~L2ACR_FORCE_WRITE_POLICY_MASK;
+-	aux |= L2ACR_FORCE_WRITE_BACK_POLICY;
++		aux &= ~L2ACR_FORCE_WRITE_POLICY_MASK;
++		aux |= L2ACR_FORCE_WRITE_BACK_POLICY;
+ #endif
+-	writel(aux, auroraL2_base + L2_AUX_CTRL_REG); 	    	
++		writel(aux, auroraL2_base + L2_AUX_CTRL_REG);
+ 
+-	l2_wt_override = ((aux & (0x3)) == 0x2 ? 1:0);
+-	/* 3. Secure write to AuroraL2 Invalidate by Way, 0x77c
+-	 */ 
+-	auroraL2_inv_all();
++		l2_wt_override = ((aux & (0x3)) == 0x2 ? 1:0);
++		/* 3. Secure write to AuroraL2 Invalidate by Way, 0x77c
++		*/
++		auroraL2_inv_all();
++
++		/* 4. Write to the Lockdown D and Lockdown I Register 9 if required
++		*/
++
++		/* 5. Write to interrupt clear register, 0x220, to clear any residual
++		*    raw interrupt set.
++		*/
++		writel(0x1FF, auroraL2_base + L2_INT_CAUSE_REG);
++
++		/* 6. Enable L2 cache
++		*/
++	}
+ 
+-	/* 4. Write to the Lockdown D and Lockdown I Register 9 if required
+-	 */  
+-    
+-	/* 5. Write to interrupt clear register, 0x220, to clear any residual 
+-	 *    raw interrupt set.
+-	 */
+-	writel(0x1FF, auroraL2_base + L2_INT_CAUSE_REG); 	    
+-	
+-	/* 6. Enable L2 cache
+-	 */
+ 	enable_l2();
+-    	auroraL2_enable = 1;
++	auroraL2_enable = 1;
+ 
+ 	return 0;
+ }
+diff --git a/tools/amp/amp_make.pl b/tools/amp/amp_make.pl
+index bf1a738..98e4432 100644
+--- a/tools/amp/amp_make.pl
++++ b/tools/amp/amp_make.pl
+@@ -17,6 +17,8 @@ if($argc > 0)
+ 	if(-d $ARGV[0])
+ 	{
+ 		$out_dir = $ARGV[0];
++		#Clip trailing slash if exists
++		$out_dir =~ s/\/$//;
+ 	}
+ 	else
+ 	{
+@@ -42,17 +44,6 @@ while( $line = <boot_file>)
+ }
+ 
+ 
+-print "curr_base = $curr_base\n";
+-print "base[0]   = $base[0]\n";
+-print "base[1]   = $base[1]\n";
+-print "curr_port = $curr_port\n";
+-print "port[0]   = $port[0]\n";
+-print "port[1]   = $port[1]\n";
+-print "load_addr = $load_addr\n";
+-print "pars_addr = $pars_addr\n";
+-print "ramd_addr = $ramd_addr\n";
+-
+-
+ if($curr_base == -1 or
+    $base[0]   == -1 or
+    $base[1]   == -1 or
+@@ -103,10 +94,6 @@ for (; ($g_id < 2) and ($g_id >= 0); $g_id += $add)
+ 	$new_pars = sprintf("0x%x", $new_pars);
+ 	$new_ramd = sprintf("0x%x", $new_ramd);
+ 
+-	print "new_load = $new_load\n";
+-	print "new_pars = $new_pars\n";
+-	print "new_ramd = $new_ramd\n";
+-
+ 	# Modify .config
+ 	system("perl -p -i -e \"s/CONFIG_MV_DRAM_BASE=.*/CONFIG_MV_DRAM_BASE=$base[$g_id]/\" .config");
+ 	system("perl -p -i -e \"s/CONFIG_MV_UART_PORT=.*/CONFIG_MV_UART_PORT=$port[$g_id]/\" .config");
+-- 
+1.7.9.5
+

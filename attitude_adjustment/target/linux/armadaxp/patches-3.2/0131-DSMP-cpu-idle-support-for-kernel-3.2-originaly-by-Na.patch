@@ -1,0 +1,137 @@
+From 1bdcc67dd0bcf8d3470bd24d106441152b672bd9 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Thu, 12 Apr 2012 10:06:52 +0300
+Subject: [PATCH 131/609] DSMP cpu idle support for kernel 3.2 ( originaly by
+ Nadav H.)
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/cpuidle.c |   86 ++++++++++++++++++++++------------------
+ 1 file changed, 47 insertions(+), 39 deletions(-)
+
+diff --git a/arch/arm/plat-armada/cpuidle.c b/arch/arm/plat-armada/cpuidle.c
+index c02bddd..7d3a8ca 100755
+--- a/arch/arm/plat-armada/cpuidle.c
++++ b/arch/arm/plat-armada/cpuidle.c
+@@ -413,19 +413,22 @@ static int mv_cpu_idle_read(char *buffer, char **buffer_location, off_t offset,
+  */
+ int armadaxp_init_cpuidle(void)
+ {
++	struct cpuidle_driver *driver =&armadaxp_idle_driver;
+ 	struct cpuidle_device *device;
+ 	int i;
++
+ 	device_registered = 1;
+ 	printk("Initializing Armada-XP CPU power management ");
+ 
+ 	if (build_identity_page_table()) {
+ 		printk(KERN_ERR "armadaxp_init_cpuidle: Failed to build identity page table\n");
+-                return -ENOMEM;
+-        }
+-	struct cpuidle_driver *driver =&armadaxp_idle_driver;
++		return -ENOMEM;
++	}
+ 
+ 	armadaxp_fabric_setup_deepIdle();
+ 
++	driver->safe_state_index = -1;
++
+ #ifdef CONFIG_MV_PMU_PROC
+ 	/* Create proc entry. */
+ 	cpu_idle_proc = create_proc_entry("cpu_idle", 0666, NULL);
+@@ -433,6 +436,7 @@ int armadaxp_init_cpuidle(void)
+ 	cpu_idle_proc->write_proc = mv_cpu_idle_write;
+ 	cpu_idle_proc->nlink = 1;
+ #endif
++
+ 	if (pm_support == WFI)
+ 		printk(" (WFI)\n");
+ 	else if (pm_support == DEEP_IDLE)
+@@ -445,44 +449,48 @@ int armadaxp_init_cpuidle(void)
+ 	}
+ 	pm_mode = pm_support;
+ 
+-	for_each_online_cpu(i) {
+-		device = &per_cpu(armadaxp_cpuidle_device, i);
+-		device->cpu = i;
+-		device->state_count = pm_support; //ARMADAXP_IDLE_STATES;
+-		/* Wait for interrupt state */
+-		driver->states[0].enter = armadaxp_enter_idle;
+-		driver->states[0].exit_latency = 1;             /* Few CPU clock cycles */
+-		driver->states[0].target_residency = 10;
+-		driver->states[0].flags = CPUIDLE_FLAG_TIME_VALID;
+-		strcpy(driver->states[0].name, "WFI");
+-		strcpy(driver->states[0].desc, "Wait for interrupt");
+-
+-		/* Deep Idle Mode */
+-		driver->states[1].enter = armadaxp_enter_idle;
+-		driver->states[1].exit_latency = 100;
+-		driver->states[1].target_residency = 1000;
+-		driver->states[1].flags = CPUIDLE_FLAG_TIME_VALID;
+-		strcpy(driver->states[1].name, "DEEP IDLE");
+-		strcpy(driver->states[1].desc, "Deep Idle");
+-
+-		/* Snooze - Deep Deep Idle Mode */
+-                driver->states[2].enter = armadaxp_enter_idle;
+-                driver->states[2].exit_latency = 1000;
+-                driver->states[2].target_residency = 10000;
+-                driver->states[2].flags = CPUIDLE_FLAG_TIME_VALID;
+-                strcpy(driver->states[2].name, "SNOOZE");
+-                strcpy(driver->states[2].desc, "Snooze");
+-
+-                if(pm_mode) {
+-			 cpuidle_register_driver(driver);
+-                        if (cpuidle_register_device(device)) {
+-                                printk(KERN_ERR "armadaxp_init_cpuidle: Failed registering\n");
+-                                return -EIO;
+-                        }
+-			//			cpuidle_register_driver(driver);
++/* Set cpuidle driver */
++       driver->state_count = pm_support;
++       driver->safe_state_index = 0;
++       /* Wait for interrupt state */
++       driver->states[0].enter = armadaxp_enter_idle;
++       driver->states[0].exit_latency = 1;             /* Few CPU clock cycles */
++       driver->states[0].target_residency = 10;
++       driver->states[0].flags = CPUIDLE_FLAG_TIME_VALID;
++       strcpy(driver->states[0].name, "WFI");
++       strcpy(driver->states[0].desc, "Wait for interrupt");
++       /* Deep Idle Mode */
++       driver->states[1].enter = armadaxp_enter_idle;
++       driver->states[1].exit_latency = 100;
++       driver->states[1].target_residency = 1000;
++       driver->states[1].flags = CPUIDLE_FLAG_TIME_VALID;
++       strcpy(driver->states[1].name, "DEEP IDLE");
++       strcpy(driver->states[1].desc, "Deep Idle");
++       /* Snooze - Deep Deep Idle Mode */
++       driver->states[2].enter = armadaxp_enter_idle;
++       driver->states[2].exit_latency = 1000;
++       driver->states[2].target_residency = 10000;
++       driver->states[2].flags = CPUIDLE_FLAG_TIME_VALID;
++       strcpy(driver->states[2].name, "SNOOZE");
++       strcpy(driver->states[2].desc, "Snooze");
++
++       if(pm_mode) {
++               if (cpuidle_register_driver(driver)) {
++                       printk(KERN_ERR "armadaxp_init_cpuidle: register driver failed\n");
++                       return -EIO;
+ 		}
+-	}
+ 
++	for_each_online_cpu(i) {
++                       device = &per_cpu(armadaxp_cpuidle_device, i);
++                       device->cpu = i;
++                       device->state_count = pm_support;
++
++                       if (cpuidle_register_device(device)) {
++                               printk(KERN_ERR "CPUidle register device failed\n,");
++                               return -EIO;
++                       }
++               }
++       }
+ 	return 0;
+ }
+ 
+-- 
+1.7.9.5
+

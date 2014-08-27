@@ -1,0 +1,71 @@
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -22,8 +22,8 @@ MV=@MV@
+ ENGINE=@SENGINE@
+ 
+ SHELL=/bin/sh
+-SUBDIRS=src doc tools
+-INSTDIRS=src doc tools
++SUBDIRS=src
++INSTDIRS=src doc
+ CLEANSUBDIRS=src tools
+ 
+ CC=@CC@
+--- a/configure
++++ b/configure
+@@ -7057,8 +7057,7 @@ echo $ECHO_N "checking for epoll_create 
+   { { echo "$as_me:$LINENO: error: cannot run test program while cross compiling
+ See \`config.log' for more details." >&5
+ echo "$as_me: error: cannot run test program while cross compiling
+-See \`config.log' for more details." >&2;}
+-   { (exit 1); exit 1; }; }
++See \`config.log' for more details." >&2;} }
+ else
+   cat >conftest.$ac_ext <<_ACEOF
+ /* confdefs.h.  */
+--- a/src/Makefile.in
++++ b/src/Makefile.in
+@@ -1,8 +1,8 @@
+ CC=@CC@
+ RM=@RM@
+ MV=@MV@
+-IRCDLIBS=@LIBS@ 
+-INCLUDEDIR=-I../include
++IRCDLIBS=-lresolv -lz @LIBS@ -L$(STAGING_DIR)/lib -L$(STAGING_DIR)/usr/lib
++INCLUDEDIR=-I../include -I$(STAGING_DIR)/usr/include
+ OPENSSLINC=@SSL_INCLUDES@
+ ENGINE=@SENGINE@
+ CRYPTO=@ENCRYPT_SRC@
+@@ -11,10 +11,10 @@ INSTALL_BIN=@INSTALL_PROGRAM@
+ INSTALL_DIR=@INSTALL_DIR@
+ CFLAGS=@CFLAGS@ -fno-strict-aliasing
+ 
+-RES_SRC =
++#RES_SRC =
+ 
+ #This is only for very old systems that NEED this
+-#RES_SRC = res_mkquery.c res_init.c res_comp.c
++RES_SRC = res_mkquery.c res_init.c res_comp.c
+ 
+ SOURCES = blalloc.c bsd.c channel.c clientlist.c clones.c confparse.c \
+           fdlist.c fds.c hash.c hide.c inet_addr.c ircd.c ircsprintf.c \
+@@ -22,7 +22,7 @@ SOURCES = blalloc.c bsd.c channel.c clie
+           m_who.c match.c memcount.c modules.c packet.c parse.c pcre.c \
+           probability.c res.c s_auth.c s_bsd.c s_conf.c s_debug.c s_err.c \
+           s_misc.c s_numeric.c s_serv.c s_user.c sbuf.c scache.c send.c \
+-          struct.c support.c throttle.c userban.c whowas.c zlink.c \
++          struct.c support.c throttle.c userban.c whowas.c zlink.c $(RES_SRC) \
+           $(ENGINE) $(CRYPTO)
+ 
+ OBJECTS = $(SOURCES:.c=.o) version.o
+--- a/src/res_comp.c
++++ b/src/res_comp.c
+@@ -229,7 +229,7 @@ dn_skipname(u_char *comp_dn, u_char *eom
+  * the first name on the list, not the pointer to the start of the
+  * message.
+  */
+-int staticdn_find(u_char *exp_dn, u_char *msg, u_char **dnptrs, 
++static int dn_find(u_char *exp_dn, u_char *msg, u_char **dnptrs,
+ 		  u_char **lastdnptr)
+ {
+     u_char *dn, *cp, **cpp;

@@ -1,0 +1,865 @@
+From 9f92470f690a16f092d8d5979eb629a1b38990f7 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Thu, 19 Jul 2012 16:05:16 +0300
+Subject: [PATCH 234/609] ArmadaXP B0 support patch 1. Support for the B0
+ revision of the ArmadaXP SoC 2. Support for a mixed
+ mode of A0 and B0 on runtime
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/include/asm/tlbflush.h                    |   27 +++++++
+ arch/arm/kernel/entry-armv.S                       |   42 ++++++++++-
+ arch/arm/kernel/traps.c                            |    8 ++
+ arch/arm/mach-armadaxp/Kconfig                     |   20 ++++-
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h       |    4 +-
+ arch/arm/mach-armadaxp/config/mvSysHwConfig.h      |    6 +-
+ arch/arm/mach-armadaxp/core.c                      |    2 +-
+ arch/arm/mach-armadaxp/include/mach/armadaxp.h     |    2 +
+ arch/arm/mm/Kconfig                                |   17 ++---
+ arch/arm/mm/cache-v7.S                             |   23 +++++-
+ arch/arm/mm/proc-macros.S                          |    6 +-
+ arch/arm/mm/proc-sheeva_pj4bv7.S                   |   79 +++++++++++++++-----
+ arch/arm/mm/sheeva_pj4b-macros.S                   |   58 ++++++++++++++
+ arch/arm/plat-armada/common/mvDeviceId.h           |   17 +++++
+ .../arm/plat-armada/include/plat/cache-aurora-l2.h |    6 +-
+ arch/arm/plat-armada/linux_oss/mvOs.h              |   53 ++++++++++---
+ .../plat-armada/mv_drivers_lsp/mv_xor/mv_netdma.c  |    8 ++
+ arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c        |    2 +-
+ 18 files changed, 325 insertions(+), 55 deletions(-)
+
+diff --git a/arch/arm/include/asm/tlbflush.h b/arch/arm/include/asm/tlbflush.h
+index 3ba837c..7040d75 100644
+--- a/arch/arm/include/asm/tlbflush.h
++++ b/arch/arm/include/asm/tlbflush.h
+@@ -482,6 +482,7 @@ static inline void flush_pmd_entry(void *pmd)
+ {
+ 	const unsigned int __tlb_flag = __cpu_tlb_flags;
+ 
++
+ 	if (tlb_flag(TLB_DCLEAN))
+ #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_4611
+ 	{
+@@ -490,8 +491,21 @@ static inline void flush_pmd_entry(void *pmd)
+ 		dmb();
+ #endif
+ #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043
++#ifdef CONFIG_ARMADA_XP_A0_WITH_B0
++		{
++			extern int soc_revision;
++			if (soc_revision == 0x2) {
++				asm("mcr	p15, 0, %0, c7, c10, 1	@ flush_pmd"
++							: : "r" (pmd) : "cc");
++			} else {
++				asm("mcr        p15, 0, %0, c7, c14, 1  @ flush_pmd"
++							: : "r" (pmd) : "cc");
++			}
++		}
++#else
+ 		asm("mcr        p15, 0, %0, c7, c14, 1  @ flush_pmd"
+                         : : "r" (pmd) : "cc");
++#endif
+ #else
+ 		asm("mcr	p15, 0, %0, c7, c10, 1	@ flush_pmd"
+ 			: : "r" (pmd) : "cc");
+@@ -525,8 +539,21 @@ static inline void clean_pmd_entry(void *pmd)
+                 dmb();
+ #endif
+ #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043
++#ifdef CONFIG_ARMADA_XP_A0_WITH_B0
++		{
++			extern int soc_revision;
++			if (soc_revision == 0x2) {
++				asm("mcr	p15, 0, %0, c7, c10, 1	@ flush_pmd"
++							: : "r" (pmd) : "cc");
++			} else {
++				asm("mcr        p15, 0, %0, c7, c14, 1  @ flush_pmd"
++							: : "r" (pmd) : "cc");
++			}
++		}
++#else
+ 		asm("mcr        p15, 0, %0, c7, c14, 1  @ flush_pmd"
+                         : : "r" (pmd) : "cc");
++#endif
+ #else
+ 		asm("mcr	p15, 0, %0, c7, c10, 1	@ flush_pmd"
+ 			: : "r" (pmd) : "cc");
+diff --git a/arch/arm/kernel/entry-armv.S b/arch/arm/kernel/entry-armv.S
+index ece0996..128a5d0 100644
+--- a/arch/arm/kernel/entry-armv.S
++++ b/arch/arm/kernel/entry-armv.S
+@@ -789,10 +789,34 @@ ENDPROC(__switch_to)
+ 	.globl	__kuser_helper_start
+ __kuser_helper_start:
+ 
++#ifdef CONFIG_ARMADA_XP_A0_WITH_B0
+ /*
+- * Due to the length of some sequences, __kuser_cmpxchg64 spans 2 regular
+- * kuser "slots", therefore 0xffff0f80 is not used as a valid entry point.
++ * Due to the sheeva arm errata 6075 - DMB must be replaced with DSB when using revision A0 of the Armada-XP
++ * In order to make the revision check on runtime, we added the following functions that implement the custom memory barrier
+  */
++__kuser_memory_barrier_errata_6075_1:				@ 0xffff0f20
++	ldr		r3, [pc, #0x1C]
++	cmp		r3, #0x2								@ MV_78XX0_B0_REV
++	beq		1f
++	dsb
++	b errata_6075_barrier_return
++1:	dmb
++	b errata_6075_barrier_return
++	.word 0
++
++	.align	5
++
++__kuser_memory_barrier_errata_6075_2:				@ 0xffff0f40
++	ldr		r3, [pc, #0x1C]
++	cmp		r3, #0x2								@ MV_78XX0_B0_REV
++	beq		1f
++	dsb
++	usr_ret	lr
++1:	dmb
++	usr_ret	lr
++	.word 0
++	.align	5
++#endif
+ 
+ __kuser_cmpxchg64:				@ 0xffff0f60
+ 
+@@ -946,15 +970,25 @@ kuser_cmpxchg32_fixup:
+ 
+ #else
+ 
++#ifdef CONFIG_ARMADA_XP_A0_WITH_B0
++	ALT_SMP(b	__kuser_memory_barrier_errata_6075_1)
++#else
+ 	smp_dmb	arm
+-1:	ldrex	r3, [r2]
++#endif
++
++errata_6075_barrier_return:
++	ldrex	r3, [r2]
+ 	subs	r3, r3, r0
+ 	strexeq	r3, r1, [r2]
+ 	teqeq	r3, #1
+-	beq	1b
++	beq errata_6075_barrier_return
+ 	rsbs	r0, r3, #0
+ 	/* beware -- each __kuser slot must be 8 instructions max */
++#ifdef CONFIG_ARMADA_XP_A0_WITH_B0
++	ALT_SMP(b	__kuser_memory_barrier_errata_6075_2)
++#else
+ 	ALT_SMP(b	__kuser_memory_barrier)
++#endif
+ 	ALT_UP(usr_ret	lr)
+ 
+ #endif
+diff --git a/arch/arm/kernel/traps.c b/arch/arm/kernel/traps.c
+index 7ac5dfd..7f737ac 100644
+--- a/arch/arm/kernel/traps.c
++++ b/arch/arm/kernel/traps.c
+@@ -788,6 +788,9 @@ void __init early_trap_init(void)
+ 	extern char __stubs_start[], __stubs_end[];
+ 	extern char __vectors_start[], __vectors_end[];
+ 	extern char __kuser_helper_start[], __kuser_helper_end[];
++#ifdef CONFIG_ARMADA_XP_A0_WITH_B0
++	extern unsigned int soc_revision;
++#endif
+ 	int kuser_sz = __kuser_helper_end - __kuser_helper_start;
+ 
+ 	/*
+@@ -799,6 +802,11 @@ void __init early_trap_init(void)
+ 	memcpy((void *)vectors + 0x200, __stubs_start, __stubs_end - __stubs_start);
+ 	memcpy((void *)vectors + 0x1000 - kuser_sz, __kuser_helper_start, kuser_sz);
+ 
++#ifdef CONFIG_ARMADA_XP_A0_WITH_B0
++	*(unsigned int*)(vectors + 0x1000 - kuser_sz + 0x1C) = soc_revision;
++	*(unsigned int*)(vectors + 0x1000 - kuser_sz + 0x3C) = soc_revision;
++#endif
++
+ 	/*
+ 	 * Do processor specific fixups for the kuser helpers
+ 	 */
+diff --git a/arch/arm/mach-armadaxp/Kconfig b/arch/arm/mach-armadaxp/Kconfig
+index ff58fa3..a51d0ff 100644
+--- a/arch/arm/mach-armadaxp/Kconfig
++++ b/arch/arm/mach-armadaxp/Kconfig
+@@ -16,7 +16,7 @@ config ARMADA_XP
+ choice
+ 	prompt "Armada XP Chip revision"
+ 	depends on ARMADA_XP
+-	default ARMADA_XP_REV_A0
++	default ARMADA_XP_REV_B0
+ 
+ config  ARMADA_XP_REV_Z1
+ 	bool "MV88F78x30 and MV88F78x60 Z1 SoC devices"
+@@ -43,8 +43,24 @@ config  ARMADA_XP_REV_A0
+ 	Choosing this option will generate a linux kernel for the
+ 	  MV78x30 and MV78x60 devices with revision A0
+ 
++config  ARMADA_XP_REV_B0
++	bool "MV88F78x30 and MV88F78x60 B0 SoC devices"
++	---help---
++	Choosing this option will generate a linux kernel for the
++	  MV78x30 and MV78x60 devices with revision B0
++
+ endchoice
+ 
++config  ARMADA_XP_A0_WITH_B0
++	bool "Armada XP A0 and B0 Runtime Support"
++	default n
++	depends on ARMADA_XP_REV_B0
++	---help---
++	Choosing this option will generate a linux kernel supporting both A0 and B0 revisions
++	Selection is done at runtime based on silicon revision.
++	Due to performance impact, it is recommended to disable this option in case of B0 only.
++
++
+ config MACH_ARMADA_XP_DB
+ 	bool "Marvell Armada XP Development Board"	
+ 	default y
+@@ -94,7 +110,7 @@ config ARMADAXP_USE_IRQ_INTERRUPT_ACK
+        bool "Use Interrupt Ack register to detect pending interrupts"
+        default n
+        help
+-	 
++
+ endmenu
+ 
+ endif
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
+index a506d3c..1c05c74 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
+@@ -237,7 +237,7 @@ extern "C" {
+ #define MV_ETH_TX_CSUM_MAX_SIZE 		9800
+ #define MV_PNC_TCAM_LINES			1024	/* TCAM num of entries */
+ 
+-#if defined(MV88F78X60_A0)
++#if defined(MV88F78X60_A0) || defined(MV88F78X60_B0)
+ /* New GMAC module is used */
+ #define MV_ETH_GMAC_NEW
+ /* New WRR/EJP module is used */
+@@ -248,7 +248,7 @@ extern "C" {
+ #define MV_ETH_PNC_NEW
+ /* PNC Load Balancing support */
+ #define MV_ETH_PNC_LB
+-#endif /* MV88F78X60_A0 */
++#endif /* MV88F78X60_A0, MV88F78X60_B0*/
+ #define MV_78130_ETH_MAX_PORT			3
+ #define MV_78460_ETH_MAX_PORT			4
+ 
+diff --git a/arch/arm/mach-armadaxp/config/mvSysHwConfig.h b/arch/arm/mach-armadaxp/config/mvSysHwConfig.h
+index caf7774..4f742f3 100644
+--- a/arch/arm/mach-armadaxp/config/mvSysHwConfig.h
++++ b/arch/arm/mach-armadaxp/config/mvSysHwConfig.h
+@@ -203,10 +203,12 @@ disclaimer.
+ #ifdef CONFIG_ARMADA_XP_REV_Z1
+ #define MV88F78X60_Z1
+ #endif
+-#ifdef CONFIG_ARMADA_XP_REV_A0
++#if defined(CONFIG_ARMADA_XP_REV_A0) || defined(CONFIG_ARMADA_XP_A0_WITH_B0)
+ #define MV88F78X60_A0
+ #endif
+-
++#if defined(CONFIG_ARMADA_XP_REV_B0) && !defined(CONFIG_ARMADA_XP_A0_WITH_B0)
++#define MV88F78X60_B0
++#endif
+ /****************************************************************/
+ /************* General    configuration ********************/
+ /****************************************************************/
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index 296e53d..023a86f 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -1441,7 +1441,7 @@ static void __init axp_db_init(void)
+ 
+ 
+ 	/* Select appropriate Board ID for Machine */
+-#ifdef CONFIG_ARMADA_XP_REV_A0
++#if defined(CONFIG_ARMADA_XP_REV_A0) || defined(CONFIG_ARMADA_XP_REV_B0)
+ 	gBoardId = DB_88F78XX0_BP_REV2_ID;
+ #else
+ 	gBoardId = DB_88F78XX0_BP_ID;
+diff --git a/arch/arm/mach-armadaxp/include/mach/armadaxp.h b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
+index ed61264..26a63aa 100644
+--- a/arch/arm/mach-armadaxp/include/mach/armadaxp.h
++++ b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
+@@ -338,4 +338,6 @@
+ #define AXP_L2_CLEAN_WAY_REG		(INTER_REGS_BASE | 0x87BC) 
+ #define AXP_L2_MNTNC_STAT_REG		(INTER_REGS_BASE | 0x8704)
+ #define AXP_SNOOP_FILTER_PHYS_REG	(INTER_REGS_PHYS_BASE | 0x21020)
++#define AXP_REVISION_ID_PHYS_REG	(INTER_REGS_PHYS_BASE | 0x40008)
++#define AXP_REVISION_ID_VIRT_REG	(INTER_REGS_BASE | 0x40008)
+ #endif
+diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
+index 441ca46..a04dc3d 100644
+--- a/arch/arm/mm/Kconfig
++++ b/arch/arm/mm/Kconfig
+@@ -965,7 +965,7 @@ config SHEEVA_ERRATA_ARM_CPU_4948
+ config SHEEVA_ERRATA_ARM_CPU_6409
+ 
+         bool "Sheeva Errata 6409: Processor may execute incorrect instructions when two ARM-mode conditional branches are back-toback and double-word-aligned"
+-        depends on  CPU_SHEEVA_PJ4B_V7 && ARMADA_XP_REV_A0
++        depends on  CPU_SHEEVA_PJ4B_V7 && (ARMADA_XP_REV_A0 || ARMADA_XP_A0_WITH_B0)
+         default y
+         help
+ 	In a certain rare case the processor will evaluate a branch incorrectly leading to incorrect execution of instructions.
+@@ -981,7 +981,7 @@ config SHEEVA_ERRATA_ARM_CPU_6409
+ config SHEEVA_ERRATA_ARM_CPU_5980
+ 
+         bool "Sheeva Errata 5980: Ordering Issues associated with Streaming device write"
+-        depends on  CPU_SHEEVA_PJ4B_V7 && ARMADA_XP_REV_A0
++        depends on  CPU_SHEEVA_PJ4B_V7 && (ARMADA_XP_REV_A0 || ARMADA_XP_A0_WITH_B0)
+ 	default y
+         help
+ 	A stream of device writes are performed with the same AXI ID, followed by a write-back, write-allocate cacheable
+@@ -993,12 +993,10 @@ config SHEEVA_ERRATA_ARM_CPU_5980
+ 		;; set bit 29 to .1. (default is 0)
+ 		MCR p15, 1, <Rd>, c15, c1,2
+ 
+-
+-
+ config SHEEVA_ERRATA_ARM_CPU_6043
+ 
+         bool "Sheeva Errata 6043: clean operations can cause victim data to be written out of order"
+-        depends on  CPU_SHEEVA_PJ4B_V7 && ARMADA_XP_REV_A0
++        depends on  CPU_SHEEVA_PJ4B_V7 && (ARMADA_XP_REV_A0 || ARMADA_XP_A0_WITH_B0)
+         default y
+         help
+ 		Cache maintenance clean operations leave the L1 in a "right to modify" state.  If a clean operation is stalled due to the
+@@ -1016,7 +1014,7 @@ config SHEEVA_ERRATA_ARM_CPU_6043
+ config SHEEVA_ERRATA_ARM_CPU_6075
+ 
+         bool "Sheeva Errata 6075: Barriers fail to enforce ordering among pended loads to non-cacheable memory"
+-        depends on  CPU_SHEEVA_PJ4B_V7 && ARMADA_XP_REV_A0
++        depends on  CPU_SHEEVA_PJ4B_V7 && (ARMADA_XP_REV_A0 || ARMADA_XP_A0_WITH_B0)
+         default y
+         help
+ 		When a DMB or DSB is used, the architecture requires that the barrier order explicit memory accesses from before the
+@@ -1036,11 +1034,10 @@ config SHEEVA_ERRATA_ARM_CPU_6075
+ 		Workaround
+ 		This issue can be avoided by replacing a DMB with a DSB SYS.
+ 
+-
+ config SHEEVA_ERRATA_ARM_CPU_6076
+ 
+         bool "Sheeva Errata 6076: Multiple writeback entries hit by snoops can result in data corruption"
+-        depends on  CPU_SHEEVA_PJ4B_V7 && ARMADA_XP_REV_A0
++        depends on  CPU_SHEEVA_PJ4B_V7 && (ARMADA_XP_REV_A0 || ARMADA_XP_A0_WITH_B0)
+         default y
+         help
+ 		In a rare case where a L1 cache eviction (either a WriteEvict or WriteBack) is allocated concurrently with a previous
+@@ -1056,7 +1053,7 @@ config SHEEVA_ERRATA_ARM_CPU_6076
+ config SHEEVA_ERRATA_ARM_CPU_6136
+ 
+         bool "Sheeva Errata 6136: Base value gets corrupted after a page-crossing, boundary-crossing Load-Store-Multiple (LDSTM)"
+-        depends on  CPU_SHEEVA_PJ4B_V7 && ARMADA_XP_REV_A0
++        depends on  CPU_SHEEVA_PJ4B_V7 && (ARMADA_XP_REV_A0 || ARMADA_XP_A0_WITH_B0)
+         default y
+         help
+ 	The scenario required to hit the bug starts with an LDM which is a cross-boundary, cross-page address.  The first part
+@@ -1137,7 +1134,7 @@ config AURORA_L2_OUTER_WA
+ 
+ config AURORA_SF_ENABLED
+         bool "Enable Marvell Aurora Snoop Filter "
+-        depends on CPU_SHEEVA_PJ4B_V7 && ARMADA_XP_REV_A0 && SMP
++        depends on CPU_SHEEVA_PJ4B_V7 && (ARMADA_XP_REV_A0 || ARMADA_XP_A0_WITH_B0 || ARMADA_XP_REV_B0) && SMP
+         default y
+         help
+           This option enables Snoop Filter feature.
+diff --git a/arch/arm/mm/cache-v7.S b/arch/arm/mm/cache-v7.S
+index 27d3fe1..14a7875 100644
+--- a/arch/arm/mm/cache-v7.S
++++ b/arch/arm/mm/cache-v7.S
+@@ -16,6 +16,7 @@
+ #include <asm/unwind.h>
+ 
+ #include "proc-macros.S"
++#include "sheeva_pj4b-macros.S"
+ 
+ /*
+  *	v7_flush_icache_all()
+@@ -43,7 +44,11 @@ ENDPROC(v7_flush_icache_all)
+  */
+ ENTRY(v7_flush_dcache_all)
+ #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6075
++#ifdef CONFIG_ARMADA_XP_A0_WITH_B0
++	a0_with_b0_errata_6075 r0
++#else
+ 	dsb
++#endif
+ #else
+ 	dmb					@ ensure ordering with previous memory accesses
+ #endif
+@@ -190,7 +195,11 @@ ENTRY(v7_coherent_user_range)
+ #endif
+ 1:
+ #if defined CONFIG_SHEEVA_ERRATA_ARM_CPU_6043 || defined CONFIG_SHEEVA_ERRATA_ARM_CPU_6076
++#ifdef CONFIG_ARMADA_XP_A0_WITH_B0
++	a0_with_b0_errata_6043_user r12, r3
++#else
+ 	USER(  mcr     p15, 0, r12, c7, c14, 1 )       @ clean & invalidate D line to the point of unification
++#endif
+ #else
+ 	USER(	mcr	p15, 0, r12, c7, c11, 1	)	@ clean D line to the point of unification
+ #endif
+@@ -290,9 +299,13 @@ v7_dma_inv_range:
+ 1:
+ #if defined (CONFIG_SHEEVA_ERRATA_ARM_CPU_4413)
+ #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6075
++#ifdef CONFIG_ARMADA_XP_A0_WITH_B0
++	a0_with_b0_errata_6075 r3
++#else
+ 	dsb
++#endif
+ #else
+-	dmb
++	dmb					@ ensure ordering with previous memory accesses
+ #endif
+ #endif
+ 	mcr	p15, 0, r0, c7, c6, 1		@ invalidate D / U line
+@@ -318,9 +331,13 @@ v7_dma_clean_range:
+ #endif
+ 1:
+ #if defined CONFIG_SHEEVA_ERRATA_ARM_CPU_6043 || defined CONFIG_SHEEVA_ERRATA_ARM_CPU_6076
+-	mcr     p15, 0, r12, c7, c14, 1         @ clean & invalidate D line to the point of unification
++#ifdef CONFIG_ARMADA_XP_A0_WITH_B0
++	a0_with_b0_errata_6043 r12, r0, r3
++#else
++	mcr		p15, 0, r12, c7, c14, 1		@ clean & invalidate D line to the point of unification
++#endif
+ #else
+-	mcr	p15, 0, r0, c7, c10, 1		@ clean D / U line
++	mcr		p15, 0, r0, c7, c10, 1		@ clean D / U line
+ #endif
+ 	add	r0, r0, r2
+ 	cmp	r0, r1
+diff --git a/arch/arm/mm/proc-macros.S b/arch/arm/mm/proc-macros.S
+index c343997..b1bd133 100644
+--- a/arch/arm/mm/proc-macros.S
++++ b/arch/arm/mm/proc-macros.S
+@@ -208,9 +208,13 @@
+         msr     cpsr_c, r3                      @ Disable interrupts
+ #if __LINUX_ARM_ARCH__ >= 7
+ #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6075
++#ifdef CONFIG_ARMADA_XP_A0_WITH_B0
++	a0_with_b0_errata_6075 r3, skip_errata_6075, test_mmu_errata_6075, end_errata_6075
++#else
+ 	dsb
++#endif
+ #else
+-	dmb					@ DMB for V7
++	dmb					@ ensure ordering with previous memory accesses
+ #endif
+ #elif __LINUX_ARM_ARCH__ == 6
+         mcr     p15, 0, r0, c7, c10, 5          @ DMB for V6
+diff --git a/arch/arm/mm/proc-sheeva_pj4bv7.S b/arch/arm/mm/proc-sheeva_pj4bv7.S
+index 2f8b3fb..c9beed9 100644
+--- a/arch/arm/mm/proc-sheeva_pj4bv7.S
++++ b/arch/arm/mm/proc-sheeva_pj4bv7.S
+@@ -47,10 +47,6 @@ ENDPROC(cpu_pj4bv7_proc_init)
+ 
+ ENTRY(cpu_pj4bv7_proc_fin)
+ 	
+-	
+-	
+-	
+-	
+ #ifdef CONFIG_CACHE_AURORA_L2
+ 	mcr	p15, 0, r0, c7, c10, 4		@ Data Synchronization Barrier
+ 	ldr	r0, =0xffff			@ L2C clean all 16 ways
+@@ -110,19 +106,26 @@ ENTRY(cpu_pj4bv7_dcache_clean_area)
+ #ifndef TLB_CAN_READ_FROM_L1_CACHE
+ 	dcache_line_size r2, r3
+ 1:
+-#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043 || defined CONFIG_SHEEVA_ERRATA_ARM_CPU_6076
+-	mcr     p15, 0, r0, c7, c14, 1          @ clean & invalidate D entry
++#if defined CONFIG_SHEEVA_ERRATA_ARM_CPU_6043 || defined CONFIG_SHEEVA_ERRATA_ARM_CPU_6076
++#ifdef CONFIG_ARMADA_XP_A0_WITH_B0
++	a0_with_b0_errata_6043 r0, r0, r3
++#else
++	mcr     p15, 0, r0, c7, c14, 1			@ clean & invalidate D entry
++#endif
+ #else
+-	mcr	p15, 0, r0, c7, c10, 1		@ clean D entry
++	mcr	p15, 0, r0, c7, c10, 1				@ clean D entry
+ #endif
+ 	add	r0, r0, r2
+ 	subs	r1, r1, r2
++
+ 	bhi	1b
+ 	dsb
+ #endif
+ 	mov	pc, lr
+ ENDPROC(cpu_pj4bv7_dcache_clean_area)
+ 
++
++
+ /*
+  *	cpu_pj4bv7_switch_mm(pgd_phys, tsk)
+  *
+@@ -228,8 +231,12 @@ str	r1, [r0]			@ linux version
+        str     r3, [r0, #20]
+        str     r3, [r0, #24]
+        str     r3, [r0, #28]
+-#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043 || defined CONFIG_SHEEVA_ERRATA_ARM_CPU_6076
+-        mcr     p15, 0, r0, c7, c14, 1          @ clean & invalidate D entry
++#if defined CONFIG_SHEEVA_ERRATA_ARM_CPU_6043 || defined CONFIG_SHEEVA_ERRATA_ARM_CPU_6076
++#ifdef CONFIG_ARMADA_XP_A0_WITH_B0
++	a0_with_b0_errata_6043, r0, r0, r1
++#else
++	mcr     p15, 0, r0, c7, c14, 1			@ clean & invalidate D entry
++#endif
+ #else
+         mcr     p15, 0, r0, c7, c10, 1          @ flush_pte
+ #endif
+@@ -243,15 +250,23 @@ str	r1, [r0]			@ linux version
+        str     r3, [r0, #24]
+        str     r3, [r0, #28]
+ #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043 || defined CONFIG_SHEEVA_ERRATA_ARM_CPU_6076
+-        mcr     p15, 0, r0, c7, c14, 1          @ clean & invalidate D entry
++#ifdef CONFIG_ARMADA_XP_A0_WITH_B0
++	a0_with_b0_errata_6043, r0, r0, r1
+ #else
+-        mcr     p15, 0, r0, c7, c10, 1          @ flush_pte
++	mcr     p15, 0, r0, c7, c14, 1			@ clean & invalidate D entry
+ #endif
+ #else
+-#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043 || defined CONFIG_SHEEVA_ERRATA_ARM_CPU_6076
+-        mcr     p15, 0, r0, c7, c14, 1          @ clean & invalidate D entry
++	mcr     p15, 0, r0, c7, c10, 1			@ flush_pte
++#endif
+ #else
+-        mcr     p15, 0, r0, c7, c10, 1          @ flush_pte
++#if defined CONFIG_SHEEVA_ERRATA_ARM_CPU_6043 || defined CONFIG_SHEEVA_ERRATA_ARM_CPU_6076
++#ifdef CONFIG_ARMADA_XP_A0_WITH_B0
++	a0_with_b0_errata_6043 r0, r0, r1
++#else
++	mcr     p15, 0, r0, c7, c14, 1			@ clean & invalidate D entry
++#endif
++#else
++	mcr     p15, 0, r0, c7, c10, 1			@ flush_pte
+ #endif
+ #endif /* CONFIG_MV_SUPPORT_64KB_PAGE_SIZE */
+ #endif
+@@ -385,14 +400,32 @@ defined(CONFIG_SMP)
+ #endif
+ #endif
+ 
+-#ifdef CONFIG_ARMADA_XP_REV_A0
+-/* DSMP A0 */
++#if defined(CONFIG_ARMADA_XP_REV_A0) || defined(CONFIG_ARMADA_XP_REV_B0)
++
++#ifdef CONFIG_ARMADA_XP_A0_WITH_B0
++/* Read and save SoC revision */
++	ldr r0, =0xd0018220		/* POWER_MNG_CTRL_REG */
++	ldr r5, [r0]
++	orr r0, r5, #(1 << 5)	/* Enable PEX0 Clk */
++	ldr r0, =0xd0040008
++	ldr r0, [r0]
++	and r0, r0, #0x3
++	str r0, soc_revision
++	ldr r0, =0xd0018220		/* POWER_MNG_CTRL_REG */
++	str r5, [r0]
++#endif
++
++/* DSMP A0/B0 */
+ 	/* Auxiliary Debug Modes Control 1 Register */
+ 	mrc        p15, 1, r0, c15, c1, 1                         /* Read */
+ 	orr        r0, r0, #0x00020                                /* BIT5 STREX backoff_disable--> '1' enable the back off of STREX instr */
+ 	orr	   r0, r0, #0x00100                                /* BIT8 Internal Parity Handling Disable--> '1' Disable Internal Parity Handling */
+ #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6409
++#ifdef CONFIG_ARMADA_XP_A0_WITH_B0
++	skip_errata_if_axp_b0 r5, skip_errata_6409
++#endif
+ 	bic        r0, r0, #0x4                                 /* Disable Static BP */
++skip_errata_6409:
+ #endif
+ 	mcr        p15, 1, r0, c15, c1, 1                         /* Write */
+ /* Auxiliary Functional Modes Control Register 0 */
+@@ -407,7 +440,11 @@ defined(CONFIG_SMP)
+ 	/* Auxiliary Debug Modes Control 0 Register */
+ 	mrc        p15, 1, r0, c15, c1, 0                         /* Read */
+ #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6136
++#ifdef CONFIG_ARMADA_XP_A0_WITH_B0
++	skip_errata_if_axp_b0 r5, skip_errata_6136
++#endif
+ 	orr          r0, r0, #0x001000                              /* BIT12 ldstm_first Two_sgl --> '1' Force first issue to be single */
++skip_errata_6136:
+ #else
+         bic          r0, r0, #0x001000                              /* BIT12 ldstm_first Two_sgl --> '0' The first issue is double word */
+ #endif
+@@ -418,7 +455,11 @@ defined(CONFIG_SMP)
+ 	orr          r0, r0, #0x02000000                         /* BIT25 Intervention Interleave Disable--> '1'  Disable Interleaving with Intervention Data */
+ 	orr          r0, r0, #0x08000000                         /* BIT27 CWF Disable--> '1' Disable critical word first sequencing */
+ #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_5980
++#ifdef CONFIG_ARMADA_XP_A0_WITH_B0
++	skip_errata_if_axp_b0 r5, skip_errata_5980
++#endif
+ 	orr          r0, r0, #0x20000000                         /* BIT29 DEV Stream Disable--> '1' Disable MO device read / write */
++skip_errata_5980:
+ #endif
+ 	orr          r0, r0, #0x40000000                         /* BIT30 L1 Replacement Policy Config--> '1' Strict Round-Robin Replacement Policy  */
+ 	mcr        p15, 1, r0, c15, c1, 2                         /* Write */
+@@ -554,6 +595,10 @@ adr	r12, __pj4bv7_setup_stack		@ the local stack
+ 	mov	pc, lr				@ return to head.S:__ret
+ ENDPROC(__pj4bv7_setup)
+ 
++.global soc_revision
++soc_revision:
++	.word 0
++
+ 	/*   AT
+ 	 *  TFR   EV X F   I D LR    S
+ 	 * .EEE ..EE PUI. .T.T 4RVI ZWRS BLDP WCAM
+@@ -613,7 +658,7 @@ cpu_elf_name:
+ __v7_proc_info:
+ 	.long	0x000f0000		@ Required ID value
+ 	.long	0x000f0000		@ Mask for ID
+-	
++
+ 	ALT_SMP(.long \
+ 		PMD_TYPE_SECT | \
+ 		PMD_SECT_AP_WRITE | \
+diff --git a/arch/arm/mm/sheeva_pj4b-macros.S b/arch/arm/mm/sheeva_pj4b-macros.S
+index 8def4b2..c7e31e9 100644
+--- a/arch/arm/mm/sheeva_pj4b-macros.S
++++ b/arch/arm/mm/sheeva_pj4b-macros.S
+@@ -40,3 +40,61 @@
+ #endif
+ 	.endm
+ 
++/*
++ * skip_errata_if_axp_b0 - get the chip revision and branch if B0 to skip errata.
++ */
++	.macro	skip_errata_if_axp_b0, reg, skip_label
++	ldr		\reg, soc_revision
++	cmp		\reg, #0x2		/* MV_78XX0_B0_REV */
++	beq		\skip_label
++	.endm
++
++/*
++ * a0_with_b0_errata_6043 - get the chip revision and branch if B0 to skip errata.
++ */
++	.macro	a0_with_b0_errata_6043, reg0, reg1, reg2
++	ldr		\reg2, =soc_revision
++	ldr		\reg2, [\reg2]
++	cmp		\reg2, #0x2		/* MV_78XX0_B0_REV */
++	beq		1f
++	mcr     p15, 0, \reg0, c7, c14, 1			@ clean & invalidate D entry
++	b 		2f
++1:
++	mcr		p15, 0, \reg1, c7, c10, 1			@ clean D entry
++2:
++	.endm
++
++/*
++ * a0_with_b0_errata_6043 - get the chip revision and branch if B0 to skip errata.
++ */
++	.macro	a0_with_b0_errata_6043_user, reg0, reg1
++	ldr		\reg1, =soc_revision
++	ldr		\reg1, [\reg1]
++	cmp		\reg1, #0x2		/* MV_78XX0_B0_REV */
++	beq		1f
++	USER(  mcr     p15, 0, \reg0, c7, c14, 1 )       @ clean & invalidate D line to the point of unification
++	b 2f
++1:
++	USER(	mcr	p15, 0, \reg0, c7, c11, 1	)	@ clean D line to the point of unification
++2:
++	.endm
++
++/*
++ * a0_with_b0_errata_6075 - get the chip revision and branch if B0 to skip errata.
++ */
++	.macro	a0_with_b0_errata_6075, reg
++	mrc      p15, 0, \reg, c1, c0, 0
++	ands	\reg, \reg, #0x1
++	ldr		\reg, =soc_revision
++	bne		1f
++	and		\reg, \reg, #0xFFFFFFF
++1:
++	ldr		\reg, [\reg]
++	cmp		\reg, #0x2		/* MV_78XX0_B0_REV */
++	beq		2f
++	dsb
++	b 		3f
++2:
++	dmb
++3:
++	.endm
+diff --git a/arch/arm/plat-armada/common/mvDeviceId.h b/arch/arm/plat-armada/common/mvDeviceId.h
+index 90e9b56..9782da7 100644
+--- a/arch/arm/plat-armada/common/mvDeviceId.h
++++ b/arch/arm/plat-armada/common/mvDeviceId.h
+@@ -303,6 +303,23 @@ extern "C" {
+ #define MV_78460_A0_ID         ((MV_78460_DEV_ID << 16) | MV_78XX0_A0_REV)
+ #define MV_78460_A0_NAME       "MV78460 A0"
+ 
++#define MV_78XX0_B0_REV		0x2
++
++#define MV_78130_B0_ID         ((MV_78130_DEV_ID << 16) | MV_78XX0_B0_REV)
++#define MV_78130_B0_NAME       "MV78130 B0"
++
++#define MV_78160_B0_ID         ((MV_78160_DEV_ID << 16) | MV_78XX0_B0_REV)
++#define MV_78160_B0_NAME       "MV78160 B0"
++
++#define MV_78230_B0_ID         ((MV_78230_DEV_ID << 16) | MV_78XX0_B0_REV)
++#define MV_78230_B0_NAME       "MV78230 B0"
++
++#define MV_78260_B0_ID         ((MV_78260_DEV_ID << 16) | MV_78XX0_B0_REV)
++#define MV_78260_B0_NAME       "MV78260 B0"
++
++#define MV_78460_B0_ID         ((MV_78460_DEV_ID << 16) | MV_78XX0_B0_REV)
++#define MV_78460_B0_NAME       "MV78460 B0"
++
+ #ifdef __cplusplus
+ }
+ #endif	/* __cplusplus */
+diff --git a/arch/arm/plat-armada/include/plat/cache-aurora-l2.h b/arch/arm/plat-armada/include/plat/cache-aurora-l2.h
+index 010ea7b..c44b117 100644
+--- a/arch/arm/plat-armada/include/plat/cache-aurora-l2.h
++++ b/arch/arm/plat-armada/include/plat/cache-aurora-l2.h
+@@ -149,10 +149,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define L2ACR_REPLACEMENT_MASK		(0x3 << L2ACR_REPLACEMENT_OFFSET)
+ #define L2ACR_REPLACEMENT_TYPE_WAYRR	(0 << L2ACR_REPLACEMENT_OFFSET)
+ #define L2ACR_REPLACEMENT_TYPE_LFSR	(1 << L2ACR_REPLACEMENT_OFFSET)
+-#ifndef CONFIG_ARMADA_XP_REV_A0
+-#define L2ACR_REPLACEMENT_TYPE_SEMIPLRU	(2 << L2ACR_REPLACEMENT_OFFSET)
+-#else
++#ifdef CONFIG_ARMADA_XP_REV_Z1
+ #define L2ACR_REPLACEMENT_TYPE_SEMIPLRU	(3 << L2ACR_REPLACEMENT_OFFSET)
++#else
++#define L2ACR_REPLACEMENT_TYPE_SEMIPLRU	(2 << L2ACR_REPLACEMENT_OFFSET)
+ #endif
+ 
+ /* L2_CNTR_CTRL_REG (L2CCR) */
+diff --git a/arch/arm/plat-armada/linux_oss/mvOs.h b/arch/arm/plat-armada/linux_oss/mvOs.h
+index d9a863e..8a889db 100755
+--- a/arch/arm/plat-armada/linux_oss/mvOs.h
++++ b/arch/arm/plat-armada/linux_oss/mvOs.h
+@@ -342,17 +342,23 @@ static inline void mvOsBridgeReorderWA(void)
+ #if defined(CONFIG_L2_CACHE_ENABLE) || defined(CONFIG_CACHE_FEROCEON_L2)
+ #define mvOsCacheLineFlush(handle, addr)                     \
+ {                                                               \
+-#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043
++ #if defined(CONFIG_SHEEVA_ERRATA_ARM_CPU_6043)					\
++  #if defined(CONFIG_ARMADA_XP_A0_WITH_B0)						\
++	extern int soc_revision;\
++	if (soc_revision == 0x2)\
++		__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 1" : : "r" (addr));\
++	else\
++		__asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));\
++   #else\
+ 	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));\
+-#else
++  #endif\
++ #else\
+ 	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 1" : : "r" (addr));\
+-#endif
++ #endif\
+ 	__asm__ __volatile__ ("mcr p15, 1, %0, c15, c9, 1" : : "r" (addr));\
+ 	__asm__ __volatile__ ("mcr p15, 0, r0, c7, c10, 4");          \
+  }
+  #elif defined(CONFIG_CACHE_AURORA_L2) && !defined(CONFIG_SHEEVA_ERRATA_ARM_CPU_6043)
+-
+-
+  #define mvOsCacheLineFlush(handle, addr)                     \
+  {                                                               \
+    DSBWA_4611(addr);                                             \
+@@ -362,6 +368,19 @@ static inline void mvOsBridgeReorderWA(void)
+    __asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 4" : : "r" (addr)); /* DSB */ \
+  }
+ 
++#elif defined(CONFIG_CACHE_AURORA_L2) && defined(CONFIG_SHEEVA_ERRATA_ARM_CPU_6043) && defined(CONFIG_ARMADA_XP_A0_WITH_B0)
++ #define mvOsCacheLineFlush(handle, addr)                     \
++ {                                                               \
++   DSBWA_4611(addr);						 \
++	extern int soc_revision;\
++	if (soc_revision == 0x2)\
++		__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 1" : : "r" (addr));\
++	else\
++		__asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));\
++   writel(__virt_to_phys(((int)addr) & ~0x1f), (INTER_REGS_BASE + MV_AURORA_L2_REGS_OFFSET + 0x7B0/*L2_CLEAN_PA*/)); \
++   writel(0x0, (INTER_REGS_BASE + MV_AURORA_L2_REGS_OFFSET + 0x700/*L2_SYNC*/)); \
++   __asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 4" : : "r" (addr)); /* DSB */ \
++ }
+ #elif defined(CONFIG_CACHE_AURORA_L2) && defined(CONFIG_SHEEVA_ERRATA_ARM_CPU_6043)
+  #define mvOsCacheLineFlush(handle, addr)                     \
+  {                                                               \
+@@ -375,11 +394,19 @@ static inline void mvOsBridgeReorderWA(void)
+  #define mvOsCacheLineFlush(handle, addr)                     \
+  {                                                               \
+    DSBWA_4611(addr);						 \
+-#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043
++#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043						\
++  #if defined(CONFIG_ARMADA_XP_A0_WITH_B0)						\
++	extern int soc_revision;\
++	if (soc_revision == 0x2)\
++		__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 1" : : "r" (addr));\
++	else\
++		__asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));\
++   #else\
+ 	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));\
+-#else
++  #endif\
++ #else\
+ 	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 1" : : "r" (addr));\
+-#endif
++ #endif\
+ 	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 4" : : "r" (addr)); \
+ }
+ #endif
+@@ -401,9 +428,17 @@ static inline void mvOsCacheMultiLineFlush(void *handle, void *addr, int size)
+ 		DSBWA_4611(addr);
+ 		while (size > 0) {
+ #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043
++#if defined(CONFIG_ARMADA_XP_A0_WITH_B0)
++			extern int soc_revision;
++			if (soc_revision == MV_78XX0_B0_REV)
++				__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 1" : : "r" (addr));
++			else\
++				__asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));
++#else
+ 			__asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));
++#endif
+ #else
+-			__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 1" : : "r" (addr)); /* Clean D$ line by MVA to PoC */
++			__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 1" : : "r" (addr));
+ #endif
+ 			writel(__virt_to_phys(((int)addr) & ~0x1f), (INTER_REGS_BASE + MV_AURORA_L2_REGS_OFFSET + 0x7B0/*L2_CLEAN_PA*/));
+ 			size -= CPU_D_CACHE_LINE_SIZE;
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_xor/mv_netdma.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_xor/mv_netdma.c
+index c67f00c..cac52f5 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_xor/mv_netdma.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_xor/mv_netdma.c
+@@ -513,7 +513,15 @@ static inline void dmac_clean_dcache_line(void* addr)
+ //#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,26)
+ 
+ #if defined CONFIG_SHEEVA_ERRATA_ARM_CPU_6043 || defined CONFIG_SHEEVA_ERRATA_ARM_CPU_6076
++#if defined(CONFIG_ARMADA_XP_A0_WITH_B0)
++	extern int soc_revision;
++	if (soc_revision == MV_78XX0_B0_REV)
++		__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 1" : : "r" (addr));
++	else\
++		__asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));
++#else
+ 	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));
++#endif
+ #else
+ 	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 1" : : "r" (addr));
+ #endif
+diff --git a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
+index 9b606aa..2079c57 100644
+--- a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
++++ b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
+@@ -84,7 +84,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #if defined(MV88F78X60_Z1)
+ #define CNTMR_EVENTS_STATUS_REG_PRIVATE(t)	(MV_CPUIF_REGS_OFFSET(TIMER_TO_CPU(t) + 0x68))
+ #define TIMER_PRIVATE_BIT(timer)	(1 << ((CPU_TIMER(timer) * 8)))
+-#elif defined(MV88F78X60_A0)
++#elif defined(MV88F78X60_A0) || defined(MV88F78X60_B0)
+ #define CNTMR_EVENTS_STATUS_REG_PRIVATE		(MV_CPUIF_LOCAL_REGS_OFFSET + 0x68)
+ #define TIMER_PRIVATE_BIT(timer)	(1 << ((timer - FIRST_PRIVATE_TIMER) * 8))
+ #else
+-- 
+1.7.9.5
+

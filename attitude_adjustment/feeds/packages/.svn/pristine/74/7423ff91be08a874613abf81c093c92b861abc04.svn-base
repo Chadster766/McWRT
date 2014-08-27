@@ -1,0 +1,33 @@
+--- a/src/wimax.c
++++ b/src/wimax.c
+@@ -133,19 +133,16 @@ static struct libusb_device_handle* find_wimax_device(void)
+ 	while (!found && (dev = devs[i++]) != NULL) {
+ 		struct libusb_device_descriptor desc;
+ 		unsigned int j = 0;
+-		unsigned short dev_vid, dev_pid;
+ 
+ 		r = libusb_get_device_descriptor(dev, &desc);
+ 		if (r < 0) {
+ 			continue;
+ 		}
+-		dev_vid = libusb_le16_to_cpu(desc.idVendor);
+-		dev_pid = libusb_le16_to_cpu(desc.idProduct);
+-		wmlog_msg(1, "Bus %03d Device %03d: ID %04x:%04x", libusb_get_bus_number(dev), libusb_get_device_address(dev), dev_vid, dev_pid);
++		wmlog_msg(1, "Bus %03d Device %03d: ID %04x:%04x", libusb_get_bus_number(dev), libusb_get_device_address(dev), desc.idVendor, desc.idProduct);
+ 		switch (match_method) {
+ 			case MATCH_BY_LIST: {
+ 				for (j = 0; j < sizeof(wimax_dev_ids) / sizeof(usb_device_id_t); j++) {
+-					if (dev_vid == wimax_dev_ids[j].vendorID && dev_pid == wimax_dev_ids[j].productID) {
++					if (desc.idVendor == wimax_dev_ids[j].vendorID && desc.idProduct == wimax_dev_ids[j].productID) {
+ 						found = dev;
+ 						break;
+ 					}
+@@ -153,7 +150,7 @@ static struct libusb_device_handle* find_wimax_device(void)
+ 				break;
+ 			}
+ 			case MATCH_BY_VID_PID: {
+-				if (dev_vid == match_params.vid && dev_pid == match_params.pid) {
++				if (desc.idVendor == match_params.vid && desc.idProduct == match_params.pid) {
+ 					found = dev;
+ 				}
+ 				break;

@@ -1,0 +1,27 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2011 OpenWrt.org
+
+START=65
+
+SERVICE_USE_PID=1
+SERVICE_PID_FILE=/var/run/pulse/pid
+
+start() {
+	user_exists pulse 51 || user_add pulse 51
+	group_exists pulse 51 || group_add pulse 51
+	[ -d /var/run/pulse ] || {
+		mkdir -m 0755 -p /var/run/pulse
+		chmod 0750 /var/run/pulse
+		chown pulse:pulse /var/run/pulse
+	}
+	[ -d /var/lib/pulse ] || {
+		mkdir -m 0755 -p /var/lib/pulse
+		chmod 0750 /var/lib/pulse
+		chown pulse:pulse /var/lib/pulse
+	}
+	service_start /usr/bin/pulseaudio --daemonize --system --disallow-exit --disallow-module-loading --disable-shm --exit-idle-time=-1
+}
+
+stop() {
+	service_stop /usr/bin/pulseaudio
+}

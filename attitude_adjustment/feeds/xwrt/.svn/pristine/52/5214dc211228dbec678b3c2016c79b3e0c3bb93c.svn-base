@@ -1,0 +1,9 @@
+#!/bin/sh
+#
+# Webif post-install script.
+#
+if $(grep -q "Mesh" "${IPKG_INSTROOT}/www/cgi-bin/webif/.categories"); then
+	sed -i '/##WEBIF:category:Mesh/a##WEBIF:category:HotSpot' "${IPKG_INSTROOT}/www/cgi-bin/webif/.categories"
+else
+	sed -i '/##WEBIF:category:Network/a##WEBIF:category:HotSpot' "${IPKG_INSTROOT}/www/cgi-bin/webif/.categories"
+fi

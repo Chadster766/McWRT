@@ -1,0 +1,45 @@
+Source-Makefile: feeds/packages/utils/i2c-tools/Makefile
+Package: i2c-tools
+Version: 3.0.3-1
+Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
+Menu-Depends: 
+Provides: 
+Build-Depends: PACKAGE_python-smbus:python
+Section: utils
+Category: Utilities
+Title: I2C tools for Linux
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: i2c-tools-3.0.3.tar.bz2
+Type: ipkg
+Description:  This package contains an heterogeneous set of I2C tools for Linux. These tools
+ were originally part of the lm-sensors package.
+ Includes:
+ - i2cdetect
+ - i2cdump
+ - i2cget
+ - i2cset
+http://www.lm-sensors.org/wiki/I2CTools
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+
+Package: python-smbus
+Submenu: Python
+Version: 3.0.3-1
+Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +PACKAGE_python-smbus:python-mini +i2c-tools
+Menu-Depends: 
+Provides: 
+Build-Depends: PACKAGE_python-smbus:python
+Section: lang
+Category: Languages
+Title: Python bindings for the SMBUS
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: i2c-tools-3.0.3.tar.bz2
+Type: ipkg
+Description:  This package contains an heterogeneous set of I2C tools for Linux.
+
+ This package contain the python bindings for Linux SMBus access through i2c-dev.
+http://www.lm-sensors.org/wiki/I2CTools
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+
+

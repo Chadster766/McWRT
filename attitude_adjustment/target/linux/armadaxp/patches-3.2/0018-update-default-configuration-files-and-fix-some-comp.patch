@@ -1,0 +1,135 @@
+From f955393306f9c29ed515c24eda3dfb4f16d04da7 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Wed, 22 Feb 2012 15:38:13 +0200
+Subject: [PATCH 018/609] update default configuration files and fix some
+ compilation errors
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/configs/armada_xp_defconfig          |   15 +++++++++------
+ arch/arm/mach-armadaxp/config/mvSysHwConfig.h |    8 ++++++++
+ arch/arm/plat-armada/linux_oss/mvOs.c         |    2 +-
+ arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c   |   12 ++++++------
+ 4 files changed, 24 insertions(+), 13 deletions(-)
+
+diff --git a/arch/arm/configs/armada_xp_defconfig b/arch/arm/configs/armada_xp_defconfig
+index 6b8dfa4..1132fd3 100644
+--- a/arch/arm/configs/armada_xp_defconfig
++++ b/arch/arm/configs/armada_xp_defconfig
+@@ -429,14 +429,14 @@ CONFIG_MV_ETH_EXTRA_BUF_NUM=532
+ # NFP support
+ #
+ # CONFIG_MV_ETH_NFP_LIB is not set
++CONFIG_MV_ETH_NFP_MODE_DEF=1
+ # CONFIG_MV_ETH_NFP_EXT is not set
+ CONFIG_MV_ETH_NFP_BRIDGE=y
+-CONFIG_MV_ETH_NFP_BRIDGE_LEARN=y
+-CONFIG_MV_ETH_NFP_BRIDGE_LEARN_DEF=0
+-# CONFIG_MV_ETH_NFP_BRIDGE_STATIC is not set
++CONFIG_MV_ETH_NFP_FDB_MODE=y
++# CONFIG_MV_ETH_NFP_BRIDGE_MODE is not set
++# CONFIG_MV_ETH_NFP_FDB_LEARN is not set
+ CONFIG_MV_ETH_NFP_VLAN=y
+-CONFIG_MV_ETH_NFP_VLAN_LEARN=y
+-CONFIG_MV_ETH_NFP_VLAN_LEARN_DEF=0
++# CONFIG_MV_ETH_NFP_VLAN_LEARN is not set
+ CONFIG_MV_ETH_NFP_FIB_LEARN=y
+ CONFIG_MV_ETH_NFP_FIB_LEARN_DEF=0
+ CONFIG_MV_ETH_NFP_CT=y
+@@ -525,6 +525,8 @@ CONFIG_AURORA_L2_OUTER=y
+ # CONFIG_ENABLE_UNALINGED_ACCESS_FAULT is not set
+ # CONFIG_AURORA_IO_CACHE_COHERENCY is not set
+ # CONFIG_CPU_SHEEVA_PJ4B_PMC_ACCESS_IN_USERMODE is not set
++# CONFIG_MV_SUPPORT_64KB_PAGE_SIZE is not set
++# CONFIG_MV_SUPPORT_L2_DEPOSIT is not set
+ CONFIG_ARM_L1_CACHE_SHIFT=5
+ CONFIG_ARM_DMA_MEM_BUFFERABLE=y
+ CONFIG_CPU_HAS_PMU=y
+@@ -675,7 +677,7 @@ CONFIG_IP_PNP_BOOTP=y
+ # CONFIG_INET_ESP is not set
+ # CONFIG_INET_IPCOMP is not set
+ # CONFIG_INET_XFRM_TUNNEL is not set
+-# CONFIG_INET_TUNNEL is not set
++CONFIG_INET_TUNNEL=y
+ CONFIG_INET_XFRM_MODE_TRANSPORT=y
+ CONFIG_INET_XFRM_MODE_TUNNEL=y
+ CONFIG_INET_XFRM_MODE_BEET=y
+@@ -1092,6 +1094,7 @@ CONFIG_SCSI_WAIT_SCAN=m
+ # CONFIG_SCSI_SAS_LIBSAS is not set
+ # CONFIG_SCSI_SRP_ATTRS is not set
+ CONFIG_SCSI_LOWLEVEL=y
++# CONFIG_SCSI_MV_VANIR is not set
+ # CONFIG_ISCSI_TCP is not set
+ # CONFIG_ISCSI_BOOT_SYSFS is not set
+ # CONFIG_SCSI_CXGB3_ISCSI is not set
+diff --git a/arch/arm/mach-armadaxp/config/mvSysHwConfig.h b/arch/arm/mach-armadaxp/config/mvSysHwConfig.h
+index c6d6f6d..30807c3 100644
+--- a/arch/arm/mach-armadaxp/config/mvSysHwConfig.h
++++ b/arch/arm/mach-armadaxp/config/mvSysHwConfig.h
+@@ -177,6 +177,14 @@ disclaimer.
+ #define SHEEVA_ERRATA_ARM_CPU_4611
+ #endif
+ 
++/* convert chip revision definitions */
++#ifdef CONFIG_ARMADA_XP_REV_Z1
++#define MV88F78X60_Z1
++#endif
++#ifdef CONFIG_ARMADA_XP_REV_A0
++#define MV88F78X60_A0
++#endif
++
+ /****************************************************************/
+ /************* General    configuration ********************/
+ /****************************************************************/
+diff --git a/arch/arm/plat-armada/linux_oss/mvOs.c b/arch/arm/plat-armada/linux_oss/mvOs.c
+index 2fd6196..db7018e 100644
+--- a/arch/arm/plat-armada/linux_oss/mvOs.c
++++ b/arch/arm/plat-armada/linux_oss/mvOs.c
+@@ -39,7 +39,7 @@ disclaimer.
+ *******************************************************************************/
+ 
+ /* includes */
+-#include <asm/processor.h>
++//#include <asm/processor.h>
+ #include "mvOs.h"
+ 
+ static MV_U32 read_p15_c0 (void);
+diff --git a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
+index a656b28..3eda4aa 100644
+--- a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
++++ b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
+@@ -81,12 +81,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+ #define TIMER_GLOBAL_BIT(timer)		((timer == MAX_GLOBAL_TIMER) ? (1<<31) : (1 << (timer * 8)))
+ 
+-#ifdef MV88F78X60_Z1
++#if defined(MV88F78X60_Z1)
+ #define CNTMR_EVENTS_STATUS_REG_PRIVATE(t)	(MV_CPUIF_REGS_OFFSET(TIMER_TO_CPU(t) + 0x68))
+ #define TIMER_PRIVATE_BIT(timer)	(1 << ((CPU_TIMER(timer) * 8)))
+-#elif MV88F78X60_A0
++#elif defined(MV88F78X60_A0)
+ #define CNTMR_EVENTS_STATUS_REG_PRIVATE		(MV_CPUIF_LOCAL_REGS_OFFSET + 0x68)
+-#define TIMER_PRIVATE_BIT(timer)	(1 << ((timer - FIRST_PRIVATE_TIMER) * 8)))
++#define TIMER_PRIVATE_BIT(timer)	(1 << ((timer - FIRST_PRIVATE_TIMER) * 8))
+ #else
+ #error "No device is defined!"
+ #endif
+@@ -429,12 +429,12 @@ MV_STATUS mvCntmrIntClear(MV_U32 cntmrNum)
+ *******************************************************************************/
+ MV_U32 mvCntmrFrqGet(MV_U32 cntmrNum)
+ {
+-#ifndef MV88F78X60_Z1
++/*#ifndef MV88F78X60_Z1
+ 	if (INVALID_CNTMR(cntmrNum))
+ 		return MV_ERROR;
+ 
+-	if (cntmrCtrl & CTCR_ARM_TIMER_25MhzFRQ_MASK(countNum))
++	if (cntmrCtrl & CTCR_ARM_TIMER_25MhzFRQ_MASK(cntmrNum))
+ 		return MV_BOARD_REFCLK_25MHZ;
+-#endif
++#endif*/
+ 	return mvCpuL2ClkGet();
+ }
+-- 
+1.7.9.5
+

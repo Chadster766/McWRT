@@ -1,0 +1,43 @@
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -228,8 +228,8 @@ sysconfdir = @sysconfdir@
+ target_alias = @target_alias@
+ with_ffmpeg = @with_ffmpeg@
+ @WITH_X11VNC_TRUE@X11VNC = x11vnc
+-SUBDIRS = libvncserver examples contrib libvncclient vncterm classes client_examples test $(X11VNC)
+-DIST_SUBDIRS = libvncserver examples contrib libvncclient vncterm classes client_examples test
++SUBDIRS = libvncserver
++DIST_SUBDIRS = libvncserver
+ bin_SCRIPTS = libvncserver-config
+ #include_HEADERS=rfb.h rfbconfig.h rfbint.h rfbproto.h keysym.h rfbregion.h
+ include_HEADERS = rfb/rfb.h rfb/rfbconfig.h rfb/rfbint.h rfb/rfbproto.h \
+--- a/configure.ac
++++ b/configure.ac
+@@ -748,14 +748,6 @@ AC_SUBST(RPMSOURCEDIR)
+ 
+ AC_CONFIG_FILES([Makefile
+ 	libvncserver/Makefile
+-	contrib/Makefile
+-	examples/Makefile
+-	vncterm/Makefile
+-	classes/Makefile
+-	classes/ssl/Makefile
+-	libvncclient/Makefile
+-	client_examples/Makefile
+-	test/Makefile
+ 	libvncserver-config
+ 	LibVNCServer.spec])
+ #
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -4,8 +4,8 @@ if WITH_X11VNC
+ X11VNC=x11vnc
+ endif
+ 
+-SUBDIRS=libvncserver examples contrib libvncclient vncterm classes client_examples test $(X11VNC)
+-DIST_SUBDIRS=libvncserver examples contrib libvncclient vncterm classes client_examples test
++SUBDIRS=libvncserver
++DIST_SUBDIRS=libvncserver
+ 
+ bin_SCRIPTS = libvncserver-config
+ 

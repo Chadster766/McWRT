@@ -1,0 +1,102 @@
+From 18332be8b655cb9b161c4795bb57cda3edc294ef Mon Sep 17 00:00:00 2001
+From: Matthew Fatheree <Matthew.Fatheree@belkin.com>
+Date: Tue, 13 May 2014 23:35:38 +0700
+Subject: [PATCH 19/31] Add gptfdisk version 0.8.6 package
+
+Signed-off-by: Matthew Fatheree <Matthew.Fatheree@belkin.com>
+---
+ package/gptfdisk/Makefile                          |   38 ++++++++++++++++++++
+ package/gptfdisk/patches/Makefile-no-unicode.patch |   36 +++++++++++++++++++
+ 2 files changed, 74 insertions(+)
+ create mode 100644 package/gptfdisk/Makefile
+ create mode 100644 package/gptfdisk/patches/Makefile-no-unicode.patch
+
+diff --git a/package/gptfdisk/Makefile b/package/gptfdisk/Makefile
+new file mode 100644
+index 0000000..6f3ce54
+--- /dev/null
++++ b/package/gptfdisk/Makefile
+@@ -0,0 +1,38 @@
++#
++# Copyright (C) 2009-2011 OpenWrt.org
++#
++# This is free software, licensed under the GNU General Public License v2.
++# See /LICENSE for more information.
++#
++
++include $(TOPDIR)/rules.mk
++
++PKG_NAME:=gptfdisk
++PKG_VERSION:=0.8.6
++PKG_RELEASE:=1
++
++PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
++PKG_SOURCE_URL:=@SF/gptfdisk
++PKG_MD5SUM:=
++
++include $(INCLUDE_DIR)/package.mk
++
++define Package/gptfdisk
++  SECTION:=utils
++  CATEGORY:=Utilities
++  SUBMENU:=disc
++  TITLE:=Partition table manipulation utility with GPT support
++  URL:=http://www.rodsbooks.com/gdisk
++  DEPENDS:=+libstdcpp
++endef
++
++define Package/gptfdisk/description
++ Partition table manipulation utility with GPT support 
++endef
++
++define Package/gptfdisk/install
++	$(INSTALL_DIR) $(1)/sbin
++	$(INSTALL_BIN) $(PKG_BUILD_DIR)/gdisk $(1)/sbin/
++endef
++
++$(eval $(call BuildPackage,gptfdisk))
+diff --git a/package/gptfdisk/patches/Makefile-no-unicode.patch b/package/gptfdisk/patches/Makefile-no-unicode.patch
+new file mode 100644
+index 0000000..f76a8b7
+--- /dev/null
++++ b/package/gptfdisk/patches/Makefile-no-unicode.patch
+@@ -0,0 +1,36 @@
++--- gptfdisk-0.8.0/Makefile.orig	2011-09-27 23:35:56.590136115 +0200
+++++ gptfdisk-0.8.0/Makefile	2011-09-27 23:36:19.707008167 +0200
++@@ -1,8 +1,8 @@
++ CC=gcc
++ CXX=g++
++ CFLAGS+=-D_FILE_OFFSET_BITS=64
++-CXXFLAGS+=-Wall -D_FILE_OFFSET_BITS=64 -D USE_UTF16
++-#CXXFLAGS+=-Wall -D_FILE_OFFSET_BITS=64
+++#CXXFLAGS+=-Wall -D_FILE_OFFSET_BITS=64 -D USE_UTF16
+++CXXFLAGS+=-Wall -D_FILE_OFFSET_BITS=64
++ LDFLAGS+=
++ LIB_NAMES=crc32 support guid gptpart mbrpart basicmbr mbr gpt bsd parttypes attributes diskio diskio-unix
++ MBR_LIBS=support diskio diskio-unix basicmbr mbrpart
++@@ -14,16 +14,16 @@
++ all:	cgdisk gdisk sgdisk fixparts
++ 
++ gdisk:	$(LIB_OBJS) gdisk.o gpttext.o
++-#	$(CXX) $(LIB_OBJS) gdisk.o gpttext.o $(LDFLAGS) -luuid -o gdisk
++-	$(CXX) $(LIB_OBJS) gdisk.o gpttext.o $(LDFLAGS) -licuio -licuuc -luuid -o gdisk
+++	$(CXX) $(LIB_OBJS) gdisk.o gpttext.o $(LDFLAGS) -luuid -o gdisk
+++#	$(CXX) $(LIB_OBJS) gdisk.o gpttext.o $(LDFLAGS) -licuio -licuuc -luuid -o gdisk
++ 
++ cgdisk: $(LIB_OBJS) cgdisk.o gptcurses.o
++-#	$(CXX) $(LIB_OBJS) cgdisk.o gptcurses.o $(LDFLAGS) -luuid -lncurses -o cgdisk
++-	$(CXX) $(LIB_OBJS) cgdisk.o gptcurses.o $(LDFLAGS) -licuio -licuuc -luuid -lncurses -o cgdisk
+++	$(CXX) $(LIB_OBJS) cgdisk.o gptcurses.o $(LDFLAGS) -luuid -lncurses -o cgdisk
+++#	$(CXX) $(LIB_OBJS) cgdisk.o gptcurses.o $(LDFLAGS) -licuio -licuuc -luuid -lncurses -o cgdisk
++ 
++ sgdisk: $(LIB_OBJS) sgdisk.o gptcl.o
++-#	$(CXX) $(LIB_OBJS) sgdisk.o gptcl.o $(LDFLAGS) -luuid -lpopt -o sgdisk
++-	$(CXX) $(LIB_OBJS) sgdisk.o gptcl.o $(LDFLAGS) -licuio -licuuc -luuid -lpopt -o sgdisk
+++	$(CXX) $(LIB_OBJS) sgdisk.o gptcl.o $(LDFLAGS) -luuid -lpopt -o sgdisk
+++#	$(CXX) $(LIB_OBJS) sgdisk.o gptcl.o $(LDFLAGS) -licuio -licuuc -luuid -lpopt -o sgdisk
++ 
++ fixparts: $(MBR_LIB_OBJS) fixparts.o
++ 	$(CXX) $(MBR_LIB_OBJS) fixparts.o $(LDFLAGS) -o fixparts
+-- 
+1.7.9.5
+

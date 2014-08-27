@@ -1,0 +1,262 @@
+From 2bede0baa62a343ed0504d8be266ed14246c8e5d Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Wed, 18 Apr 2012 13:42:54 +0300
+Subject: [PATCH 138/609] DSMP adding nas_init v3.1 ( by Lior A.)
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ tools/nas/nas_init.sh |  139 +++++++++++++++++++++++++++++++++++++++----------
+ 1 file changed, 112 insertions(+), 27 deletions(-)
+
+diff --git a/tools/nas/nas_init.sh b/tools/nas/nas_init.sh
+index 096a52e..3247017 100755
+--- a/tools/nas/nas_init.sh
++++ b/tools/nas/nas_init.sh
+@@ -1,8 +1,12 @@
+ #!/bin/bash
+ 
+-echo " * Version: 3.0"
++echo " * Version: 3.1"
+ 
+ # LOG:
++# 3.1:
++#   1. mount point updated.
++#   2. XOR affinity update.
++#   3. RAID-6 support.
+ # 3.0:
+ #   1. first all-in-one script to include: affinity, bonding, nas_init
+ #   2. PAGE_SIZE automatic set
+@@ -24,17 +28,6 @@ echo " * Version: 3.0"
+ # 2.1:
+ #   1. setting coal to 100 in net queue 0 and fixing for in NETQ
+ 
+-
+-#
+-# t= topology [sd|rd0|rd1|rd5]
+-# p= prepare drives (fdisk)
+-# m= mkfs+mdadm
+-# b= burn new rootfs to /dev/sda1
+-# f= file system format (ext4/xfs/btrfs)
+-# s= for SSD medium
+-# l= for largepage support (64k)
+-# h= for HDDs number (4/8) in RAID5 configuration
+-
+ PREPARE_HDD="no"
+ ZAP_ROOTFS="no"
+ MKFS="no"
+@@ -134,8 +127,8 @@ while getopts "l:pbmzn:sf:t:h:" flag; do
+ 
+ 	t)	TOPOLOGY=$OPTARG
+ 	    case "$OPTARG" in
+-	sd|rd0|rd1|rd5) ;;
+-		*)	do_error "Usage: drive toplogy: sd|rd0|rd1|rd5" ;;
++	sd|rd0|rd1|rd5|rd6) ;;
++		*)	do_error "Usage: drive toplogy: sd|rd0|rd1|rd5|rd6" ;;
+ 	    esac
+ 	    ;;
+ 
+@@ -148,10 +141,10 @@ while getopts "l:pbmzn:sf:t:h:" flag; do
+ 
+ 	*)	echo "Usage: $0"
+ 	    echo "           -f <ext4|xfs|btrfs|fat32>: file system type ext4, xfs, btrfs or fat32"
+-	    echo "           -t <sd|rd0|rd1|rd5>: drive topology"
++	    echo "           -t <sd|rd0|rd1|rd5|rd6>: drive topology"
+ 	    echo "           -n <num>: partition number to be mounted"
+-	    echo "           -m: mkfs/mdadm"
+-	    echo "           -p: prepare drives"
++	    echo "           -m: create RAID and FD (mkfs/mdadm)"
++	    echo "           -p: prepare drives (fdisk)"
+ 	    echo "           -h <num>: number of HDDs to use"
+ 	    echo "           -l <num>: number of links to use"
+ 	    echo "           -b <rootfs_tarball_path>:  path to rootfs tarball to be placed on /dev/sda2"
+@@ -167,6 +160,7 @@ case "$TOPOLOGY" in
+     rd0)	echo -ne "RAID0\n" ;;
+     rd1)	echo -ne "RAID1\n" ;;
+     rd5)	echo -ne "RAID5\n" ;;
++    rd6)	echo -ne "RAID6\n" ;;
+     *)	do_error "Invalid Topology" ;;
+ esac
+ 
+@@ -188,7 +182,7 @@ if [ "$MKFS" == "yes" ]; then
+     esac
+ fi
+ echo -ne "******************************************\n"
+-[[ "$TOPOLOGY" == "rd0" || "$TOPOLOGY" == "rd1" || "$TOPOLOGY" == "rd5" ]] && [ ! -e "$(which mdadm)" ] && do_error "missing mdadm in rootfs (aptitude install mdadm)"
++[[ "$TOPOLOGY" == "rd0" || "$TOPOLOGY" == "rd1" || "$TOPOLOGY" == "rd5" || "$TOPOLOGY" == "rd6" ]] && [ ! -e "$(which mdadm)" ] && do_error "missing mdadm in rootfs (aptitude install mdadm)"
+ 
+ #if [[ -e "$(which smbd)" && -e "$(which nmbd)" ]]; then
+ #    echo -n "* Starting Samba daemons"
+@@ -263,6 +257,22 @@ elif [ "$TOPOLOGY" == "rd5" ]; then
+ 	fi
+ 	PARTSIZE="20GB"
+     fi
++elif [ "$TOPOLOGY" == "rd6" ]; then
++    if [ "$HDD_NUM" == "8" ]; then
++	if [ "$SYSDISKEXIST" == "yes" ]; then
++	    DRIVES="b c d e f g h i"
++	else
++	    DRIVES="a b c d e f g h"
++	fi
++	PARTSIZE="10GB"
++    elif [ "$HDD_NUM" == "4" ]; then
++	if [ "$SYSDISKEXIST" == "yes" ]; then
++	    DRIVES="b c d e"
++	else
++	    DRIVES="a b c d"
++	fi
++	PARTSIZE="20GB"
++    fi
+ fi
+ 
+ # Checking drives existence
+@@ -452,6 +462,81 @@ if [ "$TOPOLOGY" == "rd5" ]; then
+     set +o verbose
+     echo -ne "[Done]\n"
+ 
++elif [ "$TOPOLOGY" == "rd6" ]; then
++    echo -ne " * Starting RAID6 build:       "
++    for drive in `echo $DRIVES`; do PARTITIONS="${PARTITIONS} /dev/sd${drive}${PARTNUM}"; done
++
++    set -o verbose
++
++    for drive in `echo $DRIVES`; do echo -e 1024 > /sys/block/sd${drive}/queue/read_ahead_kb; done
++
++    if [ "$MKFS" == "yes" ]; then
++	[ -e /dev/md0 ] && mdadm --manage --stop /dev/md0
++
++	for partition in `echo $DRIVES`; do mdadm --zero-superblock /dev/sd${partition}1; done
++
++	if [ "$SSD" == "no" ]; then
++	    echo "y" | mdadm --create -c 128 /dev/md0 --level=6 -n $HDD_NUM --force $PARTITIONS
++	else
++			# most SSD use eraseblock of 512, so for performance reasons we use it
++	    echo "y" | mdadm --create -c 512 /dev/md0 --level=6 -n $HDD_NUM --force $PARTITIONS
++	fi
++
++	sleep 2
++
++	if [ `cat /proc/mdstat  |grep md0 |wc -l` == 0 ]; then
++	    do_error "Unable to create RAID device"
++	fi
++
++	if [ "$FS" == "ext4" ]; then
++	    if [ "$SSD" == "no" ]; then
++		if [ "$HDD_NUM" == "8" ]; then
++		    mkfs.ext4 -j -m 0 -T largefile -b 4096 -E stride=32,stripe-width=224 -F /dev/md0
++		elif [ "$HDD_NUM" == "4" ]; then
++		    mkfs.ext4 -j -m 0 -T largefile -b 4096 -E stride=32,stripe-width=96 -F /dev/md0
++		fi
++	    else
++		mkfs.ext4 -j -m 0 -T largefile -b 4096 -E stride=128,stripe-width=384 -F /dev/md0
++	    fi
++	elif [ "$FS" == "xfs" ]; then
++	    mkfs.xfs -f /dev/md0
++	elif [ "$FS" == "btrfs" ]; then
++	    mkfs.btrfs /dev/md0
++	fi
++    else
++		# need to reassemble the raid
++	mdadm --assemble /dev/md0 --force $PARTITIONS
++
++	if [ `cat /proc/mdstat  |grep md0 |wc -l` == 0 ]; then
++	    do_error "Unable to assemble RAID device"
++	fi
++    fi
++
++    if [ "$FS" == "ext4" ]; then
++	mount -t ext4 /dev/md0 $MNT_DIR -o noatime,data=writeback,barrier=0,nobh
++    elif [ "$FS" == "xfs" ]; then
++	mount -t xfs /dev/md0 $MNT_DIR -o noatime,nodirspread
++    elif [ "$FS" == "btrfs" ]; then
++	mount -t btrfs /dev/md0 $MNT_DIR -o noatime
++    fi
++
++    if [ `mount | grep $MNT_DIR | grep -v grep | wc -l` == 0 ]; then
++	do_error "Unable to mount FS"
++    fi
++
++    if [ "$LARGE_PAGE" == "65536" ]; then
++	echo 256 > /sys/block/md0/md/stripe_cache_size
++    else
++	echo 4096 > /sys/block/md0/md/stripe_cache_size
++    fi
++    /bin/echo -e 4096 > /sys/block/md0/queue/read_ahead_kb
++
++    for drive in `echo $DRIVES`; do echo noop > /sys/block/sd${drive}/queue/scheduler; done
++    echo 4 > /proc/sys/vm/dirty_ratio
++    echo 2 > /proc/sys/vm/dirty_background_ratio
++    set +o verbose
++    echo -ne "[Done]\n"
++
+ elif [ "$TOPOLOGY" == "rd1" ]; then
+     echo -ne " * Starting RAID1 build:       "
+     for drive in `echo $DRIVES`; do PARTITIONS="${PARTITIONS} /dev/sd${drive}${PARTNUM}"; done
+@@ -658,7 +743,7 @@ if [ "$FS" != "NONE" ]; then
+ 	echo ' disable netbios = yes'			>>  /etc/smb.conf
+ 	echo ' csc policy = disable'			>>  /etc/smb.conf
+ 	if [ "$FS" == "btrfs" ]; then
+-			# crash identified with these FS
++	# crash identified with these FS
+ 	    echo '# min receivefile size = 128k'	>>  /etc/smb.conf
+ 	    echo '# strict allocate = yes'		>>  /etc/smb.conf
+ 	else
+@@ -700,19 +785,19 @@ if [[ "$ARCH" == "armv6l" || "$ARCH" == "armv7l" ]]; then
+     if [ "$CPU_COUNT" = "4" ]; then
+ 	set -o verbose
+ 
+-		# XOR Engines
++	# XOR Engines
+ 	echo 1 > /proc/irq/51/smp_affinity
+ 	echo 2 > /proc/irq/52/smp_affinity
+ 	echo 4 > /proc/irq/94/smp_affinity
+ 	echo 8 > /proc/irq/95/smp_affinity
+ 
+-		# ETH
++	# ETH
+ 	echo 1 > /proc/irq/8/smp_affinity
+ 	echo 2 > /proc/irq/10/smp_affinity
+ 	echo 4 > /proc/irq/12/smp_affinity
+ 	echo 8 > /proc/irq/14/smp_affinity
+ 
+-		# SATA
++	# SATA
+ 	echo 2 > /proc/irq/55/smp_affinity
+ 
+ 	# PCI-E SATA controller
+@@ -723,20 +808,20 @@ if [[ "$ARCH" == "armv6l" || "$ARCH" == "armv7l" ]]; then
+     elif [ "$CPU_COUNT" == "2" ]; then
+ 	set -o verbose
+ 
+-		# XOR Engines
++	# XOR Engines
+ 	echo 1 > /proc/irq/51/smp_affinity
+ 	echo 2 > /proc/irq/52/smp_affinity
+ 	echo 1 > /proc/irq/94/smp_affinity
+ 	echo 2 > /proc/irq/95/smp_affinity
+ 
+-		# ETH
++	# ETH
+ 	echo 1 > /proc/irq/8/smp_affinity
+ 	echo 2 > /proc/irq/10/smp_affinity
+ 
+-		# SATA
++	# SATA
+ 	echo 2 > /proc/irq/55/smp_affinity
+ 
+-		# PCI-E SATA controller
++	# PCI-E SATA controller
+ 	echo 2  > /proc/irq/99/smp_affinity
+ 
+ 	set +o verbose
+@@ -744,7 +829,7 @@ if [[ "$ARCH" == "armv6l" || "$ARCH" == "armv7l" ]]; then
+ fi
+ echo -ne "[Done]\n"
+ case "$TOPOLOGY" in
+-    rd1 | rd5)
++    rd1 | rd5 | rd6)
+ 		#watch "cat /proc/mdstat|grep finish"
+ 	;;
+ esac
+-- 
+1.7.9.5
+

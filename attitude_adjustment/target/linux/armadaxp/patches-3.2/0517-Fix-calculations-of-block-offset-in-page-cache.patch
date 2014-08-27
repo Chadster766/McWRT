@@ -1,0 +1,51 @@
+From 652b38de0ecafa886ecfe4e8da167a8d3fd9a7a5 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Sun, 3 Feb 2013 13:54:21 +0200
+Subject: [PATCH 517/609] Fix calculations of block offset in page cache
+
+This patch enables support for >16TB volumes when using a 64KB page
+kernel.
+The "fix" is that some calculations on 32-bit variables result in a 64-bit
+value, but the calclation is done in 32-bit arithmetics and then casted to
+64-bit.
+
+Bug fix - needs to be merged into stable branch
+
+Change-Id: I2432b2dc81e7814557725c6f2b6a8220cf444de5
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1001
+Reviewed-by: Tawfik Bayouk <tawfik@marvell.com>
+Tested-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ fs/buffer.c |    7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/fs/buffer.c b/fs/buffer.c
+index 19a4f0b..b12edfb 100644
+--- a/fs/buffer.c
++++ b/fs/buffer.c
+@@ -1019,7 +1019,8 @@ grow_dev_page(struct block_device *bdev, sector_t block,
+ 		bh = page_buffers(page);
+ 		if (bh->b_size == size) {
+ 			end_block = init_page_buffers(page, bdev,
+-						index << sizebits, size);
++				(sector_t)((sector_t)index <<
++					(sector_t)sizebits), size);
+ 			goto done;
+ 		}
+ 		if (!try_to_free_buffers(page))
+@@ -1040,7 +1041,9 @@ grow_dev_page(struct block_device *bdev, sector_t block,
+ 	 */
+ 	spin_lock(&inode->i_mapping->private_lock);
+ 	link_dev_buffers(page, bh);
+-	end_block = init_page_buffers(page, bdev, index << sizebits, size);
++	end_block = init_page_buffers(page, bdev,
++			(sector_t)((sector_t)index << (sector_t)sizebits),
++			size);
+ 	spin_unlock(&inode->i_mapping->private_lock);
+ done:
+ 	ret = (block < end_block) ? 1 : -ENXIO;
+-- 
+1.7.9.5
+

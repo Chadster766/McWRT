@@ -1,0 +1,104 @@
+--- a/configure.ac
++++ b/configure.ac
+@@ -106,17 +106,6 @@ AC_MSG_RESULT($UINT32_TYPE)
+ AC_DEFINE_UNQUOTED(UINT32_TYPE,$UINT32_TYPE,unsigned 32 bit integer type)
+ 
+ dnl ----------------------------------------------------------------------
+-dnl Internationalization
+-
+-GETTEXT_PACKAGE=ccrypt
+-AC_SUBST(GETTEXT_PACKAGE)
+-AC_DEFINE_UNQUOTED(GETTEXT_PACKAGE, "$GETTEXT_PACKAGE", [Package name for gettext])
+-
+-AM_GNU_GETTEXT
+-AM_GNU_GETTEXT_VERSION([0.14.3])
+-IT_PROG_INTLTOOL([0.34.2], [no-xml])
+-
+-dnl ----------------------------------------------------------------------
+ dnl Libtool (needed by intl/)
+ 
+ AC_PROG_LIBTOOL
+@@ -135,9 +124,7 @@ AC_SUBST(TAR)
+ 
+ dnl ----------------------------------------------------------------------
+ AC_OUTPUT([doc/ccrypt.1 
+-	   po/Makefile.in 
+ 	   m4/Makefile 
+-	   intl/Makefile 
+ 	   Makefile 
+ 	   src/Makefile 
+ 	   emacs/Makefile
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -4,11 +4,10 @@
+ 
+ ## Process this file with automake to produce Makefile.in
+ 
+-SUBDIRS = m4 po intl src emacs doc check
++SUBDIRS = m4 src emacs doc check
+ 
+-EXTRA_DIST = m4/ChangeLog  config.rpath README-WIN intltool-extract.in	\
+- intltool-merge.in intltool-update.in
+-DISTCLEANFILES = intltool-extract intltool-merge intltool-update
++EXTRA_DIST = m4/ChangeLog  config.rpath README-WIN
++DISTCLEANFILES =
+ 
+ 
+ TAR = @TAR@
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -37,7 +37,7 @@ build_triplet = @build@
+ host_triplet = @host@
+ DIST_COMMON = README $(am__configure_deps) $(srcdir)/Makefile.am \
+ 	$(srcdir)/Makefile.in $(srcdir)/config.h.in \
+-	$(top_srcdir)/configure $(top_srcdir)/intl/Makefile.in \
++	$(top_srcdir)/configure \
+ 	ABOUT-NLS AUTHORS COPYING ChangeLog INSTALL NEWS config.guess \
+ 	config.rpath config.sub depcomp elisp-comp install-sh \
+ 	ltmain.sh missing mkinstalldirs
+@@ -64,7 +64,7 @@ am__CONFIG_DISTCLEAN_FILES = config.stat
+  configure.lineno configure.status.lineno
+ mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
+ CONFIG_HEADER = config.h
+-CONFIG_CLEAN_FILES = intl/Makefile
++CONFIG_CLEAN_FILES =
+ SOURCES =
+ DIST_SOURCES =
+ RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
+@@ -251,11 +251,10 @@ sbindir = @sbindir@
+ sharedstatedir = @sharedstatedir@
+ sysconfdir = @sysconfdir@
+ target_alias = @target_alias@
+-SUBDIRS = m4 po intl src emacs doc check
+-EXTRA_DIST = m4/ChangeLog  config.rpath README-WIN intltool-extract.in	\
+- intltool-merge.in intltool-update.in
++SUBDIRS = m4 src emacs doc check
++EXTRA_DIST = m4/ChangeLog  config.rpath README-WIN
+ 
+-DISTCLEANFILES = intltool-extract intltool-merge intltool-update
++DISTCLEANFILES =
+ ACLOCAL_AMFLAGS = -I m4
+ all: config.h
+ 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -17,7 +17,7 @@ ccrypt_DEPENDENCIES = @EXTRA_OBJS@
+ 
+ localedir = $(datadir)/locale
+ INCLUDES = -I../intl -I$(top_srcdir)/intl -DLOCALEDIR=\"$(localedir)\"
+-LIBS = @LIBINTL@ @LIBS@
++LIBS = @LIBS@
+ 
+ maketables: maketables.c
+ 
+--- a/src/Makefile.in
++++ b/src/Makefile.in
+@@ -170,7 +170,7 @@ LDFLAGS = @LDFLAGS@
+ LIBICONV = @LIBICONV@
+ LIBINTL = @LIBINTL@
+ LIBOBJS = @LIBOBJS@
+-LIBS = @LIBINTL@ @LIBS@
++LIBS = @LIBS@
+ LIBTOOL = @LIBTOOL@
+ LN_S = @LN_S@
+ LTLIBICONV = @LTLIBICONV@

@@ -1,0 +1,276 @@
+diff -urN sipsak-0.9.6/configure sipsak-0.9.6.new/configure
+--- sipsak-0.9.6/configure	2006-01-28 22:11:34.000000000 +0100
++++ sipsak-0.9.6.new/configure	2012-08-06 16:45:07.051588486 +0200
+@@ -5954,264 +5954,6 @@
+ 
+ 
+ 
+-	echo "$as_me:$LINENO: checking for ares_version.h" >&5
+-echo $ECHO_N "checking for ares_version.h... $ECHO_C" >&6
+-
+-	ares_incdir=NONE
+-	ares_libdir=NONE
+-	ares_libcall=NONE
+-	ares_incdirs="/usr/include /usr/local/include /sw/include"
+-	ares_libdirs="/usr/lib64 /usr/lib /usr/local/lib64 /usr/local/lib /sw/lib"
+-	ares_libexten=".so .dylib .a"
+-
+-	for dir in $ares_incdirs; do
+-		try="$dir/ares_version.h"
+-		if test -f $try; then
+-			ares_incdir=$dir;
+-			break;
+-		fi
+-	done
+-
+-	if test "$ares_incdir" = "NONE"; then
+-		echo "$as_me:$LINENO: result: not found" >&5
+-echo "${ECHO_T}not found" >&6
+-	else
+-		echo "$as_me:$LINENO: result: found at $ares_incdir" >&5
+-echo "${ECHO_T}found at $ares_incdir" >&6
+-
+-		echo "$as_me:$LINENO: checking for c-ares lib" >&5
+-echo $ECHO_N "checking for c-ares lib... $ECHO_C" >&6
+-
+-		for dir in $ares_libdirs; do
+-			for extension in $ares_libexten; do
+-				try="$dir/libcares$extension"
+-				if test -f $try; then
+-					ares_libdir=$dir;
+-					ares_libcall=cares;
+-					break;
+-				fi
+-			done
+-			if test "$ares_libdir" != "NONE"; then
+-				break;
+-			fi
+-		done
+-
+-		if test "$ares_libdir" = "NONE"; then
+-			echo "$as_me:$LINENO: result: not found" >&5
+-echo "${ECHO_T}not found" >&6
+-		else
+-			echo "$as_me:$LINENO: result: found at $ares_libdir" >&5
+-echo "${ECHO_T}found at $ares_libdir" >&6
+-		fi
+-
+-		echo "$as_me:$LINENO: checking for ares_version in -lcares" >&5
+-echo $ECHO_N "checking for ares_version in -lcares... $ECHO_C" >&6
+-if test "${ac_cv_lib_cares_ares_version+set}" = set; then
+-  echo $ECHO_N "(cached) $ECHO_C" >&6
+-else
+-  ac_check_lib_save_LIBS=$LIBS
+-LIBS="-lcares  $LIBS"
+-cat >conftest.$ac_ext <<_ACEOF
+-/* confdefs.h.  */
+-_ACEOF
+-cat confdefs.h >>conftest.$ac_ext
+-cat >>conftest.$ac_ext <<_ACEOF
+-/* end confdefs.h.  */
+-
+-/* Override any gcc2 internal prototype to avoid an error.  */
+-#ifdef __cplusplus
+-extern "C"
+-#endif
+-/* We use char because int might match the return type of a gcc2
+-   builtin and then its argument prototype would still apply.  */
+-char ares_version ();
+-int
+-main ()
+-{
+-ares_version ();
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-rm -f conftest.$ac_objext conftest$ac_exeext
+-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+-  (eval $ac_link) 2>conftest.er1
+-  ac_status=$?
+-  grep -v '^ *+' conftest.er1 >conftest.err
+-  rm -f conftest.er1
+-  cat conftest.err >&5
+-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); } &&
+-	 { ac_try='test -z "$ac_c_werror_flag"
+-			 || test ! -s conftest.err'
+-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+-  (eval $ac_try) 2>&5
+-  ac_status=$?
+-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); }; } &&
+-	 { ac_try='test -s conftest$ac_exeext'
+-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+-  (eval $ac_try) 2>&5
+-  ac_status=$?
+-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); }; }; then
+-  ac_cv_lib_cares_ares_version=yes
+-else
+-  echo "$as_me: failed program was:" >&5
+-sed 's/^/| /' conftest.$ac_ext >&5
+-
+-ac_cv_lib_cares_ares_version=no
+-fi
+-rm -f conftest.err conftest.$ac_objext \
+-      conftest$ac_exeext conftest.$ac_ext
+-LIBS=$ac_check_lib_save_LIBS
+-fi
+-echo "$as_me:$LINENO: result: $ac_cv_lib_cares_ares_version" >&5
+-echo "${ECHO_T}$ac_cv_lib_cares_ares_version" >&6
+-if test $ac_cv_lib_cares_ares_version = yes; then
+-
+-cat >>confdefs.h <<\_ACEOF
+-#define HAVE_CARES_H 1
+-_ACEOF
+-
+-		  LIBS="$LIBS -L$ares_libdir -l$ares_libcall"
+-		  CFLAGS="$CFLAGS -I$ares_incdir"
+-		  SIPSAK_HAVE_ARES="1"
+-
+-
+-fi
+-
+-	fi
+-
+-if test "X$SIPSAK_HAVE_ARES" == "X"; then
+-
+-	echo "$as_me:$LINENO: checking for ruli.h" >&5
+-echo $ECHO_N "checking for ruli.h... $ECHO_C" >&6
+-
+-	ruli_incdir=NONE
+-	ruli_libdir=NONE
+-	ruli_incdirs="/usr/include /usr/local/include /sw/include"
+-	ruli_libdirs="/usr/lib64 /usr/lib /usr/local/lib64 /usr/local/lib /sw/lib"
+-	ruli_libexten=".so .dylib .a"
+-
+-	for dir in $ruli_incdirs; do
+-		try="$dir/ruli.h"
+-		if test -f $try; then
+-			ruli_incdir=$dir;
+-			break;
+-		fi
+-	done
+-
+-	if test "$ruli_incdir" = "NONE"; then
+-		echo "$as_me:$LINENO: result: not found" >&5
+-echo "${ECHO_T}not found" >&6
+-	else
+-		echo "$as_me:$LINENO: result: found at $ruli_incdir" >&5
+-echo "${ECHO_T}found at $ruli_incdir" >&6
+-
+-		echo "$as_me:$LINENO: checking for libruli" >&5
+-echo $ECHO_N "checking for libruli... $ECHO_C" >&6
+-
+-		for dir in $ruli_libdirs; do
+-			for extension in $ruli_libexten; do
+-				try="$dir/libruli$extension"
+-				if test -f $try; then
+-					ruli_libdir=$dir;
+-					break;
+-				fi
+-			done
+-			if test "$ruli_libdir" != "NONE"; then
+-				break;
+-			fi
+-		done
+-
+-		if test "$ruli_libdir" = "NONE"; then
+-			echo "$as_me:$LINENO: result: not found" >&5
+-echo "${ECHO_T}not found" >&6
+-		else
+-			echo "$as_me:$LINENO: result: found at $ruli_libdir" >&5
+-echo "${ECHO_T}found at $ruli_libdir" >&6
+-		fi
+-
+-		echo "$as_me:$LINENO: checking for ruli_sync_query in -lruli" >&5
+-echo $ECHO_N "checking for ruli_sync_query in -lruli... $ECHO_C" >&6
+-if test "${ac_cv_lib_ruli_ruli_sync_query+set}" = set; then
+-  echo $ECHO_N "(cached) $ECHO_C" >&6
+-else
+-  ac_check_lib_save_LIBS=$LIBS
+-LIBS="-lruli  $LIBS"
+-cat >conftest.$ac_ext <<_ACEOF
+-/* confdefs.h.  */
+-_ACEOF
+-cat confdefs.h >>conftest.$ac_ext
+-cat >>conftest.$ac_ext <<_ACEOF
+-/* end confdefs.h.  */
+-
+-/* Override any gcc2 internal prototype to avoid an error.  */
+-#ifdef __cplusplus
+-extern "C"
+-#endif
+-/* We use char because int might match the return type of a gcc2
+-   builtin and then its argument prototype would still apply.  */
+-char ruli_sync_query ();
+-int
+-main ()
+-{
+-ruli_sync_query ();
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-rm -f conftest.$ac_objext conftest$ac_exeext
+-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+-  (eval $ac_link) 2>conftest.er1
+-  ac_status=$?
+-  grep -v '^ *+' conftest.er1 >conftest.err
+-  rm -f conftest.er1
+-  cat conftest.err >&5
+-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); } &&
+-	 { ac_try='test -z "$ac_c_werror_flag"
+-			 || test ! -s conftest.err'
+-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+-  (eval $ac_try) 2>&5
+-  ac_status=$?
+-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); }; } &&
+-	 { ac_try='test -s conftest$ac_exeext'
+-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+-  (eval $ac_try) 2>&5
+-  ac_status=$?
+-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); }; }; then
+-  ac_cv_lib_ruli_ruli_sync_query=yes
+-else
+-  echo "$as_me: failed program was:" >&5
+-sed 's/^/| /' conftest.$ac_ext >&5
+-
+-ac_cv_lib_ruli_ruli_sync_query=no
+-fi
+-rm -f conftest.err conftest.$ac_objext \
+-      conftest$ac_exeext conftest.$ac_ext
+-LIBS=$ac_check_lib_save_LIBS
+-fi
+-echo "$as_me:$LINENO: result: $ac_cv_lib_ruli_ruli_sync_query" >&5
+-echo "${ECHO_T}$ac_cv_lib_ruli_ruli_sync_query" >&6
+-if test $ac_cv_lib_ruli_ruli_sync_query = yes; then
+-
+-cat >>confdefs.h <<\_ACEOF
+-#define HAVE_RULI_H 1
+-_ACEOF
+-
+-		  LIBS="$LIBS -L$ruli_libdir -lruli"
+-		  CFLAGS="$CFLAGS -I$ruli_incdir"
+-
+-fi
+-
+-	fi
+-
+-else
+-
+ for ac_header in arpa/nameser.h
+ do
+ as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
+@@ -6361,7 +6103,6 @@
+ 
+ done
+ 
+-fi
+ 
+ 
+ 	# Check for T1 timer value

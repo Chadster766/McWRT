@@ -1,0 +1,43 @@
+--- a/Config/lex.yy.c
++++ b/Config/lex.yy.c
+@@ -445,9 +445,15 @@ static void copy_text(const char *from, 
+ 
+ #ifndef YY_SKIP_YYWRAP
+ #ifdef __cplusplus
+-extern "C" int yywrap YY_PROTO(( void ));
+-#else
+-extern int yywrap YY_PROTO(( void ));
++/* extern "C" int yywrap YY_PROTO(( void )); */
++int yywrap (void ) {
++    return 1;
++}
++#else
++/* extern int yywrap YY_PROTO(( void )); */
++int yywrap (void ) {
++    return 1;
++}
+ #endif
+ #endif
+ 
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -12,7 +12,7 @@ OBJS = attr.o daemon.o error.o fd_cache.
+        md5.o mount.o nfs.o password.o readdir.o user.o xdr.o winsupport.o
+ CONFOBJ = Config/lib.a
+ EXTRAOBJ = @EXTRAOBJ@
+-LDFLAGS = @LDFLAGS@ @LIBS@ @LEXLIB@
++LDFLAGS = @LDFLAGS@ @LIBS@
+ EXEEXT = @EXEEXT@
+ 
+ prefix = @prefix@
+--- a/configure
++++ b/configure
+@@ -2604,7 +2604,7 @@ else
+ 
+     ac_save_LIBS=$LIBS
+     ac_cv_lib_lex='none needed'
+-    for ac_lib in '' -lfl -ll; do
++    for ac_lib in '' -ll; do
+       LIBS="$ac_lib $ac_save_LIBS"
+       cat >conftest.$ac_ext <<_ACEOF
+ `cat $LEX_OUTPUT_ROOT.c`

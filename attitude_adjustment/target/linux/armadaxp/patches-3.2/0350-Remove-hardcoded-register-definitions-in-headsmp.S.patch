@@ -1,0 +1,42 @@
+From 662159c7d2ea2cfa41d52fa9da165d0cfd6c72e9 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Thu, 29 Nov 2012 17:25:21 +0200
+Subject: [PATCH 350/609] Remove hardcoded register definitions in headsmp.S
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/headsmp.S |    9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/headsmp.S b/arch/arm/mach-armadaxp/headsmp.S
+index fc65e70..e1653e4 100644
+--- a/arch/arm/mach-armadaxp/headsmp.S
++++ b/arch/arm/mach-armadaxp/headsmp.S
+@@ -8,10 +8,11 @@
+ #include <linux/linkage.h>
+ #include <linux/init.h>
+ #include <asm/memory.h>
++#include <mach/hardware.h>
+ 
+ 
+-#define AXP_COHERENCY_FABRIC_CTL_REG 0xD0020200
+-#define AXP_COHERENCY_FABRIC_CFG_REG 0xD0020204
++#define AXP_COHERENCY_FABRIC_CTL_REG (INTER_REGS_PHYS_BASE + 0x20200)
++#define AXP_COHERENCY_FABRIC_CFG_REG (INTER_REGS_PHYS_BASE + 0x20204)
+ 
+ /*
+  * specific entry point for secondary CPUs.  This provides
+@@ -28,6 +29,10 @@ ENTRY(axp_secondary_startup)
+ #ifdef CONFIG_BE8_ON_LE
+         setend  be
+ #endif
++	ldr r0, =0xd0001504
++	ldr r1, =0x3000000
++	str r1, [r0]
++
+ 	mrc	p15, 0, r0, c0, c0, 5
+ 	and	r0, r0, #15
+ 
+-- 
+1.7.9.5
+

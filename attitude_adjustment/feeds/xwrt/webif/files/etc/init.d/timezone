@@ -1,0 +1,25 @@
+#!/bin/sh /etc/rc.common
+
+START=11
+
+timezone_config() {
+	local cfg="$1"
+	local posixtz
+	local etctz="/etc/TZ"
+
+	config_get posixtz "$cfg" posixtz
+
+	if [ ! -h $etctz ]; then 
+		ln -sf /tmp/TZ "$etctz"
+	fi
+	[ -n "$posixtz" ] && echo "$posixtz" > "$etctz" || echo "UTC+0" > "$etctz"
+}
+
+start() {
+	config_load timezone
+	config_foreach timezone_config timezone
+}
+
+restart() {
+	start
+}

@@ -1,0 +1,58 @@
+From 96d0e027371e8c7ec2b1f6f2df8a35e5a9a08c78 Mon Sep 17 00:00:00 2001
+From: Po-Yu Chuang <pychuang@marvell.com>
+Date: Wed, 17 Oct 2012 15:01:36 +0800
+Subject: [PATCH 334/609] PJ4B LPAE: set CP15 registers to the same value as
+ non-LPAE
+
+Auxiliary Debug Modes Control 0 Register
+Auxiliary Debug Modes Control 1 Register
+Auxiliary Debug Modes Control 2 Register
+Auxiliary Functional Modes Control Register 0
+
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mm/proc-sheeva_pj4bv7lpae.S |   27 +++++++++++++++++++++++++++
+ 1 file changed, 27 insertions(+)
+
+diff --git a/arch/arm/mm/proc-sheeva_pj4bv7lpae.S b/arch/arm/mm/proc-sheeva_pj4bv7lpae.S
+index 0355a8b..55ebc78 100644
+--- a/arch/arm/mm/proc-sheeva_pj4bv7lpae.S
++++ b/arch/arm/mm/proc-sheeva_pj4bv7lpae.S
+@@ -277,6 +277,33 @@ __pj4bv7_setup:
+ 	orreq	r0, r0, r10			@ Enable CPU-specific SMP bits
+ 	mcreq	p15, 0, r0, c1, c0, 1
+ #endif
++	/* Auxiliary Debug Modes Control 1 Register */
++	mrc        p15, 1, r0, c15, c1, 1                         /* Read */
++	orr        r0, r0, #0x00020                                /* BIT5 STREX backoff_disable--> '1' enable the back off of STREX instr */
++	orr	   r0, r0, #0x00100                                /* BIT8 Internal Parity Handling Disable--> '1' Disable Internal Parity Handling */
++	mcr        p15, 1, r0, c15, c1, 1                         /* Write */
++
++/* Auxiliary Functional Modes Control Register 0 */
++	mrc        p15, 1, r0, c15, c2, 0                         /* Read */
++#ifdef CONFIG_SMP
++	orr          r0, r0, #0x00002                                /* BIT1 SMP/nAMP --> '1' taking part in coherency */
++#endif
++	orr     r0, r0, #0x00004                                /* BIT2 L1 parity --> '1' Enabled */
++	orr     r0, r0, #0x00100                                /* BIT8 FW --> '1' enable Cache and TLB maintenance broadcast */
++	mcr        p15, 1, r0, c15, c2, 0                         /* Write */
++
++	/* Auxiliary Debug Modes Control 0 Register */
++	mrc        p15, 1, r0, c15, c1, 0                         /* Read */
++	orr          r0, r0, #0x400000                              /* BIT22 dvm_wakeup_dis --> '1' WFI/WFE will serve the DVM and back to idle */
++	mcr        p15, 1, r0, c15, c1, 0                         /* Write */
++	/* Auxiliary Debug Modes Control 2 Register */
++	mrc        p15, 1, r0, c15, c1, 2                         /* Read */
++	orr          r0, r0, #0x02000000                         /* BIT25 Intervention Interleave Disable--> '1'  Disable Interleaving with Intervention Data */
++	orr          r0, r0, #0x08000000                         /* BIT27 CWF Disable--> '1' Disable critical word first sequencing */
++	orr          r0, r0, #0x20000000                         /* BIT29 DEV Stream Disable--> '1' Disable MO device read / write */
++	orr          r0, r0, #0x40000000                         /* BIT30 L1 Replacement Policy Config--> '1' Strict Round-Robin Replacement Policy  */
++	mcr        p15, 1, r0, c15, c1, 2                         /* Write */
++
+ #endif
+ #ifdef CONFIG_CPU_SHEEVA_PJ4B_PMC_ACCESS_IN_USERMODE
+ 	@ Enable performance counters user access
+-- 
+1.7.9.5
+

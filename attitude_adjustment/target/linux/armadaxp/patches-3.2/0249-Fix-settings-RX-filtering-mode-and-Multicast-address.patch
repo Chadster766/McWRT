@@ -1,0 +1,58 @@
+From a3c6ba960556a2b81d40a72d96c222bc596ff4f0 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Thu, 16 Aug 2012 02:11:34 -0400
+Subject: [PATCH 249/609] Fix settings RX filtering mode and Multicast
+ addresses for kernel 3.2.22
+
+	In this kernel ndo_set_multicast_list function callback was removed.
+	ndo_set_rx_mode callback will replace this functionality
+
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |    8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index f71f7fc..82728af 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -959,8 +959,7 @@ static const struct net_device_ops mv_eth_netdev_ops = {
+ 	.ndo_open = mv_eth_open,
+ 	.ndo_stop = mv_eth_stop,
+ 	.ndo_start_xmit = mv_eth_tx,
+-	/*TODO - this is a hack by Seif M. need to fix this to properly move to linux 3.2!!!
+-	.ndo_set_multicast_list = mv_eth_set_multicast_list,*/
++	.ndo_set_rx_mode = mv_eth_set_multicast_list,
+ 	.ndo_set_mac_address = mv_eth_set_mac_addr,
+ 	.ndo_change_mtu = mv_eth_change_mtu,
+ 	.ndo_tx_timeout = mv_eth_tx_timeout,
+@@ -976,7 +975,7 @@ static const struct net_device_ops mv_switch_netdev_ops = {
+ 	.ndo_open = mv_eth_switch_start,
+ 	.ndo_stop = mv_eth_switch_stop,
+ 	.ndo_start_xmit = mv_eth_tx,
+-	.ndo_set_multicast_list = mv_eth_switch_set_multicast_list,
++	.ndo_set_rx_mode = mv_eth_switch_set_multicast_list,
+ 	.ndo_set_mac_address = mv_eth_switch_set_mac_addr,
+ 	.ndo_change_mtu = mv_eth_switch_change_mtu,
+ 	.ndo_tx_timeout = mv_eth_tx_timeout,
+@@ -1599,7 +1598,6 @@ static inline int mv_eth_rx(struct eth_port *pp, int rx_todo, int rxq)
+ #else
+ 		dev = pp->dev;
+ #endif /* CONFIG_MV_ETH_SWITCH */
+-
+ 		STAT_DBG(pp->stats.rxq[rxq]++);
+ 		dev->stats.rx_packets++;
+ 
+@@ -3523,6 +3521,8 @@ struct net_device *mv_eth_netdev_init(struct eth_port *pp, int mtu, u8 *mac,
+ 
+ 	SET_NETDEV_DEV(dev, &pdev->dev);
+ 
++	dev->priv_flags |= IFF_UNICAST_FLT;
++
+ 	if (pp->flags & MV_ETH_F_CONNECT_LINUX) {
+ 		mv_eth_netdev_set_features(dev);
+ 		if (register_netdev(dev)) {
+-- 
+1.7.9.5
+

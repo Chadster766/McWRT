@@ -1,0 +1,55 @@
+From 6e4b2682fc79db4c333958b897b17b88cafbf0f6 Mon Sep 17 00:00:00 2001
+From: Kosta Zertsekel <konszert@marvell.com>
+Date: Mon, 17 Dec 2012 12:00:00 +0200
+Subject: [PATCH 480/609] Make mvOsIoVirtToPhy efficient
+
+Change-Id: I06267b0e5745a292a85cfd8f559882b9868a1a32
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/include/asm/dma-mapping.h |    8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/include/asm/dma-mapping.h b/arch/arm/include/asm/dma-mapping.h
+index 78727fe..e0de453 100644
+--- a/arch/arm/include/asm/dma-mapping.h
++++ b/arch/arm/include/asm/dma-mapping.h
+@@ -81,7 +81,7 @@ static inline void __dma_single_cpu_to_dev(const void *kaddr, size_t size,
+ 	extern void ___dma_single_cpu_to_dev(const void *, size_t,
+ 		enum dma_data_direction);
+ 
+-	if (!arch_is_coherent())
++	if (!arch_is_coherent() && size > 0)
+ 		___dma_single_cpu_to_dev(kaddr, size, dir);
+ }
+ 
+@@ -91,7 +91,7 @@ static inline void __dma_single_dev_to_cpu(const void *kaddr, size_t size,
+ 	extern void ___dma_single_dev_to_cpu(const void *, size_t,
+ 		enum dma_data_direction);
+ 
+-	if (!arch_is_coherent())
++	if (!arch_is_coherent() && size > 0)
+ 		___dma_single_dev_to_cpu(kaddr, size, dir);
+ 	else if (dir != DMA_TO_DEVICE)
+ 		dma_io_sync();
+@@ -103,7 +103,7 @@ static inline void __dma_page_cpu_to_dev(struct page *page, unsigned long off,
+ 	extern void ___dma_page_cpu_to_dev(struct page *, unsigned long,
+ 		size_t, enum dma_data_direction);
+ 
+-	if (!arch_is_coherent())
++	if (!arch_is_coherent() && size > 0)
+ 		___dma_page_cpu_to_dev(page, off, size, dir);
+ }
+ 
+@@ -113,7 +113,7 @@ static inline void __dma_page_dev_to_cpu(struct page *page, unsigned long off,
+ 	extern void ___dma_page_dev_to_cpu(struct page *, unsigned long,
+ 		size_t, enum dma_data_direction);
+ 
+-	if (!arch_is_coherent())
++	if (!arch_is_coherent() && size > 0)
+ 		___dma_page_dev_to_cpu(page, off, size, dir);
+ 	else if (dir != DMA_TO_DEVICE)
+ 		dma_io_sync();
+-- 
+1.7.9.5
+

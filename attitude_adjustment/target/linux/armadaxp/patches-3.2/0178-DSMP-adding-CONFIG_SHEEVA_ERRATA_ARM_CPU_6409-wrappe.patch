@@ -1,0 +1,55 @@
+From 0db05f7519ddd3d15f9aaf2a135e81a9daeaee34 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Sun, 24 Jun 2012 17:28:41 +0300
+Subject: [PATCH 178/609] DSMP: adding CONFIG_SHEEVA_ERRATA_ARM_CPU_6409
+ wrapper to an already implemented errata
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mm/Kconfig              |   14 ++++++++++++++
+ arch/arm/mm/proc-sheeva_pj4bv7.S |    2 ++
+ 2 files changed, 16 insertions(+)
+
+diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
+index b607292..404fa9d 100644
+--- a/arch/arm/mm/Kconfig
++++ b/arch/arm/mm/Kconfig
+@@ -949,7 +949,21 @@ config SHEEVA_ERRATA_ARM_CPU_4948
+ 	  line boundary (i.e., unaligned access). If it does occur, L0 data
+ 	  cache can be disabled
+ 
++config SHEEVA_ERRATA_ARM_CPU_6409
+ 
++        bool "Sheeva Errata 6409: Processor may execute incorrect instructions when two ARM-mode conditional branches are back-toback and double-word-aligned"
++        depends on  CPU_SHEEVA_PJ4B_V7 && ARMADA_XP_REV_A0
++        default y
++        help
++	In a certain rare case the processor will evaluate a branch incorrectly leading to incorrect execution of instructions.
++	The bug occurs when the static predictor is incorrectly applied to a branch instruction when a dynamic predictor
++	predicts that a branch should not be taken
++	Workaround:
++		To avoid this bug with minimal performance impact, the static branch predictor can be disabled by writing a "0" to bit[2]
++		of the Auxiliary Debug Modes Control Register as follows:
++		mrc p15, 1, r0, c15, c1, 1
++		bic r0, r0, 0x4; disable static prediction
++		mcr p15, 1, r0, c15, c1, 1
+ 
+ config SHEEVA_ERRATA_ARM_CPU_5980
+ 
+diff --git a/arch/arm/mm/proc-sheeva_pj4bv7.S b/arch/arm/mm/proc-sheeva_pj4bv7.S
+index ec52d8f..1673b55 100644
+--- a/arch/arm/mm/proc-sheeva_pj4bv7.S
++++ b/arch/arm/mm/proc-sheeva_pj4bv7.S
+@@ -393,7 +393,9 @@ defined(CONFIG_SMP)
+ 	mrc        p15, 1, r0, c15, c1, 1                         /* Read */
+ 	orr        r0, r0, #0x00020                                /* BIT5 STREX backoff_disable--> '1' enable the back off of STREX instr */
+ 	orr	   r0, r0, #0x00100                                /* BIT8 Internal Parity Handling Disable--> '1' Disable Internal Parity Handling */
++#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6409
+ 	bic        r0, r0, #0x4                                 /* Disable Static BP */
++#endif
+ 	mcr        p15, 1, r0, c15, c1, 1                         /* Write */
+ /* Auxiliary Functional Modes Control Register 0 */
+ 	mrc        p15, 1, r0, c15, c2, 0                         /* Read */
+-- 
+1.7.9.5
+

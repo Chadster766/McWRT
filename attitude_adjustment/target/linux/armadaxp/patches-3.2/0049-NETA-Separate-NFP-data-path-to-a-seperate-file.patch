@@ -1,0 +1,2497 @@
+From 4d471f2a12ad01e033fac3cbed2a54f1995fc6b6 Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Sun, 15 Jul 2012 16:45:26 +0300
+Subject: [PATCH 049/609] NETA: Separate NFP data path to a seperate file
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/Makefile                    |    5 +-
+ arch/arm/mach-armadaxp/mv_hal_if/mvSysNeta.c       |    3 +-
+ .../arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig |    3 +-
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_eth_switch.c |    3 +-
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c   |    1 +
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     | 1671 ++++----------------
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h     |  186 ++-
+ arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h      |    2 +-
+ 8 files changed, 503 insertions(+), 1371 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
+index c9da894..d7be286 100644
+--- a/arch/arm/mach-armadaxp/Makefile
++++ b/arch/arm/mach-armadaxp/Makefile
+@@ -16,7 +16,8 @@
+ include 	  $(srctree)/arch/arm/mach-armadaxp/config/mvRules.mk
+ 
+ ifdef CONFIG_MV_ETH_NFP
+-	NFPOBJS += $(LSP_NFP_MGR_DIR)/mv_nfp_mgr.o $(LSP_NFP_MGR_DIR)/nfp_sysfs.o  $(LSP_NFP_MGR_DIR)/mv_nfp_hooks.o
++	NFPOBJS += $(LSP_NFP_MGR_DIR)/mv_nfp_mgr.o $(LSP_NFP_MGR_DIR)/nfp_sysfs.o  $(LSP_NFP_MGR_DIR)/mv_nfp_hooks.o \
++		$(LSP_NET_DEV_DIR)/mv_eth_nfp.o
+ endif
+ 
+ ifdef CONFIG_MV_ETH_NFP_FIB
+@@ -185,7 +186,7 @@ obj-$(CONFIG_MV_INCLUDE_SWITCH) 	+= $(QD_OBJS)
+ # drivers part
+ # Legacy Giga driver
+ ifeq ($(CONFIG_MV_ETH_LEGACY),y)
+-obj-$(CONFIG_MV_ETH_NFP) 	        += $(LSP_NFP_MGR_DIR)/mv_nfp_mgr.o $(LSP_NFP_MGR_DIR)/mv_nfp_hooks.o
++obj-$(CONFIG_MV_ETH_NFP) 	        += $(LSP_NFP_MGR_DIR)/mv_nfp_mgr.o
+ obj-$(CONFIG_MV_ETH_NFP_SEC)            += $(LSP_NFP_MGR_DIR)/mv_nfp_sec.o
+ endif
+ 
+diff --git a/arch/arm/mach-armadaxp/mv_hal_if/mvSysNeta.c b/arch/arm/mach-armadaxp/mv_hal_if/mvSysNeta.c
+index 85d3c4f..fe2be33 100644
+--- a/arch/arm/mach-armadaxp/mv_hal_if/mvSysNeta.c
++++ b/arch/arm/mach-armadaxp/mv_hal_if/mvSysNeta.c
+@@ -117,7 +117,8 @@ void 	mvSysNetaInit(void)
+ 	halData.tClk = mvBoardTclkGet();
+ 	halData.maxCPUs = mvCtrlEthMaxCPUsGet();
+ 	halData.iocc = arch_is_coherent();
+-
++	halData.ctrlModel = mvCtrlModelGet();
++	halData.ctrlRev = mvCtrlRevGet();
+ #ifdef CONFIG_MV_ETH_BM
+ 	halData.bmPhysBase = PNC_BM_PHYS_BASE;
+ 	halData.bmVirtBase = (MV_U8 *)ioremap(PNC_BM_PHYS_BASE, PNC_BM_SIZE);
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
+index 43f9d19..490f237 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
+@@ -674,7 +674,8 @@ config MV_ETH_NFP_LIB
+ 	select MV_ETH_NFP_CT
+ 	select MV_ETH_NFP_CT_LEARN
+ 	select MV_ETH_NFP_BRIDGE
+-	select MV_ETH_NFP_BRIDGE_LEARN
++	select MV_ETH_NFP_FDB_MODE
++	select MV_ETH_NFP_FDB_LEARN
+ 	select MV_ETH_NFP_VLAN
+ 	select MV_ETH_NFP_VLAN_LEARN
+ 	select MV_ETH_NFP_FIB
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_switch.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_switch.c
+index d3f1975..ebc8e72 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_switch.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_switch.c
+@@ -780,9 +780,8 @@ void    mv_eth_switch_status_print(int port)
+ 			if (dev)
+ 				mv_eth_netdev_print(dev);
+ 		}
+-	} else {
++	} else
+ 		printk(KERN_ERR "ethPort=%d: switch is not connected - pp=%p, flags=0x%lx\n", port, pp, pp->flags);
+-	}
+ }
+ 
+ 
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c
+index d2d486d..df28415 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c
+@@ -53,6 +53,7 @@ disclaimer.
+ 
+ #include "mv_switch.h"
+ #include "mv_netdev.h"
++#include "mv_eth_tool.h"
+ 
+ #include "mvOs.h"
+ #include "mvSysHwConfig.h"
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 89057a6..81e6dc2 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -33,9 +33,10 @@ disclaimer.
+ #include <linux/platform_device.h>
+ #include <linux/skbuff.h>
+ #include <linux/inetdevice.h>
++#include <linux/mv_neta.h>
+ #include <net/ip.h>
+ #include <net/ipv6.h>
+-#include <linux/module.h>
++
+ #include "mvOs.h"
+ #include "mvDebug.h"
+ #include "dbg-trace.h"
+@@ -46,9 +47,6 @@ disclaimer.
+ #include "mvSysEthPhyApi.h"
+ #include "mvSysNetaApi.h"
+ 
+-#include "nfp_mgr/mv_nfp_mgr_if.h"
+-#include "nfp/mvNfpDefs.h"
+-
+ #include "gbe/mvNeta.h"
+ #include "bm/mvBm.h"
+ #include "pnc/mvPnc.h"
+@@ -73,7 +71,7 @@ MV_CPU_CNTRS_EVENT	*event5 = NULL;
+ 
+ unsigned int ext_switch_port_mask = 0;
+ 
+-void handle_group_affinity(void);
++void handle_group_affinity(int port);
+ void set_rxq_affinity(struct eth_port *pp, MV_U32 rxqAffinity, int group);
+ 
+ 
+@@ -92,64 +90,35 @@ int mv_eth_ctrl_pnc(int en)
+ 
+ #ifdef CONFIG_MV_ETH_NFP
+ extern int nfp_sysfs_init(void);
+-
+-static INLINE int mv_eth_need_fragment(MV_NFP_RESULT *res);
+-
+-static MV_STATUS mv_eth_nfp(struct eth_port *pp, int rxq, struct neta_rx_desc *rx_desc,
+-						struct eth_pbuf *pkt, struct bm_pool *pool);
+-
+-static MV_STATUS mv_eth_nfp_tx(struct eth_pbuf *pkt, MV_NFP_RESULT *res);
+-
+-/* Enable NFP */
+-int mv_eth_ctrl_nfp(struct net_device *dev, int en)
+-{
+-	struct eth_port *pp = MV_ETH_PRIV(dev);
+-
+-	if (pp == NULL)
+-		return 1;
+-
+-	if (en) {
+-		pp->flags |= MV_ETH_F_NFP_EN;
+-		printk(KERN_INFO "%s: NFP enabled\n", dev->name);
+-	} else {
+-		pp->flags &= ~MV_ETH_F_NFP_EN;
+-		printk(KERN_INFO "%s: NFP disabled\n", dev->name);
+-	}
+-	return 0;
+-}
+ #endif /* CONFIG_MV_ETH_NFP */
+ 
+ #ifdef CONFIG_NET_SKB_RECYCLE
+-static int mv_ctrl_recycle = CONFIG_NET_SKB_RECYCLE_DEF;
++int mv_ctrl_recycle = CONFIG_NET_SKB_RECYCLE_DEF;
+ 
+ int mv_eth_ctrl_recycle(int en)
+ {
+ 	mv_ctrl_recycle = en;
+ 	return 0;
+ }
+-
+-#define mv_eth_is_recycle()     (mv_ctrl_recycle)
+ #else
+ int mv_eth_ctrl_recycle(int en)
+ {
+-	printk(KERN_ERR "Not supported\n");
++	printk(KERN_ERR "SKB recycle is not supported\n");
+ 	return 1;
+ }
+-#define mv_eth_is_recycle()     0
+ #endif /* CONFIG_NET_SKB_RECYCLE */
+ 
+ extern u8 mvMacAddr[CONFIG_MV_ETH_PORTS_NUM][MV_MAC_ADDR_SIZE];
+ extern u16 mvMtu[CONFIG_MV_ETH_PORTS_NUM];
+ 
+ extern unsigned int switch_enabled_ports;
+-extern int mv_ctrl_nfp_state;
+ 
+ struct bm_pool mv_eth_pool[MV_ETH_BM_POOLS];
+ struct eth_port **mv_eth_ports;
+ struct net_device **mv_net_devs;
+ 
+ int mv_net_devs_num = 0;
+-
++int mv_ctrl_txdone = CONFIG_MV_ETH_TXDONE_COAL_PKTS;
+ /*
+  * Static declarations
+  */
+@@ -157,7 +126,6 @@ static int mv_eth_ports_num = 0;
+ static int mv_net_devs_max = 0;
+ 
+ static int mv_eth_initialized = 0;
+-static int mv_ctrl_txdone = CONFIG_MV_ETH_TXDONE_COAL_PKTS;
+ 
+ /*
+  * Local functions
+@@ -165,12 +133,8 @@ static int mv_ctrl_txdone = CONFIG_MV_ETH_TXDONE_COAL_PKTS;
+ static void mv_eth_txq_delete(struct eth_port *pp, struct tx_queue *txq_ctrl);
+ static void mv_eth_tx_timeout(struct net_device *dev);
+ static int mv_eth_tx(struct sk_buff *skb, struct net_device *dev);
+-static struct sk_buff *mv_eth_skb_alloc(struct bm_pool *bm, struct eth_pbuf *pkt);
+ static void mv_eth_tx_frag_process(struct eth_port *pp, struct sk_buff *skb, struct tx_queue *txq_ctrl, u16 flags);
+ 
+-static inline int mv_eth_refill(struct eth_port *pp, int rxq, struct eth_pbuf *pkt,
+-				struct bm_pool *pool, struct neta_rx_desc *rx_desc);
+-
+ static void mv_eth_config_show(void);
+ static int  mv_eth_priv_init(struct eth_port *pp, int port);
+ static void mv_eth_priv_cleanup(struct eth_port *pp);
+@@ -228,28 +192,27 @@ int mv_eth_cmdline_port3_config(char *s)
+ void set_cpu_affinity(struct eth_port *pp, MV_U32 cpuAffinity, int group)
+ {
+ 	int cpu;
+-	MV_U32 rxqAffinity = 0, currRxqAffinity;
++	MV_U32 rxqAffinity = 0;
+ 
+ 	/* nothing to do when cpuAffinity == 0 */
+ 	if (cpuAffinity == 0)
+ 		return;
+ 
+ 	/* First, read affinity of the target group, in case it contains CPUs */
+-	for (cpu = 0; cpu < CONFIG_NR_CPUS; cpu++)
++	for (cpu = 0; cpu < CONFIG_NR_CPUS; cpu++) {
++		if (!(MV_BIT_CHECK(pp->cpuMask, cpu)))
++			continue;
+ 		if (pp->napiCpuGroup[cpu] == group) {
+ 			rxqAffinity = MV_REG_READ(NETA_CPU_MAP_REG(pp->port, cpu)) & 0xff;
+ 			break;
+ 		}
+-
++	}
+ 	for (cpu = 0; cpu < CONFIG_NR_CPUS; cpu++) {
+-		/* read rxqAffinity of the current group */
+-		currRxqAffinity = MV_REG_READ(NETA_CPU_MAP_REG(pp->port, cpu)) & 0xff;
+ 		if (cpuAffinity & 1) {
+ 			pp->napi[cpu] = pp->napiGroup[group];
+ 			pp->napiCpuGroup[cpu] = group;
+-			/* set rxq affinity, except for the first time */
+-			if (pp->napiCpuGroup[cpu] != -1)
+-				set_rxq_affinity(pp, currRxqAffinity | rxqAffinity, group);
++			/* set rxq affinity of the target group */
++			MV_REG_WRITE(NETA_CPU_MAP_REG(pp->port, cpu), rxqAffinity | NETA_CPU_TXQ_ACCESS_ALL_MASK);
+ 		}
+ 		cpuAffinity >>= 1;
+ 	}
+@@ -259,9 +222,12 @@ int group_has_cpus(struct eth_port *pp, int group)
+ {
+ 	int cpu;
+ 
+-	for (cpu = 0; cpu < CONFIG_NR_CPUS; cpu++)
++	for (cpu = 0; cpu < CONFIG_NR_CPUS; cpu++) {
++		if (!(MV_BIT_CHECK(pp->cpuMask, cpu)))
++			continue;
+ 		if (pp->napiCpuGroup[cpu] == group)
+ 			return 1;
++	}
+ 
+ 	/* the group contains no CPU */
+ 	return 0;
+@@ -287,14 +253,18 @@ void set_rxq_affinity(struct eth_port *pp, MV_U32 rxqAffinity, int group)
+ 	}
+ 
+    for (cpu = 0; cpu < CONFIG_NR_CPUS; cpu++) {
++		if (!(MV_BIT_CHECK(pp->cpuMask, cpu)))
++			continue;
+ 	   tmpRxqAffinity = rxqAffinity;
+ 
++	   regVal = MV_REG_READ(NETA_CPU_MAP_REG(pp->port, cpu));
++
+ 	   if (pp->napiCpuGroup[cpu] == group) {
+ 		   cpuInGroup = 1;
+-		   regVal = 0;
++		   /* init TXQ Access Enable bits */
++		   regVal = regVal & 0xff00;
+ 	   } else {
+ 		   cpuInGroup = 0;
+-		   regVal = MV_REG_READ(NETA_CPU_MAP_REG(pp->port, cpu));
+ 		}
+ 
+ 	   for (rxq = 0; rxq < CONFIG_MV_ETH_RXQ; rxq++) {
+@@ -307,7 +277,7 @@ void set_rxq_affinity(struct eth_port *pp, MV_U32 rxqAffinity, int group)
+ 			}
+ 			tmpRxqAffinity >>= 1;
+ 	   }
+-	   MV_REG_WRITE(NETA_CPU_MAP_REG(pp->port, cpu), regVal | NETA_CPU_TXQ_ACCESS_ALL_MASK);
++	   MV_REG_WRITE(NETA_CPU_MAP_REG(pp->port, cpu), regVal);
+    }
+ }
+ 
+@@ -352,25 +322,6 @@ static int mv_eth_port_config_parse(struct eth_port *pp)
+ 	return 0;
+ }
+ 
+-
+-static void mv_eth_add_cleanup_timer(struct eth_port *pp)
+-{
+-	if (test_and_set_bit(MV_ETH_F_CLEANUP_TIMER_BIT, &(pp->flags)) == 0) {
+-		pp->cleanup_timer.expires = jiffies + ((HZ * CONFIG_MV_ETH_CLEANUP_TIMER_PERIOD) / 1000); /* ms */
+-		add_timer(&pp->cleanup_timer);
+-	}
+-}
+-
+-static void mv_eth_add_tx_done_timer(struct eth_port *pp)
+-{
+-	if (test_and_set_bit(MV_ETH_F_TX_DONE_TIMER_BIT, &(pp->flags)) == 0) {
+-
+-		pp->tx_done_timer.expires = jiffies + ((HZ * CONFIG_MV_ETH_TX_DONE_TIMER_PERIOD) / 1000); /* ms */
+-		add_timer(&pp->tx_done_timer);
+-	}
+-}
+-
+-
+ #ifdef ETH_SKB_DEBUG
+ struct sk_buff *mv_eth_skb_debug[MV_BM_POOL_CAP_MAX * MV_ETH_BM_POOLS];
+ static spinlock_t skb_debug_lock;
+@@ -446,28 +397,6 @@ struct net_device *mv_eth_netdev_by_id(unsigned int idx)
+ 	return NULL;
+ }
+ 
+-static inline void mv_eth_shadow_inc_get(struct tx_queue *txq)
+-{
+-	txq->shadow_txq_get_i++;
+-	if (txq->shadow_txq_get_i == txq->txq_size)
+-		txq->shadow_txq_get_i = 0;
+-}
+-
+-inline void mv_eth_shadow_inc_put(struct tx_queue *txq)
+-{
+-	txq->shadow_txq_put_i++;
+-	if (txq->shadow_txq_put_i == txq->txq_size)
+-		txq->shadow_txq_put_i = 0;
+-}
+-
+-inline void mv_eth_shadow_dec_put(struct tx_queue *txq)
+-{
+-	if (txq->shadow_txq_put_i == 0)
+-		txq->shadow_txq_put_i = txq->txq_size - 1;
+-	else
+-		txq->shadow_txq_put_i--;
+-}
+-
+ static inline int mv_eth_skb_mh_add(struct sk_buff *skb, u16 mh)
+ {
+ 	/* sanity: Check that there is place for MH in the buffer */
+@@ -485,43 +414,6 @@ static inline int mv_eth_skb_mh_add(struct sk_buff *skb, u16 mh)
+ 	return 0;
+ }
+ 
+-static inline struct neta_tx_desc *mv_eth_tx_desc_get(struct tx_queue *txq_ctrl, int num)
+-{
+-	/* Is enough TX descriptors to send packet */
+-	if ((txq_ctrl->txq_count + num) >= txq_ctrl->txq_size) {
+-		/*
+-		printk(KERN_ERR "eth_tx: txq_ctrl->txq=%d - no_resource: txq_count=%d, txq_size=%d, num=%d\n",
+-			txq_ctrl->txq, txq_ctrl->txq_count, txq_ctrl->txq_size, num);
+-		*/
+-		STAT_ERR(txq_ctrl->stats.txq_err++);
+-		return NULL;
+-	}
+-	return mvNetaTxqNextDescGet(txq_ctrl->q);
+-}
+-
+-inline void mv_eth_tx_desc_flush(struct neta_tx_desc *tx_desc)
+-{
+-#if defined(MV_CPU_BE)
+-	mvNetaTxqDescSwap(tx_desc);
+-#endif /* MV_CPU_BE */
+-
+-	mvOsCacheLineFlush(NULL, tx_desc);
+-}
+-
+-/* Free pkt + skb pair */
+-static inline void mv_eth_pkt_free(struct eth_pbuf *pkt)
+-{
+-	struct sk_buff *skb = (struct sk_buff *)pkt->osInfo;
+-
+-#ifdef CONFIG_NET_SKB_RECYCLE
+-	skb->skb_recycle = NULL;
+-	skb->hw_cookie = NULL;
+-#endif /* CONFIG_NET_SKB_RECYCLE */
+-
+-	dev_kfree_skb_any(skb);
+-	mvOsFree(pkt);
+-}
+-
+ void mv_eth_ctrl_txdone(int num)
+ {
+ 	mv_ctrl_txdone = num;
+@@ -660,7 +552,8 @@ int mv_eth_ctrl_set_poll_rx_weight(int port, u32 weight)
+ 	pp->weight = weight;
+ 
+ 	for_each_possible_cpu(cpu) {
+-		pp->napi[cpu]->weight = pp->weight;
++		if (pp->napi[cpu])
++			pp->napi[cpu]->weight = pp->weight;
+ 	}
+ 
+ 	return 0;
+@@ -871,7 +764,7 @@ static const struct net_device_ops mv_eth_netdev_ops = {
+ 	.ndo_open = mv_eth_open,
+ 	.ndo_stop = mv_eth_stop,
+ 	.ndo_start_xmit = mv_eth_tx,
+-	.ndo_set_rx_mode = mv_eth_set_multicast_list,
++	.ndo_set_multicast_list = mv_eth_set_multicast_list,
+ 	.ndo_set_mac_address = mv_eth_set_mac_addr,
+ 	.ndo_change_mtu = mv_eth_change_mtu,
+ 	.ndo_tx_timeout = mv_eth_tx_timeout,
+@@ -1146,103 +1039,6 @@ static inline void mv_eth_rx_csum(struct eth_port *pp, struct neta_rx_desc *rx_d
+ 	STAT_DBG(pp->stats.rx_csum_sw++);
+ }
+ 
+-inline int mv_eth_pool_put(struct bm_pool *pool, struct eth_pbuf *pkt)
+-{
+-	unsigned long flags = 0;
+-
+-	MV_ETH_LOCK(&pool->lock, flags);
+-	if (mvStackIsFull(pool->stack)) {
+-		STAT_ERR(pool->stats.stack_full++);
+-		MV_ETH_UNLOCK(&pool->lock, flags);
+-
+-		/* free pkt+skb */
+-		mv_eth_pkt_free(pkt);
+-		return 1;
+-	}
+-	mvStackPush(pool->stack, (MV_U32) pkt);
+-	STAT_DBG(pool->stats.stack_put++);
+-	MV_ETH_UNLOCK(&pool->lock, flags);
+-	return 0;
+-}
+-
+-inline struct eth_pbuf *mv_eth_pool_get(struct bm_pool *pool)
+-{
+-	struct eth_pbuf *pkt = NULL;
+-	struct sk_buff *skb;
+-	unsigned long flags = 0;
+-
+-	MV_ETH_LOCK(&pool->lock, flags);
+-
+-	if (mvStackIndex(pool->stack) > 0) {
+-		STAT_DBG(pool->stats.stack_get++);
+-		pkt = (struct eth_pbuf *)mvStackPop(pool->stack);
+-	} else
+-		STAT_ERR(pool->stats.stack_empty++);
+-
+-	MV_ETH_UNLOCK(&pool->lock, flags);
+-	if (pkt)
+-		return pkt;
+-
+-	/* Try to allocate new pkt + skb */
+-	pkt = mvOsMalloc(sizeof(struct eth_pbuf));
+-	if (pkt) {
+-		skb = mv_eth_skb_alloc(pool, pkt);
+-		if (!skb) {
+-			mvOsFree(pkt);
+-			pkt = NULL;
+-		}
+-	}
+-	return pkt;
+-}
+-
+-inline void *mv_eth_extra_pool_get(struct eth_port *pp)
+-{
+-	void *ext_buf;
+-
+-	spin_lock(&pp->extLock);
+-	if (mvStackIndex(pp->extArrStack) == 0) {
+-		STAT_ERR(pp->stats.ext_stack_empty++);
+-		ext_buf = mvOsMalloc(CONFIG_MV_ETH_EXTRA_BUF_SIZE);
+-	} else {
+-		STAT_DBG(pp->stats.ext_stack_get++);
+-		ext_buf = (void *)mvStackPop(pp->extArrStack);
+-	}
+-	spin_unlock(&pp->extLock);
+-
+-	return ext_buf;
+-}
+-
+-inline int mv_eth_extra_pool_put(struct eth_port *pp, void *ext_buf)
+-{
+-	spin_lock(&pp->extLock);
+-	if (mvStackIsFull(pp->extArrStack)) {
+-		STAT_ERR(pp->stats.ext_stack_full++);
+-		spin_unlock(&pp->extLock);
+-		mvOsFree(ext_buf);
+-		return 1;
+-	}
+-	mvStackPush(pp->extArrStack, (MV_U32)ext_buf);
+-	STAT_DBG(pp->stats.ext_stack_put++);
+-	spin_unlock(&pp->extLock);
+-	return 0;
+-}
+-
+-/* Pass pkt to BM Pool or RXQ ring */
+-inline void mv_eth_rxq_refill(struct eth_port *pp, int rxq,
+-				     struct eth_pbuf *pkt, struct bm_pool *pool, struct neta_rx_desc *rx_desc)
+-{
+-	if (mv_eth_pool_bm(pool)) {
+-		/* Refill BM pool */
+-		STAT_DBG(pool->stats.bm_put++);
+-		mvBmPoolPut(pkt->pool, (MV_ULONG) pkt->physAddr);
+-		mvOsCacheLineInv(NULL, rx_desc);
+-	} else {
+-		/* Refill Rx descriptor */
+-		STAT_DBG(pp->stats.rxq_fill[rxq]++);
+-		mvNetaRxDescFill(rx_desc, pkt->physAddr, (MV_U32)pkt);
+-	}
+-}
+-
+ static inline int mv_eth_tx_done_policy(u32 cause)
+ {
+ 	return fls(cause >> NETA_CAUSE_TXQ_SENT_DESC_OFFS) - 1;
+@@ -1277,7 +1073,7 @@ static inline int mv_eth_tx_policy(struct eth_port *pp, struct sk_buff *skb)
+ }
+ 
+ #ifdef CONFIG_NET_SKB_RECYCLE
+-static int mv_eth_skb_recycle(struct sk_buff *skb)
++int mv_eth_skb_recycle(struct sk_buff *skb)
+ {
+ 	struct eth_pbuf *pkt = skb->hw_cookie;
+ 	struct bm_pool *pool = &mv_eth_pool[pkt->pool];
+@@ -1349,6 +1145,120 @@ static struct sk_buff *mv_eth_skb_alloc(struct bm_pool *pool, struct eth_pbuf *p
+ 	return skb;
+ }
+ 
++static inline void mv_eth_txq_bufs_free(struct eth_port *pp, struct tx_queue *txq_ctrl, int num)
++{
++	u32 shadow;
++	int i;
++
++	/* Free buffers that was not freed automatically by BM */
++	for (i = 0; i < num; i++) {
++		shadow = txq_ctrl->shadow_txq[txq_ctrl->shadow_txq_get_i];
++		mv_eth_shadow_inc_get(txq_ctrl);
++
++		if (!shadow)
++			continue;
++
++		if (shadow & MV_ETH_SHADOW_SKB) {
++			shadow &= ~MV_ETH_SHADOW_SKB;
++			dev_kfree_skb_any((struct sk_buff *)shadow);
++			STAT_DBG(pp->stats.tx_skb_free++);
++		} else {
++			if (shadow & MV_ETH_SHADOW_EXT) {
++				shadow &= ~MV_ETH_SHADOW_EXT;
++				mv_eth_extra_pool_put(pp, (void *)shadow);
++			} else {
++				/* packet from NFP without BM */
++				struct eth_pbuf *pkt = (struct eth_pbuf *)shadow;
++				struct bm_pool *pool = &mv_eth_pool[pkt->pool];
++
++				if (mv_eth_pool_bm(pool)) {
++					/* Refill BM pool */
++					STAT_DBG(pool->stats.bm_put++);
++					mvBmPoolPut(pkt->pool, (MV_ULONG) pkt->physAddr);
++				} else {
++					mv_eth_pool_put(pool, pkt);
++				}
++			}
++		}
++	}
++}
++
++inline u32 mv_eth_txq_done(struct eth_port *pp, struct tx_queue *txq_ctrl)
++{
++	int tx_done;
++
++	tx_done = mvNetaTxqSentDescProc(pp->port, txq_ctrl->txp, txq_ctrl->txq);
++	if (!tx_done)
++		return tx_done;
++/*
++	printk(KERN_ERR "tx_done: txq_count=%d, port=%d, txp=%d, txq=%d, tx_done=%d\n",
++			txq_ctrl->txq_count, pp->port, txq_ctrl->txp, txq_ctrl->txq, tx_done);
++*/
++	if (!mv_eth_txq_bm(txq_ctrl))
++		mv_eth_txq_bufs_free(pp, txq_ctrl, tx_done);
++
++	txq_ctrl->txq_count -= tx_done;
++	STAT_DBG(txq_ctrl->stats.txq_txdone += tx_done);
++
++	return tx_done;
++}
++
++inline struct eth_pbuf *mv_eth_pool_get(struct bm_pool *pool)
++{
++	struct eth_pbuf *pkt = NULL;
++	struct sk_buff *skb;
++	unsigned long flags = 0;
++
++	MV_ETH_LOCK(&pool->lock, flags);
++
++	if (mvStackIndex(pool->stack) > 0) {
++		STAT_DBG(pool->stats.stack_get++);
++		pkt = (struct eth_pbuf *)mvStackPop(pool->stack);
++	} else
++		STAT_ERR(pool->stats.stack_empty++);
++
++	MV_ETH_UNLOCK(&pool->lock, flags);
++	if (pkt)
++		return pkt;
++
++	/* Try to allocate new pkt + skb */
++	pkt = mvOsMalloc(sizeof(struct eth_pbuf));
++	if (pkt) {
++		skb = mv_eth_skb_alloc(pool, pkt);
++		if (!skb) {
++			mvOsFree(pkt);
++			pkt = NULL;
++		}
++	}
++	return pkt;
++}
++
++/* Reuse pkt if possible, allocate new skb and move BM pool or RXQ ring */
++inline int mv_eth_refill(struct eth_port *pp, int rxq,
++				struct eth_pbuf *pkt, struct bm_pool *pool, struct neta_rx_desc *rx_desc)
++{
++	if (pkt == NULL) {
++		pkt = mv_eth_pool_get(pool);
++		if (pkt == NULL)
++			return 1;
++	} else {
++		struct sk_buff *skb;
++
++		/* No recycle -  alloc new skb */
++		skb = mv_eth_skb_alloc(pool, pkt);
++		if (!skb) {
++			mvOsFree(pkt);
++			pool->missed++;
++			mv_eth_add_cleanup_timer(pp);
++			return 1;
++		}
++	}
++	mv_eth_rxq_refill(pp, rxq, pkt, pool, rx_desc);
++
++	return 0;
++}
++
++
+ static inline MV_U32 mv_eth_skb_tx_csum(struct eth_port *pp, struct sk_buff *skb)
+ {
+ #ifdef CONFIG_MV_ETH_TX_CSUM_OFFLOAD
+@@ -1484,1039 +1394,123 @@ static inline int mv_eth_rx(struct eth_port *pp, int rx_todo, int rxq)
+ #endif /* CONFIG_MV_ETH_SWITCH */
+ 
+ 		STAT_DBG(pp->stats.rxq[rxq]++);
+-		dev->stats.rx_packets++;
+-
+-		rx_bytes = rx_desc->dataSize - (MV_ETH_CRC_SIZE + MV_ETH_MH_SIZE);
+-		dev->stats.rx_bytes += rx_bytes;
+-
+-#ifndef CONFIG_MV_ETH_PNC
+-	/* Update IP offset and IP header len in RX descriptor */
+-	if (NETA_RX_L3_IS_IP4(rx_desc->status)) {
+-		int ip_offset;
+-
+-		if ((rx_desc->status & ETH_RX_VLAN_TAGGED_FRAME_MASK))
+-			ip_offset = MV_ETH_MH_SIZE + sizeof(MV_802_3_HEADER) + MV_VLAN_HLEN;
+-		else
+-			ip_offset = MV_ETH_MH_SIZE + sizeof(MV_802_3_HEADER);
+-
+-		NETA_RX_SET_IPHDR_OFFSET(rx_desc, ip_offset);
+-		NETA_RX_SET_IPHDR_HDRLEN(rx_desc, 5);
+-	}
+-#endif /* !CONFIG_MV_ETH_PNC */
+-
+-#ifdef CONFIG_MV_ETH_DEBUG_CODE
+-		if (pp->flags & MV_ETH_F_DBG_RX)
+-			mvDebugMemDump(pkt->pBuf + pkt->offset, 64, 1);
+-#endif /* CONFIG_MV_ETH_DEBUG_CODE */
+-
+-#if defined(CONFIG_MV_ETH_PNC) && defined(CONFIG_MV_ETH_RX_SPECIAL)
+-		/* Special RX processing */
+-		if (rx_desc->pncInfo & NETA_PNC_RX_SPECIAL) {
+-			if (pp->rx_special_proc) {
+-				pp->rx_special_proc(pp->port, rxq, dev, (struct sk_buff *)(pkt->osInfo), rx_desc);
+-				STAT_INFO(pp->stats.rx_special++);
+-
+-				/* Refill processing */
+-				err = mv_eth_refill(pp, rxq, pkt, pool, rx_desc);
+-				if (err) {
+-					printk(KERN_ERR "Linux processing - Can't refill\n");
+-					pp->rxq_ctrl[rxq].missed++;
+-					rx_filled--;
+-				}
+-				continue;
+-			}
+-		}
+-#endif /* CONFIG_MV_ETH_PNC && CONFIG_MV_ETH_RX_SPECIAL */
+-
+-#ifdef CONFIG_MV_ETH_NFP
+-		if (pp->flags & MV_ETH_F_NFP_EN) {
+-			MV_STATUS status;
+-
+-			pkt->bytes = rx_bytes + MV_ETH_MH_SIZE;
+-			pkt->offset = NET_SKB_PAD;
+-
+-			status = mv_eth_nfp(pp, rxq, rx_desc, pkt, pool);
+-			if (status == MV_OK)
+-				continue;
+-			if (status == MV_FAIL) {
+-				rx_filled--;
+-				continue;
+-			}
+-			/* MV_TERMINATE - packet returned to slow path */
+-		}
+-#endif /* CONFIG_MV_ETH_NFP */
+-
+-		/* Linux processing */
+-		skb = (struct sk_buff *)(pkt->osInfo);
+-
+-		skb->data += MV_ETH_MH_SIZE;
+-		skb->tail += (rx_bytes + MV_ETH_MH_SIZE);
+-		skb->len = rx_bytes;
+-
+-#ifdef ETH_SKB_DEBUG
+-		mv_eth_skb_check(skb);
+-#endif /* ETH_SKB_DEBUG */
+-
+-		skb->protocol = eth_type_trans(skb, dev);
+-
+-#ifdef CONFIG_NET_SKB_RECYCLE
+-		if (mv_eth_is_recycle()) {
+-			skb->skb_recycle = mv_eth_skb_recycle;
+-			skb->hw_cookie = pkt;
+-			pkt = NULL;
+-		}
+-#endif /* CONFIG_NET_SKB_RECYCLE */
+-
+-		if (skb)
+-			mv_eth_rx_csum(pp, rx_desc, skb);
+-
+-#ifdef CONFIG_MV_ETH_GRO
+-		if (skb && (dev->features & NETIF_F_GRO)) {
+-			STAT_DBG(pp->stats.rx_gro++);
+-			STAT_DBG(pp->stats.rx_gro_bytes += skb->len);
+-
+-			rx_status = napi_gro_receive(pp->napi[smp_processor_id()], skb);
+-			skb = NULL;
+-		}
+-#endif /* CONFIG_MV_ETH_GRO */
+-
+-		if (skb) {
+-			STAT_DBG(pp->stats.rx_netif++);
+-			rx_status = netif_receive_skb(skb);
+-			STAT_DBG(if (rx_status)	(pp->stats.rx_drop_sw++));
+-		}
+-
+-		/* Refill processing: */
+-		err = mv_eth_refill(pp, rxq, pkt, pool, rx_desc);
+-		if (err) {
+-			printk(KERN_ERR "Linux processing - Can't refill\n");
+-			pp->rxq_ctrl[rxq].missed++;
+-			mv_eth_add_cleanup_timer(pp);
+-			rx_filled--;
+-		}
+-	}
+-
+-	/* Update RxQ management counters */
+-	mvOsCacheIoSync();
+-	mvNetaRxqDescNumUpdate(pp->port, rxq, rx_done, rx_filled);
+-
+-	return rx_done;
+-}
+-
+-#ifdef CONFIG_MV_ETH_NFP_EXT
+-static void nfp_skb_destructor(struct sk_buff *skb)
+-{
+-	consume_skb(skb_shinfo(skb)->destructor_arg);
+-}
+-
+-static int nfp_ext_tx_fragment(struct net_device *dev, struct sk_buff *skb, MV_NFP_RESULT *res)
+-{
+-	unsigned int      dlen, doff, error, flen, fsize, l, max_dlen, max_plen;
+-	unsigned int      hdrlen, offset;
+-	struct iphdr      *ip, *nip;
+-	struct sk_buff    *new;
+-	struct page       *page;
+-	int               mac_header_len;
+-	MV_IP_HEADER_INFO *pIpInfo = &res->ipInfo;
+-
+-	max_plen = dev->mtu + dev->hard_header_len;
+-
+-	SKB_LINEAR_ASSERT(skb);
+-
+-	mac_header_len = (pIpInfo->ipOffset - res->shift);
+-	ip = (struct iphdr *)(skb->data + mac_header_len);
+-
+-	hdrlen = mac_header_len + res->ipInfo.ipHdrLen;
+-
+-	doff = hdrlen;
+-	dlen = skb_headlen(skb) - hdrlen;
+-	offset = ntohs(ip->frag_off) & IP_OFFSET;
+-	max_dlen = (max_plen - hdrlen) & ~0x07;
+-
+-	do {
+-		new = dev_alloc_skb(hdrlen);
+-		if (!new)
+-			break;
+-
+-		/* Setup new packet metadata */
+-		new->protocol = IPPROTO_IP;
+-		new->ip_summed = CHECKSUM_PARTIAL;
+-		skb_set_network_header(new, mac_header_len);
+-
+-		/* Copy original IP header */
+-		memcpy(skb_put(new, hdrlen), skb->data, hdrlen);
+-
+-		/* Append data portion */
+-		fsize = flen = min(max_dlen, dlen);
+-
+-		skb_get(skb);
+-		skb_shinfo(new)->destructor_arg = skb;
+-		new->destructor = nfp_skb_destructor;
+-
+-		while (fsize) {
+-			l = PAGE_SIZE - ((unsigned long)(skb->data + doff) & ~PAGE_MASK);
+-			if (l > fsize)
+-				l = fsize;
+-
+-			page = virt_to_page(skb->data + doff);
+-			get_page(page);
+-			skb_add_rx_frag(new, skb_shinfo(new)->nr_frags, page,
+-					(unsigned long)(skb->data + doff) &
+-								~PAGE_MASK, l);
+-			dlen -= l;
+-			doff += l;
+-			fsize -= l;
+-		}
+-
+-		/* Fixup IP header */
+-		nip = ip_hdr(new);
+-		nip->tot_len = htons((4 * ip->ihl) + flen);
+-		nip->frag_off = htons(offset |
+-				(dlen ? IP_MF : (IP_MF & ntohs(ip->frag_off))));
+-
+-		/* if it was PPPoE, update the PPPoE payload fields
+-		adapted from  mv_eth_frag_build_hdr_desc */
+-		if ((*((char *)nip - MV_PPPOE_HDR_SIZE - 1) == 0x64) &&
+-			(*((char *)nip - MV_PPPOE_HDR_SIZE - 2) == 0x88)) {
+-			PPPoE_HEADER *pPPPNew = (PPPoE_HEADER *)((char *)nip - MV_PPPOE_HDR_SIZE);
+-			pPPPNew->len = htons(flen + 4*ip->ihl + MV_PPP_HDR_SIZE);
+-	    }
+-
+-		offset += flen / 8;
+-
+-		/* Recalculate IP checksum */
+-		new->ip_summed = CHECKSUM_NONE;
+-		nip->check = 0;
+-		nip->check = ip_fast_csum(nip, nip->ihl);
+-
+-		/* TX packet */
+-		error = dev->netdev_ops->ndo_start_xmit(new, dev);
+-		if (error)
+-			break;
+-	} while (dlen);
+-
+-	if (!new)
+-		return -ENOMEM;
+-
+-	if (error) {
+-		consume_skb(new);
+-		return error;
+-	}
+-
+-	/* We are no longer use original skb */
+-	consume_skb(skb);
+-	return 0;
+-}
+-
+-static int mv_eth_nfp_ext_tx(struct eth_port *pp, struct eth_pbuf *pkt, MV_NFP_RESULT *res)
+-{
+-	struct sk_buff *skb;
+-	struct net_device *dev = (struct net_device *)res->dev;
+-
+-	/* prepare SKB for transmit */
+-	skb = (struct sk_buff *)(pkt->osInfo);
+-
+-	skb->data += res->shift;
+-	skb->tail = skb->data + pkt->bytes ;
+-	skb->len = pkt->bytes;
+-
+-	skb_reset_mac_header(skb);
+-	skb_reset_network_header(skb);
+-
+-	if (res->flags & MV_NFP_RES_IP_INFO_VALID) {
+-
+-		if (res->ipInfo.family == MV_INET) {
+-			struct iphdr *iph = (struct iphdr *)res->ipInfo.ip_hdr.ip4;
+-
+-			if (mv_eth_need_fragment(res))
+-				return nfp_ext_tx_fragment(dev, skb, res);
+-
+-			/* Recalculate IP checksum for IPv4 if necessary */
+-			skb->ip_summed = CHECKSUM_NONE;
+-			iph->check = 0;
+-			iph->check = ip_fast_csum((unsigned char *)iph, iph->ihl);
+-		}
+-		skb_set_network_header(skb, res->ipInfo.ipOffset - res->shift);
+-	}
+-
+-	if (pp) {
+-		/* ingress port is GBE */
+-#ifdef ETH_SKB_DEBUG
+-		mv_eth_skb_check(skb);
+-#endif /* ETH_SKB_DEBUG */
+-
+-#ifdef CONFIG_NET_SKB_RECYCLE
+-		if (mv_eth_is_recycle()) {
+-			skb->skb_recycle = mv_eth_skb_recycle;
+-			skb->hw_cookie = pkt;
+-		}
+-#endif /* CONFIG_NET_SKB_RECYCLE */
+-	}
+-	return dev->netdev_ops->ndo_start_xmit(skb, dev);
+-}
+-
+-
+-static MV_STATUS _build_from_pkt_info(MV_EXT_PKT_INFO *pktInfo, struct neta_rx_desc *rxd)
+-{
+-	if (pktInfo->flags & MV_EXT_VLAN_EXIST_MASK)
+-		NETA_RX_SET_VLAN(rxd);
+-
+-	if (pktInfo->flags & MV_EXT_PPP_EXIST_MASK)
+-		NETA_RX_SET_PPPOE(rxd);
+-
+-	if (pktInfo->l3_type == ETH_P_IP)
+-		NETA_RX_L3_SET_IP4(rxd);
+-	else if (pktInfo->l3_type == ETH_P_IPV6)
+-		NETA_RX_L3_SET_IP6(rxd);
+-	else {
+-		NETA_RX_L3_SET_UN(rxd);
+-		return MV_OK;
+-	}
+-
+-	if (pktInfo->flags & MV_EXT_IP_FRAG_MASK)
+-		NETA_RX_IP_SET_FRAG(rxd);
+-
+-
+-	if (!pktInfo->l3_offset || !pktInfo->l3_hdrlen)
+-		return -1;
+-
+-	NETA_RX_SET_IPHDR_OFFSET(rxd, pktInfo->l3_offset + MV_ETH_MH_SIZE);
+-	NETA_RX_SET_IPHDR_HDRLEN(rxd, (pktInfo->l3_hdrlen >> 2));
+-
+-	if ((pktInfo->flags & MV_EXT_L3_VALID_MASK) == 0) {
+-		NETA_RX_L3_SET_IP4_ERR(rxd);
+-		return MV_OK;
+-	}
+-
+-	switch (pktInfo->l4_proto) {
+-	case IPPROTO_TCP:
+-		NETA_RX_L4_SET_TCP(rxd);
+-		break;
+-
+-	case IPPROTO_UDP:
+-		NETA_RX_L4_SET_UDP(rxd);
+-		break;
+-
+-	default:
+-		NETA_RX_L4_SET_OTHER(rxd);
+-		break;
+-	}
+-
+-	if (pktInfo->flags & MV_EXT_L4_VALID_MASK)
+-		NETA_RX_L4_CSUM_SET_OK(rxd);
+-
+-	return MV_OK;
+-}
+-
+-
+-static MV_STATUS complete_desc_build_ipv4(int ofs, struct iphdr *iph, struct sk_buff *skb, struct neta_rx_desc *rxd)
+-{
+-	int l4_proto = 0;
+-	int hdrlen;
+-	int tmp;
+-
+-	NETA_RX_L3_SET_IP4(rxd);
+-	hdrlen = iph->ihl << 2;
+-	NETA_RX_SET_IPHDR_HDRLEN(rxd, iph->ihl);
+-
+-	if (ip_fast_csum((unsigned char *)iph, iph->ihl)) {
+-		NETA_RX_L3_SET_IP4_ERR(rxd);
+-		return MV_OK;
+-	}
+-
+-	switch ((l4_proto = iph->protocol)) {
+-	case IPPROTO_TCP:
+-		NETA_RX_L4_SET_TCP(rxd);
+-		break;
+-	case IPPROTO_UDP:
+-		NETA_RX_L4_SET_UDP(rxd);
+-		break;
+-	default:
+-		NETA_RX_L4_SET_OTHER(rxd);
+-		l4_proto = 0;
+-		break;
+-	}
+-
+-	tmp = ntohs(iph->frag_off);
+-	if ((tmp & IP_MF) != 0 || (tmp & IP_OFFSET) != 0) {
+-		NETA_RX_IP_SET_FRAG(rxd);
+-		return MV_OK; /* cannot checksum fragmented */
+-	}
+-
+-	if (!l4_proto)
+-		return MV_OK; /* can't proceed without l4_proto in {UDP, TCP} */
+-
+-	if (skb->ip_summed == CHECKSUM_UNNECESSARY) {
+-		NETA_RX_L4_CSUM_SET_OK(rxd);
+-		return MV_OK;
+-	}
+-
+-	if (l4_proto == IPPROTO_UDP) {
+-		struct udphdr *uh = (struct udphdr *)((char *)iph + hdrlen);
+-
+-		if (uh->check == 0)
+-			NETA_RX_L4_CSUM_SET_OK(rxd);
+-	}
+-
+-	/* Complete checksum with pseudo header */
+-	if (skb->ip_summed == CHECKSUM_COMPLETE) {
+-		if (!csum_tcpudp_magic(iph->saddr, iph->daddr, skb->len - hdrlen - ofs,
+-			       l4_proto, skb->csum)) {
+-			NETA_RX_L4_CSUM_SET_OK(rxd);
+-			return MV_OK;
+-		}
+-	}
+-
+-	return MV_OK;
+-}
+-
+-static MV_STATUS complete_desc_build_ipv6(int ofs, struct sk_buff *skb, struct neta_rx_desc *rxd)
+-{
+-	struct ipv6hdr *ip6h;
+-	int l4_proto = 0;
+-	int hdrlen;
+-	__u8 nexthdr;
+-
+-	NETA_RX_L3_SET_IP6(rxd);
+-
+-	hdrlen = sizeof(struct ipv6hdr);
+-	NETA_RX_SET_IPHDR_HDRLEN(rxd, (hdrlen >> 2));
+-
+-	ip6h = (struct ipv6hdr *)(skb->data + ofs);
+-
+-	nexthdr = ip6h->nexthdr;
+-
+-	/* No support for extension headers. Only TCP or UDP */
+-	if (nexthdr == NEXTHDR_TCP) {
+-		l4_proto = IPPROTO_TCP;
+-		NETA_RX_L4_SET_TCP(rxd);
+-	} else if (nexthdr == NEXTHDR_UDP) {
+-		l4_proto = IPPROTO_UDP;
+-		NETA_RX_L4_SET_UDP(rxd);
+-	} else {
+-		NETA_RX_L4_SET_OTHER(rxd);
+-		return MV_OK;
+-	}
+-
+-	if (skb->ip_summed == CHECKSUM_COMPLETE) {
+-		if (!csum_ipv6_magic(&ip6h->saddr, &ip6h->daddr, skb->len,
+-				      l4_proto , skb->csum)) {
+-			NETA_RX_L4_CSUM_SET_OK(rxd);
+-			return MV_OK;
+-		}
+-	}
+-
+-	return MV_OK;
+-}
+-
+-
+-static MV_STATUS mv_nfp_rx_desc_build(struct sk_buff *skb, MV_EXT_PKT_INFO *pktInfo, struct neta_rx_desc *rxd)
+-{
+-	struct iphdr *iph;
+-	int l3_proto = 0;
+-	int ofs = 0;
+-	MV_U16 tmp;
+-
+-	rxd->status = 0;
+-	rxd->pncInfo = 0;
+-
+-	if (pktInfo)
+-		return _build_from_pkt_info(pktInfo, rxd);
+-
+-	tmp = ntohs(skb->protocol);
+- ll:
+-	switch (tmp) {
+-	case ETH_P_IP:
+-	case ETH_P_IPV6:
+-		l3_proto = tmp;
+-		break;
+-
+-	case ETH_P_PPP_SES:
+-		NETA_RX_SET_PPPOE(rxd);
+-		ofs += MV_PPPOE_HDR_SIZE;
+-		switch (tmp = ntohs(*((MV_U16 *)&skb->data[ofs - 2]))) {
+-		case 0x0021:
+-			l3_proto = ETH_P_IP;
+-			break;
+-		case 0x0057:
+-			l3_proto = ETH_P_IPV6;
+-			break;
+-		default:
+-			goto non_ip;
+-		}
+-		break;
+-
+-	case ETH_P_8021Q:
+-		/* Don't support double VLAN for now */
+-		if (NETA_RX_IS_VLAN(rxd))
+-			goto non_ip;
+-
+-		NETA_RX_SET_VLAN(rxd);
+-		ofs = MV_VLAN_HLEN;
+-
+-		tmp = ntohs(*((MV_U16 *)&skb->data[2]));
+-			goto ll;
+-
+-	default:
+-	  goto non_ip;
+-	}
+-
+-	NETA_RX_SET_IPHDR_OFFSET(rxd, ETH_HLEN + MV_ETH_MH_SIZE + ofs);
+-
+-	iph = (struct iphdr *)(skb->data + ofs);
+-
+-	if (l3_proto == ETH_P_IP)
+-		return complete_desc_build_ipv4(ofs, iph, skb, rxd);
+-
+-	return complete_desc_build_ipv6(ofs, skb, rxd);
+-
+-non_ip:
+-	 NETA_RX_L3_SET_UN(rxd);
+-	 return MV_OK;
+-}
+-
+-void mv_eth_ext_pkt_info_print(MV_EXT_PKT_INFO *pktInfo)
+-{
+-	if (pktInfo == NULL)
+-		return;
+-
+-	if (pktInfo->flags & MV_EXT_VLAN_EXIST_MASK)
+-		printk(KERN_INFO "VLAN");
+-
+-	if (pktInfo->flags & MV_EXT_PPP_EXIST_MASK)
+-		printk(KERN_INFO " PPPoE");
+-
+-	if (pktInfo->l3_type == ETH_P_IP)
+-		printk(KERN_INFO " ipv4");
+-	else if (pktInfo->l3_type == ETH_P_IPV6)
+-		printk(KERN_INFO " ipv6");
+-	else
+-		printk(KERN_INFO " non-ip");
+-
+-	if (pktInfo->flags & MV_EXT_IP_FRAG_MASK)
+-		printk(KERN_INFO " FRAG");
+-
+-	if (pktInfo->flags & MV_EXT_L3_VALID_MASK)
+-		printk(KERN_INFO " L3CSUM_OK");
+-
+-	printk(" offset=%d, hdrlen=%d", pktInfo->l3_offset, pktInfo->l3_hdrlen);
+-
+-	if (pktInfo->l4_proto == IPPROTO_TCP)
+-		printk(KERN_INFO " TCP");
+-	else if (pktInfo->l4_proto == IPPROTO_UDP)
+-		printk(KERN_INFO " UDP");
+-
+-	if (pktInfo->flags & MV_EXT_L4_VALID_MASK)
+-		printk(KERN_INFO " L4CSUM_OK");
+-
+-	printk(KERN_INFO "\n");
+-}
+-
+-
+-/* Return values:   0 - packet successfully processed by NFP (transmitted or dropped) */
+-/*                  1 - packet can't be processed by NFP  */
+-/*                  2 - skb is not valid for NFP (not enough headroom or nonlinear) */
+-/*                  3 - not enough info in pktInfo   */
+-int mv_eth_nfp_ext(struct net_device *dev, struct sk_buff *skb, MV_EXT_PKT_INFO *pktInfo)
+-{
+-	MV_STATUS           status;
+-	MV_NFP_RESULT       res;
+-	struct neta_rx_desc rx_desc;
+-	struct eth_pbuf     pkt;
+-	int                 port, err = 1;
+-
+-#define NEEDED_HEADROOM (MV_PPPOE_HDR_SIZE + MV_VLAN_HLEN)
+-
+-	/* Check that NFP is eanbled */
+-	if (mv_ctrl_nfp_state == 0)
+-		return 1;
+-
+-	/* Check if external interface is mapped to NFP */
+-	status = mvNfpIfMapPortGet(dev->ifindex, &port);
+-	if (status != MV_OK)
+-	    return 1;
+-
+-	if (skb_is_nonlinear(skb)) {
+-		printk(KERN_ERR "%s: skb=%p is nonlinear\n", __func__, skb);
+-		return 2;
+-	}
+-
+-	/* Prepare pkt structure */
+-	pkt.offset = skb_headroom(skb) - (ETH_HLEN + MV_ETH_MH_SIZE);
+-	if (pkt.offset < NEEDED_HEADROOM) {
+-		/* we don't know at this stage if there will be added any of vlans or pppoe or both */
+-		printk(KERN_ERR "%s: Possible problem: not enough headroom: %d < %d\n",
+-				__func__, pkt.offset, NEEDED_HEADROOM);
+-		return 2;
+-	}
+-
+-	pkt.pBuf = skb->head;
+-	pkt.bytes = skb->len + ETH_HLEN + MV_ETH_MH_SIZE;
+-
+-	/* Set invalid pool to prevent BM usage */
+-	pkt.pool = MV_ETH_BM_POOLS;
+-	pkt.physAddr = mvOsIoVirtToPhys(NULL, skb->head);
+-	pkt.osInfo = (void *)skb;
+-
+-	/* prepare rx_desc structure */
+-	status = mv_nfp_rx_desc_build(skb, pktInfo,  &rx_desc);
+-	if (status != MV_OK)
+-		return 3;
+-
+-	read_lock(&nfp_lock);
+-	status = mvNfpRx(port, &rx_desc, &pkt, &res);
+-
+-	read_unlock(&nfp_lock);
+-
+-	if (status == MV_OK) {
+-		if  (res.flags & MV_NFP_RES_NETDEV_EXT) {
+-			/* EXT RX -> EXT TX */
+-			mv_eth_nfp_ext_tx(NULL, &pkt, &res);
+-		} else {
+-			/* EXT RX -> INT TX */
+-			mvOsCacheFlush(NULL, pkt.pBuf + pkt.offset, pkt.bytes);
+-			status = mv_eth_nfp_tx(&pkt, &res);
+-			if (status != MV_OK)
+-				dev_kfree_skb_any(skb);
+-		}
+-		err = 0;
+-	} else if (status == MV_DROPPED) {
+-		dev_kfree_skb_any(skb);
+-		err = 0;
+-	}
+-	return err;
+-}
+-#endif /* CONFIG_MV_ETH_NFP_EXT */
+-
+-#ifdef CONFIG_MV_ETH_NFP
+-static INLINE int mv_eth_need_fragment(MV_NFP_RESULT *res)
+-{
+-	if (res->flags & MV_NFP_RES_IP_INFO_VALID)
+-		return (res->ipInfo.ipLen > res->mtu);
+-
+-	return 0;
+-}
+-
+-static inline int mv_eth_frag_build_hdr_desc(struct eth_port *priv, struct tx_queue *txq_ctrl,
+-					MV_U8 *pktData, int mac_hdr_len, int ip_hdr_len,
+-					     int frag_size, int left_len, int frag_offset)
+-{
+-	struct neta_tx_desc *tx_desc;
+-	struct iphdr        *iph;
+-	MV_U8               *data;
+-	int                 align;
+-	MV_U16              frag_ctrl;
+-
+-	tx_desc = mv_eth_tx_desc_get(txq_ctrl, 1);
+-	if (tx_desc == NULL)
+-		return -1;
+-
+-	txq_ctrl->txq_count++;
+-
+-	data = mv_eth_extra_pool_get(priv);
+-	if (data == NULL)
+-		return -1;
+-
+-	tx_desc->command = mvNetaTxqDescCsum(mac_hdr_len, MV_16BIT_BE(MV_IP_TYPE), ip_hdr_len, 0);
+-	tx_desc->command |= NETA_TX_F_DESC_MASK;
+-	tx_desc->dataSize = mac_hdr_len + ip_hdr_len;
+-
+-	txq_ctrl->shadow_txq[txq_ctrl->shadow_txq_put_i] = ((MV_ULONG)data | MV_ETH_SHADOW_EXT);
+-	mv_eth_shadow_inc_put(txq_ctrl);
+-
+-	/* Check for IP header alignment */
+-	align = 4 - (mac_hdr_len & 3);
+-	data += align;
+-	memcpy(data, pktData, mac_hdr_len + ip_hdr_len);
+-
+-	iph = (struct iphdr *)(data + mac_hdr_len);
+-
+-	iph->tot_len = htons(frag_size + ip_hdr_len);
+-
+-	/* update frag_offset and MF flag in IP header - packet can be already fragmented */
+-	frag_ctrl = ntohs(iph->frag_off);
+-	frag_offset += ((frag_ctrl & IP_OFFSET) << 3);
+-	frag_ctrl &= ~IP_OFFSET;
+-	frag_ctrl |= ((frag_offset >> 3) & IP_OFFSET);
+-
+-	if (((frag_ctrl & IP_MF) == 0) && (left_len != frag_size))
+-		frag_ctrl |= IP_MF;
+-
+-	iph->frag_off = htons(frag_ctrl);
+-
+-	/* if it was PPPoE, update the PPPoE payload fields  */
+-	if ((*((char *)iph - MV_PPPOE_HDR_SIZE - 1) == 0x64) &&
+-		(*((char *)iph - MV_PPPOE_HDR_SIZE - 2) == 0x88)) {
+-		PPPoE_HEADER *pPPPNew = (PPPoE_HEADER *)((char *)iph - MV_PPPOE_HDR_SIZE);
+-		pPPPNew->len = htons(frag_size + ip_hdr_len + MV_PPP_HDR_SIZE);
+-	}
+-	tx_desc->bufPhysAddr = mvOsCacheFlush(NULL, data, tx_desc->dataSize);
+-	mv_eth_tx_desc_flush(tx_desc);
+-
+-	return 0;
+-}
+-
+-static inline int mv_eth_frag_build_data_desc(struct tx_queue *txq_ctrl, MV_U8 *frag_ptr, int frag_size,
+-						int data_left, struct eth_pbuf *pkt)
+-{
+-	struct neta_tx_desc *tx_desc;
+-
+-	tx_desc = mv_eth_tx_desc_get(txq_ctrl, 1);
+-	if (tx_desc == NULL)
+-		return -1;
+-
+-	txq_ctrl->txq_count++;
+-	tx_desc->dataSize = frag_size;
+-	tx_desc->bufPhysAddr = pkt->physAddr + (frag_ptr - pkt->pBuf);
+-	tx_desc->command = (NETA_TX_L_DESC_MASK | NETA_TX_Z_PAD_MASK);
+-
+-	if (frag_size == data_left)
+-		txq_ctrl->shadow_txq[txq_ctrl->shadow_txq_put_i] = (u32) pkt;
+-	else
+-		txq_ctrl->shadow_txq[txq_ctrl->shadow_txq_put_i] = 0;
+-
+-	mv_eth_shadow_inc_put(txq_ctrl);
+-	mv_eth_tx_desc_flush(tx_desc);
+-
+-	return 0;
+-}
+-
+-static int mv_eth_fragment_tx(struct eth_port *pp, struct net_device *dev, MV_NFP_RESULT* res,
+-					   struct tx_queue *txq_ctrl, struct eth_pbuf *pkt)
+-{
+-	MV_IP_HEADER_INFO *pIpInfo = &res->ipInfo;
+-	int   pkt_offset = (pkt->offset + res->shift);
+-	int   ip_offset = (pIpInfo->ipOffset - res->shift);
+-	int   frag_size = MV_ALIGN_DOWN((res->mtu - res->ipInfo.ipHdrLen), 8);
+-	int   data_left = pIpInfo->ipLen - res->ipInfo.ipHdrLen;
+-	int   pktNum = (data_left / frag_size) + ((data_left % frag_size) ? 1 : 0);
+-	MV_U8 *pData = pkt->pBuf + pkt_offset;
+-	MV_U8 *payloadStart = pData + ip_offset + pIpInfo->ipHdrLen;
+-	MV_U8 *frag_ptr = payloadStart;
+-	int   i, total_bytes = 0;
+-	int   save_txq_count = txq_ctrl->txq_count;
+-
+-	if ((txq_ctrl->txq_count + (pktNum * 2)) >= txq_ctrl->txq_size) {
+-/*
+-		printk(KERN_ERR "%s: no TX descriptors - txq_count=%d, len=%d, frag_size=%d\n",
+-					__func__, txq_ctrl->txq_count, data_left, frag_size);
+-*/
+-		STAT_ERR(txq_ctrl->stats.txq_err++);
+-		goto outNoTxDesc;
+-	}
+-
+-	for (i = 0; i < pktNum; i++) {
+-
+-		if (mv_eth_frag_build_hdr_desc(pp, txq_ctrl, pData, ip_offset, pIpInfo->ipHdrLen,
+-					frag_size, data_left, frag_ptr - payloadStart))
+-			goto outNoTxDesc;
+-
+-		total_bytes += (ip_offset + pIpInfo->ipHdrLen);
+-
+-		if (mv_eth_frag_build_data_desc(txq_ctrl, frag_ptr, frag_size, data_left, pkt))
+-			goto outNoTxDesc;
+-
+-		total_bytes += frag_size;
+-		frag_ptr += frag_size;
+-		data_left -= frag_size;
+-		frag_size = MV_MIN(frag_size, data_left);
+-	}
+-	/* Flush + Invalidate cache for MAC + IP header + L4 header */
+-	pData = pkt->pBuf + pkt->offset;
+-	if (res->shift < 0)
+-		pData += res->shift;
+-
+-	mvOsCacheMultiLineFlushInv(NULL, pData, (res->pWrite - pData));
+-
+-#ifdef CONFIG_MV_PON
+-	if (MV_PON_PORT(pp->port))
+-		mvNetaPonTxqBytesAdd(pp->port, txq_ctrl->txp, txq_ctrl->txq, total_bytes);
+-#endif /* CONFIG_MV_PON */
+-
+-	dev->stats.tx_packets += pktNum;
+-	dev->stats.tx_bytes += total_bytes;
+-	STAT_DBG(txq_ctrl->stats.txq_tx += (pktNum * 2));
+-
+-	mvNetaTxqPendDescAdd(pp->port, txq_ctrl->txp, txq_ctrl->txq, pktNum * 2);
+-
+-	return (pktNum * 2);
+-
+-outNoTxDesc:
+-	while (save_txq_count < txq_ctrl->txq_count) {
+-		txq_ctrl->txq_count--;
+-		mv_eth_shadow_dec_put(txq_ctrl);
+-		mvNetaTxqPrevDescGet(txq_ctrl->q);
+-	}
+-	/* Invalidate cache for MAC + IP header + L4 header */
+-	pData = pkt->pBuf + pkt->offset;
+-	if (res->shift < 0)
+-		pData += res->shift;
+-
+-	mvOsCacheMultiLineInv(NULL, pData, (res->pWrite - pData));
+-
+-	return 0;
+-}
+-
+-
+-static MV_STATUS mv_eth_nfp_tx(struct eth_pbuf *pkt, MV_NFP_RESULT *res)
+-{
+-	struct net_device *dev = (struct net_device *)res->dev;
+-	struct eth_port *pp = MV_ETH_PRIV(dev);
+-	struct neta_tx_desc *tx_desc;
+-	u32 tx_cmd, physAddr;
+-	MV_STATUS status = MV_OK;
+-	struct tx_queue *txq_ctrl;
+-	int use_bm, pkt_offset, frags = 1;
+-
+-	read_lock(&pp->rwlock);
+-
+-	/* Get TxQ to send packet */
+-	/* Check TXQ classification */
+-	if ((res->flags & MV_NFP_RES_TXQ_VALID) == 0)
+-		res->txq = pp->txq[smp_processor_id()];
+-
+-	if ((res->flags & MV_NFP_RES_TXP_VALID) == 0)
+-		res->txp = pp->txp;
+-
+-	txq_ctrl = &pp->txq_ctrl[res->txp * CONFIG_MV_ETH_TXQ + res->txq];
+-	spin_lock(&txq_ctrl->queue_lock);
+-
+-	/* Do fragmentation if needed */
+-	if (mv_eth_need_fragment(res)) {
+-		frags = mv_eth_fragment_tx(pp, dev, res, txq_ctrl, pkt);
+-		if (frags == 0) {
+-			dev->stats.tx_dropped++;
+-			status = MV_DROPPED;
+-		}
+-		STAT_INFO(pp->stats.tx_fragment++);
+-		goto out;
+-	}
+-
+-	/* Get next descriptor for tx, single buffer, so FIRST & LAST */
+-	tx_desc = mv_eth_tx_desc_get(txq_ctrl, 1);
+-	if (tx_desc == NULL) {
+-
+-		/* No resources: Drop */
+-		dev->stats.tx_dropped++;
+-		status = MV_DROPPED;
+-		goto out;
+-	}
+-
+-	if (res->flags & MV_NFP_RES_L4_CSUM_NEEDED) {
+-		MV_U8 *pData = pkt->pBuf + pkt->offset;
+-
+-		if (res->shift < 0)
+-			pData += res->shift;
+-
+-		mvOsCacheMultiLineFlushInv(NULL, pData, (res->pWrite - pData));
+-	}
+-
+-	txq_ctrl->txq_count++;
+-
+-	/* tx_cmd - word accumulated by NFP processing */
+-	tx_cmd = res->tx_cmd;
+-
+-	if (res->ipInfo.family == MV_INET) {
+-		tx_cmd |= NETA_TX_L3_IP4 | NETA_TX_IP_CSUM_MASK |
+-				((res->ipInfo.ipOffset - res->shift) << NETA_TX_L3_OFFSET_OFFS) |
+-				((res->ipInfo.ipHdrLen >> 2) << NETA_TX_IP_HLEN_OFFS);
+-	} else {
+-		tx_cmd |= NETA_TX_L3_IP6 |
+-				((res->ipInfo.ipOffset - res->shift) << NETA_TX_L3_OFFSET_OFFS) |
+-				((res->ipInfo.ipHdrLen >> 2) << NETA_TX_IP_HLEN_OFFS);
+-	}
+-
+-#ifdef CONFIG_MV_ETH_BM_CPU
+-	use_bm = 1;
+-#else
+-	use_bm = 0;
+-#endif /* CONFIG_MV_ETH_BM_CPU */
+-
+-	pkt_offset = pkt->offset + res->shift;
+-	physAddr = pkt->physAddr;
+-	if (pkt_offset > NETA_TX_PKT_OFFSET_MAX) {
+-		use_bm = 0;
+-		physAddr += pkt_offset;
+-		pkt_offset = 0;
+-	}
+-
+-	if ((pkt->pool >= 0) && (pkt->pool < MV_ETH_BM_POOLS)) {
+-		if (use_bm) {
+-			tx_cmd |= NETA_TX_BM_ENABLE_MASK | NETA_TX_BM_POOL_ID_MASK(pkt->pool);
+-			txq_ctrl->shadow_txq[txq_ctrl->shadow_txq_put_i] = (u32) NULL;
+-		} else
+-			txq_ctrl->shadow_txq[txq_ctrl->shadow_txq_put_i] = (u32) pkt;
+-	} else {
+-		/* skb from external interface */
+-		txq_ctrl->shadow_txq[txq_ctrl->shadow_txq_put_i] = ((u32)pkt->osInfo | MV_ETH_SHADOW_SKB);
+-	}
+-
+-	mv_eth_shadow_inc_put(txq_ctrl);
+-
+-	tx_cmd |= NETA_TX_PKT_OFFSET_MASK(pkt_offset);
+-
+-	tx_desc->command = tx_cmd | NETA_TX_FLZ_DESC_MASK;
+-	tx_desc->dataSize = pkt->bytes;
+-	tx_desc->bufPhysAddr = physAddr;
+-
+-	/* FIXME: PON only? --BK */
+-	tx_desc->hw_cmd = pp->hw_cmd;
+-
+-#ifdef CONFIG_MV_ETH_DEBUG_CODE
+-	if (pp->flags & MV_ETH_F_DBG_TX) {
+-		printk(KERN_ERR "%s - nfp_tx_%lu: port=%d, txp=%d, txq=%d\n",
+-		       dev->name, dev->stats.tx_packets, pp->port, res->txp, res->txq);
+-		mv_eth_tx_desc_print(tx_desc);
+-		mv_eth_pkt_print(pkt);
+-	}
+-#endif /* CONFIG_MV_ETH_DEBUG_CODE */
+-
+-	mv_eth_tx_desc_flush(tx_desc);
+-
+-#ifdef CONFIG_MV_PON
+-	if (MV_PON_PORT(pp->port))
+-		mvNetaPonTxqBytesAdd(pp->port, res->txp, res->txq, pkt->bytes);
+-#endif /* CONFIG_MV_PON */
+-
+-	/* Enable transmit by update PENDING counter */
+-	mvNetaTxqPendDescAdd(pp->port, res->txp, res->txq, 1);
+-
+-	/* FIXME: stats includes MH --BK */
+-	dev->stats.tx_packets++;
+-	dev->stats.tx_bytes += pkt->bytes;
+-	STAT_DBG(txq_ctrl->stats.txq_tx++);
+-
+-out:
+-#ifndef CONFIG_MV_ETH_TXDONE_ISR
+-	if (txq_ctrl->txq_count >= mv_ctrl_txdone) {
+-		u32 tx_done = mv_eth_txq_done(pp, txq_ctrl);
+-
+-		STAT_DIST(if (tx_done < pp->dist_stats.tx_done_dist_size)
+-			pp->dist_stats.tx_done_dist[tx_done]++);
+-	}
+-	/* If after calling mv_eth_txq_done, txq_ctrl->txq_count equals frags, we need to set the timer */
+-	if ((txq_ctrl->txq_count == frags) && (frags > 0))
+-		mv_eth_add_tx_done_timer(pp);
++		dev->stats.rx_packets++;
+ 
+-#endif /* CONFIG_MV_ETH_TXDONE_ISR */
++		rx_bytes = rx_desc->dataSize - (MV_ETH_CRC_SIZE + MV_ETH_MH_SIZE);
++		dev->stats.rx_bytes += rx_bytes;
+ 
+-	spin_unlock(&txq_ctrl->queue_lock);
+-	read_unlock(&pp->rwlock);
++#ifndef CONFIG_MV_ETH_PNC
++	/* Update IP offset and IP header len in RX descriptor */
++	if (NETA_RX_L3_IS_IP4(rx_desc->status)) {
++		int ip_offset;
+ 
+-	return status;
+-}
++		if ((rx_desc->status & ETH_RX_VLAN_TAGGED_FRAME_MASK))
++			ip_offset = MV_ETH_MH_SIZE + sizeof(MV_802_3_HEADER) + MV_VLAN_HLEN;
++		else
++			ip_offset = MV_ETH_MH_SIZE + sizeof(MV_802_3_HEADER);
+ 
+-/* Function returns the following error codes:
+- *  MV_OK - packet processed and sent successfully by NFP
+- *  MV_TERMINATE - packet can't be processed by NFP - pass to Linux processing
+- *  MV_DROPPED - packet processed by NFP, but not sent (dropped)
+- */
+-static MV_STATUS mv_eth_nfp(struct eth_port *pp, int rxq, struct neta_rx_desc *rx_desc,
+-				struct eth_pbuf *pkt, struct bm_pool *pool)
+-{
+-	MV_STATUS       status;
+-	MV_NFP_RESULT   res;
+-	bool            tx_external = false;
++		NETA_RX_SET_IPHDR_OFFSET(rx_desc, ip_offset);
++		NETA_RX_SET_IPHDR_HDRLEN(rx_desc, 5);
++	}
++#endif /* !CONFIG_MV_ETH_PNC */
+ 
+ #ifdef CONFIG_MV_ETH_DEBUG_CODE
+-	if (pp->flags & MV_ETH_F_DBG_RX) {
+-		mv_eth_rx_desc_print(rx_desc);
+-		mv_eth_pkt_print(pkt);
+-	}
++		if (pp->flags & MV_ETH_F_DBG_RX)
++			mvDebugMemDump(pkt->pBuf + pkt->offset, 64, 1);
+ #endif /* CONFIG_MV_ETH_DEBUG_CODE */
+ 
+-	read_lock(&nfp_lock);
++#if defined(CONFIG_MV_ETH_PNC) && defined(CONFIG_MV_ETH_RX_SPECIAL)
++		/* Special RX processing */
++		if (rx_desc->pncInfo & NETA_PNC_RX_SPECIAL) {
++			if (pp->rx_special_proc) {
++				pp->rx_special_proc(pp->port, rxq, dev, (struct sk_buff *)(pkt->osInfo), rx_desc);
++				STAT_INFO(pp->stats.rx_special++);
+ 
+-	status = mvNfpRx(pp->port, rx_desc, pkt, &res);
+-	tx_external = (res.flags & MV_NFP_RES_NETDEV_EXT);
++				/* Refill processing */
++				err = mv_eth_refill(pp, rxq, pkt, pool, rx_desc);
++				if (err) {
++					printk(KERN_ERR "Linux processing - Can't refill\n");
++					pp->rxq_ctrl[rxq].missed++;
++					rx_filled--;
++				}
++				continue;
++			}
++		}
++#endif /* CONFIG_MV_ETH_PNC && CONFIG_MV_ETH_RX_SPECIAL */
+ 
+-	read_unlock(&nfp_lock);
++#ifdef CONFIG_MV_ETH_NFP
++		if (pp->flags & MV_ETH_F_NFP_EN) {
++			MV_STATUS status;
+ 
+-	if (status == MV_OK) {
++			pkt->bytes = rx_bytes + MV_ETH_MH_SIZE;
++			pkt->offset = NET_SKB_PAD;
+ 
+-		if (res.flags & MV_NFP_RES_L4_CSUM_NEEDED) {
+-			MV_IP_HEADER_INFO *pIpInfo = &res.ipInfo;
+-			MV_U8 *pIpHdr = pIpInfo->ip_hdr.l3;
++			status = mv_eth_nfp(pp, rxq, rx_desc, pkt, pool);
++			if (status == MV_OK)
++				continue;
++			if (status == MV_FAIL) {
++				rx_filled--;
++				continue;
++			}
++			/* MV_TERMINATE - packet returned to slow path */
++		}
++#endif /* CONFIG_MV_ETH_NFP */
+ 
+-			if (pIpInfo->ipProto == MV_IP_PROTO_TCP) {
+-				MV_TCP_HEADER *pTcpHdr = (MV_TCP_HEADER *) ((char *)pIpHdr + pIpInfo->ipHdrLen);
++		/* Linux processing */
++		skb = (struct sk_buff *)(pkt->osInfo);
+ 
+-				pTcpHdr->chksum = csum_fold(csum_partial((char *)res.diffL4, sizeof(res.diffL4),
+-									~csum_unfold(pTcpHdr->chksum)));
+-				res.pWrite = (MV_U8 *)pTcpHdr + sizeof(MV_TCP_HEADER);
+-			} else {
+-				MV_UDP_HEADER *pUdpHdr = (MV_UDP_HEADER *) ((char *)pIpHdr + pIpInfo->ipHdrLen);
++		skb->data += MV_ETH_MH_SIZE;
++		skb->tail += (rx_bytes + MV_ETH_MH_SIZE);
++		skb->len = rx_bytes;
+ 
+-				pUdpHdr->check = csum_fold(csum_partial((char *)res.diffL4, sizeof(res.diffL4),
+-									~csum_unfold(pUdpHdr->check)));
+-				res.pWrite = (MV_U8 *)pUdpHdr + sizeof(MV_UDP_HEADER);
+-			}
++#ifdef ETH_SKB_DEBUG
++		mv_eth_skb_check(skb);
++#endif /* ETH_SKB_DEBUG */
++
++		skb->protocol = eth_type_trans(skb, dev);
++
++#ifdef CONFIG_NET_SKB_RECYCLE
++		if (mv_eth_is_recycle()) {
++			skb->skb_recycle = mv_eth_skb_recycle;
++			skb->hw_cookie = pkt;
++			pkt = NULL;
+ 		}
++#endif /* CONFIG_NET_SKB_RECYCLE */
+ 
+-#ifdef CONFIG_MV_ETH_NFP_EXT
+-		if  (tx_external) {
+-			/* INT RX -> EXT TX */
+-			mv_eth_nfp_ext_tx(pp, pkt, &res);
+-			status = MV_OK;
+-		} else
+-#endif /* CONFIG_MV_ETH_NFP_EXT */
+-			/* INT RX -> INT TX */
+-			status = mv_eth_nfp_tx(pkt, &res);
+-	}
+-	if (status == MV_OK) {
+-		STAT_DBG(pp->stats.rx_nfp++);
++		if (skb)
++			mv_eth_rx_csum(pp, rx_desc, skb);
+ 
+-		/* Packet transmited - refill now */
+-		if (!tx_external && mv_eth_pool_bm(pool)) {
+-			/* BM - no refill */
+-			mvOsCacheLineInv(NULL, rx_desc);
+-			return MV_OK;
++#ifdef CONFIG_MV_ETH_GRO
++		if (skb && (dev->features & NETIF_F_GRO)) {
++			STAT_DBG(pp->stats.rx_gro++);
++			STAT_DBG(pp->stats.rx_gro_bytes += skb->len);
++
++			rx_status = napi_gro_receive(pp->napi[smp_processor_id()], skb);
++			skb = NULL;
+ 		}
++#endif /* CONFIG_MV_ETH_GRO */
+ 
+-		if (!tx_external || mv_eth_is_recycle())
+-			pkt = NULL;
++		if (skb) {
++			STAT_DBG(pp->stats.rx_netif++);
++			rx_status = netif_receive_skb(skb);
++			STAT_DBG(if (rx_status)	(pp->stats.rx_drop_sw++));
++		}
+ 
+-		if (mv_eth_refill(pp, rxq, pkt, pool, rx_desc)) {
++		/* Refill processing: */
++		err = mv_eth_refill(pp, rxq, pkt, pool, rx_desc);
++		if (err) {
+ 			printk(KERN_ERR "Linux processing - Can't refill\n");
+ 			pp->rxq_ctrl[rxq].missed++;
+ 			mv_eth_add_cleanup_timer(pp);
+-			return MV_FAIL;
++			rx_filled--;
+ 		}
+-		return MV_OK;
+-	}
+-	if (status == MV_DROPPED) {
+-		/* Refill the same buffer */
+-		STAT_DBG(pp->stats.rx_nfp_drop++);
+-		mv_eth_rxq_refill(pp, rxq, pkt, pool, rx_desc);
+-		return MV_OK;
+ 	}
+-	return status;
+-}
+-#endif /* CONFIG_MV_ETH_NFP */
+-
+-/* Reuse pkt if possible, allocate new skb and move BM pool or RXQ ring */
+-static inline int mv_eth_refill(struct eth_port *pp, int rxq,
+-				struct eth_pbuf *pkt, struct bm_pool *pool, struct neta_rx_desc *rx_desc)
+-{
+-	if (pkt == NULL) {
+-		pkt = mv_eth_pool_get(pool);
+-		if (pkt == NULL)
+-			return 1;
+-	} else {
+-		struct sk_buff *skb;
+ 
+-		/* No recycle -  alloc new skb */
+-		skb = mv_eth_skb_alloc(pool, pkt);
+-		if (!skb) {
+-			mvOsFree(pkt);
+-			pool->missed++;
+-			mv_eth_add_cleanup_timer(pp);
+-			return 1;
+-		}
+-	}
+-	mv_eth_rxq_refill(pp, rxq, pkt, pool, rx_desc);
++	/* Update RxQ management counters */
++	mvOsCacheIoSync();
++	mvNetaRxqDescNumUpdate(pp->port, rxq, rx_done, rx_filled);
+ 
+-	return 0;
++	return rx_done;
+ }
+ 
+ static int mv_eth_tx(struct sk_buff *skb, struct net_device *dev)
+@@ -2878,7 +1872,7 @@ int mv_eth_tx_tso(struct sk_buff *skb, struct net_device *dev,
+ 
+ 		/* Move to next segment */
+ 		frag_size = skb_frag_ptr->size;
+-		frag_ptr = page_address(skb_frag_ptr->page.p) + skb_frag_ptr->page_offset;
++		frag_ptr = page_address(skb_frag_ptr->page) + skb_frag_ptr->page_offset;
+ 		frag++;
+ 	}
+ 	totalDescNum = 0;
+@@ -2940,7 +1934,7 @@ int mv_eth_tx_tso(struct sk_buff *skb, struct net_device *dev,
+ 
+ 				/* Move to next segment */
+ 				frag_size = skb_frag_ptr->size;
+-				frag_ptr = page_address(skb_frag_ptr->page.p) + skb_frag_ptr->page_offset;
++				frag_ptr = page_address(skb_frag_ptr->page) + skb_frag_ptr->page_offset;
+ 				frag++;
+ 			}
+ 		}		/* of while data_left > 0 */
+@@ -2975,45 +1969,6 @@ outNoTxDesc:
+ }
+ #endif /* CONFIG_MV_ETH_TSO */
+ 
+-
+-static inline void mv_eth_txq_bufs_free(struct eth_port *pp, struct tx_queue *txq_ctrl, int num)
+-{
+-	u32 shadow;
+-	int i;
+-
+-	/* Free buffers that was not freed automatically by BM */
+-	for (i = 0; i < num; i++) {
+-		shadow = txq_ctrl->shadow_txq[txq_ctrl->shadow_txq_get_i];
+-		mv_eth_shadow_inc_get(txq_ctrl);
+-
+-		if (!shadow)
+-			continue;
+-
+-		if (shadow & MV_ETH_SHADOW_SKB) {
+-			shadow &= ~MV_ETH_SHADOW_SKB;
+-			dev_kfree_skb_any((struct sk_buff *)shadow);
+-			STAT_DBG(pp->stats.tx_skb_free++);
+-		} else {
+-			if (shadow & MV_ETH_SHADOW_EXT) {
+-				shadow &= ~MV_ETH_SHADOW_EXT;
+-				mv_eth_extra_pool_put(pp, (void *)shadow);
+-			} else {
+-				/* packet from NFP without BM */
+-				struct eth_pbuf *pkt = (struct eth_pbuf *)shadow;
+-				struct bm_pool *pool = &mv_eth_pool[pkt->pool];
+-
+-				if (mv_eth_pool_bm(pool)) {
+-					/* Refill BM pool */
+-					STAT_DBG(pool->stats.bm_put++);
+-					mvBmPoolPut(pkt->pool, (MV_ULONG) pkt->physAddr);
+-				} else {
+-					mv_eth_pool_put(pool, pkt);
+-				}
+-			}
+-		}
+-	}
+-}
+-
+ /* Drop packets received by the RXQ and free buffers */
+ static void mv_eth_rxq_drop_pkts(struct eth_port *pp, int rxq)
+ {
+@@ -3061,26 +2016,6 @@ static void mv_eth_txq_done_force(struct eth_port *pp, struct tx_queue *txq_ctrl
+ 	txq_ctrl->shadow_txq_get_i = 0;
+ }
+ 
+-inline u32 mv_eth_txq_done(struct eth_port *pp, struct tx_queue *txq_ctrl)
+-{
+-	int tx_done;
+-
+-	tx_done = mvNetaTxqSentDescProc(pp->port, txq_ctrl->txp, txq_ctrl->txq);
+-	if (!tx_done)
+-		return tx_done;
+-/*
+-	printk(KERN_ERR "tx_done: txq_count=%d, port=%d, txp=%d, txq=%d, tx_done=%d\n",
+-			txq_ctrl->txq_count, pp->port, txq_ctrl->txp, txq_ctrl->txq, tx_done);
+-*/
+-	if (!mv_eth_txq_bm(txq_ctrl))
+-		mv_eth_txq_bufs_free(pp, txq_ctrl, tx_done);
+-
+-	txq_ctrl->txq_count -= tx_done;
+-	STAT_DBG(txq_ctrl->stats.txq_txdone += tx_done);
+-
+-	return tx_done;
+-}
+-
+ inline u32 mv_eth_tx_done_pon(struct eth_port *pp, int *tx_todo)
+ {
+ 	int txp, txq;
+@@ -3164,7 +2099,7 @@ static void mv_eth_tx_frag_process(struct eth_port *pp, struct sk_buff *skb, str
+ 		/* NETA_TX_BM_ENABLE_MASK = 0 */
+ 		/* NETA_TX_PKT_OFFSET_MASK = 0 */
+ 		tx_desc->dataSize = frag->size;
+-		tx_desc->bufPhysAddr = mvOsCacheFlush(NULL, page_address(frag->page.p) + frag->page_offset,
++		tx_desc->bufPhysAddr = mvOsCacheFlush(NULL, page_address(frag->page) + frag->page_offset,
+ 						      tx_desc->dataSize);
+ 
+ 		if (i == (skb_shinfo(skb)->nr_frags - 1)) {
+@@ -3454,6 +2389,7 @@ irqreturn_t mv_eth_isr(int irq, void *dev_id)
+ {
+ 	struct eth_port *pp = (struct eth_port *)dev_id;
+ 	struct napi_struct *napi = pp->napi[smp_processor_id()];
++
+ #ifdef CONFIG_MV_ETH_DEBUG_CODE
+ 	if (pp->flags & MV_ETH_F_DBG_ISR) {
+ 		printk(KERN_ERR "%s: port=%d, cpu=%d, mask=0x%x, cause=0x%x\n",
+@@ -3532,15 +2468,12 @@ int mv_eth_poll(struct napi_struct *napi, int budget)
+ 	int rx_done = 0;
+ 	MV_U32 causeRxTx;
+ 	struct eth_port *pp = MV_ETH_PRIV(napi->dev);
++
+ #ifdef CONFIG_MV_ETH_DEBUG_CODE
+-	int i;
+ 	if (pp->flags & MV_ETH_F_DBG_POLL) {
+ 		printk(KERN_ERR "%s ENTER: port=%d, cpu=%d, mask=0x%x, cause=0x%x\n",
+ 			__func__, pp->port, smp_processor_id(),
+ 			MV_REG_READ(NETA_INTR_NEW_MASK_REG(pp->port)), MV_REG_READ(NETA_INTR_NEW_CAUSE_REG(pp->port)));
+-		for (i = 0; i < CONFIG_MV_ETH_NAPI_GROUPS; i++)
+-			printk(KERN_INFO "%d:", pp->stats.poll[i]);
+-		printk(KERN_INFO "\n");
+ 	}
+ #endif /* CONFIG_MV_ETH_DEBUG_CODE */
+ 
+@@ -3606,9 +2539,6 @@ int mv_eth_poll(struct napi_struct *napi, int budget)
+ 	if (pp->flags & MV_ETH_F_DBG_POLL) {
+ 		printk(KERN_ERR "%s  EXIT: port=%d, cpu=%d, budget=%d, rx_done=%d\n",
+ 			__func__, pp->port, smp_processor_id(), budget, rx_done);
+-		for (i = 0; i < CONFIG_MV_ETH_NAPI_GROUPS; i++)
+-			printk(KERN_INFO "%d:", pp->stats.poll[i]);
+-		printk(KERN_INFO "\n");
+ 	}
+ #endif /* CONFIG_MV_ETH_DEBUG_CODE */
+ 
+@@ -3757,7 +2687,7 @@ static MV_STATUS mv_eth_bm_pools_init(void)
+ }
+ 
+ /* Note: call this function only after mv_eth_ports_num is initialized */
+-static int mv_eth_load_network_interfaces(void)
++static int mv_eth_load_network_interfaces(MV_U32 portMask, MV_U32 cpuMask)
+ {
+ 	u32 port, dev_i = 0;
+ 	struct eth_port *pp;
+@@ -3767,6 +2697,9 @@ static int mv_eth_load_network_interfaces(void)
+ 	printk(KERN_ERR "  o Loading network interface(s)\n");
+ 
+ 	for (port = 0; port < mv_eth_ports_num; port++) {
++		if (!(MV_BIT_CHECK(portMask, port)))
++			continue;
++
+ 		if (!mvCtrlPwrClckGet(ETH_GIG_UNIT_ID, port)) {
+ 			printk(KERN_ERR "\n  o Warning: GbE port %d is powered off\n\n", port);
+ 			continue;
+@@ -3787,6 +2720,8 @@ static int mv_eth_load_network_interfaces(void)
+ 		if (err)
+ 			return err;
+ 
++		pp->cpuMask = cpuMask;
++
+ #ifdef CONFIG_MV_ETH_PMT
+ 		if (MV_PON_PORT(port))
+ 			mvNetaPmtInit(port, (MV_NETA_PMT *)ioremap(PMT_PON_PHYS_BASE, PMT_MEM_SIZE));
+@@ -3859,9 +2794,9 @@ static int mv_eth_load_network_interfaces(void)
+ 		}
+ 		pp->dev = mv_net_devs[dev_i];
+ 		dev_i++;
++		handle_group_affinity(port);
+ 	}
+ 
+-	handle_group_affinity();
+ 	mv_net_devs_num = dev_i;
+ 
+ 	return 0;
+@@ -3877,6 +2812,16 @@ static int mv_eth_probe(struct platform_device *pdev)
+ 	u32 port;
+ 	struct eth_port *pp;
+ 	int size;
++	MV_U32 port_mask, cpu_mask;
++
++	if (pdev->dev.platform_data) {
++		port_mask = ((struct netaSmpGroupStruct *)pdev->dev.platform_data)->portMask;
++		cpu_mask =  ((struct netaSmpGroupStruct *)pdev->dev.platform_data)->cpuMask;
++	} else {
++		port_mask = (1 << CONFIG_MV_ETH_PORTS_NUM) - 1;
++		cpu_mask = (1 << CONFIG_NR_CPUS) - 1;
++	}
++	printk(KERN_INFO "%s: portMask = %x cpuMask=%x \n", __func__, port_mask, cpu_mask);
+ 
+ #ifdef ETH_SKB_DEBUG
+ 	memset(mv_eth_skb_debug, 0, sizeof(mv_eth_skb_debug));
+@@ -3884,7 +2829,7 @@ static int mv_eth_probe(struct platform_device *pdev)
+ #endif
+ 
+ 	if (!mv_eth_initialized) {
+-		mvSysNetaInit(); /* init MAC Unit */
++		mvSysNetaInit(port_mask, cpu_mask); /* init MAC Unit */
+ 
+ 		mv_eth_ports_num = mvCtrlEthMaxPortGet();
+ 		if (mv_eth_ports_num > CONFIG_MV_ETH_PORTS_NUM)
+@@ -3933,7 +2878,7 @@ static int mv_eth_probe(struct platform_device *pdev)
+ #endif /* CONFIG_MV_INCLUDE_SWITCH */
+ 
+ 	if (!mv_eth_initialized) {
+-		if (mv_eth_load_network_interfaces())
++		if (mv_eth_load_network_interfaces(port_mask, cpu_mask))
+ 			goto oom;
+ 	}
+ 
+@@ -3958,8 +2903,15 @@ static int mv_eth_probe(struct platform_device *pdev)
+ 		}
+ 	}
+ 
+-	if (!mv_eth_initialized)
++	if (!mv_eth_initialized) {
++#ifdef CONFIG_MV_ETH_NFP
++#ifdef CONFIG_MV_ETH_NFP_LIB
++	printk(KERN_INFO "Using NFP lib\n");
++#endif /* CONFIG_MV_ETH_NFP_LIB */
++	nfp_sysfs_init();
++#endif /* CONFIG_MV_ETH_NFP */
+ 		mv_eth_cpu_counters_init();
++	}
+ 
+ 	printk(KERN_ERR "\n");
+ 
+@@ -4126,14 +3078,15 @@ struct net_device *mv_eth_netdev_init(struct eth_port *pp, int mtu, u8 *mac)
+ #ifdef CONFIG_MV_ETH_TOOL
+ 	SET_ETHTOOL_OPS(dev, &mv_eth_tool_ops);
+ #endif
++
+ 	/* Default NAPI initialization */
+ 	for (i = 0; i < CONFIG_MV_ETH_NAPI_GROUPS; i++) {
+-		pp->napiGroup[i] = (struct napi_struct *)kmalloc(sizeof(struct napi_struct), GFP_KERNEL);
++		pp->napiGroup[i] = kmalloc(sizeof(struct napi_struct), GFP_KERNEL);
+ 		memset(pp->napiGroup[i], 0, sizeof(struct napi_struct));
+ 	}
+ 
+ 	for (cpu = 0; cpu < CONFIG_NR_CPUS; cpu++) {
+-		pp->napiCpuGroup[cpu] = -1;
++		pp->napiCpuGroup[cpu] = 0;
+ 		pp->napi[cpu]         = NULL;
+ 		}
+ 
+@@ -4364,7 +3317,6 @@ void mv_eth_config_show(void)
+ #endif
+ 
+ #ifdef CONFIG_MV_ETH_NFP
+-
+ 	printk(KERN_ERR "  o Network Fast Processing (NFP) supported\n");
+ 
+ #ifdef NFP_BRIDGE
+@@ -4458,6 +3410,11 @@ static void mv_eth_netdev_update_features(struct net_device *dev)
+ int mv_eth_napi_set_cpu_affinity(int port, int group, int affinity)
+ {
+ 	struct eth_port *pp = mv_eth_port_by_id(port);
++	if (pp == NULL) {
++		printk(KERN_ERR "%s: pp == NULL, port=%d\n", __func__, port);
++		return -1;
++	}
++
+ 	if (group >= CONFIG_MV_ETH_NAPI_GROUPS) {
+ 		printk(KERN_ERR "%s: group number is higher than %d\n", __func__, CONFIG_MV_ETH_NAPI_GROUPS-1);
+ 		return -1;
+@@ -4466,49 +3423,54 @@ int mv_eth_napi_set_cpu_affinity(int port, int group, int affinity)
+ 		printk(KERN_ERR "Port %d must be stopped before\n", port);
+ 		return -EINVAL;
+ 	}
+-
+ 	set_cpu_affinity(pp, affinity, group);
+ 	return 0;
+ 
+ }
+-void handle_group_affinity(void)
++void handle_group_affinity(int port)
+ {
+-	int port = 0, group;
++	int group;
+ 	struct eth_port *pp;
+-	MV_U32 group_cpu_affinity[4];
+-	MV_U32 rxq_affinity[4];
++	MV_U32 group_cpu_affinity[CONFIG_MV_ETH_NAPI_GROUPS];
++	MV_U32 rxq_affinity[CONFIG_MV_ETH_NAPI_GROUPS];
++
+ 	group_cpu_affinity[0] = CONFIG_MV_ETH_GROUP0_CPU;
+ 	rxq_affinity[0] 	  = CONFIG_MV_ETH_GROUP0_RXQ;
+ 
+-#ifdef CONFIG_MV_ETH_NAPI_GR1
++#ifdef CONFIG_MV_ETH_GROUP1_CPU
+ 		group_cpu_affinity[1] = CONFIG_MV_ETH_GROUP1_CPU;
+ 		rxq_affinity[1] 	  = CONFIG_MV_ETH_GROUP1_RXQ;
+ #endif
+ 
+-#ifdef CONFIG_MV_ETH_NAPI_GR2
++#ifdef CONFIG_MV_ETH_GROUP2_CPU
+ 		group_cpu_affinity[2] = CONFIG_MV_ETH_GROUP2_CPU;
+ 		rxq_affinity[2] 	  = CONFIG_MV_ETH_GROUP2_RXQ;
+ #endif
+ 
+-#ifdef CONFIG_MV_ETH_NAPI_GR3
++#ifdef CONFIG_MV_ETH_GROUP3_CPU
+ 		group_cpu_affinity[3] = CONFIG_MV_ETH_GROUP3_CPU;
+ 		rxq_affinity[3] 	  = CONFIG_MV_ETH_GROUP3_RXQ;
+ #endif
+ 
+-	for (port = 0; port < mv_eth_ports_num; port++) {
+-		pp = mv_eth_port_by_id(port);
+-		for (group = 0; group < CONFIG_MV_ETH_NAPI_GROUPS; group++) {
+-			set_cpu_affinity(pp, group_cpu_affinity[group], group);
+-			set_rxq_affinity(pp, rxq_affinity[group], group);
+-		}
+-	}
+-}
++	pp = mv_eth_port_by_id(port);
++	if (pp == NULL)
++		return;
+ 
++	for (group = 0; group < CONFIG_MV_ETH_NAPI_GROUPS; group++)
++		set_cpu_affinity(pp, group_cpu_affinity[group], group);
++	for (group = 0; group < CONFIG_MV_ETH_NAPI_GROUPS; group++)
++		set_rxq_affinity(pp, rxq_affinity[group], group);
+ 
++}
+ 
+ int	mv_eth_napi_set_rxq_affinity(int port, int group, int rxqAffinity)
+ {
+ 	struct eth_port *pp = mv_eth_port_by_id(port);
++
++	if (pp == NULL) {
++		printk(KERN_ERR "%s: pp is null \n", __func__);
++		return MV_FAIL;
++	}
+ 	if (group >= CONFIG_MV_ETH_NAPI_GROUPS) {
+ 		printk(KERN_ERR "%s: group number is higher than %d\n", __func__, CONFIG_MV_ETH_NAPI_GROUPS-1);
+ 		return -1;
+@@ -4526,11 +3488,17 @@ int	mv_eth_napi_set_rxq_affinity(int port, int group, int rxqAffinity)
+ void mv_eth_napi_group_show(int port)
+ {
+ 	int cpu, group;
+-
+ 	struct eth_port *pp = mv_eth_port_by_id(port);
++
++	if (pp == NULL) {
++		printk(KERN_ERR "%s: pp == NULL\n", __func__);
++		return;
++	}
+ 	for (group = 0; group < CONFIG_MV_ETH_NAPI_GROUPS; group++) {
+ 		printk(KERN_INFO "group=%d:\n", group);
+ 		for (cpu = 0; cpu < CONFIG_NR_CPUS; cpu++) {
++			if (!(MV_BIT_CHECK(pp->cpuMask, cpu)))
++				continue;
+ 			if (pp->napiCpuGroup[cpu] == group) {
+ 				printk(KERN_INFO "   CPU%d ", cpu);
+ 				mvNetaRxqCpuDump(port, cpu);
+@@ -4610,7 +3578,7 @@ static int mv_eth_rxq_fill(struct eth_port *pp, int rxq, int num)
+ 		pkt = mv_eth_pool_get(bm_pool);
+ 		if (pkt) {
+ 			rx_desc = (struct neta_rx_desc *)MV_NETA_QUEUE_DESC_PTR(&rx_ctrl->queueCtrl, i);
+-			memset(rx_desc, 0, sizeof(rx_desc));
++			memset(rx_desc, 0, sizeof(struct neta_rx_desc));
+ 
+ 			mvNetaRxDescFill(rx_desc, pkt->physAddr, (MV_U32)pkt);
+ 		} else {
+@@ -4825,6 +3793,8 @@ int mv_eth_start_internals(struct eth_port *pp, int mtu)
+ 	if (mv_eth_ctrl_is_tx_enabled(pp)) {
+ 		int cpu;
+ 		for_each_possible_cpu(cpu) {
++			if (!(MV_BIT_CHECK(pp->cpuMask, cpu)))
++				continue;
+ 			if (mv_eth_ctrl_txq_cpu_own(pp->port, pp->txp, pp->txq[cpu], 1) < 0) {
+ 				err = -EINVAL;
+ 				goto out;
+@@ -5035,8 +4005,10 @@ int mv_eth_stop_internals(struct eth_port *pp)
+ 
+ 	if (mv_eth_ctrl_is_tx_enabled(pp)) {
+ 		int cpu;
+-		for_each_possible_cpu(cpu)
+-			mv_eth_ctrl_txq_cpu_own(pp->port, pp->txp, pp->txq[cpu], 0);
++		for_each_possible_cpu(cpu) {
++			if (MV_BIT_CHECK(pp->cpuMask, cpu))
++				mv_eth_ctrl_txq_cpu_own(pp->port, pp->txp, pp->txq[cpu], 0);
++		}
+ 	}
+ 
+ 	/* free the skb's in the hal rx ring */
+@@ -5240,6 +4212,11 @@ void mv_eth_tos_map_show(int port)
+ 	int tos, txq;
+ 	struct eth_port *pp = mv_eth_port_by_id(port);
+ 
++	if (pp == NULL) {
++		printk(KERN_ERR "%s: port %d entry is null \n", __func__, port);
++		return;
++	}
++
+ #ifdef CONFIG_MV_ETH_PNC
+ 	if (mv_eth_pnc_ctrl_en)
+ 		pnc_ipv4_dscp_show();
+@@ -5344,7 +4321,7 @@ int mv_eth_txq_tos_map_set(int port, int txq, unsigned char tos)
+ 
+ static int mv_eth_priv_init(struct eth_port *pp, int port)
+ {
+-	int i;
++	int cpu, i;
+ 	u8	*ext_buf;
+ 
+ 	TRC_INIT(0, 0, 0, 0);
+@@ -5355,8 +4332,10 @@ static int mv_eth_priv_init(struct eth_port *pp, int port)
+ 	pp->port = port;
+ 	pp->txp_num = 1;
+ 	pp->txp = 0;
+-	for_each_possible_cpu(i)
+-		pp->txq[i] = CONFIG_MV_ETH_TXQ_DEF;
++	for_each_possible_cpu(cpu) {
++		if ((MV_BIT_CHECK(pp->cpuMask, cpu)))
++			pp->txq[cpu] = CONFIG_MV_ETH_TXQ_DEF;
++	}
+ 
+ 	pp->flags = 0;
+ 
+@@ -5563,7 +4542,7 @@ void mv_eth_port_status_print(unsigned int port)
+ 		return;
+ 
+ 	printk(KERN_ERR "\n");
+-	printk(KERN_ERR "port=%d, flags=0x%lx\n", port, pp->flags);
++	printk(KERN_ERR "port=%d, flags=0x%lx, rx_weight=%d\n", port, pp->flags, pp->weight);
+ 	if ((!(pp->flags & MV_ETH_F_SWITCH)) && (pp->flags & MV_ETH_F_CONNECT_LINUX))
+ 		printk(KERN_ERR "%s: ", pp->dev->name);
+ 	else
+@@ -5644,9 +4623,11 @@ void mv_eth_port_status_print(unsigned int port)
+ 	printk(KERN_CONT "CPU:   txq_def   causeRxTx    napi\n");
+ 	{
+ 		int cpu;
+-		for_each_possible_cpu(cpu)
+-			printk(KERN_ERR "  %d:      %d      0x%08x     %d\n",
+-				cpu, pp->txq[cpu], pp->causeRxTx[cpu], test_bit(NAPI_STATE_SCHED, &pp->napi[cpu]->state));
++		for_each_possible_cpu(cpu) {
++			if (MV_BIT_CHECK(pp->cpuMask, cpu))
++				printk(KERN_ERR "  %d:      %d      0x%08x     %d\n",
++					cpu, pp->txq[cpu], pp->causeRxTx[cpu], test_bit(NAPI_STATE_SCHED, &pp->napi[cpu]->state));
++		}
+ 	}
+ 	printk(KERN_CONT "\n");
+ 
+@@ -5667,7 +4648,6 @@ void mv_eth_port_stats_print(unsigned int port)
+ 	struct tx_queue *txq_ctrl;
+ 	int txp, queue;
+ 	u32 total_rx_ok, total_rx_fill_ok;
+-
+ #ifdef CONFIG_MV_ETH_STAT_INF
+ 	int i;
+ #endif
+@@ -6169,13 +5149,6 @@ static struct platform_driver mv_eth_driver = {
+ 
+ static int __init mv_eth_init_module(void)
+ {
+-#ifdef CONFIG_MV_ETH_NFP
+-#ifdef CONFIG_MV_ETH_NFP_LIB
+-	printk(KERN_INFO "Using NFP lib\n");
+-#endif /* CONFIG_MV_ETH_NFP_LIB */
+-	nfp_sysfs_init();
+-#endif /* CONFIG_MV_ETH_NFP */
+-
+ 	return platform_driver_register(&mv_eth_driver);
+ }
+ module_init(mv_eth_init_module);
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+index 8e41714..d4e8a0e 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+@@ -39,7 +39,9 @@ disclaimer.
+ #include "mvStack.h"
+ 
+ #include "gbe/mvNeta.h"
+-#include "neta/bm/mvBmRegs.h"
++#include "bm/mvBmRegs.h"
++#include "bm/mvBm.h"
++
+ 
+ /******************************************************
+  * driver statistics control --                       *
+@@ -113,6 +115,15 @@ int mv_eth_ctrl_pnc(int en);
+ 	else                                                  \
+ 		spin_unlock_irqrestore((lock), (flags));
+ 
++
++#ifdef CONFIG_NET_SKB_RECYCLE
++extern int mv_ctrl_recycle;
++#define mv_eth_is_recycle()     (mv_ctrl_recycle)
++int mv_eth_skb_recycle(struct sk_buff *skb);
++#else
++#define mv_eth_is_recycle()     0
++#endif /* CONFIG_NET_SKB_RECYCLE */
++
+ /******************************************************
+  * rx / tx queues --                                  *
+  ******************************************************/
+@@ -425,6 +436,151 @@ static inline int mv_eth_ctrl_is_tx_enabled(struct eth_port *pp)
+ 	return 0;
+ }
+ 
++static inline struct neta_tx_desc *mv_eth_tx_desc_get(struct tx_queue *txq_ctrl, int num)
++{
++	/* Is enough TX descriptors to send packet */
++	if ((txq_ctrl->txq_count + num) >= txq_ctrl->txq_size) {
++		/*
++		printk(KERN_ERR "eth_tx: txq_ctrl->txq=%d - no_resource: txq_count=%d, txq_size=%d, num=%d\n",
++			txq_ctrl->txq, txq_ctrl->txq_count, txq_ctrl->txq_size, num);
++		*/
++		STAT_ERR(txq_ctrl->stats.txq_err++);
++		return NULL;
++	}
++	return mvNetaTxqNextDescGet(txq_ctrl->q);
++}
++
++static inline void mv_eth_tx_desc_flush(struct neta_tx_desc *tx_desc)
++{
++#if defined(MV_CPU_BE)
++	mvNetaTxqDescSwap(tx_desc);
++#endif /* MV_CPU_BE */
++
++	mvOsCacheLineFlush(NULL, tx_desc);
++}
++
++static inline void *mv_eth_extra_pool_get(struct eth_port *pp)
++{
++	void *ext_buf;
++
++	spin_lock(&pp->extLock);
++	if (mvStackIndex(pp->extArrStack) == 0) {
++		STAT_ERR(pp->stats.ext_stack_empty++);
++		ext_buf = mvOsMalloc(CONFIG_MV_ETH_EXTRA_BUF_SIZE);
++	} else {
++		STAT_DBG(pp->stats.ext_stack_get++);
++		ext_buf = (void *)mvStackPop(pp->extArrStack);
++	}
++	spin_unlock(&pp->extLock);
++
++	return ext_buf;
++}
++
++static inline int mv_eth_extra_pool_put(struct eth_port *pp, void *ext_buf)
++{
++	spin_lock(&pp->extLock);
++	if (mvStackIsFull(pp->extArrStack)) {
++		STAT_ERR(pp->stats.ext_stack_full++);
++		spin_unlock(&pp->extLock);
++		mvOsFree(ext_buf);
++		return 1;
++	}
++	mvStackPush(pp->extArrStack, (MV_U32)ext_buf);
++	STAT_DBG(pp->stats.ext_stack_put++);
++	spin_unlock(&pp->extLock);
++	return 0;
++}
++
++static inline void mv_eth_add_cleanup_timer(struct eth_port *pp)
++{
++	if (test_and_set_bit(MV_ETH_F_CLEANUP_TIMER_BIT, &(pp->flags)) == 0) {
++		pp->cleanup_timer.expires = jiffies + ((HZ * CONFIG_MV_ETH_CLEANUP_TIMER_PERIOD) / 1000); /* ms */
++		add_timer(&pp->cleanup_timer);
++	}
++}
++
++static inline void mv_eth_add_tx_done_timer(struct eth_port *pp)
++{
++	if (test_and_set_bit(MV_ETH_F_TX_DONE_TIMER_BIT, &(pp->flags)) == 0) {
++
++		pp->tx_done_timer.expires = jiffies + ((HZ * CONFIG_MV_ETH_TX_DONE_TIMER_PERIOD) / 1000); /* ms */
++		add_timer(&pp->tx_done_timer);
++	}
++}
++
++static inline void mv_eth_shadow_inc_get(struct tx_queue *txq)
++{
++	txq->shadow_txq_get_i++;
++	if (txq->shadow_txq_get_i == txq->txq_size)
++		txq->shadow_txq_get_i = 0;
++}
++
++static inline void mv_eth_shadow_inc_put(struct tx_queue *txq)
++{
++	txq->shadow_txq_put_i++;
++	if (txq->shadow_txq_put_i == txq->txq_size)
++		txq->shadow_txq_put_i = 0;
++}
++
++static inline void mv_eth_shadow_dec_put(struct tx_queue *txq)
++{
++	if (txq->shadow_txq_put_i == 0)
++		txq->shadow_txq_put_i = txq->txq_size - 1;
++	else
++		txq->shadow_txq_put_i--;
++}
++
++/* Free pkt + skb pair */
++static inline void mv_eth_pkt_free(struct eth_pbuf *pkt)
++{
++	struct sk_buff *skb = (struct sk_buff *)pkt->osInfo;
++
++#ifdef CONFIG_NET_SKB_RECYCLE
++	skb->skb_recycle = NULL;
++	skb->hw_cookie = NULL;
++#endif /* CONFIG_NET_SKB_RECYCLE */
++
++	dev_kfree_skb_any(skb);
++	mvOsFree(pkt);
++}
++
++static inline int mv_eth_pool_put(struct bm_pool *pool, struct eth_pbuf *pkt)
++{
++	unsigned long flags = 0;
++
++	MV_ETH_LOCK(&pool->lock, flags);
++	if (mvStackIsFull(pool->stack)) {
++		STAT_ERR(pool->stats.stack_full++);
++		MV_ETH_UNLOCK(&pool->lock, flags);
++
++		/* free pkt+skb */
++		mv_eth_pkt_free(pkt);
++		return 1;
++	}
++	mvStackPush(pool->stack, (MV_U32) pkt);
++	STAT_DBG(pool->stats.stack_put++);
++	MV_ETH_UNLOCK(&pool->lock, flags);
++	return 0;
++}
++
++
++/* Pass pkt to BM Pool or RXQ ring */
++static inline void mv_eth_rxq_refill(struct eth_port *pp, int rxq,
++				     struct eth_pbuf *pkt, struct bm_pool *pool, struct neta_rx_desc *rx_desc)
++{
++	if (mv_eth_pool_bm(pool)) {
++		/* Refill BM pool */
++		STAT_DBG(pool->stats.bm_put++);
++		mvBmPoolPut(pkt->pool, (MV_ULONG) pkt->physAddr);
++		mvOsCacheLineInv(NULL, rx_desc);
++	} else {
++		/* Refill Rx descriptor */
++		STAT_DBG(pp->stats.rxq_fill[rxq]++);
++		mvNetaRxDescFill(rx_desc, pkt->physAddr, (MV_U32)pkt);
++	}
++}
++
++
+ #ifdef CONFIG_MV_ETH_SWITCH
+ struct mv_eth_switch_config {
+ 	int             mtu;
+@@ -461,7 +617,12 @@ int         mv_eth_check_mtu_valid(struct net_device *dev, int mtu);
+ int         mv_eth_set_mac_addr(struct net_device *dev, void *mac);
+ void        mv_eth_set_multicast_list(struct net_device *dev);
+ int         mv_eth_open(struct net_device *dev);
++
++#ifdef CONFIG_MV_ETH_NFP
+ int         mv_eth_ctrl_nfp(struct net_device *dev, int en);
++MV_STATUS	mv_eth_nfp(struct eth_port *pp, int rxq, struct neta_rx_desc *rx_desc,
++					struct eth_pbuf *pkt, struct bm_pool *pool);
++#endif /* CONFIG_MV_ETH_NFP */
+ 
+ irqreturn_t mv_eth_isr(int irq, void *dev_id);
+ int         mv_eth_start_internals(struct eth_port *pp, int mtu);
+@@ -483,9 +644,9 @@ void        mv_eth_mac_show(int port);
+ void        mv_eth_tos_map_show(int port);
+ int         mv_eth_rxq_tos_map_set(int port, int rxq, unsigned char tos);
+ int         mv_eth_txq_tos_map_set(int port, int txq, unsigned char tos);
+-int 				mv_eth_napi_set_cpu_affinity(int port, int group, int affinity);
+-int 				mv_eth_napi_set_rxq_affinity(int port, int group, int rxq);
+-void 				mv_eth_napi_group_show(int port);
++int         mv_eth_napi_set_cpu_affinity(int port, int group, int affinity);
++int         mv_eth_napi_set_rxq_affinity(int port, int group, int rxq);
++void        mv_eth_napi_group_show(int port);
+ 
+ int         mv_eth_rxq_vlan_prio_set(int port, int rxq, unsigned char prio);
+ 
+@@ -543,20 +704,15 @@ void        mv_eth_rx_special_proc_func(int port, void (*func)(int port, int rxq
+ int  mv_eth_poll(struct napi_struct *napi, int budget);
+ void mv_eth_link_event(struct eth_port *pp, int print);
+ 
+-inline void mv_eth_shadow_inc_put(struct tx_queue *txq);
+-inline void mv_eth_shadow_dec_put(struct tx_queue *txq);
+-inline int mv_eth_rx_policy(u32 cause);
+-inline u32 mv_eth_tx_done_gbe(struct eth_port *pp, u32 cause_tx_done, int *tx_todo);
+-inline u32 mv_eth_tx_done_pon(struct eth_port *pp, int *tx_todo);
+-inline u32 mv_eth_txq_done(struct eth_port *pp, struct tx_queue *txq_ctrl);
+-inline void mv_eth_tx_desc_flush(struct neta_tx_desc *tx_desc);
+-inline void mv_eth_rxq_refill(struct eth_port *pp, int rxq,
++int mv_eth_rx_policy(u32 cause);
++int mv_eth_refill(struct eth_port *pp, int rxq,
+ 				struct eth_pbuf *pkt, struct bm_pool *pool, struct neta_rx_desc *rx_desc);
+-inline struct eth_pbuf *mv_eth_pool_get(struct bm_pool *pool);
+-inline int mv_eth_pool_put(struct bm_pool *pool, struct eth_pbuf *pkt);
++u32 mv_eth_txq_done(struct eth_port *pp, struct tx_queue *txq_ctrl);
++u32 mv_eth_tx_done_gbe(struct eth_port *pp, u32 cause_tx_done, int *tx_todo);
++u32 mv_eth_tx_done_pon(struct eth_port *pp, int *tx_todo);
+ 
+ #ifdef CONFIG_MV_ETH_RX_DESC_PREFETCH
+-inline struct neta_rx_desc *mv_eth_rx_prefetch(struct eth_port *pp,
++struct neta_rx_desc *mv_eth_rx_prefetch(struct eth_port *pp,
+ 						MV_NETA_RXQ_CTRL *rx_ctrl, int rx_done, int rx_todo);
+ #endif /* CONFIG_MV_ETH_RX_DESC_PREFETCH */
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
+index fcd4f0d..3172b72 100644
+--- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
++++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
+@@ -621,7 +621,7 @@ MV_STATUS	mvNetaSpeedDuplexSet(int portNo, MV_ETH_PORT_SPEED speed, MV_ETH_PORT_
+ MV_STATUS 	mvNetaSpeedDuplexGet(int portNo, MV_ETH_PORT_SPEED *speed, MV_ETH_PORT_DUPLEX *duplex);
+ 
+ MV_STATUS	mvNetaRxqCpuMaskSet(int port, int rxq, int cpu_mask);
+-void	mvNetaRxqCpuDump(int port, int cpu);
++void		mvNetaRxqCpuDump(int port, int cpu);
+ 
+ void		mvNetaSetOtherMcastTable(int portNo, int queue);
+ void		mvNetaSetUcastTable(int port, int queue);
+-- 
+1.7.9.5
+

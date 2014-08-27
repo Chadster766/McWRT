@@ -1,0 +1,64 @@
+From 5a8811b70c512ea359b3620c2bfc6047f00e38a5 Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Sun, 16 Dec 2012 17:58:44 +0200
+Subject: [PATCH 462/609] fix XOR resources init for AMP
+
+Change-Id: Id22fe1702f46680ad81a8fa4f9ffabd444b89cb9
+Signed-off-by: Neta Zur <neta@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/xor/mvXor.c |   14 +++++++-------
+ arch/arm/plat-armada/mv_hal/xor/mvXor.h |    2 +-
+ 2 files changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_hal/xor/mvXor.c b/arch/arm/plat-armada/mv_hal/xor/mvXor.c
+index 313ab1b..87b2fbc 100755
+--- a/arch/arm/plat-armada/mv_hal/xor/mvXor.c
++++ b/arch/arm/plat-armada/mv_hal/xor/mvXor.c
+@@ -62,7 +62,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #include "mvCommon.h"
+ #include "mvOs.h"
+ #include "ctrlEnv/mvCtrlEnvSpec.h"
+-/*#include "ctrlEnv/mvUnitMap.h"*/
++
+ #include "mvSysXorConfig.h"
+ #include "mvXorRegs.h"
+ #include "mvXor.h"
+@@ -87,15 +87,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * RETURN:
+ *       MV_BAD_PARAM if parameters to function invalid, MV_OK otherwise.
+ *******************************************************************************/
+-MV_VOID mvXorHalInit(MV_U32 xorChanNum)
++MV_VOID mvXorHalInit(MV_U32 unit)
+ {
+ 	MV_U32 i;
+-	/* Abort any XOR activity & set default configuration */
+-	for (i = 0; i < xorChanNum; i++) {
+-
+-		/*if(mvUnitMapIsMine(XOR0 + XOR_UNIT(i)) == MV_FALSE)
+-			continue;*/
++	MV_U32 maxChan;
+ 
++	/* Abort any XOR activity & set default configuration */
++	/* loop over unit channels */
++	maxChan = (MV_XOR_MAX_CHAN_PER_UNIT * unit) + MV_XOR_MAX_CHAN_PER_UNIT;
++	for (i = (MV_XOR_MAX_CHAN_PER_UNIT * unit); i < maxChan; i++) {
+ 		mvXorCommandSet(i, MV_STOP);
+ 		mvXorCtrlSet(i, (1 << XEXCR_REG_ACC_PROTECT_OFFS) |
+ 			     (4 << XEXCR_DST_BURST_LIMIT_OFFS) | (4 << XEXCR_SRC_BURST_LIMIT_OFFS)
+diff --git a/arch/arm/plat-armada/mv_hal/xor/mvXor.h b/arch/arm/plat-armada/mv_hal/xor/mvXor.h
+index 6bde57f..ad475b3 100755
+--- a/arch/arm/plat-armada/mv_hal/xor/mvXor.h
++++ b/arch/arm/plat-armada/mv_hal/xor/mvXor.h
+@@ -189,7 +189,7 @@ extern "C" {
+ 		XOR_NEXT_DESC	/* Next Descriptor Address Control */
+ 	} MV_XOR_OVERRIDE_TARGET;
+ 
+-	MV_VOID mvXorHalInit(MV_U32 xorChanNum);
++	MV_VOID mvXorHalInit(MV_U32 unit);
+ 	MV_STATUS mvXorCtrlSet(MV_U32 chan, MV_U32 xorCtrl);
+ 	MV_STATUS mvXorEccClean(MV_U32 chan, MV_XOR_ECC *pXorEccConfig);
+ 	MV_U32 mvXorEccCurrTimerGet(MV_U32 chan, MV_U32 tClk);
+-- 
+1.7.9.5
+

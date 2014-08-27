@@ -1,0 +1,28 @@
+From 35b7f1e0afc934c91391b75b144ab61383fc5ae8 Mon Sep 17 00:00:00 2001
+From: Yehuda Y <yehuday@marvell.com>
+Date: Mon, 9 Jul 2012 09:38:12 +0300
+Subject: [PATCH 240/609] Changed Global timer of second AMP image from 1 to
+ co-exist with vxWorks
+
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/time.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/mach-armadaxp/time.c b/arch/arm/mach-armadaxp/time.c
+index ea7e52f..86ec098 100644
+--- a/arch/arm/mach-armadaxp/time.c
++++ b/arch/arm/mach-armadaxp/time.c
+@@ -238,7 +238,7 @@ void __init axp_time_init(unsigned int fabric_clk)
+ 	u32 u;
+ 
+ #ifdef CONFIG_MV_AMP_ENABLE
+-	soc_timer_id = (master_cpu_id == 0 ? 0 : 1);
++	soc_timer_id = (master_cpu_id == 0 ? 0 : 3);
+ #else
+ 	soc_timer_id = 0;
+ #endif
+-- 
+1.7.9.5
+

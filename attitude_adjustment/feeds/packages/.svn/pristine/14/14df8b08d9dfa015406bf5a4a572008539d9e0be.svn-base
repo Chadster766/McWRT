@@ -1,0 +1,26 @@
+We should always link with libncurses. This is not noticeable
+when building the debian packages because we install libncurses5
+runtime library as a dependency.
+
+--- a/cgatool/Makefile
++++ b/cgatool/Makefile
+@@ -17,7 +17,7 @@ LDLIBS= $(DEPLIBS)
+ LDFLAGS= -L../libs/.libs
+ endif
+ 
+-LDLIBS += -lcrypto
++LDLIBS += -lcrypto -lncurses
+ 
+ ifeq ($(USE_THREADS),y)
+ LDLIBS += -lpthread
+--- a/sendd/Makefile
++++ b/sendd/Makefile
+@@ -28,7 +28,7 @@ LDLIBS= $(DEPLIBS)
+ LDFLAGS= -L../libs/.libs
+ endif
+ 
+-LDLIBS += -lcrypto
++LDLIBS += -lcrypto -lncurses
+ LDLIBS += $(OSLIBS)
+ 
+ ifeq ($(USE_THREADS),y)

@@ -1,0 +1,15 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2012 OpenWrt.org
+START=99 
+APP=kamailio
+BIN_FILE="/usr/sbin/"$APP
+PID_FILE="/var/run/"$APP".pid"
+
+start() {
+	start-stop-daemon -S -x $BIN_FILE -p $PID_FILE -b -m
+}
+
+stop() {
+	start-stop-daemon -K -x $BIN_FILE -p $PID_FILE -q
+	rm -rf $PID_FILE
+}

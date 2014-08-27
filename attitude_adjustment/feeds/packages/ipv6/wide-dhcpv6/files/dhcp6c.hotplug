@@ -1,0 +1,20 @@
+#!/bin/sh
+
+include /lib/network
+
+config_load "dhcp6c"
+
+local enabled
+config_get_bool enabled basic enabled 0
+[ $enabled -eq 0 ] && return 0
+
+local client_interface
+config_get client_interface basic interface
+
+if [ "$INTERFACE" = "$client_interface" ] && [ "$ACTION" = "ifup" ]; then
+	/etc/init.d/dhcp6c start
+fi
+
+if [ "$INTERFACE" = "$client_interface" ] && [ "$ACTION" = "ifdown" ]; then
+	/etc/init.d/dhcp6c stop
+fi

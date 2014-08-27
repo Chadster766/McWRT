@@ -1,0 +1,26 @@
+From 13a29c4f0e94272b43b5a00d135dcac1a18094b5 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Tue, 17 Jan 2012 07:16:43 -0500
+Subject: [PATCH 085/609] NETA set group affinity when port connected to
+ switch too
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 27717f2..37f71fb 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -2782,6 +2782,7 @@ static int mv_eth_load_network_interfaces(MV_U32 portMask, MV_U32 cpuMask)
+ 
+ 			/* set this port to be in promiscuous mode. MAC filtering is performed by the Switch */
+ 			mv_eth_port_promisc_set(pp->port, queue);
++			handle_group_affinity(port);
+ 
+ 			continue;
+ 		}
+-- 
+1.7.9.5
+

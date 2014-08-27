@@ -1,0 +1,148 @@
+From 5a07a72b274170212cc28d473c9a0f40b45d2c53 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Wed, 16 May 2012 14:02:03 -0400
+Subject: [PATCH 190/609] fix Makefile for NFP usage
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/Makefile |  106 ++++++++++++++++++---------------------
+ 1 file changed, 48 insertions(+), 58 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
+index 65f9206..b4d7831 100644
+--- a/arch/arm/mach-armadaxp/Makefile
++++ b/arch/arm/mach-armadaxp/Makefile
+@@ -15,54 +15,6 @@
+ #*******************************************************************************/
+ include 	  $(srctree)/arch/arm/mach-armadaxp/config/mvRules.mk
+ 
+-ifdef CONFIG_MV_ETH_NFP
+-NFP_OBJS += $(LSP_NFP_MGR_DIR)/mv_nfp_mgr.o $(LSP_NFP_MGR_DIR)/nfp_sysfs.o
+-NFP_OBJS += $(LSP_NET_DEV_DIR)/mv_eth_nfp.o $(HAL_ETH_NFP_DIR)/mvNfp.o
+-endif
+-
+-ifdef CONFIG_MV_ETH_NFP_FIB
+-NFP_OBJS += $(LSP_NFP_MGR_DIR)/nfp_fib_arp_sysfs.o
+-NFP_OBJS += $(HAL_ETH_NFP_DIR)/mvNfpFib.o
+-ifdef CONFIG_IPV6
+-NFP_OBJS += $(LSP_NFP_MGR_DIR)/ipv6_parsing.o $(LSP_NFP_MGR_DIR)/nfp_fib6_arp_sysfs.o
+-endif
+-endif
+-
+-ifdef CONFIG_MV_ETH_NFP_CT
+-NFP_OBJS += $(LSP_NFP_MGR_DIR)/nfp_ct_sysfs.o
+-NFP_OBJS += $(HAL_ETH_NFP_DIR)/mvNfpCt.o
+-ifdef CONFIG_IPV6
+-NFP_OBJS += $(LSP_NFP_MGR_DIR)/nfp_ct6_sysfs.o
+-endif
+-endif
+-
+-ifdef CONFIG_MV_ETH_NFP_CLASSIFY
+-NFP_OBJS += $(LSP_NFP_MGR_DIR)/nfp_classification_sysfs.o $(LSP_NFP_MGR_DIR)/nfp_exact_classification_sysfs.o \
+-	   $(LSP_NFP_MGR_DIR)/nfp_prio_classification_sysfs.o
+-endif
+-
+-ifdef CONFIG_MV_ETH_NFP_BRIDGE
+-NFP_OBJS += $(LSP_NFP_MGR_DIR)/nfp_bridge_sysfs.o
+-ifdef CONFIG_MV_ETH_NFP_FDB_MODE
+-NFP_OBJS += $(HAL_ETH_NFP_DIR)/mvNfpFdb.o
+-else
+-NFP_OBJS += $(HAL_ETH_NFP_DIR)/mvNfpBridge.o
+-endif
+-endif
+-
+-ifdef CONFIG_MV_ETH_NFP_VLAN
+-NFP_OBJS += $(LSP_NFP_MGR_DIR)/nfp_vlan_sysfs.o
+-endif
+-
+-ifdef CONFIG_MV_ETH_NFP_PPP
+-NFP_OBJS += $(LSP_NFP_MGR_DIR)/nfp_ppp_sysfs.o
+-endif
+-
+-nfp-objs = $(NFP_OBJS)
+-obj-$(CONFIG_MV_ETH_NFP) += nfp.o
+-
+-nfp_learn-objs = $(LSP_NFP_MGR_DIR)/mv_nfp_hooks.o
+-obj-$(CONFIG_MV_ETH_NFP_LEARN) += nfp_learn.o
+ 
+ # Objects list
+ COMMON_OBJS	= $(COMMON_DIR)/mvDebug.o $(COMMON_DIR)/mvCommon.o $(COMMON_DIR)/mvStack.o $(COMMON_DIR)/mvList.o $(COMMON_DIR)/mvIpc.o
+@@ -119,11 +71,6 @@ armadaxp-y				+= $(HAL_ETHPHY_DIR)/mvEthPhy.o $(HAL_IF_DIR)/mvSysEthPhy.o
+ ifeq ($(CONFIG_MV_ETH_LEGACY),y)
+ armadaxp-$(CONFIG_MV_ETH_LEGACY)	+= $(HAL_ETH_GBE_DIR)/mvEth.o $(HAL_ETH_GBE_DIR)/mvEthDebug.o \
+ 					   $(HAL_ETH_GBE_DIR)/mvEthAddrDec.o $(HAL_IF_DIR)/mvSysEth.o
+-armadaxp-$(CONFIG_MV_ETH_NFP)           += $(HAL_ETH_NFP_DIR)/mvNfp.o
+-armadaxp-$(CONFIG_MV_ETH_NFP_NAT) 	+= $(HAL_ETH_NFP_DIR)/mvNfpNat.o
+-armadaxp-$(CONFIG_MV_ETH_NFP_FDB) 	+= $(HAL_ETH_NFP_DIR)/mvNfpFdb.o
+-armadaxp-$(CONFIG_MV_ETH_NFP_PPP) 	+= $(HAL_ETH_NFP_DIR)/mvNfpPpp.o
+-armadaxp-$(CONFIG_MV_ETH_NFP_SEC)	+= $(HAL_ETH_NFP_DIR)/mvNfpSec.o
+ endif
+ 
+ # NETA Giga driver
+@@ -162,11 +109,6 @@ armadaxp-$(CONFIG_MV_CPU_L2_PERF_CNTRS) += $(HAL_CPU_DIR)/mvCpuL2Cntrs.o
+ obj-$(CONFIG_MV_INCLUDE_SWITCH) 	+= $(QD_OBJS)
+ 
+ # drivers part
+-# Legacy Giga driver
+-ifeq ($(CONFIG_MV_ETH_LEGACY),y)
+-obj-$(CONFIG_MV_ETH_NFP) 	        += $(LSP_NFP_MGR_DIR)/mv_nfp_mgr.o
+-obj-$(CONFIG_MV_ETH_NFP_SEC)            += $(LSP_NFP_MGR_DIR)/mv_nfp_sec.o
+-endif
+ 
+ ifeq ($(CONFIG_MV_ETH_NETA),y)
+ obj-$(CONFIG_MV_ETH_PNC)                += $(LSP_PNC_DIR)/pnc_sysfs.o
+@@ -207,3 +149,51 @@ obj-$(CONFIG_FB_DOVE_CLCD)		+= clcd.o
+ obj-$(CONFIG_PM)			+= pm.o
+ 
+ 
++ifdef CONFIG_MV_ETH_NFP
++NFP_OBJS += $(LSP_NFP_MGR_DIR)/mv_nfp_mgr.o $(LSP_NFP_MGR_DIR)/nfp_sysfs.o
++NFP_OBJS += $(LSP_NET_DEV_DIR)/mv_eth_nfp.o $(HAL_ETH_NFP_DIR)/mvNfp.o
++endif
++
++ifdef CONFIG_MV_ETH_NFP_FIB
++NFP_OBJS += $(LSP_NFP_MGR_DIR)/nfp_fib_arp_sysfs.o
++NFP_OBJS += $(HAL_ETH_NFP_DIR)/mvNfpFib.o
++ifdef CONFIG_IPV6
++NFP_OBJS += $(LSP_NFP_MGR_DIR)/ipv6_parsing.o $(LSP_NFP_MGR_DIR)/nfp_fib6_arp_sysfs.o
++endif
++endif
++
++ifdef CONFIG_MV_ETH_NFP_CT
++NFP_OBJS += $(LSP_NFP_MGR_DIR)/nfp_ct_sysfs.o
++NFP_OBJS += $(HAL_ETH_NFP_DIR)/mvNfpCt.o
++ifdef CONFIG_IPV6
++NFP_OBJS += $(LSP_NFP_MGR_DIR)/nfp_ct6_sysfs.o
++endif
++endif
++
++ifdef CONFIG_MV_ETH_NFP_CLASSIFY
++NFP_OBJS += $(LSP_NFP_MGR_DIR)/nfp_classification_sysfs.o $(LSP_NFP_MGR_DIR)/nfp_exact_classification_sysfs.o \
++	   $(LSP_NFP_MGR_DIR)/nfp_prio_classification_sysfs.o
++endif
++
++ifdef CONFIG_MV_ETH_NFP_BRIDGE
++NFP_OBJS += $(LSP_NFP_MGR_DIR)/nfp_bridge_sysfs.o
++ifdef CONFIG_MV_ETH_NFP_FDB_MODE
++NFP_OBJS += $(HAL_ETH_NFP_DIR)/mvNfpFdb.o
++else
++NFP_OBJS += $(HAL_ETH_NFP_DIR)/mvNfpBridge.o
++endif
++endif
++
++ifdef CONFIG_MV_ETH_NFP_VLAN
++NFP_OBJS += $(LSP_NFP_MGR_DIR)/nfp_vlan_sysfs.o
++endif
++
++ifdef CONFIG_MV_ETH_NFP_PPP
++NFP_OBJS += $(LSP_NFP_MGR_DIR)/nfp_ppp_sysfs.o
++endif
++
++nfp-objs = $(NFP_OBJS)
++obj-$(CONFIG_MV_ETH_NFP) += nfp.o
++
++nfp_learn-objs = $(LSP_NFP_MGR_DIR)/mv_nfp_hooks.o
++obj-$(CONFIG_MV_ETH_NFP_LEARN) += nfp_learn.o
+-- 
+1.7.9.5
+

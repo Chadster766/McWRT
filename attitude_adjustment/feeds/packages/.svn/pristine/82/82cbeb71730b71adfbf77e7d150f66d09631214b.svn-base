@@ -1,0 +1,66 @@
+%
+% anyremote configuration file for sound management. (Server-mode)
+% prerequisites: amixer utility
+%
+
+% STATUS stable
+% XTEST no
+% SOUND mixer
+% ENV no
+
+% Uncomment if needed
+%AutoRepeat=false
+%Baudrate=19200
+Device=bluetooth:19
+%Log=true
+Screen=true
+
+GuiAppName=Sound volume test
+GuiAppIcon=sound.png
+GuiAppType=Example
+GuiAppBinary=true
+
+% 1 - increase sound volume
+% 2 - mute/unmute
+% 3 - increase sound volume
+% 5 -  show list of available controls
+
+[Aliases]
+
+% Aliases for AverMedia IR remote
+VOLUMEDOWN=1
+MIN_INTERESTING=2
+VOLUMEUP=3
+TEXT=*
+
+[End]
+
+[Keys]
+
+(Init)   =Macro(SET_CARD);Macro(TEST_MIXER);Macro(INIT_CONTROL);
+(Connect)=Set(parameter,debug,on);\
+	Set(icons,SoundControl,1,minus,2,mute,3,plus,4,default,5,configure,6,default,7,default,8,default,9,default,0,default,*,question,#,default);\
+	Macro(SET_VIEW);
+
+SET_CARD    =Make(var,mixer_card,echo 'if [ -f $HOME/.anyRemote/amixer.card ]; then cat $HOME/.anyRemote/amixer.card; else true; fi;'|bash -f -s);
+TEST_MIXER  =Exec(echo 'TEST=`amixer $(mixer_card) sget Master,0`;U=`echo $TEST|grep "Usage: amixer" |wc -l`;KD=`which kdialog|grep kdialog|grep -v not|wc -l`;if [ "x$KD" == "x1" ]; then M="kdialog --msgbox"; else M="echo";fi;if [ "x$U" != "x0" ]; then $M "ERROR: You have to correct example according to Your system configuration !"; fi;'|bash -f -s);
+INIT_CONTROL=Exec(echo 'if [ -f $HOME/.anyRemote/amixer.control ]; then true; else echo "Master@0" > $HOME/.anyRemote/amixer.control; fi;'|bash -f -s)
+SET_VIEW    =Set(menu,add,Controls);ExecAndSet(title,cat $HOME/.anyRemote/amixer.control|sed "s/@/,/");
+
+Cancel=Exit
+
+Controls=ExecAndSet(list,replace,Mixer Controls,amixer scontrols|sed 's/Simple mixer control //;s/,/@/;s/$/,/');Set(menu,replace,Choose);
+Choose($$)=Exec(echo $(Param) > $HOME/.anyRemote/amixer.control);Set(list,close);Macro(SET_VIEW);
+Back=Set(text,close);Macro(SET_VIEW);
+Back($$)=Set(list,close);Macro(SET_VIEW);
+
+1=Exec(amixer $(mixer_card) sset `cat $HOME/.anyRemote/amixer.control|sed "s/@/,/"` 5%-    -q)
+2=Exec(amixer $(mixer_card) sset `cat $HOME/.anyRemote/amixer.control|sed "s/@/,/"` toggle -q)
+3=Exec(amixer $(mixer_card) sset `cat $HOME/.anyRemote/amixer.control|sed "s/@/,/"` 5%+    -q)
+
+5=Macro(Controls);
+
+* *=Set(text,replace,Help,1 - Vol-\n2 - Mute/Unmute\n3 - Vol+\n5 - Choose mixer control)
+
+[End]
+

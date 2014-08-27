@@ -1,0 +1,28 @@
+From 408f0b00ce8837e0b4b999c286a858f1b57a6619 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Tue, 25 Dec 2012 14:10:13 +0200
+Subject: [PATCH 374/609] Fix: "Fixed bug on IPC network driver" patch
+
+fix MAC address
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_ipc_net/ipc_net.c            |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c
+index 3092460..c3c856e 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c
+@@ -484,7 +484,7 @@ static int ipc_net_init(void *platform_data)
+ 
+ 	/* Set a static MAC address*/
+ 	dev->dev_addr[0] = 0;
+-	dev->dev_addr[0] = 0;
++	dev->dev_addr[1] = 0;
+ 	for(i = 2; i < ETH_ALEN; i++) {
+ 		dev->dev_addr[i] = i + whoAmI();
+ 	}
+-- 
+1.7.9.5
+

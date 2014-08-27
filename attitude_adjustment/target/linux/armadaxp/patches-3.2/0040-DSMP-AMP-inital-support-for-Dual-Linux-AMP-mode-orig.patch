@@ -1,0 +1,1950 @@
+From a1dd970830f2cda964dd594d129d96449c6c6ea9 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Wed, 29 Feb 2012 16:08:38 +0200
+Subject: [PATCH 040/609] DSMP AMP inital support for Dual Linux AMP mode -
+ originaly by Yehuda y.
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/Makefile                    |    2 +
+ .../armada_xp_family/ctrlEnv/mvSemaphore.c         |  114 ++++++++
+ .../armada_xp_family/ctrlEnv/mvSemaphore.h         |   84 ++++++
+ .../armada_xp_family/ctrlEnv/mvUnitMap.c           |  273 ++++++++++++++++++++
+ .../armada_xp_family/ctrlEnv/mvUnitMap.h           |  150 +++++++++++
+ arch/arm/mach-armadaxp/core.c                      |  217 ++++++++++++----
+ arch/arm/mach-armadaxp/flashmap.c                  |    4 +
+ arch/arm/mach-armadaxp/include/mach/armadaxp.h     |    2 +-
+ arch/arm/mach-armadaxp/include/mach/debug-macro.S  |    6 +-
+ arch/arm/mach-armadaxp/include/mach/memory.h       |    4 +
+ arch/arm/mach-armadaxp/include/mach/smp.h          |    8 +-
+ arch/arm/mach-armadaxp/include/mach/uncompress.h   |    9 +-
+ arch/arm/mach-armadaxp/irq.c                       |   42 ++-
+ arch/arm/mach-armadaxp/pex.c                       |   14 +-
+ arch/arm/mach-armadaxp/platsmp.c                   |  138 +++++++---
+ arch/arm/mach-armadaxp/time.c                      |   45 ++--
+ arch/arm/mach-armadaxp/usb.c                       |    9 +-
+ arch/arm/plat-armada/Kconfig                       |   43 +++
+ include/linux/mv_neta.h                            |   12 +
+ tools/amp/amp_make.pl                              |  140 ++++++++++
+ 20 files changed, 1187 insertions(+), 129 deletions(-)
+ create mode 100644 arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
+ create mode 100644 arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h
+ create mode 100644 arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.c
+ create mode 100644 arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.h
+ mode change 100644 => 100755 arch/arm/mach-armadaxp/core.c
+ create mode 100644 include/linux/mv_neta.h
+ create mode 100644 tools/amp/amp_make.pl
+
+diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
+index 7a5d0d2..650de5d 100644
+--- a/arch/arm/mach-armadaxp/Makefile
++++ b/arch/arm/mach-armadaxp/Makefile
+@@ -217,6 +217,8 @@ armadaxp-$(CONFIG_MV_INCLUDE_PEX)	+= pex.o
+ armadaxp-$(CONFIG_FEROCEON_PROC) 	+= $(PLAT_DRIVERS)/mv_proc/proc.o
+ armadaxp-$(CONFIG_MV_DBG_TRACE) 	+= dbg-trace.o
+ armadaxp-$(CONFIG_SMP)			+= platsmp.o headsmp.o
++armadaxp-$(CONFIG_MV_AMP_ENABLE)	+= $(SOC_ENV_DIR)/mvUnitMap.o
++armadaxp-$(CONFIG_MV_AMP_ENABLE)	+= $(SOC_ENV_DIR)/mvSemaphore.o
+ armadaxp-$(CONFIG_PROC_FS)		+= dump_cp15_regs.o
+ obj-$(CONFIG_FB_DOVE_CLCD)		+= clcd.o
+ obj-$(CONFIG_PM)			+= pm.o
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
+new file mode 100644
+index 0000000..264d4f1
+--- /dev/null
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
+@@ -0,0 +1,114 @@
++/*******************************************************************************
++Copyright (C) Marvell International Ltd. and its affiliates
++
++This software file (the "File") is owned and distributed by Marvell
++International Ltd. and/or its affiliates ("Marvell") under the following
++alternative licensing terms.  Once you have made an election to distribute the
++File under one of the following license alternatives, please (i) delete this
++introductory statement regarding license alternatives, (ii) delete the two
++license alternatives that you have not elected to use and (iii) preserve the
++Marvell copyright notice above.
++
++********************************************************************************
++Marvell Commercial License Option
++
++If you received this File from Marvell and you have entered into a commercial
++license agreement (a "Commercial License") with Marvell, the File is licensed
++to you under the terms of the applicable Commercial License.
++
++********************************************************************************
++Marvell GPL License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File in accordance with the terms and conditions of the General
++Public License Version 2, June 1991 (the "GPL License"), a copy of which is
++available along with the File in the license.txt file or by writing to the Free
++Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
++on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++
++THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
++DISCLAIMED.  The GPL License provides additional details about this warranty
++disclaimer.
++********************************************************************************
++Marvell BSD License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File under the following licensing terms.
++Redistribution and use in source and binary forms, with or without modification,
++are permitted provided that the following conditions are met:
++
++    *   Redistributions of source code must retain the above copyright notice,
++	    this list of conditions and the following disclaimer.
++
++    *   Redistributions in binary form must reproduce the above copyright
++        notice, this list of conditions and the following disclaimer in the
++        documentation and/or other materials provided with the distribution.
++
++    *   Neither the name of Marvell nor the names of its contributors may be
++        used to endorse or promote products derived from this software without
++        specific prior written permission.
++
++THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
++ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
++WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
++DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
++ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
++(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
++LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
++ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
++SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++
++*******************************************************************************/
++
++#include "ctrlEnv/mvCtrlEnvLib.h"
++#include "ctrlEnv/sys/mvCpuIf.h"
++#include "cpu/mvCpu.h"
++#include "ctrlEnv/mvSemaphore.h"
++
++
++MV_BOOL mvSemaLock(MV_32 num)
++{
++	MV_U32 tmp;
++	MV_U32 cpuId;
++	if (num > MV_MAX_SEMA)
++	{
++		mvOsPrintf("Invalid semaphore number\n");
++		return MV_FALSE;
++	}
++	cpuId = whoAmI();
++	do
++	{
++		tmp = MV_REG_BYTE_READ(MV_SEMA_REG_BASE+num);
++	} while ((tmp & 0xFF) != cpuId);
++	return MV_TRUE;
++}
++
++MV_BOOL mvSemaTryLock(MV_32 num)
++{
++	MV_U32 tmp;
++	if (num > MV_MAX_SEMA)
++	{
++		mvOsPrintf("Invalid semaphore number\n");
++		return MV_FALSE;
++	}
++	tmp = MV_REG_BYTE_READ(MV_SEMA_REG_BASE+num);
++	if ((tmp & 0xFF) != whoAmI())
++	{
++		return MV_FALSE;
++	}
++	else
++		return MV_TRUE;
++}
++
++MV_BOOL mvSemaUnlock(MV_32 num)
++{
++	if (num > MV_MAX_SEMA)
++	{
++		mvOsPrintf("Invalid semaphore number\n");
++		return MV_FALSE;
++	}
++	MV_REG_BYTE_WRITE(MV_SEMA_REG_BASE+(num), 0xFF);
++	return MV_TRUE;
++}
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h
+new file mode 100644
+index 0000000..ff002dd
+--- /dev/null
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h
+@@ -0,0 +1,84 @@
++/*******************************************************************************
++Copyright (C) Marvell International Ltd. and its affiliates
++
++This software file (the "File") is owned and distributed by Marvell
++International Ltd. and/or its affiliates ("Marvell") under the following
++alternative licensing terms.  Once you have made an election to distribute the
++File under one of the following license alternatives, please (i) delete this
++introductory statement regarding license alternatives, (ii) delete the two
++license alternatives that you have not elected to use and (iii) preserve the
++Marvell copyright notice above.
++
++********************************************************************************
++Marvell Commercial License Option
++
++If you received this File from Marvell and you have entered into a commercial
++license agreement (a "Commercial License") with Marvell, the File is licensed
++to you under the terms of the applicable Commercial License.
++
++********************************************************************************
++Marvell GPL License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File in accordance with the terms and conditions of the General
++Public License Version 2, June 1991 (the "GPL License"), a copy of which is
++available along with the File in the license.txt file or by writing to the Free
++Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
++on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++
++THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
++DISCLAIMED.  The GPL License provides additional details about this warranty
++disclaimer.
++********************************************************************************
++Marvell BSD License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File under the following licensing terms.
++Redistribution and use in source and binary forms, with or without modification,
++are permitted provided that the following conditions are met:
++
++    *   Redistributions of source code must retain the above copyright notice,
++	    this list of conditions and the following disclaimer.
++
++    *   Redistributions in binary form must reproduce the above copyright
++        notice, this list of conditions and the following disclaimer in the
++        documentation and/or other materials provided with the distribution.
++
++    *   Neither the name of Marvell nor the names of its contributors may be
++        used to endorse or promote products derived from this software without
++        specific prior written permission.
++
++THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
++ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
++WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
++DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
++ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
++(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
++LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
++ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
++SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++
++*******************************************************************************/
++#ifndef mvsemaphore_h
++#define mvsemaphore_h
++
++#define MV_SEMA_REG_BASE	(0x20500)
++#define MV_MAX_SEMA 	    	128
++#define MV_SEMA_SMI 		50
++#define MV_SEMA_RTC 		51
++#define MV_SEMA_NOR_FLASH 	0
++#define MV_SEMA_BOOT 		1
++#define MV_SEMA_PEX0 		2
++#define MV_SEMA_BRIDGE 		3
++#define MV_SEMA_IRQ 		4
++#define MV_SEMA_CLOCK		5
++
++#define MV_SEMA_IPC_SNORT 	10
++
++MV_BOOL mvSemaLock(MV_32 num);
++MV_BOOL mvSemaTryLock(MV_32 num);
++MV_BOOL mvSemaUnlock(MV_32 num);
++
++#endif
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.c
+new file mode 100644
+index 0000000..8500a1f
+--- /dev/null
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.c
+@@ -0,0 +1,273 @@
++/*******************************************************************************
++Copyright (C) Marvell International Ltd. and its affiliates
++
++This software file (the "File") is owned and distributed by Marvell
++International Ltd. and/or its affiliates ("Marvell") under the following
++alternative licensing terms.  Once you have made an election to distribute the
++File under one of the following license alternatives, please (i) delete this
++introductory statement regarding license alternatives, (ii) delete the two
++license alternatives that you have not elected to use and (iii) preserve the
++Marvell copyright notice above.
++
++********************************************************************************
++Marvell Commercial License Option
++
++If you received this File from Marvell and you have entered into a commercial
++license agreement (a "Commercial License") with Marvell, the File is licensed
++to you under the terms of the applicable Commercial License.
++
++********************************************************************************
++Marvell GPL License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File in accordance with the terms and conditions of the General
++Public License Version 2, June 1991 (the "GPL License"), a copy of which is
++available along with the File in the license.txt file or by writing to the Free
++Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
++on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++
++THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
++DISCLAIMED.  The GPL License provides additional details about this warranty
++disclaimer.
++********************************************************************************
++Marvell BSD License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File under the following licensing terms.
++Redistribution and use in source and binary forms, with or without modification,
++are permitted provided that the following conditions are met:
++
++    *   Redistributions of source code must retain the above copyright notice,
++	    this list of conditions and the following disclaimer.
++
++    *   Redistributions in binary form must reproduce the above copyright
++        notice, this list of conditions and the following disclaimer in the
++        documentation and/or other materials provided with the distribution.
++
++    *   Neither the name of Marvell nor the names of its contributors may be
++        used to endorse or promote products derived from this software without
++        specific prior written permission.
++
++THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
++ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
++WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
++DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
++ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
++(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
++LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
++ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
++SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++
++*******************************************************************************/
++
++#include "ctrlEnv/mvCtrlEnvLib.h"
++#include "ctrlEnv/sys/mvCpuIf.h"
++#include "cpu/mvCpu.h"
++#include "boardEnv/mvBoardEnvLib.h"
++#include "ctrlEnv/mvUnitMap.h"
++
++static MV_BOOL mv_rsrc_limited = MV_FALSE;
++static MV_RES_MAP mv_res_table[] = {
++	/* Dividable units */
++	{0, "uart0"},
++	{0, "uart1"},
++	{0, "pex0"},
++	{0, "pex1"},
++	{0, "pex2"},
++	{0, "pex3"},
++	{0, "eth0"},
++	{0, "eth1"},
++	{0, "eth2"},
++	{0, "eth3"},
++	{0, "xor0"},
++	{0, "xor1"},
++	{0, "usb0"},
++	{0, "usb1"},
++	{0, "usb2"},
++	{0, "i2c0"},
++	{0, "i2c1"},
++	/* Single Allocation units */
++	{0, "sata"},
++	{0, "cesa"},
++	{0, "nor"},
++	{0, "nand"},
++	{0, "spi"},
++	{0, "tdm"},
++	{0, "sdio"},
++	{0, "lcd"},
++	{0, "hwmon"},
++	{0, "rtc"},
++	{-1, "last"}
++};
++
++MV_BOOL mvUnitMapIsRsrcLimited()
++{
++	return mv_rsrc_limited;
++}
++
++MV_VOID mvUnitMapSetRsrcLimited(MV_BOOL isLimited)
++{
++	mv_rsrc_limited = isLimited;
++}
++
++MV_BOOL mvUnitMapIsMine(MV_SOC_UNIT unitIdx)
++{
++	return mv_res_table[unitIdx].isMine;
++}
++
++MV_BOOL mvUnitMapIsPexMine(int pciIf)
++{
++	MV_SOC_UNIT unitIdx;
++	int maxLaneId[4]; //YY - GET A DEFINE HERE instead of 4
++
++	maxLaneId[0] = 		        + (3 * CONFIG_MV_PEX_0_4X1);
++	maxLaneId[1] = maxLaneId[0] + 1 + (3 * CONFIG_MV_PEX_1_4X1);
++	maxLaneId[2] = maxLaneId[1] + 1;
++	maxLaneId[3] = maxLaneId[2] + 1;
++
++	if(pciIf <= maxLaneId[0])
++		unitIdx = PEX0;
++	else if(pciIf <= maxLaneId[1])
++		unitIdx = PEX1;
++	else if(pciIf <= maxLaneId[2])
++		unitIdx = PEX2;
++	else if(pciIf <= maxLaneId[3])
++		unitIdx = PEX3;
++
++	return mv_res_table[unitIdx].isMine;
++}
++
++MV_VOID mvUnitMapSetMine(MV_SOC_UNIT unitIdx)
++{
++	if (MV_TRUE == mv_res_table[unitIdx].isMine)
++	{
++		mvOsPrintf("Warning! Unit %s is already mapped\n", mv_res_table[unitIdx].unitName);
++		return;
++	}
++	mv_res_table[unitIdx].isMine = 1;
++}
++
++MV_BOOL mvUnitMapSetup(char* cmdLine, STRSTR_FUNCPTR strstr_func)
++{
++	int unitIdx;
++	char* match;
++	const char *syntaxErr = "mvUnitMapSetup: syntax error (%s)\n";
++	for (unitIdx = 0; mv_res_table[unitIdx].isMine != (-1); unitIdx++) {
++		char *unitName = mv_res_table[unitIdx].unitName;
++		int len;
++		match = strstr_func(cmdLine, unitName);
++		if (!match) continue;
++		/*Look for start delimiter*/
++		if (match > cmdLine) {
++			if (match[-1] != ' ' && match[-1] != ':') {
++				mvOsPrintf(syntaxErr, mv_res_table[unitIdx].unitName);
++				continue;
++			}
++		}
++		/* Calc string length without using strlen() */
++		while (*unitName++ != '\0');
++		len = unitName - mv_res_table[unitIdx].unitName - 1;
++		/*Look for end delimiter*/
++		if (match[len] != ' ' && match[len] != ':' && match[len] != '\0') {
++			mvOsPrintf(syntaxErr, mv_res_table[unitIdx].unitName);
++			continue;
++		}
++		mvUnitMapSetMine(unitIdx);
++	}
++	return MV_TRUE;
++}
++
++/*MV_BOOL mvSocUnitMapFillTableFormBitMap(MV_U32 flag)
++{
++	int i,bit,cpuId;
++	for (i = 0; mv_res_table[i].cpuId != -1; i++)
++	{
++		switch (i)
++		{
++		case UART0:  bit=UART0_T0_CPU1;   break;
++		case UART1:  bit=UART1_TO_CPU1;   break;
++		case PEX00:  bit=PEX0_TO_CPU1;    break;
++		case PEX10:  bit=PEX1_TO_CPU1;    break;
++		case GIGA0:  bit=GIGA0_TO_CPU1;   break;
++		case GIGA1:  bit=GIGA1_TO_CPU1;   break;
++		case GIGA2:  bit=GIGA2_TO_CPU1;   break;
++		case GIGA3:  bit=GIGA3_TO_CPU1;   break;
++		case SATA:   bit=SATA_TO_CPU1;    break;
++		case XOR:    bit=XOR_TO_CPU1;  	  break;
++		case IDMA:   bit=IDMA_TO_CPU1;    break;
++		case USB0:   bit=USB0_TO_CPU1;    break;
++		case USB1:   bit=USB1_TO_CPU1;    break;
++		case USB2:   bit=USB2_TO_CPU1;    break;
++		case CESA:   bit=CESA_TO_CPU1;    break;
++		case NOR_FLASH:	bit=NOR_TO_CPU1;    break;
++		case NAND_FLASH: bit=NAND_TO_CPU1;    break;
++		case SPI_FLASH:bit=SPI_TO_CPU1;    break;
++		case TDM: bit=TDM_TO_CPU1;    break;
++		default: bit=0;
++			break;
++		}
++		//cpuId = (flag & bit) ? SLAVE_CPU:MASTER_CPU;
++		mvSocUnitMapSet(i, cpuId);
++	}
++	return MV_TRUE;
++}
++
++MV_U32 mvSocUnitMapFillFlagFormTable(void)
++{
++	int i;
++	MV_U32 flag = 0;
++	for (i = 0; mv_res_table[i].cpuId != -1; i++)
++	{
++	    if (mvSocUnitMapGet(i) == 0)//SLAVE_CPU)
++	    {
++		switch (i)
++		{
++		case UART0:  flag |= UART0_T0_CPU1;   	break;
++		case UART1:  flag |= UART1_TO_CPU1;   	break;
++		case PEX00:  flag |= PEX0_TO_CPU1;    	break;
++		case PEX10:  flag |= PEX1_TO_CPU1;    	break;
++		case GIGA0:  flag |= GIGA0_TO_CPU1;   	break;
++		case GIGA1:  flag |= GIGA1_TO_CPU1;   	break;
++		case GIGA2:  flag |= GIGA2_TO_CPU1;   	break;
++		case GIGA3:  flag |= GIGA3_TO_CPU1;   	break;
++		case SATA:   flag |= SATA_TO_CPU1;    	break;
++		case XOR:    flag |= XOR_TO_CPU1;	break;
++		case IDMA:   flag |= IDMA_TO_CPU1;    	break;
++		case USB0:   flag |= USB0_TO_CPU1;    	break;
++		case USB1:   flag |= USB1_TO_CPU1;    	break;
++		case USB2:   flag |= USB2_TO_CPU1;    	break;
++		case CESA:   flag |= CESA_TO_CPU1;    	break;
++		case NOR_FLASH: flag |= NOR_TO_CPU1;   break;
++		case NAND_FLASH: flag |= NAND_TO_CPU1;   break;
++		case SPI_FLASH: flag |= SPI_TO_CPU1;   break;
++		case TDM: flag |= TDM_TO_CPU1;   break;
++		default:
++			break;
++		}
++	    }
++	}
++
++	return flag;
++}*/
++MV_VOID mvUnitMapSetAllMine()
++{
++	int unitIdx, count;
++	mvOsPrintf("AMP: No resource string: Allocating all resource to group:");
++	for (unitIdx = 0; mv_res_table[unitIdx].isMine != (-1); unitIdx++) {
++		mvUnitMapSetMine(unitIdx);
++	}
++}
++
++MV_VOID mvSocUnitMapPrint()
++{
++	int unitIdx;
++	mvOsPrintf("  AMP: Resources ");
++	for (unitIdx = 0; mv_res_table[unitIdx].isMine != -1; unitIdx++) {
++		if (mv_res_table[unitIdx].isMine) {
++			mvOsPrintf("- %s ", mv_res_table[unitIdx].unitName);
++		}
++	}
++	mvOsPrintf("\n");
++}
+\ No newline at end of file
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.h
+new file mode 100644
+index 0000000..87ffb6b
+--- /dev/null
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.h
+@@ -0,0 +1,150 @@
++/*******************************************************************************
++Copyright (C) Marvell International Ltd. and its affiliates
++
++This software file (the "File") is owned and distributed by Marvell
++International Ltd. and/or its affiliates ("Marvell") under the following
++alternative licensing terms.  Once you have made an election to distribute the
++File under one of the following license alternatives, please (i) delete this
++introductory statement regarding license alternatives, (ii) delete the two
++license alternatives that you have not elected to use and (iii) preserve the
++Marvell copyright notice above.
++
++********************************************************************************
++Marvell Commercial License Option
++
++If you received this File from Marvell and you have entered into a commercial
++license agreement (a "Commercial License") with Marvell, the File is licensed
++to you under the terms of the applicable Commercial License.
++
++********************************************************************************
++Marvell GPL License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File in accordance with the terms and conditions of the General
++Public License Version 2, June 1991 (the "GPL License"), a copy of which is
++available along with the File in the license.txt file or by writing to the Free
++Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
++on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++
++THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
++DISCLAIMED.  The GPL License provides additional details about this warranty
++disclaimer.
++********************************************************************************
++Marvell BSD License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File under the following licensing terms.
++Redistribution and use in source and binary forms, with or without modification,
++are permitted provided that the following conditions are met:
++
++    *   Redistributions of source code must retain the above copyright notice,
++	    this list of conditions and the following disclaimer.
++
++    *   Redistributions in binary form must reproduce the above copyright
++        notice, this list of conditions and the following disclaimer in the
++        documentation and/or other materials provided with the distribution.
++
++    *   Neither the name of Marvell nor the names of its contributors may be
++        used to endorse or promote products derived from this software without
++        specific prior written permission.
++
++THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
++ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
++WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
++DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
++ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
++(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
++LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
++ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
++SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++
++*******************************************************************************/
++#ifndef mvUnitMap_h
++#define mvUnitMap_h
++
++typedef enum
++{
++	UART0=0,
++	UART1,
++	PEX0,
++	PEX1,
++	PEX2,
++	PEX3,
++	ETH0,
++	ETH1,
++	ETH2,
++	ETH3,
++	XOR0,
++	XOR1,
++	USB0,
++	USB1,
++	USB2,
++	I2C0,
++	I2C1,
++	SATA,
++	CESA,
++	NOR,
++	NAND,
++	SPI,
++	TDM,
++	SDIO,
++	LCD,
++	HWMON,
++	RTC,
++	MAX_UNITS
++} MV_SOC_UNIT;
++
++/* binary flags for mvSocUnitMapFillTableFormBitMap */
++/*#define UART0_T0_CPU1	0x0001
++#define UART1_TO_CPU1	0x0002
++#define PEX0_TO_CPU1	0x0004
++#define PEX1_TO_CPU1	0x0008
++#define GIGA0_TO_CPU1	0x0010
++#define GIGA1_TO_CPU1	0x0020
++#define GIGA2_TO_CPU1	0x0040
++#define GIGA3_TO_CPU1	0x0080
++#define SATA_TO_CPU1	0x0100
++#define XOR_TO_CPU1		0x0200
++#define IDMA_TO_CPU1	0x0400
++#define USB0_TO_CPU1	0x0800
++#define USB1_TO_CPU1    0x1000
++#define USB2_TO_CPU1    0x2000
++#define CESA_TO_CPU1	0x4000
++#define NOR_TO_CPU1		0x8000
++#define NAND_TO_CPU1	0x10000
++#define SPI_TO_CPU1		0x20000
++#define TDM_TO_CPU1		0x40000
++
++#define CPU1_DEFAULT_INTERFACE (UART1_TO_CPU1 | PEX1_TO_CPU1 | GIGA2_TO_CPU1 | GIGA3_TO_CPU1 | IDMA_TO_CPU1 | USB1_TO_CPU1)*/
++
++typedef struct __MV_RES_MAP
++{
++	int	isMine;
++	char*	unitName;
++} MV_RES_MAP;
++
++typedef char *(*STRSTR_FUNCPTR)(const char *s1, const char *s2);
++
++MV_BOOL mvUnitMapIsMine(MV_SOC_UNIT unitIdx);
++MV_BOOL mvUnitMapIsPexMine(int pciIf);
++MV_VOID mvUnitMapSetMine(MV_SOC_UNIT unitIdx);
++MV_BOOL mvUnitMapSetup(char* p, STRSTR_FUNCPTR strstr_func);
++MV_VOID mvUnitMapSetAllMine(void);
++MV_VOID mvSocUnitMapPrint(void);
++MV_BOOL mvUnitMapIsRsrcLimited(void);
++MV_VOID mvUnitMapSetRsrcLimited(MV_BOOL isLimited);
++
++#ifndef CONFIG_MV_AMP_ENABLE
++#define mvUnitMapIsMine(rsrc) 		MV_TRUE
++#define mvUnitMapIsPexMine(pciIf) 	MV_TRUE
++#define mvUnitMapIsRsrcLimited 	  	MV_TRUE
++#define mvUnitMapSetRsrcLimited(limit)
++#define mvUnitMapSetMine(rsrc)
++#define mvUnitMapSetAllMine
++#define mvSocUnitMapPrint
++#define mvUnitMapSetup(str, strstr_func) MV_TRUE
++#endif //CONFIG_MV_AMP_ENABLE
++
++#endif //mvUnitMap_h
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+old mode 100644
+new mode 100755
+index ae73ddb..aab118b
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -15,6 +15,7 @@
+  */
+ #include <linux/types.h>
+ #include <linux/kernel.h>
++#include <linux/ctype.h>
+ #include <linux/init.h>
+ #include <linux/list.h>
+ #include <linux/device.h>
+@@ -50,6 +51,7 @@
+ 
+ #include "ctrlEnv/mvCtrlEnvLib.h"
+ #include "ctrlEnv/sys/mvCpuIf.h"
++#include "ctrlEnv/mvUnitMap.h"
+ #include "boardEnv/mvBoardEnvLib.h"
+ #include "mvDebug.h"
+ #include "mvSysHwConfig.h"
+@@ -107,6 +109,7 @@ extern MV_CPU_DEC_WIN* mv_sys_map(void);
+ extern u32 mv_crypto_virt_base_get(u8 chan);
+ #endif
+ extern void axp_init_irq(void);
++extern void __init set_core_count(unsigned int cpu_count);
+ 
+ /* for debug putstr */
+ static char arr[256];
+@@ -118,6 +121,7 @@ MV_U8 mvMacAddr[CONFIG_MV_ETH_PORTS_NUM][6];
+ MV_U16 mvMtu[CONFIG_MV_ETH_PORTS_NUM] = {0};
+ #endif
+ 
++
+ /*
+  * Helpers to get DDR bank info
+  */
+@@ -338,6 +342,46 @@ static int __init nfcConfig_setup(char *s)
+ }
+ __setup("nfcConfig=", nfcConfig_setup);
+ 
++unsigned long mv_cpu_count = NR_CPUS;
++static int __init mv_cpu_count_setup(char *s)
++{
++	int fail;
++	unsigned int cpu_count;
++
++	/* Translate string to integer. If fails return to default*/
++	while (isspace(*s))
++		s++;
++
++	fail = strict_strtoul(s, 10, &cpu_count);
++	if(fail == 0)
++	{
++		set_core_count(cpu_count);
++	}
++
++	return 1;
++}
++__setup("mv_cpu_count=", mv_cpu_count_setup);
++
++static int __init mv_rsrc_setup(char *s)
++{
++	char* rsrc = strchr(s, ' ');
++
++	/*Verify NULL termination */
++	if (rsrc) (*rsrc) = '\0';
++	/* Parse string to table */
++	if (MV_FALSE == mvUnitMapSetup(s, strstr))
++		printk(KERN_ERR "Invalid resource string %s\n", s);
++
++	// Change to rsrc limited mode
++	mvUnitMapSetRsrcLimited(MV_TRUE);
++
++	return 1;
++}
++__setup("mv_rsrc=", mv_rsrc_setup);
++
++
++
++
+ void __init armadaxp_setup_cpu_mbus(void)
+ {
+ 	void __iomem *addr;
+@@ -470,11 +514,61 @@ static struct platform_device aurora_uart0 = {
+ 	.num_resources		= ARRAY_SIZE(aurora_uart0_resources),
+ };
+ 
++/**********
++ * UART-1 *
++ **********/
++ static struct plat_serial8250_port aurora_uart1_data[] = {
++	{
++		.iotype		= UPIO_MEM32,
++		.regshift	= 2,
++		.uartclk	= 0,
++	},
++};
++
++static struct resource aurora_uart1_resources[] = {
++	{
++		.start		= (INTER_REGS_PHYS_BASE | MV_UART_REGS_OFFSET(1)),
++		.end		= (INTER_REGS_PHYS_BASE | MV_UART_REGS_OFFSET(1)) + SZ_256 - 1,
++		.flags		= IORESOURCE_MEM,
++	}, {
++		.start		= IRQ_AURORA_UART1,
++		.end		= IRQ_AURORA_UART1,
++		.flags		= IORESOURCE_IRQ,
++	},
++};
++
++static struct platform_device aurora_uart1 = {
++	.name			= "dw-apb-uart",
++	.id			= 0,
++	.dev			= {
++		.platform_data	= aurora_uart1_data,
++	},
++	.resource		= aurora_uart1_resources,
++	.num_resources		= ARRAY_SIZE(aurora_uart1_resources),
++};
+ 
+-void __init serial_initialize(void)
++void __init serial_initialize(int port)
+ {
+-	aurora_uart0_data[0].uartclk = mvBoardTclkGet();
+-	platform_device_register(&aurora_uart0);
++	if(port == 0)
++	{
++		if(mvUnitMapIsMine(UART0) == MV_FALSE){
++			printk(KERN_WARNING "uart%d resource not allocated but CONFIG_MV_UART_PORT = %d\n", port, port);
++			mvUnitMapSetMine(UART0);
++		}
++
++		aurora_uart0_data[0].uartclk = mvBoardTclkGet();
++		platform_device_register(&aurora_uart0);
++	}
++	else
++	{
++		if(mvUnitMapIsMine(UART1) == MV_FALSE){
++			printk(KERN_WARNING "uart%d resource not allocated but CONFIG_MV_UART_PORT = %d\n", port, port);
++			mvUnitMapSetMine(UART1);
++		}
++
++		aurora_uart1_data[0].uartclk = mvBoardTclkGet();
++		platform_device_register(&aurora_uart1);
++	}
+ }
+ 
+ /********
+@@ -514,6 +608,27 @@ static struct platform_device mv_sdio_plat = {
+ 	.num_resources	= ARRAY_SIZE(mvsdio_resources),
+ 	.resource	= mvsdio_resources,
+ };
++
++void __init sdio_initialize(void)
++{
++	if (MV_TRUE == mvCtrlPwrClckGet(SDIO_UNIT_ID, 0)) {
++		int irq_detect = mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_DETECT);
++		MV_UNIT_WIN_INFO addrWinMap[MAX_TARGETS + 1];
++
++		if (irq_detect != MV_ERROR) {
++			mvsdio_data.gpio_card_detect = mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_DETECT);
++			irq_int_type[mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_DETECT)+IRQ_AURORA_GPIO_START] = GPP_IRQ_TYPE_CHANGE_LEVEL;
++		}
++
++		if(mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_WP) != MV_ERROR)
++			mvsdio_data.gpio_write_protect = mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_WP);
++
++		if(MV_OK == mvCtrlAddrWinMapBuild(addrWinMap, MAX_TARGETS + 1))
++			if (MV_OK == mvSdmmcWinInit(addrWinMap))
++				mvsdio_data.clock = mvBoardTclkGet();
++		platform_device_register(&mv_sdio_plat);
++       }
++}
+ #endif /* #if defined(CONFIG_MV_INCLUDE_SDIO) */
+ 
+ /*******
+@@ -856,6 +971,9 @@ void print_board_info(void)
+ #endif
+ 	printk("  Detected Tclk %d, SysClk %d, FabricClk %d, PClk %d\n",mvTclk, mvSysclk, mvCpuL2ClkGet(), mvCpuPclkGet());
+ 	printk("  LSP version: %s\n", LSP_VERSION);
++#ifdef CONFIG_MV_AMP_ENABLE
++	mvSocUnitMapPrint();
++#endif
+ 	printk("\n");
+ }
+ 
+@@ -1173,6 +1291,12 @@ static void cpu_fabric_common_init(void)
+  ****************************************************************************/
+ static void __init axp_db_init(void)
+ {
++#ifdef CONFIG_MV_AMP_ENABLE
++	/* Init Resource sharing */
++	if(mvUnitMapIsRsrcLimited() == MV_FALSE)
++		mvUnitMapSetAllMine();
++#endif
++
+ 	/* Call Aurora/cpu special configurations */
+ 	cpu_fabric_common_init();
+ 
+@@ -1208,7 +1332,11 @@ static void __init axp_db_init(void)
+ 
+ 	elf_hwcap &= ~HWCAP_JAVA;
+ 
+-	serial_initialize();
++#ifndef CONFIG_MV_UART_PORT
++	serial_initialize(0);
++#else
++	serial_initialize(CONFIG_MV_UART_PORT);
++#endif
+ 
+ 	/* At this point, the CPU windows are configured according to default definitions in mvSysHwConfig.h */
+ 	/* and cpuAddrWinMap table in mvCpuIf.c. Now it's time to change defaults for each platform.         */
+@@ -1219,78 +1347,71 @@ static void __init axp_db_init(void)
+ 	mv_gpio_init();
+ 
+ 	/* RTC */
+-	rtc_init();
++	if(mvUnitMapIsMine(RTC) == MV_TRUE)
++		rtc_init();
+ 
+ 	/* SPI */
+-	mvSysSpiInit(0, _16M);
++	if(mvUnitMapIsMine(SPI) == MV_TRUE)
++		mvSysSpiInit(0, _16M);
+ 
+ 	/* ETH-PHY */
+-	mvSysEthPhyInit();
++	if(mvUnitMapIsMine(ETH0) == MV_TRUE) //YY - What to do with PHY ??
++		mvSysEthPhyInit();
+ 
+ 	/* Sata */
+ #ifdef CONFIG_SATA_MV
+-	armadaxp_sata_init(&dbdsmp_sata_data);
++	if(mvUnitMapIsMine(SATA) == MV_TRUE)
++		armadaxp_sata_init(&dbdsmp_sata_data);
+ #endif
+ #ifdef CONFIG_MTD_NAND_NFC
+ 	/* NAND */
+-	axp_db_nfc_init();
++	if(mvUnitMapIsMine(NAND) == MV_TRUE)
++		axp_db_nfc_init();
+ #endif
+ 	/* HWMON */
+-	armadaxp_hwmon_init();
++	if(mvUnitMapIsMine(HWMON) == MV_TRUE)
++		armadaxp_hwmon_init();
+ 
+ 	/* XOR */
+ #ifdef XOR0_ENABLE
+-	armadaxp_xor0_init();
++	if(mvUnitMapIsMine(XOR0) == MV_TRUE)
++		armadaxp_xor0_init();
+ #endif
+-	armadaxp_xor1_init();
++	if(mvUnitMapIsMine(XOR1) == MV_TRUE)
++		armadaxp_xor1_init();
+ 
+ 	/* I2C */
+-	platform_device_register(&axp_i2c0);
+-
++	if(mvUnitMapIsMine(I2C0) == MV_TRUE)
++		platform_device_register(&axp_i2c0);
+ 
+ #ifdef CONFIG_FB_DOVE
+-      if ((lcd0_enable == 1) && (lcd_panel == 0 ))
++      if ((lcd0_enable == 1) && (lcd_panel == 0 ) && (mvUnitMapIsMine(I2C1) == MV_TRUE))
+         platform_device_register(&axp_i2c1);
+ #endif
+-
+-
+-	
+-
++	/* SDIO */
+ #if defined(CONFIG_MV_INCLUDE_SDIO)
+-	if (MV_TRUE == mvCtrlPwrClckGet(SDIO_UNIT_ID, 0)) {
+-		int irq_detect = mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_DETECT);
+-		MV_UNIT_WIN_INFO addrWinMap[MAX_TARGETS + 1];
+-
+-		if (irq_detect != MV_ERROR) {
+-			mvsdio_data.gpio_card_detect = mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_DETECT);
+-			irq_int_type[mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_DETECT)+IRQ_AURORA_GPIO_START] = GPP_IRQ_TYPE_CHANGE_LEVEL;
+-		}
+-
+-		if(mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_WP) != MV_ERROR)
+-			mvsdio_data.gpio_write_protect = mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_WP);
+-
+-		if(MV_OK == mvCtrlAddrWinMapBuild(addrWinMap, MAX_TARGETS + 1))
+-			if (MV_OK == mvSdmmcWinInit(addrWinMap))
+-				mvsdio_data.clock = mvBoardTclkGet();
+-		platform_device_register(&mv_sdio_plat);
+-       }
++	if(mvUnitMapIsMine(SDIO) == MV_TRUE)
++		sdio_initialize();
+ #endif
+ 
+ #ifdef CONFIG_MV_ETHERNET
+ 	/* Ethernet */
+-	eth_init();
++	if(mvUnitMapIsMine(ETH0) == MV_TRUE) //YY - Change to per port init
++		eth_init();
+ #endif
+ 
+ #ifdef CONFIG_FB_DOVE
+-	kw_lcd0_dmi.dram = &armadaxp_mbus_dram_info;
+-	if (lcd_panel) {
+-		kw_lcd0_dmi.lvds_info.enabled = 1;
+-		kw_lcd0_dmi.fixed_full_div = 1;
+-		kw_lcd0_dmi.full_div_val = 7;	
+-//		kw_lcd0_dmi.lcd_ref_clk = 27000000;
+-		printk(KERN_INFO "LCD Panel enabled.\n");
++	if(mvUnitMapIsMine(LCD) == MV_TRUE){
++		kw_lcd0_dmi.dram = &armadaxp_mbus_dram_info;
++		if (lcd_panel) {
++			kw_lcd0_dmi.lvds_info.enabled = 1;
++			kw_lcd0_dmi.fixed_full_div = 1;
++			kw_lcd0_dmi.full_div_val = 7;
++	//		kw_lcd0_dmi.lcd_ref_clk = 27000000;
++			printk(KERN_INFO "LCD Panel enabled.\n");
++		}
++		clcd_platform_init(&kw_lcd0_dmi, &kw_lcd0_vid_dmi, &dsmp_backlight_data);
+ 	}
+-	clcd_platform_init(&kw_lcd0_dmi, &kw_lcd0_vid_dmi, &dsmp_backlight_data);
+ #endif
+ 
+ 	return;
+@@ -1336,7 +1457,7 @@ void __init axp_tag_fixup_mem32(struct machine_desc *mdesc, struct tag *t,
+ 
+ MACHINE_START(ARMADA_XP_DB, "Marvell Armada XP Development Board")
+ 	/* MAINTAINER("MARVELL") */
+-	.atag_offset	= 0x00000100,
++	.atag_offset	= (PHYS_OFFSET + 0x100),
+ 	.map_io		= axp_map_io,
+ 	.init_irq	= axp_init_irq,
+ 	.timer		= &axp_timer,
+@@ -1384,7 +1505,7 @@ static void __init axp_rdsrv_init(void)
+ 
+ 	elf_hwcap &= ~HWCAP_JAVA;
+ 
+-	serial_initialize();
++	serial_initialize(0);
+ 
+ 	/* At this point, the CPU windows are configured according to default definitions in mvSysHwConfig.h */
+ 	/* and cpuAddrWinMap table in mvCpuIf.c. Now it's time to change defaults for each platform.         */
+@@ -1499,7 +1620,7 @@ static void __init axp_fpga_init(void)
+ 
+ 	elf_hwcap &= ~HWCAP_JAVA;
+ 
+-	serial_initialize();
++	serial_initialize(0);
+ 
+ 	/* At this point, the CPU windows are configured according to default definitions in mvSysHwConfig.h */
+ 	/* and cpuAddrWinMap table in mvCpuIf.c. Now it's time to change defaults for each platform.         */
+diff --git a/arch/arm/mach-armadaxp/flashmap.c b/arch/arm/mach-armadaxp/flashmap.c
+index 3d48279..1169ee3 100644
+--- a/arch/arm/mach-armadaxp/flashmap.c
++++ b/arch/arm/mach-armadaxp/flashmap.c
+@@ -43,6 +43,7 @@ disclaimer.
+ #include "mvSysHwConfig.h"
+ #include "boardEnv/mvBoardEnvLib.h"
+ #include "ctrlEnv/sys/mvCpuIf.h"
++#include "ctrlEnv/mvUnitMap.h"
+ 
+ #define MTD_FLASH_MAP_DEBUG
+ 
+@@ -209,6 +210,9 @@ static int __init flash_map_init(void)
+ {	
+ 	int i;
+ 
++	if(mvUnitMapIsMine(SPI) == MV_FALSE)
++		return 0;
++
+ 	mapsNum = flashInfoFill();
+ 	DB(printk("\nINFO: flash_map_init - detected %d devices\n",  mapsNum));
+ 
+diff --git a/arch/arm/mach-armadaxp/include/mach/armadaxp.h b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
+index 9fce9a1..22439b2 100644
+--- a/arch/arm/mach-armadaxp/include/mach/armadaxp.h
++++ b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
+@@ -187,7 +187,7 @@
+  * Linux native definitiotns
+  */
+ #define SDRAM_OPERATION_REG		(INTER_REGS_BASE | 0x1418)
+-#define AXP_UART0_PHYS_BASE		(INTER_REGS_PHYS_BASE | 0x12000)
++#define AXP_UART_PHYS_BASE(port)	(INTER_REGS_PHYS_BASE | 0x12000 + (port * 0x100))
+ #define DDR_VIRT_BASE			(INTER_REGS_BASE | 0x00000)
+ #define AXP_BRIDGE_VIRT_BASE		(INTER_REGS_BASE | 0x20000)
+ #define AXP_BRIDGE_PHYS_BASE		(INTER_REGS_PHYS_BASE | 0x20000)
+diff --git a/arch/arm/mach-armadaxp/include/mach/debug-macro.S b/arch/arm/mach-armadaxp/include/mach/debug-macro.S
+index 2db307c..db547b6 100644
+--- a/arch/arm/mach-armadaxp/include/mach/debug-macro.S
++++ b/arch/arm/mach-armadaxp/include/mach/debug-macro.S
+@@ -13,7 +13,11 @@
+ 	ldr     \rp, =INTER_REGS_PHYS_BASE
+ 	ldr	\rv, =INTER_REGS_BASE
+ 	orr     \rp, \rp, #0x00012000
+-        orr     \rv, \rv, #0x00012000	
++        orr     \rv, \rv, #0x00012000
++#ifdef CONFIG_MV_UART_PORT
++	orr     \rp, \rp, #0x100 * CONFIG_MV_UART_PORT
++        orr     \rv, \rv, #0x100 * CONFIG_MV_UART_PORT
++#endif
+ 	.endm
+ 
+ #define UART_SHIFT	2
+diff --git a/arch/arm/mach-armadaxp/include/mach/memory.h b/arch/arm/mach-armadaxp/include/mach/memory.h
+index 4fb5666..fbd93c2 100644
+--- a/arch/arm/mach-armadaxp/include/mach/memory.h
++++ b/arch/arm/mach-armadaxp/include/mach/memory.h
+@@ -5,7 +5,11 @@
+ #ifndef __ASM_ARCH_MEMORY_H
+ #define __ASM_ARCH_MEMORY_H
+ 
++#ifdef CONFIG_MV_DRAM_BASE
++#define PHYS_OFFSET		UL(CONFIG_MV_DRAM_BASE)
++#else
+ #define PHYS_OFFSET		UL(0x00000000)
++#endif
+ 
+ /* #define __virt_to_bus(x)	__virt_to_phys(x) */
+ /* #define __bus_to_virt(x)	__phys_to_virt(x) */
+diff --git a/arch/arm/mach-armadaxp/include/mach/smp.h b/arch/arm/mach-armadaxp/include/mach/smp.h
+index 953f741..cc9a141 100644
+--- a/arch/arm/mach-armadaxp/include/mach/smp.h
++++ b/arch/arm/mach-armadaxp/include/mach/smp.h
+@@ -3,6 +3,10 @@
+ 
+ #include <asm/io.h>
+ #include <mach/armadaxp.h>
++
++extern unsigned int master_cpu_id;
++extern unsigned int group_cpu_mask;
++
+ #define hard_smp_processor_id()			\
+ 	({						\
+ 		unsigned int cpunum;			\
+@@ -11,5 +15,7 @@
+ 		cpunum &= 0x0F;				\
+ 	})
+ 
++#define get_hw_cpu_mask(cpu_mask)	((cpu_mask << master_cpu_id) & group_cpu_mask);
++#define get_hw_cpu_id(cpu)		(cpu + master_cpu_id);
+ 
+-#endif
++#endif //ASMARM_ARCH_SMP_H
+diff --git a/arch/arm/mach-armadaxp/include/mach/uncompress.h b/arch/arm/mach-armadaxp/include/mach/uncompress.h
+index 78b9d08..ca4313f 100644
+--- a/arch/arm/mach-armadaxp/include/mach/uncompress.h
++++ b/arch/arm/mach-armadaxp/include/mach/uncompress.h
+@@ -8,8 +8,13 @@
+ 
+ #include <mach/armadaxp.h>
+ 
+-#define UART_THR ((volatile unsigned char *)(AXP_UART0_PHYS_BASE + 0x0))
+-#define UART_LSR ((volatile unsigned char *)(AXP_UART0_PHYS_BASE + 0x14))
++#ifndef CONFIG_MV_UART_PORT
++#define UART_THR ((volatile unsigned char *)(AXP_UART_PHYS_BASE(0) + 0x0))
++#define UART_LSR ((volatile unsigned char *)(AXP_UART_PHYS_BASE(0) + 0x14))
++#else
++#define UART_THR ((volatile unsigned char *)(AXP_UART_PHYS_BASE(CONFIG_MV_UART_PORT) + 0x0))
++#define UART_LSR ((volatile unsigned char *)(AXP_UART_PHYS_BASE(CONFIG_MV_UART_PORT) + 0x14))
++#endif
+ 
+ #define LSR_THRE	0x20
+ 
+diff --git a/arch/arm/mach-armadaxp/irq.c b/arch/arm/mach-armadaxp/irq.c
+index 223dcf6..15e52c1 100644
+--- a/arch/arm/mach-armadaxp/irq.c
++++ b/arch/arm/mach-armadaxp/irq.c
+@@ -16,10 +16,12 @@
+ #include <linux/interrupt.h>
+ #include <plat/msi.h>
+ #include "ctrlEnv/mvCtrlEnvLib.h"
++#include "ctrlEnv/mvSemaphore.h"
+ #include "boardEnv/mvBoardEnvLib.h"
+ #include "gpp/mvGpp.h"
+ #include "gpp/mvGppRegs.h"
+ #include "mvOs.h"
++#include "include/mach/smp.h"
+ 
+ unsigned int  irq_int_type[NR_IRQS];
+ static DEFINE_SPINLOCK(irq_controller_lock);
+@@ -60,6 +62,7 @@ MV_REG_WRITE(CPU_CF_LOCAL_MASK_REG(cpu), val);
+ #ifdef CONFIG_SMP
+ if (cpu > 0) { /*disabled for both cpu */
+ 	val = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_MP));
++	/* YY - FIXME: assuming all 4 cpus */
+ 	val &= ~0xf;
+ 	MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_MP), val);
+ }
+@@ -115,7 +118,7 @@ spin_unlock(&irq_controller_lock);
+ return 0;
+ }
+ #endif
+-#else
++#else /* CONFIG_ARMADAXP_USE_IRQ_INDIRECT_MODE */
+ 
+ void axp_irq_mask(struct irq_data *d)
+ {	
+@@ -139,7 +142,12 @@ if ((irq >= IRQ_AURORA_GPIO_START) && (irq < IRQ_AURORA_MSI_START)) {
+ } else
+ 	addr = CPU_INT_SOURCE_CONTROL_REG(irq);
+ 
+-spin_lock(&irq_controller_lock);
++#ifdef CONFIG_MV_AMP_ENABLE
++       mvSemaLock(MV_SEMA_IRQ);
++#else
++	spin_lock(&irq_controller_lock);
++#endif
++
+ temp = MV_REG_READ(addr);
+ 
+ if ((irq >= IRQ_AURORA_GPIO_START) && (irq < IRQ_AURORA_MSI_START)) {
+@@ -149,13 +157,18 @@ if ((irq >= IRQ_AURORA_GPIO_START) && (irq < IRQ_AURORA_MSI_START)) {
+ }
+ 
+ if (irq <= max_per_cpu_irq) // per CPU
+-	temp &= ~(1 << smp_processor_id());
++	temp &= ~(1 << hard_smp_processor_id());
+ /* for GPIO IRQs , don't disable INTS , they will be disabled in the units mask */
+ else if (irq < IRQ_MAIN_INTS_NUM)
+-	temp &= ~0xf;
++	temp &= ~0xf; //YY - maybe need to use a different mask here
+ 
+ MV_REG_WRITE(addr, temp);
++
++#ifdef CONFIG_MV_AMP_ENABLE
++       mvSemaLock(MV_SEMA_IRQ);
++#else
+ spin_unlock(&irq_controller_lock);
++#endif
+ }
+ 
+ void axp_irq_unmask(struct irq_data *d)
+@@ -180,8 +193,11 @@ if ((irq >= IRQ_AURORA_GPIO_START) && (irq < IRQ_AURORA_MSI_START)) {
+ 		addr = CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_IN_DRBL_HIGH);
+ } else
+ 	addr = CPU_INT_SOURCE_CONTROL_REG(irq);
+-
+-spin_lock(&irq_controller_lock);
++#ifdef CONFIG_MV_AMP_ENABLE
++	mvSemaLock(MV_SEMA_IRQ);
++#else
++	spin_lock(&irq_controller_lock);
++#endif
+ temp = MV_REG_READ(addr);
+ 
+ if (irq >= IRQ_AURORA_GPIO_START) {
+@@ -190,14 +206,19 @@ if (irq >= IRQ_AURORA_GPIO_START) {
+ 	MV_REG_BIT_SET(GPP_INT_LVL_REG(reg), bitmask);
+ }
+ #ifdef CONFIG_SMP
+-else
+-	map = *cpus_addr(*(d->affinity));
++	else{
++		map = get_hw_cpu_mask(*cpus_addr(*(d->affinity)));
++       }
+ #endif
+-temp &= ~0xf;
++//temp &= ~0xf; //YY
+ temp |= map;
+ temp |= (0x1 << 28); /* Set IntEn for this source */
+ MV_REG_WRITE(addr, temp);
+-spin_unlock(&irq_controller_lock);
++#ifdef CONFIG_MV_AMP_ENABLE
++	mvSemaUnlock(MV_SEMA_IRQ);
++#else
++	spin_unlock(&irq_controller_lock);
++#endif
+ }
+ 
+ 
+@@ -308,7 +329,6 @@ for (irq = 0; irq < IRQ_AURORA_MSI_START ; irq++) {
+ int pmu_request_irq(int irq, irq_handler_t handler)
+ {
+ 	int i;
+-	struct irq_data *d = irq_get_irq_data(irq);
+ 	int ret = request_irq(irq, handler, IRQF_DISABLED | IRQF_NOBALANCING, "armpmu", NULL);
+ 	if (!ret) {
+ 		for_each_online_cpu(i) {
+diff --git a/arch/arm/mach-armadaxp/pex.c b/arch/arm/mach-armadaxp/pex.c
+index f7158c4..6dee482 100644
+--- a/arch/arm/mach-armadaxp/pex.c
++++ b/arch/arm/mach-armadaxp/pex.c
+@@ -33,6 +33,7 @@
+ #include "boardEnv/mvBoardEnvLib.h"
+ #include "ctrlEnv/sys/mvCpuIf.h"
+ #include "ctrlEnv/mvCtrlEnvSpec.h"
++#include "ctrlEnv/mvUnitMap.h"
+ #include "pex/mvPexRegs.h"
+ #include "mvSysPexApi.h"
+ 
+@@ -89,8 +90,11 @@ void __init mv_pex_preinit(void)
+ 		/* Translate logical interface number to physical */
+ 		pexHWInf = boardPexInfo->pexMapping[pciIf];
+ 
++		if (MV_FALSE == mvUnitMapIsPexMine(pexHWInf))
++			continue;
++
+ 		printk("PCI-E: Cheking physical bus #%d (controller #%d): ", pciIf, pexHWInf);
+-		if (MV_FALSE == mvCtrlPwrClckGet(PEX_UNIT_ID, pexHWInf))	
++		if (MV_FALSE == mvCtrlPwrClckGet(PEX_UNIT_ID, pexHWInf))
+ 		{
+ 			printk("Disabled\n");
+ 			continue;
+@@ -246,6 +250,9 @@ int __init mv_pex_setup(int nr, struct pci_sys_data *sys)
+ 	/* Translate logical interface number to physical */
+ 	pexHWInf = boardPexInfo->pexMapping[nr];
+ 
++	if (MV_FALSE == mvUnitMapIsPexMine(pexHWInf))
++		return 0;
++
+ 	/* Check if this interface is used or not */
+ 	if (MV_FALSE == mvCtrlPwrClckGet(PEX_UNIT_ID, pexHWInf))
+ 		return 0;
+@@ -315,7 +322,12 @@ struct pci_bus *mv_pex_scan_bus(int nr, struct pci_sys_data *sys)
+ 
+ 	/* Set the bus number in the following controller */
+ 	for (ifnum = (nr+1); ifnum < boardPexInfo->boardPexIfNum; ifnum++) {
++
+ 		pexNextHWInf = boardPexInfo->pexMapping[ifnum];
++
++		if (MV_FALSE == mvUnitMapIsPexMine(pexNextHWInf))
++			continue;
++
+ 		if (MV_TRUE == mvCtrlPwrClckGet(PEX_UNIT_ID, pexNextHWInf)) {
+ 			mvPexLocalBusNumSet(pexNextHWInf, (bus->subordinate + 1));
+ 			break;
+diff --git a/arch/arm/mach-armadaxp/platsmp.c b/arch/arm/mach-armadaxp/platsmp.c
+index 4ae141d..9f95c36 100644
+--- a/arch/arm/mach-armadaxp/platsmp.c
++++ b/arch/arm/mach-armadaxp/platsmp.c
+@@ -17,15 +17,19 @@
+ #include <mach/hardware.h>
+ #include <asm/mach-types.h>
+ #include <asm/unified.h>
+-
+ #include "ctrlEnv/mvCtrlEnvLib.h"
+ #include "ctrlEnv/sys/mvCpuIf.h"
++#include "ctrlEnv/mvSemaphore.h"
++#include "include/mach/smp.h"
+ 
+ extern void axp_secondary_startup(void);
+ extern void second_cpu_init(void);
+ extern void second_cpu_msi_init(void);
+ extern MV_CPU_DEC_WIN* mv_sys_map(void);
++extern unsigned long mv_cpu_count;
+ 
++unsigned int master_cpu_id  = 0;
++unsigned int group_cpu_mask = ((1 << NR_CPUS) - 1);
+ 
+ /*
+  * We use IRQ1 as the IPI
+@@ -35,12 +39,14 @@ static inline void axp_smp_cross_call(const struct cpumask *mask, unsigned int i
+ {
+         unsigned long map = *cpus_addr(*mask);
+         void __iomem *addr = (void __iomem *)(AXP_SW_TRIG_IRQ);
++
++	map = get_hw_cpu_mask(map);
++
+         writel( ( ((map & 0xf) << 8) | irqnr ), addr);
+ 
+         return;
+ }
+ 
+-
+ /*
+  * control for which core is the next to come out of the secondary
+  * boot "holding pen"
+@@ -52,11 +58,21 @@ static unsigned int __init get_core_count(void)
+ #ifdef CONFIG_MACH_ARMADA_XP_FPGA
+ 	return 2;
+ #else
+-	/* Read the number of availabe CPUs in the SoC */
+-	return ((MV_REG_READ(SOC_COHERENCY_FABRIC_CFG_REG) & 0xF) + 1);
++	/* The number of CPUs in this SMP group is given by
++	 * CMD line. The default is NR_CPUS */
++	return mv_cpu_count;
+ #endif
+ }
+ 
++void __init set_core_count(unsigned int cpu_count)
++{
++	/* Update cpu count */
++	mv_cpu_count = cpu_count;
++
++	/* Update group mask as well */
++	group_cpu_mask = ((1 << cpu_count) - 1) << (hard_smp_processor_id());
++}
++
+ static DEFINE_SPINLOCK(boot_lock);
+ 
+ void __cpuinit platform_secondary_init(unsigned int cpu)
+@@ -106,7 +122,7 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
+ 	 * "cpu" is Linux's internal ID.
+ 	 */
+ 	flush_cache_all();
+-	pen_release = cpu;
++	pen_release = get_hw_cpu_id(cpu);
+ 	flush_cache_all();
+ 
+ 	timeout = jiffies + (10 * HZ);
+@@ -125,7 +141,6 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
+ 	 */
+ 	spin_unlock(&boot_lock);
+ 
+-	//printk("pen_release %d \n",pen_release);
+ 	return pen_release != -1 ? -ENOSYS : 0;
+ }
+ 
+@@ -137,35 +152,35 @@ static void __init wakeup_cpus(void)
+ {
+ 	MV_U32 val = 0;
+ 	MV_U32 ncores = get_core_count();
++	MV_U32 cpu_id, cpu_mask;
++
+ #ifndef CONFIG_MACH_ARMADA_XP_FPGA
+ #ifndef CONFIG_ARMADA_XP_REV_Z1
+ 	/* Scale up CPU#1 clock to max */
+ 	MV_U32 divider = MV_REG_READ(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1);
+ 	divider = ( divider & 0x3F );
+-	if (ncores > 1) {
+-		val = MV_REG_READ(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1);
+-		val &= ~(0x0000FF00); 	/* cpu1 clkdiv ratio; cpu0 based on SAR */
+-		val |= divider << 8;
+-		MV_REG_WRITE(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1, val);
+-	}
+-
+-	/* Scale up CPU#2 clock to max */
+-	if (ncores > 2) {
+-		 val = MV_REG_READ(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1);
+-                val &= ~(0x00FF0000);   /* cpu1 clkdiv ratio; cpu0 based on SAR */
+-                val |= divider << 16;
+-                MV_REG_WRITE(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1, val);
+-	}
+-
+ 
+-	/* Scale up CPU#3 clock to max */
+-	if (ncores > 3) {
+-		val = MV_REG_READ(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1);
+-		val &= ~0xFF000000;	/* cpus 3 clkdiv ratios */
+-		val |= divider << 24;
+-		MV_REG_WRITE(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1, val);
++	for(cpu_id = master_cpu_id + 1; cpu_id < (master_cpu_id + ncores); cpu_id++){
++		if (cpu_id == 1) {
++			val = MV_REG_READ(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1);
++			val &= ~(0x0000FF00); 	/* cpu1 clkdiv ratio; cpu0 based on SAR */
++			val |= divider << 8;
++			MV_REG_WRITE(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1, val);
++		}
++		else if (cpu_id == 2) {
++			val = MV_REG_READ(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1);
++			val &= ~(0x00FF0000);   /* cpu1 clkdiv ratio; cpu0 based on SAR */
++			val |= divider << 16;
++			MV_REG_WRITE(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1, val);
++		}
++		else if (cpu_id == 3) {
++			val = MV_REG_READ(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1);
++			val &= ~0xFF000000;	/* cpus 3 clkdiv ratios */
++			val |= divider << 24;
++			MV_REG_WRITE(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1, val);
++		}
+ 	}
+-#else
++#else /*CONFIG_ARMADA_XP_REV_Z1*/
+        /* Scale up CPU#1 clock to max */
+ 	if (ncores > 1) {
+ 		val = MV_REG_READ(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL0);
+@@ -189,11 +204,16 @@ static void __init wakeup_cpus(void)
+ 		val |= 0x1 << 24;
+ 		MV_REG_WRITE(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1, val);
+ 	}
+-#endif
++#endif/*CONFIG_ARMADA_XP_REV_Z1*/
+ 
++	cpu_mask = ((0x1 << (ncores-1)) - 1) << master_cpu_id;
++
++#ifdef CONFIG_MV_AMP_ENABLE
++	mvSemaLock(MV_SEMA_CLOCK);
++#endif
+ 	/* Set clock devider reload smooth bit mask */
+ 	val = MV_REG_READ(AXP_CPU_DIVCLK_CTRL0);
+-	val |= ((0x1 << (ncores-1)) - 1) << 21;
++	val |= (cpu_mask) << 21;
+ 	MV_REG_WRITE(AXP_CPU_DIVCLK_CTRL0, val);
+ 
+ 	/* Request clock devider reload */
+@@ -206,20 +226,27 @@ static void __init wakeup_cpus(void)
+ 	val &= ~(0xf << 21);
+ 	MV_REG_WRITE(AXP_CPU_DIVCLK_CTRL0, val);
+ 	udelay(100);
++#ifdef CONFIG_MV_AMP_ENABLE
++	mvSemaUnlock(MV_SEMA_CLOCK);
+ #endif
++#endif /*CONFIG_MACH_ARMADA_XP_FPGA*/
++
+ 	/* Set resume control and address */
+ 	MV_REG_WRITE(AXP_CPU_RESUME_CTRL_REG, 0x0);
+-	if (ncores > 1) MV_REG_WRITE(AXP_CPU_RESUME_ADDR_REG(1), virt_to_phys(axp_secondary_startup));
+-	if (ncores > 2) MV_REG_WRITE(AXP_CPU_RESUME_ADDR_REG(2), virt_to_phys(axp_secondary_startup));
+-	if (ncores > 3) MV_REG_WRITE(AXP_CPU_RESUME_ADDR_REG(3), virt_to_phys(axp_secondary_startup));
++
++	for(cpu_id = master_cpu_id + 1; cpu_id < (master_cpu_id + ncores); cpu_id++){
++		MV_REG_WRITE(AXP_CPU_RESUME_ADDR_REG(cpu_id), virt_to_phys(axp_secondary_startup));
++	}
+ 
+ 	/* nobody is to be released from the pen yet */
+ 	pen_release = -1;
+ 
+ 	/* Kick secondary CPUs */
+-	if (ncores > 1) MV_REG_WRITE(AXP_CPU_RESET_REG(1), 0x0);
+-	if (ncores > 2)	MV_REG_WRITE(AXP_CPU_RESET_REG(2), 0x0);
+-	if (ncores > 3) MV_REG_WRITE(AXP_CPU_RESET_REG(3), 0x0);
++	for(cpu_id = master_cpu_id + 1; cpu_id < (master_cpu_id + ncores); cpu_id++){
++		// TODO YY - check that the core is activated in coherency fabric
++		printk("SMP: CPU %d Waking up CPU %d\n", master_cpu_id, cpu_id);
++		MV_REG_WRITE(AXP_CPU_RESET_REG(cpu_id), 0x0);
++	}
+ 
+ 	mb();
+ 	udelay(10);
+@@ -229,16 +256,34 @@ static void __init initialize_bridge(void)
+ {
+ 	MV_U32 reg;
+ 	MV_U32 ncores = get_core_count();
++	MV_U32 core_bits;
++	MV_U32 smp_group_offset;
++
++	/* Set 1 bits for cores in this group */
++	core_bits = ((0x1 << ncores) - 1) << master_cpu_id;
++
++	/* Core 0 will always be part of group 0 */
++	if(master_cpu_id == 0)
++		smp_group_offset = 24;
++	else
++		smp_group_offset = 16;
+ 
+-	/* Associate all available CPUs to SMP group 0 */
++#ifdef CONFIG_MV_AMP_ENABLE
++	mvSemaLock(MV_SEMA_BRIDGE);
++#endif
++	/* Assocaite group cores to the same SMP group */
+ 	reg = MV_REG_READ(SOC_COHERENCY_FABRIC_CFG_REG);
+-	reg |= (((0x1 << ncores) - 1) << 24);
++	reg |= (core_bits << smp_group_offset);
+ 	MV_REG_WRITE(SOC_COHERENCY_FABRIC_CFG_REG, reg);
+ 
+ 	/* enable CPUs in SMP group on Fabric coherency */
+ 	reg = MV_REG_READ(SOC_COHERENCY_FABRIC_CTRL_REG);
+-	reg |= (((0x1 << ncores) - 1) << 24);
++	reg |= (core_bits << 24);
+ 	MV_REG_WRITE(SOC_COHERENCY_FABRIC_CTRL_REG, reg);
++
++#ifdef CONFIG_MV_AMP_ENABLE
++	mvSemaUnlock(MV_SEMA_BRIDGE);
++#endif
+ }
+ 
+ /*
+@@ -251,6 +296,10 @@ void __init smp_init_cpus(void)
+ 	MV_U32 ncores = get_core_count();
+ 
+ 	printk("SMP: init cpus\n");
++
++	/* Set the HW CPU id of the master core */
++	master_cpu_id  = hard_smp_processor_id();
++
+ 	/* Set CPU address decoding */
+ 	if( mvCpuIfInit(mv_sys_map())) {
+ 		printk( "Cpu Interface initialization failed.\n" );
+@@ -267,7 +316,6 @@ void __init smp_init_cpus(void)
+ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
+ {
+ 	unsigned int ncores = get_core_count();
+-	unsigned int cpu = smp_processor_id();
+ 	int i;
+ 
+ 	printk("SMP: prepare CPUs (%d cores)\n", ncores);
+@@ -287,6 +335,16 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
+ 		ncores = NR_CPUS;
+ 	}
+ 
++	if ((ncores + master_cpu_id) > NR_CPUS) {
++		printk(KERN_WARNING
++		       "Bad core count (%d) for SMP group starting at cpu no (%d). There is no CPU %d. Clipping\n", ncores, master_cpu_id, ncores + master_cpu_id);
++
++		ncores = (NR_CPUS - master_cpu_id);
++	}
++
++	/* Adjust core count in case fixing was done */
++	set_core_count(ncores);
++
+ 	/*
+ 	 * are we trying to boot more cores than exist?
+ 	 */
+diff --git a/arch/arm/mach-armadaxp/time.c b/arch/arm/mach-armadaxp/time.c
+index 74e58d7..1d1b840 100644
+--- a/arch/arm/mach-armadaxp/time.c
++++ b/arch/arm/mach-armadaxp/time.c
+@@ -38,21 +38,19 @@ static struct clock_event_device __percpu ** axp_local_clockevent;
+ 
+ extern void axp_irq_mask(struct irq_data *d);
+ extern void axp_irq_unmask(struct irq_data *d);
++extern unsigned int master_cpu_id;
+ 
+-#define   TIMER_CTRL		(MV_CNTMR_REGS_OFFSET + 0x0000)
+-#define    TIMER0_EN		0x0001
+-#define    TIMER0_RELOAD_EN	0x0002
+-#define    TIMER1_EN		0x0004
+-#define    TIMER1_RELOAD_EN	0x0008
+-#define  TIMER0_RELOAD		(MV_CNTMR_REGS_OFFSET + 0x0010)
+-#define  TIMER0_VAL		(MV_CNTMR_REGS_OFFSET + 0x0014)
+-#define  TIMER1_RELOAD		(MV_CNTMR_REGS_OFFSET + 0x0018)
+-#define  TIMER1_VAL		(MV_CNTMR_REGS_OFFSET + 0x001c)
++#define  TIMER_CTRL		(MV_CNTMR_REGS_OFFSET + 0x0000)
+ #define  TIMER_WD_RELOAD	(MV_CNTMR_REGS_OFFSET + 0x0020)
+ #define  TIMER_WD_VAL		(MV_CNTMR_REGS_OFFSET + 0x0024)
+ #define  TIMER_CAUSE		(MV_CNTMR_REGS_OFFSET + 0x0028)
+-#define   INT_TIMER0_CLR 	~(1 << 0)
+-#define   INT_TIMER1_CLR 	~(1 << 8)
++
++#define  TIMER_EN(x)		(0x0001 << (2 * x))
++#define  TIMER_RELOAD_EN(x)	(0x0002 << (2 * x))
++#define  TIMER_RELOAD(x)	(MV_CNTMR_REGS_OFFSET + 0x0010 + (8 * x))
++#define  TIMER_VAL(x)		(MV_CNTMR_REGS_OFFSET + 0x0014 + (8 * x))
++#define  INT_TIMER_CLR(x)	(~(1 << (8*x)))
++
+ 
+ #define  LCL_TIMER_BASE		(0x21000 | 0x40)
+ #define  LCL_TIMER_CTRL		(LCL_TIMER_BASE + 0x0000)
+@@ -72,15 +70,14 @@ extern void axp_irq_unmask(struct irq_data *d);
+ 
+ #define LCL_TIMER_TURN_25MHZ	(1 << 11)
+ #define BRIDGE_CAUSE		(MV_MBUS_REGS_OFFSET | 0x0260)
+-#define BRIDGE_INT_TIMER0	(1 << 24)
+-#define BRIDGE_INT_TIMER1	(1 << 25)
+ #define BRIDGE_MASK		(MV_MBUS_REGS_OFFSET | 0x10c4)
++#define BRIDGE_INT_TIMER(x)	(1 << (24 + x))
+ 
+ /*
+  * Number of timer ticks per jiffy.
+  */
+ static u32 ticks_per_jiffy;
+-
++static unsigned int soc_timer_id;
+ 
+ static DEFINE_CLOCK_DATA(cd);
+ 
+@@ -88,13 +85,13 @@ static DEFINE_CLOCK_DATA(cd);
+ 
+ unsigned long long notrace sched_clock(void)
+ {
+-	u32 cyc = ~MV_REG_READ(TIMER0_VAL);
++	u32 cyc = ~MV_REG_READ(TIMER_VAL(soc_timer_id));
+ 	return cyc_to_sched_clock(&cd, cyc, (u32)~0);
+ }
+ 
+ static void notrace axp_update_sched_clock(void)
+ {
+-	u32 cyc = ~MV_REG_READ(TIMER0_VAL);
++	u32 cyc = ~MV_REG_READ(TIMER_VAL(soc_timer_id));
+ 	update_sched_clock(&cd, cyc, (u32)~0);
+ }
+ 
+@@ -110,7 +107,7 @@ static void __init setup_sched_clock(unsigned long tclk)
+  */
+ static cycle_t axp_clksrc_read(struct clocksource *cs)
+ {
+-	return (0xffffffff - MV_REG_READ(TIMER0_VAL));
++	return (0xffffffff - MV_REG_READ(TIMER_VAL(soc_timer_id)));
+ }
+ 
+ static struct clocksource axp_clksrc = {
+@@ -239,23 +236,25 @@ void __init axp_time_init(unsigned int fabric_clk)
+ {
+ 	u32 u;
+ 
+-	printk("Initializing ArmadaXP Timer\n");
++	soc_timer_id = (master_cpu_id == 0 ? 0 : 1); //YY - can't use timer 2 and 3. why ?
++
++	printk("Initializing ArmadaXP SOC Timer %d\n", soc_timer_id);
+ 
+ 	ticks_per_jiffy = (fabric_clk + HZ/2) / HZ;
+ 	
+ 	setup_sched_clock(fabric_clk);
+ 
+ 	/* Setup free-running clocksource timer (interrupts disabled) */
+-	MV_REG_WRITE(TIMER0_VAL, 0xffffffff);
+-	MV_REG_WRITE(TIMER0_RELOAD, 0xffffffff);
++	MV_REG_WRITE(TIMER_VAL(soc_timer_id), 0xffffffff);
++	MV_REG_WRITE(TIMER_RELOAD(soc_timer_id), 0xffffffff);
+ 	u = MV_REG_READ(BRIDGE_MASK);
+-	u &= ~BRIDGE_INT_TIMER0;
++	u &= ~BRIDGE_INT_TIMER(soc_timer_id);
+ 	MV_REG_WRITE(BRIDGE_MASK, u);
+ 	u = MV_REG_READ(TIMER_CTRL);
+ #if !defined (CONFIG_ARMADA_XP_REV_Z1) && !defined (CONFIG_MACH_ARMADA_XP_FPGA)
+-	u |= (TIMER0_EN | TIMER0_RELOAD_EN | LCL_TIMER_TURN_25MHZ);
++	u |= (TIMER_EN(soc_timer_id) | TIMER_RELOAD_EN(soc_timer_id) | LCL_TIMER_TURN_25MHZ);
+ #else
+-	u |= (TIMER0_EN | TIMER0_RELOAD_EN);
++	u |= (TIMER_EN(soc_timer_id) | TIMER_RELOAD_EN(soc_timer_id));
+ #endif
+ 	MV_REG_WRITE(TIMER_CTRL, u);
+ 	axp_clksrc.mult = clocksource_hz2mult(fabric_clk, axp_clksrc.shift);
+diff --git a/arch/arm/mach-armadaxp/usb.c b/arch/arm/mach-armadaxp/usb.c
+index 55a4eea..80d8763 100644
+--- a/arch/arm/mach-armadaxp/usb.c
++++ b/arch/arm/mach-armadaxp/usb.c
+@@ -43,6 +43,7 @@ disclaimer.
+ #include "mvCommon.h"
+ #include "mvDebug.h"
+ #include "ctrlEnv/mvCtrlEnvLib.h"
++#include "ctrlEnv/mvUnitMap.h"
+ #include "mvSysUsbApi.h"
+ #include "usb/mvUsbRegs.h"
+ #include "usb/mvUsb.h"
+@@ -90,7 +91,13 @@ static int __init   mv_usb_init(void)
+ 		if (MV_FALSE == mvCtrlPwrClckGet(USB_UNIT_ID, dev))
+ 		{
+ 			printk("\nWarning Integrated USB %d is Powered Off\n",dev);
+-			continue;	    
++			continue;
++		}
++
++		/* Check if this USB is mapped to this AMP group - YY */
++		if(MV_FALSE == mvUnitMapIsMine(USB0 + dev))
++		{
++			continue;
+ 		}
+ 
+ 		isHost = mvIsUsbHost & (1 << dev);
+diff --git a/arch/arm/plat-armada/Kconfig b/arch/arm/plat-armada/Kconfig
+index ea46c73..a6a7da9 100644
+--- a/arch/arm/plat-armada/Kconfig
++++ b/arch/arm/plat-armada/Kconfig
+@@ -177,6 +177,49 @@ config MV_INCLUDE_SWITCH
+ 
+ endmenu
+ 
++
++
++menu "Armada AMP options"
++
++config MV_AMP_ENABLE
++        bool "Enable AMP support"
++        depends on   (ARMADA_XP || (MV78XX0)) && (!ARMADA_XP_REV_Z1)
++        default n
++
++config MV_DRAM_BASE
++        hex "Base address of physical memory (= PHYS_OFFSET)"
++        depends on   MV_AMP_ENABLE
++        default 0x00000000
++
++config MV_DRAM_BASE_G0
++        hex "Image 0 - Base address of physical memory"
++        depends on   MV_AMP_ENABLE
++        default 0x00000000
++
++config MV_DRAM_BASE_G1
++        hex "Image 1 - Base address of physical memory"
++        depends on   MV_AMP_ENABLE
++        default 0x20000000
++
++
++config MV_UART_PORT
++        int "UART port for prints"
++        depends on   MV_AMP_ENABLE
++        default 0
++
++config MV_UART_PORT_G0
++        int "Image 0 - UART port for prints"
++        depends on   MV_AMP_ENABLE
++        default 0
++
++config MV_UART_PORT_G1
++        int "Image 1 - UART port for prints"
++        depends on   MV_AMP_ENABLE
++        default 1
++
++endmenu
++
++
+ config MV_GPP_MAX_PINS
+ 	int
+ 	default 32 if MV78XX0
+diff --git a/include/linux/mv_neta.h b/include/linux/mv_neta.h
+new file mode 100644
+index 0000000..c1e55d8
+--- /dev/null
++++ b/include/linux/mv_neta.h
+@@ -0,0 +1,12 @@
++/*  mv_neta.h */
++
++#ifndef LINUX_MV_NETA_H
++#define LINUX_MV_NETA_H
++
++struct netaSmpGroupStruct {
++	MV_U32 portMask;
++	MV_U32 cpuMask;
++};
++
++
++#endif
+diff --git a/tools/amp/amp_make.pl b/tools/amp/amp_make.pl
+new file mode 100644
+index 0000000..bf1a738
+--- /dev/null
++++ b/tools/amp/amp_make.pl
+@@ -0,0 +1,140 @@
++#!/usr/bin/perl
++
++# Save original .config
++open cfg_file, ".config" or die "\n AMP Error: Can't open .config file. Aborting\n";
++open boot_file, "arch/arm/mach-armadaxp/Makefile.boot" or die "\n AMP Error: Can't open arch/arm/mach-armadaxp/Makefile.boot file. Aborting\n";
++
++$curr_base = $base[0] = $base[1] = $curr_port = $port[0] =  $port[1] = -1;
++$load_addr = $pars_addr = $ramd_addr = -1;
++
++
++$argc = @ARGV;
++$out_dir = "./arch/arm/boot";
++
++
++if($argc > 0)
++{
++	if(-d $ARGV[0])
++	{
++		$out_dir = $ARGV[0];
++	}
++	else
++	{
++		print "\nAMP: Output directory $ARGV[0] doesnt exist. Using defualt $out_dir\n";
++	}
++}
++
++
++while( $line = <cfg_file>)
++{
++	if($line =~ m/CONFIG_MV_DRAM_BASE=(\S*)/)   {$curr_base = $1;}
++	if($line =~ m/CONFIG_MV_DRAM_BASE_G0=(\S*)/){$base[0] = $1;}
++	if($line =~ m/CONFIG_MV_DRAM_BASE_G1=(\S*)/){$base[1] = $1;}
++	if($line =~ m/CONFIG_MV_UART_PORT=(\d*)/)     {$curr_port = $1;}
++	if($line =~ m/CONFIG_MV_UART_PORT_G0=(\d*)/)  {$port[0] = $1;}
++	if($line =~ m/CONFIG_MV_UART_PORT_G1=(\d*)/)  {$port[1] = $1;}
++}
++while( $line = <boot_file>)
++{
++	if($line =~ m/zreladdr-y	:= (\S*)/){$load_addr = $1;}
++	if($line =~ m/params_phys-y	:= (\S*)/){$pars_addr = $1;}
++	if($line =~ m/initrd_phys-y	:= (\S*)/){$ramd_addr = $1;}
++}
++
++
++print "curr_base = $curr_base\n";
++print "base[0]   = $base[0]\n";
++print "base[1]   = $base[1]\n";
++print "curr_port = $curr_port\n";
++print "port[0]   = $port[0]\n";
++print "port[1]   = $port[1]\n";
++print "load_addr = $load_addr\n";
++print "pars_addr = $pars_addr\n";
++print "ramd_addr = $ramd_addr\n";
++
++
++if($curr_base == -1 or
++   $base[0]   == -1 or
++   $base[1]   == -1 or
++   $curr_port == -1 or
++   $port[0]   == -1 or
++   $port[1]   == -1 or
++   $load_addr == -1 or
++   $pars_addr == -1 or
++   $ramd_addr == -1  )
++{
++	print "AMP Error: Cant find all CONFIG values in .config. Did you set
++CONFIG_MV_AMP_ENABLE ?\n";
++
++	print "curr_base = $curr_base\n";
++	print "base[0]   = $base[0]\n";
++	print "base[1]   = $base[1]\n";
++	print "curr_port = $curr_port\n";
++	print "port[0]   = $port[0]\n";
++	print "port[1]   = $port[1]\n";
++	print "load_addr = $load_addr\n";
++	print "pars_addr = $pars_addr\n";
++	print "ramd_addr = $ramd_addr\n";
++
++	goto END;
++}
++
++# To speed up compilation, start from the last compiled group
++$g_id = 0;
++$add  = 1;
++
++if($curr_base eq $ base[1])
++{
++	$g_id =  1;
++	$add  = -1;
++}
++
++#####	compile both image #######
++for (; ($g_id < 2) and ($g_id >= 0); $g_id += $add)
++{
++	print ("\nAMP: Compiling image $g_id\n");
++
++	# Calculate new addresses based on new base address
++	$new_load = hex($base[$g_id]) + hex($load_addr);
++	$new_pars = hex($base[$g_id]) + hex($pars_addr);
++	$new_ramd   = hex($base[$g_id]) + hex($ramd_addr);
++
++	$new_load = sprintf("0x%x", $new_load);
++	$new_pars = sprintf("0x%x", $new_pars);
++	$new_ramd = sprintf("0x%x", $new_ramd);
++
++	print "new_load = $new_load\n";
++	print "new_pars = $new_pars\n";
++	print "new_ramd = $new_ramd\n";
++
++	# Modify .config
++	system("perl -p -i -e \"s/CONFIG_MV_DRAM_BASE=.*/CONFIG_MV_DRAM_BASE=$base[$g_id]/\" .config");
++	system("perl -p -i -e \"s/CONFIG_MV_UART_PORT=.*/CONFIG_MV_UART_PORT=$port[$g_id]/\" .config");
++
++	# Modify Makefile.boot
++	system("perl -p -i -e \"s/zreladdr-y	:= .*/zreladdr-y	:= $new_load/\" arch/arm/mach-armadaxp/Makefile.boot");
++	system("perl -p -i -e \"s/params_phys-y	:= .*/params_phys-y	:= $new_pars/\" arch/arm/mach-armadaxp/Makefile.boot");
++	system("perl -p -i -e \"s/initrd_phys-y	:= .*/initrd_phys-y	:= $new_ramd/\" arch/arm/mach-armadaxp/Makefile.boot");
++
++	#Compile
++	$fail = system("make uImage -j4");
++
++	if($fail)
++	{
++		print "\nAMP Error: Failed to build Image $g_id. Exiting\n";
++		goto END;
++	}
++
++	system("cp ./arch/arm/boot/uImage $out_dir/uImage_g$g_id");
++	print "\nAMP: Image $g_id ready at $out_dir/uImage_g$g_id\n";
++}
++
++
++END:
++
++system("perl -p -i -e \"s/zreladdr-y	:= .*/zreladdr-y	:= $load_addr/\" arch/arm/mach-armadaxp/Makefile.boot");
++system("perl -p -i -e \"s/params_phys-y	:= .*/params_phys-y	:= $pars_addr/\" arch/arm/mach-armadaxp/Makefile.boot");
++system("perl -p -i -e \"s/initrd_phys-y	:= .*/initrd_phys-y	:= $ramd_addr/\" arch/arm/mach-armadaxp/Makefile.boot");
++
++close cfg_file;
++close boot_file;
+-- 
+1.7.9.5
+

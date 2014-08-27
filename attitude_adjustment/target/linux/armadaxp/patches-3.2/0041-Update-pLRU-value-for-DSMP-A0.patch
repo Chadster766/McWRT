@@ -1,0 +1,30 @@
+From 584952e108a8a196a264af9b6e38905122829215 Mon Sep 17 00:00:00 2001
+From: Badran Mohammad <mohammad@marvell.com>
+Date: Sun, 11 Dec 2011 12:38:58 +0200
+Subject: [PATCH 041/609] Update pLRU value for DSMP-A0
+
+Signed-off-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../arm/plat-armada/include/plat/cache-aurora-l2.h |    4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/arch/arm/plat-armada/include/plat/cache-aurora-l2.h b/arch/arm/plat-armada/include/plat/cache-aurora-l2.h
+index d2e4e06..010ea7b 100644
+--- a/arch/arm/plat-armada/include/plat/cache-aurora-l2.h
++++ b/arch/arm/plat-armada/include/plat/cache-aurora-l2.h
+@@ -149,7 +149,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define L2ACR_REPLACEMENT_MASK		(0x3 << L2ACR_REPLACEMENT_OFFSET)
+ #define L2ACR_REPLACEMENT_TYPE_WAYRR	(0 << L2ACR_REPLACEMENT_OFFSET)
+ #define L2ACR_REPLACEMENT_TYPE_LFSR	(1 << L2ACR_REPLACEMENT_OFFSET)
++#ifndef CONFIG_ARMADA_XP_REV_A0
+ #define L2ACR_REPLACEMENT_TYPE_SEMIPLRU	(2 << L2ACR_REPLACEMENT_OFFSET)
++#else
++#define L2ACR_REPLACEMENT_TYPE_SEMIPLRU	(3 << L2ACR_REPLACEMENT_OFFSET)
++#endif
+ 
+ /* L2_CNTR_CTRL_REG (L2CCR) */
+ #define L2CCR_CPU0_EVENT_ENABLE		(1 << 16)
+-- 
+1.7.9.5
+

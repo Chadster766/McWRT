@@ -1,0 +1,243 @@
+# LCD4Linux configuration file for the TRENDnet TEW-673GRU board
+
+Variables {
+   tick 1500
+   tack 3000
+   minute 60000
+   barstyle 'H'
+}
+
+Display Image {
+    Driver 'Image'
+    Format 'PNG'
+    Size   '220x176'
+    Font   '6x8'
+    Pixel  '1+0'
+    Gap    '0x0'
+    Border 0
+    background 'ffffff00'
+    foreground 'ffffffff'
+    basecolor  '000000'
+}
+
+Display TEW673GRU {
+    Driver       'TEW673GRU'
+    Port         '/dev/spidev1.0'
+    Mode         1
+    Font         '6x8'
+    background   'ffffff00'
+    foreground   'ffffffff'
+    basecolor    '000000'
+}
+
+Display TEW673GRU_Text {
+    Driver       'TEW673GRU'
+    Port         '/dev/spidev1.0'
+    Mode         0
+    background   'ffffff00'
+    foreground   'ffffffff'
+    basecolor    '000000'
+}
+
+Widget OS {
+    class 'Text'
+    expression '*** '.uname('sysname').' '.uname('release').' ***'
+    width 20
+    align 'M'
+    style 'bold'
+    speed 0
+    update tick
+}
+
+Widget CPU {
+    class  'Text'
+    expression  uname('machine')
+    prefix 'CPU '
+    width  9
+    align  'L'
+    style 'norm'
+    update tick
+}
+
+Widget CPUinfo {
+    class  'Text'
+    expression  cpuinfo('model name')
+    prefix ''
+    width  20
+    align  'M'
+    speed 0
+    update tick
+}
+
+Widget RAM {
+    class  'Text'
+    expression meminfo('MemTotal')/1024
+    postfix 'MB RAM'
+    width  12
+    precision 1
+    align  'R'
+    update 0
+}
+
+Widget Uptime {
+    class 'Text'
+    expression uptime('%d days %H:%M:%S')
+    width 21
+    align 'R'
+    prefix 'Up '
+    update 1000
+}
+
+Widget Busy {
+    class 'Text'
+    expression proc_stat::cpu('busy', 500)
+    prefix 'Busy'
+    postfix '%'
+    width 10
+    precision 1
+    align 'R'
+    update tick
+}
+
+Widget BusyBar {
+    class 'Bar'
+    expression  proc_stat::cpu('busy',   500)
+    expression2 proc_stat::cpu('system', 500)
+    length 10
+    direction 'E'
+    update tack
+    style barstyle
+}
+
+Widget Load {
+    class 'Text'
+    expression loadavg(1)
+    prefix 'Load'
+    postfix ' '
+    width 11
+    precision 1
+    align 'R'
+    update tick
+}
+
+Widget LoadBar {
+    class 'Bar'
+    expression  loadavg(1)
+    max 2.0
+    length 10
+    direction 'E'
+    update tack
+    style barstyle
+}
+
+Widget LAN {
+    class 'Text'
+    expression (netdev('eth0.1', 'Rx_bytes', 500)+netdev('eth0.1', 'Tx_bytes', 500))/1024
+    prefix 'LAN'
+    postfix ' '
+    width 11
+    precision 0
+    align 'R'
+    update tick
+}
+
+Widget LANBar {
+    class 'Bar'
+    expression  netdev('eth0.1', 'Rx_bytes', 500)
+    expression2 netdev('eth0.1', 'Tx_bytes', 500)
+    length 10
+    direction 'E'
+    update tack
+    style barstyle
+}
+
+Widget WAN {
+    class 'Text'
+    expression (netdev('eth2', 'Rx_bytes', 500)+netdev('eth2', 'Tx_bytes', 500))/1024
+    prefix 'WAN'
+    postfix ' '
+    width 11
+    precision 0
+    align 'R'
+    update tick
+}
+
+Widget WANBar {
+    class 'Bar'
+    expression  netdev('eth2', 'Rx_bytes', 500)
+    expression2 netdev('eth2', 'Tx_bytes', 500)
+    length 10
+    direction 'E'
+    update tack
+    style barstyle
+}
+
+Widget Background {
+    class 'Image'
+    file '/etc/openwrt_220x176.png'
+    update 0
+    visible 1
+}
+
+Layout TEW673GRU {
+    Row5 {
+        Col1  'CPU'
+        Col10 'RAM'
+    }
+    Row7 {
+        Col1  'Busy'
+        Col12 'BusyBar'
+    }
+    Row9 {
+        Col1 'Load'
+        Col12 'LoadBar'
+    }
+    Row11 {
+        Col1  'LAN'
+        Col12 'LANBar'
+    }
+    Row13 {
+        Col1  'WAN'
+        Col12 'WANBar'
+    }
+    Row22 {
+        Col1  'Uptime'
+    }
+    Layer 2 {
+        X1.Y1 'Background'
+    }
+}
+
+Layout TEW673GRU_Text {
+    Row1 {
+        Col1  'CPU'
+        Col10 'RAM'
+    }
+    Row2 {
+        Col1  'Busy'
+        Col12 'BusyBar'
+    }
+    Row3 {
+        Col1 'Load'
+        Col12 'LoadBar'
+    }
+    Row4 {
+        Col1  'LAN'
+        Col12 'LANBar'
+    }
+    Row5 {
+        Col1  'WAN'
+        Col12 'WANBar'
+    }
+    Row11 {
+        Col1  'Uptime'
+    }
+}
+
+#Display 'Image'
+
+Display 'TEW673GRU'
+Layout 'TEW673GRU'
+
+#Display 'TEW673GRU_Text'
+#Layout 'TEW673GRU_Text'

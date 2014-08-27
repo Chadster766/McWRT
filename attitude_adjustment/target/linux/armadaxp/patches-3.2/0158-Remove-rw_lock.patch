@@ -1,0 +1,365 @@
+From 5106b3ce1000ae7c430c70428dca292ba9a5aaf5 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Mon, 9 Jul 2012 09:09:18 -0400
+Subject: [PATCH 158/609] Remove rw_lock
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |  119 +++++++++++++-------
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h     |   15 +++
+ 2 files changed, 93 insertions(+), 41 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index faf0a9c..32b333e 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -1601,7 +1601,14 @@ static int mv_eth_tx(struct sk_buff *skb, struct net_device *dev)
+ 	struct tx_queue *txq_ctrl = NULL;
+ 	struct neta_tx_desc *tx_desc;
+ 
+-	read_lock(&pp->rwlock);
++	if (!test_bit(MV_ETH_F_STARTED_BIT, &(pp->flags))) {
++		STAT_INFO(pp->stats.netdev_stop++);
++#ifdef CONFIG_MV_ETH_DEBUG_CODE
++		if (pp->flags & MV_ETH_F_DBG_TX)
++			printk(KERN_ERR "%s: STARTED_BIT = 0, packet is dropped.\n", __func__);
++#endif /* CONFIG_MV_ETH_DEBUG_CODE */
++		goto out;
++	}
+ 
+ 	if (!(netif_running(dev))) {
+ 		printk(KERN_ERR "!netif_running() in %s\n", __func__);
+@@ -1764,7 +1771,6 @@ out:
+ 	if (txq_ctrl)
+ 		spin_unlock(&txq_ctrl->queue_lock);
+ 
+-	read_unlock(&pp->rwlock);
+ 	return NETDEV_TX_OK;
+ }
+ 
+@@ -2551,7 +2557,18 @@ int mv_eth_poll(struct napi_struct *napi, int budget)
+ 	}
+ #endif /* CONFIG_MV_ETH_DEBUG_CODE */
+ 
+-	read_lock(&pp->rwlock);
++	if (!test_bit(MV_ETH_F_STARTED_BIT, &(pp->flags))) {
++		STAT_INFO(pp->stats.netdev_stop++);
++
++#ifdef CONFIG_MV_ETH_DEBUG_CODE
++		if (pp->flags & MV_ETH_F_DBG_RX)
++			printk(KERN_ERR "%s: STARTED_BIT = 0, poll completed.\n", __func__);
++#endif /* CONFIG_MV_ETH_DEBUG_CODE */
++
++		napi_complete(napi);
++		STAT_INFO(pp->stats.poll_exit[smp_processor_id()]++);
++		return rx_done;
++	}
+ 
+ 	STAT_INFO(pp->stats.poll[smp_processor_id()]++);
+ 
+@@ -2630,7 +2647,6 @@ int mv_eth_poll(struct napi_struct *napi, int budget)
+ 		local_irq_restore(flags);
+ 	}
+ 	pp->causeRxTx[smp_processor_id()] = causeRxTx;
+-	read_unlock(&pp->rwlock);
+ 	return rx_done;
+ }
+ 
+@@ -3852,13 +3868,17 @@ MV_STATUS mv_eth_tx_done_ptks_coal_set(int port, int txp, int txq, MV_U32 value)
+  ***********************************************************/
+ int mv_eth_start_internals(struct eth_port *pp, int mtu)
+ {
+-	unsigned long rwflags;
+ 	unsigned int status;
+ 	int rxq, txp, txq, num, err = 0;
+ 	int pkt_size = RX_PKT_SIZE(mtu);
+ 	MV_BOARD_MAC_SPEED mac_speed;
+ 
+-	write_lock_irqsave(&pp->rwlock, rwflags);
++	if (test_bit(MV_ETH_F_STARTED_BIT, &(pp->flags))) {
++		STAT_ERR(pp->stats.state_err++);
++		printk(KERN_ERR "%s: port %d, wrong state: STARTED_BIT = 1\n", __func__, pp->port);
++		err = -EINVAL;
++		goto out;
++	}
+ 
+ 	if (mvNetaMaxRxSizeSet(pp->port, RX_PKT_SIZE(mtu))) {
+ 		printk(KERN_ERR "%s: can't set maxRxSize=%d for port=%d, mtu=%d\n",
+@@ -4048,7 +4068,6 @@ int mv_eth_start_internals(struct eth_port *pp, int mtu)
+ 	set_bit(MV_ETH_F_STARTED_BIT, &(pp->flags));
+ 
+  out:
+-	write_unlock_irqrestore(&pp->rwlock, rwflags);
+ 	return err;
+ }
+ 
+@@ -4058,12 +4077,13 @@ int mv_eth_start_internals(struct eth_port *pp, int mtu)
+  ***********************************************************/
+ int mv_eth_stop_internals(struct eth_port *pp)
+ {
+-	unsigned long rwflags;
+ 	int queue;
+ 
+-	write_lock_irqsave(&pp->rwlock, rwflags);
+-
+-	clear_bit(MV_ETH_F_STARTED_BIT, &(pp->flags));
++	if (!test_and_clear_bit(MV_ETH_F_STARTED_BIT, &(pp->flags))) {
++		STAT_ERR(pp->stats.state_err++);
++		printk(KERN_ERR "%s: port %d, wrong state: STARTED_BIT = 0.\n", __func__, pp->port);
++		goto error;
++	}
+ 
+ 	/* stop the port activity, mask all interrupts */
+ 	if (mvNetaPortDisable(pp->port) != MV_OK) {
+@@ -4071,14 +4091,9 @@ int mv_eth_stop_internals(struct eth_port *pp)
+ 		goto error;
+ 	}
+ 
+-	/* clear all ethernet port interrupts ???? */
+-	MV_REG_WRITE(NETA_INTR_MISC_CAUSE_REG(pp->port), 0);
+-	MV_REG_WRITE(NETA_INTR_OLD_CAUSE_REG(pp->port), 0);
++	mv_eth_interrupts_mask(pp);
+ 
+-	/* mask all ethernet port interrupts ???? */
+-	MV_REG_WRITE(NETA_INTR_NEW_MASK_REG(pp->port), 0);
+-	MV_REG_WRITE(NETA_INTR_OLD_MASK_REG(pp->port), 0);
+-	MV_REG_WRITE(NETA_INTR_MISC_MASK_REG(pp->port), 0);
++	mdelay(10);
+ 
+ #ifdef CONFIG_MV_ETH_HWF
+ 	mvNetaHwfEnable(pp->port, 0);
+@@ -4103,14 +4118,10 @@ int mv_eth_stop_internals(struct eth_port *pp)
+ 	for (queue = 0; queue < CONFIG_MV_ETH_RXQ; queue++)
+ 		mv_eth_rxq_drop_pkts(pp, queue);
+ 
+-	write_unlock_irqrestore(&pp->rwlock, rwflags);
+-
+ 	return 0;
+ 
+ error:
+ 	printk(KERN_ERR "GbE port %d: stop internals failed\n", pp->port);
+-	write_unlock_irqrestore(&pp->rwlock, rwflags);
+-
+ 	return -1;
+ }
+ 
+@@ -4178,11 +4189,16 @@ int mv_eth_change_mtu_internals(struct net_device *dev, int mtu)
+ 	struct bm_pool	*new_pool = NULL;
+ 	struct eth_port *pp = MV_ETH_PRIV(dev);
+ 	int             config_pkt_size;
+-	unsigned long	rwflags;
++
++	if (test_bit(MV_ETH_F_STARTED_BIT, &(pp->flags))) {
++		STAT_ERR(pp->stats.state_err++);
++		if (pp->flags & MV_ETH_F_DBG_RX)
++			printk(KERN_ERR "%s: port %d, STARTED_BIT = 0, Invalid value.\n", __func__, pp->port);
++		return -1;
++	}
+ 
+ 	if ((mtu != dev->mtu) && (pp->pool_long)) {
+ 		/* If long pool assigned and MTU really changed and can't use old pool - free buffers */
+-		write_lock_irqsave(&pp->rwlock, rwflags);
+ 
+ 		config_pkt_size = 0;
+ #ifdef CONFIG_MV_ETH_BM_CPU
+@@ -4225,7 +4241,6 @@ int mv_eth_change_mtu_internals(struct net_device *dev, int mtu)
+ 			pp->pool_short = NULL;
+ 		}
+ */
+-		write_unlock_irqrestore(&pp->rwlock, rwflags);
+ 	}
+ 	dev->mtu = mtu;
+ 
+@@ -4244,11 +4259,20 @@ static void mv_eth_tx_done_timer_callback(unsigned long data)
+ 	struct eth_port *pp = MV_ETH_PRIV(dev);
+ 	int tx_done = 0, tx_todo = 0;
+ 
+-	read_lock(&pp->rwlock);
+ 	STAT_INFO(pp->stats.tx_done_timer++);
+ 
+ 	clear_bit(MV_ETH_F_TX_DONE_TIMER_BIT, &(pp->flags));
+ 
++	if (!test_bit(MV_ETH_F_STARTED_BIT, &(pp->flags))) {
++		STAT_INFO(pp->stats.netdev_stop++);
++#ifdef CONFIG_MV_ETH_DEBUG_CODE
++		if (pp->flags & MV_ETH_F_DBG_TX)
++			printk(KERN_ERR "%s: port #%d is stopped, STARTED_BIT = 0, exit timer.\n", __func__, pp->port);
++#endif /* CONFIG_MV_ETH_DEBUG_CODE */
++
++		return;
++	}
++
+ 	if (MV_PON_PORT(pp->port))
+ 		tx_done = mv_eth_tx_done_pon(pp, &tx_todo);
+ 	else
+@@ -4258,8 +4282,6 @@ static void mv_eth_tx_done_timer_callback(unsigned long data)
+ 
+ 	if (tx_todo > 0)
+ 		mv_eth_add_tx_done_timer(pp);
+-
+-	read_unlock(&pp->rwlock);
+ }
+ 
+ /***********************************************************
+@@ -4271,14 +4293,14 @@ static void mv_eth_cleanup_timer_callback(unsigned long data)
+ 	struct net_device *dev = (struct net_device *)data;
+ 	struct eth_port *pp = MV_ETH_PRIV(dev);
+ 
+-	read_lock(&pp->rwlock);
+ 	STAT_INFO(pp->stats.cleanup_timer++);
++	clear_bit(MV_ETH_F_CLEANUP_TIMER_BIT, &(pp->flags));
++
++	if (!test_bit(MV_ETH_F_STARTED_BIT, &(pp->flags)))
++		return;
+ 
+ 	/* FIXME: check bm_pool->missed and pp->rxq_ctrl[rxq].missed counters and allocate */
+ 	/* re-add timer if necessary (check bm_pool->missed and pp->rxq_ctrl[rxq].missed   */
+-
+-	clear_bit(MV_ETH_F_CLEANUP_TIMER_BIT, &(pp->flags));
+-	read_unlock(&pp->rwlock);
+ }
+ 
+ void mv_eth_mac_show(int port)
+@@ -4530,7 +4552,6 @@ static int mv_eth_priv_init(struct eth_port *pp, int port)
+ 	clear_bit(MV_ETH_F_CLEANUP_TIMER_BIT, &(pp->flags));
+ 
+ 	pp->weight = CONFIG_MV_ETH_RX_POLL_WEIGHT;
+-	rwlock_init(&pp->rwlock);
+ 
+ 	/* Init pool of external buffers for TSO, fragmentation, etc */
+ 	spin_lock_init(&pp->extLock);
+@@ -4807,6 +4828,7 @@ void mv_eth_port_stats_print(unsigned int port)
+ 	printk(KERN_ERR "netif_wake....................%10u\n", stat->netif_wake);
+ 	printk(KERN_ERR "ext_stack_empty...............%10u\n", stat->ext_stack_empty);
+ 	printk(KERN_ERR "ext_stack_full ...............%10u\n", stat->ext_stack_full);
++	printk(KERN_ERR "state_err.....................%10u\n", stat->state_err);
+ #endif /* CONFIG_MV_ETH_STAT_ERR */
+ 
+ #ifdef CONFIG_MV_ETH_STAT_INF
+@@ -4820,14 +4842,15 @@ void mv_eth_port_stats_print(unsigned int port)
+ 	printk(KERN_ERR "ethPort_%d: Events", port);
+ 	printk(KERN_CONT "\n-------------------------------\n");
+ 	for (i = 0; i < CONFIG_NR_CPUS; i++) {
+-		printk(KERN_ERR "poll[%d].....................%10u\n", i, stat->poll[i]);
+-		printk(KERN_ERR "poll_exit[%d]................%10u\n", i, stat->poll_exit[i]);
++		printk(KERN_ERR "poll[%d]......................%10u\n", i, stat->poll[i]);
++		printk(KERN_ERR "poll_exit[%d].................%10u\n", i, stat->poll_exit[i]);
+ 	}
+ 	printk(KERN_ERR "tx_fragmentation..............%10u\n", stat->tx_fragment);
+ 	printk(KERN_ERR "tx_done_event.................%10u\n", stat->tx_done);
+ 	printk(KERN_ERR "tx_done_timer_event...........%10u\n", stat->tx_done_timer);
+ 	printk(KERN_ERR "cleanup_timer_event...........%10u\n", stat->cleanup_timer);
+ 	printk(KERN_ERR "link..........................%10u\n", stat->link);
++	printk(KERN_ERR "netdev_stop...................%10u\n", stat->netdev_stop);
+ #ifdef CONFIG_MV_ETH_RX_SPECIAL
+ 	printk(KERN_ERR "rx_special....................%10u\n", stat->rx_special);
+ #endif /* CONFIG_MV_ETH_RX_SPECIAL */
+@@ -5101,14 +5124,13 @@ MV_U8	wol_mask[DEF_WOL_SIZE] = { 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+ 
+ int mv_eth_wol_pkts_check(int port)
+ {
+-	struct eth_port		*pp = mv_eth_port_by_id(port);
++	struct eth_port	    *pp = mv_eth_port_by_id(port);
+ 	struct neta_rx_desc *rx_desc;
+ 	struct eth_pbuf     *pkt;
+ 	struct bm_pool      *pool;
+-	int	                rxq, rx_done, i, wakeup, ruleId;
++	int                 rxq, rx_done, i, wakeup, ruleId;
+ 	MV_NETA_RXQ_CTRL    *rx_ctrl;
+ 
+-	write_lock(&pp->rwlock);
+ 	wakeup = 0;
+ 	for (rxq = 0; rxq < CONFIG_MV_ETH_RXQ; rxq++) {
+ 		rx_ctrl = pp->rxq_ctrl[rxq].q;
+@@ -5148,11 +5170,9 @@ int mv_eth_wol_pkts_check(int port)
+ 		}
+ 		if (wakeup) {
+ 			/* Failed enter WoL mode */
+-			write_unlock(&pp->rwlock);
+ 			return 1;
+ 		}
+ 	}
+-	write_unlock(&pp->rwlock);
+ 	return 0;
+ }
+ 
+@@ -5174,11 +5194,26 @@ void mv_eth_wol_wakeup(int port)
+ 
+ int mv_eth_wol_sleep(int port)
+ {
+-	int rxq;
++	int rxq, cpu;
++	struct eth_port *pp;
+ 
+ 	/* Set PnC to WoL filtering mode */
+ 	mv_pnc_wol_sleep(port);
+ 
++	pp = mv_eth_port_by_id(port);
++	if (pp == NULL) {
++		printk(KERN_INFO "Failed to fined pp struct on port #%d\n", port);
++		return 1;
++	}
++
++	mv_eth_interrupts_mask(pp);
++
++	/* wait until all napi stop transmit */
++	for_each_possible_cpu(cpu) {
++		if (pp->napi[cpu])
++			napi_synchronize(pp->napi[cpu]);
++	}
++
+ 	/* Check received packets in all RXQs */
+ 	/* If match one of WoL pattern - wakeup, not match - drop */
+ 	if (mv_eth_wol_pkts_check(port)) {
+@@ -5195,6 +5230,8 @@ int mv_eth_wol_sleep(int port)
+ 		mvNetaRxqTimeCoalSet(port, rxq, 0);
+ 	}
+ 
++	mv_eth_interrupts_unmask(pp);
++
+ 	return 0;
+ }
+ #endif /* CONFIG_MV_ETH_PNC_WOL */
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+index bc4e958..c65b432 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+@@ -151,6 +151,7 @@ struct port_stats {
+ 	u32 ext_stack_empty;
+ 	u32 ext_stack_full;
+ 	u32 netif_wake;
++	u32 state_err;
+ #endif /* CONFIG_MV_ETH_STAT_ERR */
+ 
+ #ifdef CONFIG_MV_ETH_STAT_INF
+@@ -163,6 +164,7 @@ struct port_stats {
+ 	u32 tx_done_timer;
+ 	u32 cleanup_timer;
+ 	u32 link;
++	u32 netdev_stop;
+ 
+ #ifdef CONFIG_MV_ETH_RX_SPECIAL
+ 	u32 rx_special;
+@@ -429,6 +431,19 @@ static inline void mv_eth_interrupts_unmask(struct eth_port *pp)
+ 		MV_ETH_RX_INTR_MASK));
+ }
+ 
++static inline void mv_eth_interrupts_mask(struct eth_port *pp)
++{
++	/* clear all ethernet port interrupts */
++	MV_REG_WRITE(NETA_INTR_MISC_CAUSE_REG(pp->port), 0);
++	MV_REG_WRITE(NETA_INTR_OLD_CAUSE_REG(pp->port), 0);
++
++	/* mask all ethernet port interrupts */
++	MV_REG_WRITE(NETA_INTR_NEW_MASK_REG(pp->port), 0);
++	MV_REG_WRITE(NETA_INTR_OLD_MASK_REG(pp->port), 0);
++	MV_REG_WRITE(NETA_INTR_MISC_MASK_REG(pp->port), 0);
++}
++
++
+ static inline int mv_eth_ctrl_is_tx_enabled(struct eth_port *pp)
+ {
+ 	if (!pp)
+-- 
+1.7.9.5
+

@@ -1,0 +1,142 @@
+From 7f37e10b8ed00a7700a2125ebd171c4e6101ad15 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Mon, 22 Apr 2013 16:15:25 +0300
+Subject: [PATCH 599/609] PM, A370: Fix Deep-idle support after switching
+ internal registers to 0xF1000000
+
+Since the A370 bootROM uses fixed offset to the internal registers (0xD0000000)
+This patch Adds the CONFIG_ARMADA_SUPPORT_DEEP_IDLE_CESA_USE config that uses the
+CESA SRAM instead of the bootROM when using other than 0xD0000000 internal
+registers offset.
+
+Bug Fix - should be integrated to stable branch
+
+Change-Id: Ic0a5deeb8040b36a27000981b743f5225ad67029
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1637
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mm/Kconfig                           |   10 ++++++----
+ arch/arm/plat-armada/armada_suspend.S         |   18 +++++++++++++++++-
+ arch/arm/plat-armada/cpuidle.c                |   14 ++++++++++++++
+ arch/arm/plat-armada/cpuidle.h                |    5 +++++
+ 5 files changed, 43 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
+index a2c90a2..8161859 100644
+--- a/arch/arm/mm/Kconfig
++++ b/arch/arm/mm/Kconfig
+@@ -1099,6 +1099,7 @@ config SHEEVA_ERRATA_ARM_CPU_ADD_DELAY_FOR_STREX
+ config SHEEVA_DEEP_IDLE
+ 	bool "Enable CPU/L2 Deep Idle Power Management"
+ 	depends on (ARCH_ARMADA_XP || ARCH_ARMADA370) && CPU_IDLE
++	select ARMADA_SUPPORT_DEEP_IDLE_CESA_USE if ARCH_ARMADA370
+ 
+ config CPU_FREQ_ARMADA_XP
+ 	bool "Enable CPU frequency scaling"
+@@ -1123,12 +1124,13 @@ config ARMADA_DEEP_IDLE_SUPPORT_DRAM_SR
+ 	default n
+ 	depends on SHEEVA_DEEP_IDLE && ARCH_ARMADA370
+ 
+-config ARMADA_DEEP_IDLE_SUPPORT_FAST_EXIT
+-	bool "Enable Fast Exit from Deep-Idle"
+-	default y
++config ARMADA_SUPPORT_DEEP_IDLE_CESA_USE
++	bool "Enable CESA SRAM usage for Deep-Idle"
+ 	depends on SHEEVA_DEEP_IDLE && ARCH_ARMADA370
+ 	help
+-	  Enable fast exit from Deep-Idle by using a reserved block in crypto engine SRAM.
++	  Enable exit from Deep-Idle by using a reserved block in crypto engine SRAM.
++	  This setup is required to override the bootROM code when internal registers
++	  offeset is other than 0xD0000000.
+ 
+ config CACHE_AURORA_L2
+ 	bool "Enable Marvell Aurora L2 cache controller"
+diff --git a/arch/arm/plat-armada/armada_suspend.S b/arch/arm/plat-armada/armada_suspend.S
+index 0562693..c74e163 100644
+--- a/arch/arm/plat-armada/armada_suspend.S
++++ b/arch/arm/plat-armada/armada_suspend.S
+@@ -30,7 +30,23 @@
+ #define GPIO_OUT_CTRL_REG			(INTER_REGS_BASE + 0x18184)
+ #endif
+ 
+-#define MV_COHERENCY_FABRIC_CTRL_REG	(0x20200)
++#define MV_COHERENCY_FABRIC_CTRL_REG		(0x20200)
++
++#ifdef CONFIG_ARMADA_SUPPORT_DEEP_IDLE_CESA_USE
++#define PMU_RESUME_ADDR_REG			(INTER_REGS_PHYS_BASE + 0x22124)
++
++.global	armadaxp_deep_idle_exit_start
++.global	armadaxp_deep_idle_exit_end
++
++ENTRY(armadaxp_deep_idle_exit)
++armadaxp_deep_idle_exit_start:
++	ldr	r0, [pc, #4]
++	ldr	r1, [r0]
++	mov	pc, r1
++	.word	(PMU_RESUME_ADDR_REG)
++armadaxp_deep_idle_exit_end:
++ENDPROC(armadaxp_deep_idle_exit)
++#endif
+ 
+ /*
+ * armadaxp_snoop_dis_virt:
+diff --git a/arch/arm/plat-armada/cpuidle.c b/arch/arm/plat-armada/cpuidle.c
+index f740ac7..3ae787d 100644
+--- a/arch/arm/plat-armada/cpuidle.c
++++ b/arch/arm/plat-armada/cpuidle.c
+@@ -99,6 +99,10 @@ void mv_cpuidle_reset_cpu_win_state(void)
+ 	u32 i;
+ 	MV_AHB_TO_MBUS_DEC_WIN	winInfo;
+ 
++#ifdef CONFIG_ARMADA_SUPPORT_DEEP_IDLE_CESA_USE
++	u32 length = &armadaxp_deep_idle_exit_end - &armadaxp_deep_idle_exit_start;
++	memcpy((void *)CRYPT_ENG_VIRT_BASE(0), &armadaxp_deep_idle_exit_start, length);
++#endif
+ 	/* Save CPU windows state, and enable access for Bootrom	*
+ 	** according to SoC default address decoding windows.		*/
+ 	for (i = 0; i < MAX_AHB_TO_MBUS_WINS; i++) {
+@@ -109,6 +113,15 @@ void mv_cpuidle_reset_cpu_win_state(void)
+ 		mvAhbToMbusWinEnable(i, MV_FALSE);
+ 	}
+ 
++#ifdef CONFIG_ARMADA_SUPPORT_DEEP_IDLE_CESA_USE
++	/* Cesa SRAM */
++	winInfo.target = CRYPT0_ENG;
++	winInfo.addrWin.baseLow = 0xFFFF0000;
++	winInfo.addrWin.baseHigh = 0x0;
++	winInfo.addrWin.size = _64K;
++	winInfo.enable = MV_TRUE;
++	mvAhbToMbusWinSet(13, &winInfo);
++#else
+ 	winInfo.target = BOOT_ROM_CS;
+ 	winInfo.addrWin.baseLow = 0xF8000000;
+ 	winInfo.addrWin.baseHigh = 0x0;
+@@ -122,6 +135,7 @@ void mv_cpuidle_reset_cpu_win_state(void)
+ 	winInfo.addrWin.size = _64K;
+ 	winInfo.enable = MV_TRUE;
+ 	mvAhbToMbusWinSet(8, &winInfo);
++#endif
+ }
+ #endif
+ 
+diff --git a/arch/arm/plat-armada/cpuidle.h b/arch/arm/plat-armada/cpuidle.h
+index 160ded5..c6f3ec0 100644
+--- a/arch/arm/plat-armada/cpuidle.h
++++ b/arch/arm/plat-armada/cpuidle.h
+@@ -24,6 +24,11 @@ void armadaxp_smp_prepare_idle(unsigned int processor_id);
+ void armadaxp_smp_restore_idle(unsigned int processor_id);
+ 
+ extern int axp_secondary_startup(void);
++#ifdef CONFIG_ARMADA_SUPPORT_DEEP_IDLE_CESA_USE
++extern int armadaxp_deep_idle_exit(void);
++extern unsigned char armadaxp_deep_idle_exit_start;
++extern unsigned char armadaxp_deep_idle_exit_end;
++#endif
+ 
+ typedef enum  {
+ 	DISABLED,
+-- 
+1.7.9.5
+

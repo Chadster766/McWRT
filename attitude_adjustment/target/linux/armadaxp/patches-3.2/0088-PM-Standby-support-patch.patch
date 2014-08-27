@@ -1,0 +1,158 @@
+From 43ce67ae971e08e6e6554fb96cb263720e8954be Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Mon, 23 Jan 2012 11:19:37 +0200
+Subject: [PATCH 088/609] PM Standby support patch
+
+Add support for system standby using the /sys/power/state parameter
+see the /Documentation/power/ for information
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/pm.c    |   44 ++++++++++++++++++++++++++--------------
+ arch/arm/plat-armada/cpuidle.c |    4 +---
+ 2 files changed, 30 insertions(+), 18 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/pm.c b/arch/arm/mach-armadaxp/pm.c
+index 8d3f63e..e0a0ec5 100644
+--- a/arch/arm/mach-armadaxp/pm.c
++++ b/arch/arm/mach-armadaxp/pm.c
+@@ -1,9 +1,9 @@
+ /*
+  * pm.c
+  *
+- * Power Management functions for Marvell Dove System On Chip
++ * Power Management functions for Marvell ArmadaXP System On Chip
+  *
+- * Maintainer: Tawfik Bayouk <tawfik@marvell.com>
++ * Maintainer: Nadav Haklai <nadavh@marvell.com>
+  *
+  * This file is licensed under  the terms of the GNU General Public
+  * License version 2. This program is licensed "as is" without any
+@@ -22,9 +22,9 @@
+ #ifdef CONFIG_SHEEVA_DEEP_IDLE
+ extern void armadaxp_deepidle(void);
+ /*
+- * Logical check for Dove valid PM states
++ * Logical check for Armada XP valid PM states
+  */
+-static int dove_pm_valid(suspend_state_t state)
++static int armadaxp_pm_valid(suspend_state_t state)
+ {
+ 	return (state == PM_SUSPEND_STANDBY);
+ }
+@@ -32,12 +32,20 @@ static int dove_pm_valid(suspend_state_t state)
+ /*
+  * Enter the requested PM state
+  */
+-static int dove_pm_enter(suspend_state_t state)
++static int armadaxp_pm_enter(suspend_state_t state)
+ {
+-	MV_U32	reg;
++	unsigned int backup[2];
+ 
+ 	switch (state)	{
+ 	case PM_SUSPEND_STANDBY:
++
++		/* Enable Uart IRQ */
++		backup[0] = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0));
++		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0), 0x1 | backup[0]);
++		/* Disable IPI IRQs */
++		backup[1] = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_IN_DRBL_LOW));
++		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_IN_DRBL_LOW), 0);
++#if 0
+ 		printk(KERN_INFO "Entering Wol Mode (Neta IRQs 8,10,12,14 are enabled now)...\n");
+ 
+ 		/* Reenable the NETA IRQ in order to wake from it */
+@@ -56,9 +64,14 @@ static int dove_pm_enter(suspend_state_t state)
+ 		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE3_FIC));
+ 		reg |= 0x1;
+ 		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE3_FIC), reg);
+-
++#endif
+ 		armadaxp_deepidle();
+ 
++		/* Disable Uart IRQ */
++		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0), backup[0]);
++		/* Enable IPI IRQs */
++		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_IN_DRBL_LOW), backup[1]);
++#if 0
+ 		/* Disable it since it will be re-enabled by the stack */
+ 		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE0_FIC));
+ 		reg &= ~0x1;
+@@ -77,6 +90,7 @@ static int dove_pm_enter(suspend_state_t state)
+ 		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE3_FIC), reg);
+ 
+ 		printk(KERN_INFO "Exiting Wol Mode (Neta IRQs 8,10,12,14 are disabled now)...\n");
++#endif
+ 		break;
+ 	default:
+ 		return -EINVAL;
+@@ -85,28 +99,28 @@ static int dove_pm_enter(suspend_state_t state)
+ 	return 0;
+ }
+ 
+-static struct platform_suspend_ops dove_pm_ops = {
+-	.valid		= dove_pm_valid,
+-	.enter		= dove_pm_enter,
++static struct platform_suspend_ops armadaxp_pm_ops = {
++	.valid		= armadaxp_pm_valid,
++	.enter		= armadaxp_pm_enter,
+ };
+ 
+-static int __init dove_pm_init(void)
++static int __init armadaxp_pm_init(void)
+ {
+ 	printk(KERN_INFO "ArmadaXP Power Managament Suspend Operations Initialized\n");
+-	suspend_set_ops(&dove_pm_ops);
++	suspend_set_ops(&armadaxp_pm_ops);
+ 	return 0;
+ }
+ 
+-__initcall(dove_pm_init);
++__initcall(armadaxp_pm_init);
+ 
+ #else
+ 
+-static int __init dove_pm_init(void)
++static int __init armadaxp_pm_init(void)
+ {
+ 	printk(KERN_INFO "ArmadaXP Power Managament NOT Initialized (Missing Deep-Idle Support)\n");
+ 	return 0;
+ }
+ 
+-__initcall(dove_pm_init);
++__initcall(armadaxp_pm_init);
+ 
+ #endif /* CONFIG_SHEEVA_DEEP_IDLE */
+diff --git a/arch/arm/plat-armada/cpuidle.c b/arch/arm/plat-armada/cpuidle.c
+index 7f4d7d6..9a62b0f 100644
+--- a/arch/arm/plat-armada/cpuidle.c
++++ b/arch/arm/plat-armada/cpuidle.c
+@@ -120,7 +120,6 @@ extern int armadaxp_cpu_suspend(void);
+ void armadaxp_fabric_setup_deepIdle(void)
+ {
+ 	MV_U32  reg;
+-	MV_U32	i;
+ 
+ 	/* Enable L2 & Fabric powerdown in Deep-Idle mode - Fabric */
+ 	reg = MV_REG_READ(MV_L2C_NFABRIC_PM_CTRL_CFG_REG);
+@@ -140,7 +139,6 @@ void armadaxp_fabric_prepare_hotplug(void)
+ 
+ 	MV_REG_WRITE(PM_CPU_BOOT_ADDR_REDIRECT(processor_id), virt_to_phys(axp_secondary_startup));
+ 
+-
+ 	reg = MV_REG_READ(PM_STATUS_AND_MASK_REG(processor_id));
+ 	/* set WaitMask fields */
+ 	reg |= PM_STATUS_AND_MASK_CPU_IDLE_WAIT;
+@@ -331,7 +329,7 @@ static int mv_cpu_idle_write(struct file *file, const char *buffer,
+ {
+ 
+ 	int i;
+-	unsigned int backup[116];
++	unsigned int backup[IRQ_MAIN_INTS_NUM];
+ 
+ 	struct cpuidle_device *	device = &per_cpu(armadaxp_cpuidle_device, smp_processor_id());
+ 
+-- 
+1.7.9.5
+

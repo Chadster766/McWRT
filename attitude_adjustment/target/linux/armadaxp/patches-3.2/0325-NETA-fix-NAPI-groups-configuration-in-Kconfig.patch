@@ -1,0 +1,159 @@
+From 64360e4d5c26ca874dc0396f8718b5cab02b74f4 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Tue, 16 Oct 2012 09:25:18 -0400
+Subject: [PATCH 325/609] NETA: fix NAPI groups configuration in Kconfig
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig |   96 +++++++++-----------
+ 1 file changed, 45 insertions(+), 51 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
+index 519591b..dfba7c2 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
+@@ -611,14 +611,6 @@ config  MV_ETH_RX_PKT_PREFETCH
+         ---help---
+         Use pld instruction to prefetch first two cache lines of received packet data
+ 
+-config  MV_ETH_NAPI_GROUPS
+-        int "Number of NAPI instances can be used per port"
+-	range 1 NR_CPUS if SMP
+-	range 1 1 if !SMP
+-        default 1
+-        ---help---
+-	Different RXQs and TXQs can be processed by different CPU using different NAPI instances
+-
+ config MV_ETH_RX_SPECIAL
+ 	depends on MV_ETH_PNC
+         bool "Enable special RX processing"
+@@ -882,81 +874,83 @@ config  MV_ETH_NFP_DEBUG
+ 
+ endmenu
+ 
+-menuconfig MV_ETH_NAPI
+-        bool "NAPI configuration"
+-        default y
++menu "NAPI Groups"
+ 
+-menuconfig MV_ETH_NAPI_GR0
+-        bool "NAPI configuration for group 0"
+-		depends on MV_ETH_NAPI
+-        default y
++config  MV_ETH_NAPI_GROUPS
++        int "Number of NAPI instances can be used per port"
++	range 1 NR_CPUS if SMP
++	range 1 1 if !SMP
++        default 1
++        ---help---
++	Different RXQs and TXQs can be processed by different CPU using different NAPI instances
++
++menu "NAPI group #0 configuration"
+ 
+ config MV_ETH_GROUP0_CPU
+ 	hex "CPU affinity for group0"
+-	depends on MV_ETH_NAPI && MV_ETH_NAPI && MV_ETH_NAPI_GR0
+-    range 0x0 0xf if (NR_CPUS=4)
+-    range 0x0 0x7 if (NR_CPUS=3)
+-    range 0x0 0x3 if (NR_CPUS=2)
+-	range 0x0 0x1 if (NR_CPUS=1)
++	range 0x0 0xf if (SMP && (NR_CPUS=4))
++	range 0x0 0x7 if (SMP && (NR_CPUS=3))
++	range 0x0 0x3 if (SMP && (NR_CPUS=2))
++	range 0x0 0x1 if !SMP
+ 	default 0xf
++
+ config MV_ETH_GROUP0_RXQ
+ 	hex "RXQ affinity for group0"
+-	depends on MV_ETH_NAPI && MV_ETH_NAPI_GR0
+ 	range 0x0 0xff
+ 	default 0xff
++endmenu
+ 
+-menuconfig MV_ETH_NAPI_GR1
+-	bool "NAPI configuration for group 1"
+-	depends on MV_ETH_NAPI && (MV_ETH_NAPI_GROUPS !=1)
+-	default y
++menu "NAPI group #1 configuration"
++	depends on (MV_ETH_NAPI_GROUPS != 1)
+ 
+ config MV_ETH_GROUP1_CPU
+ 	hex "CPU affinity for group1"
+-	depends on MV_ETH_NAPI && MV_ETH_NAPI_GR1
+-    range 0x0 0xf if (NR_CPUS=4)
+-    range 0x0 0x7 if (NR_CPUS=3)
+-    range 0x0 0x3 if (NR_CPUS=2)
+-	range 0x0 0x3 if (NR_CPUS=1)
++	range 0x0 0xf if (SMP && (NR_CPUS=4))
++	range 0x0 0x7 if (SMP && (NR_CPUS=3))
++	range 0x0 0x3 if (SMP && (NR_CPUS=2))
++	range 0x0 0x1 if !SMP
+ 	default 0x0
++
+ config MV_ETH_GROUP1_RXQ
+ 	hex "RXQ affinity for group1"
+-	depends on MV_ETH_NAPI && MV_ETH_NAPI_GR1
+ 	range 0x0 0xff
+ 	default 0x0
+-menuconfig MV_ETH_NAPI_GR2
+-        bool "NAPI configuration for group 2"
+-		depends on MV_ETH_NAPI && (MV_ETH_NAPI_GROUPS !=1) && (MV_ETH_NAPI_GROUPS !=2)
+-        default y
++endmenu
++
++menu "NAPI group #2 configuration"
++	depends on (MV_ETH_NAPI_GROUPS != 1) && (MV_ETH_NAPI_GROUPS != 2)
++
+ config MV_ETH_GROUP2_CPU
+ 	hex "CPU affinity for group2"
+-	depends on MV_ETH_NAPI && MV_ETH_NAPI && MV_ETH_NAPI_GR2
+-    range 0x0 0xf if (NR_CPUS=4)
+-    range 0x0 0x7 if (NR_CPUS=3)
+-    range 0x0 0x3 if (NR_CPUS=2)
+-	range 0x0 0x3 if (NR_CPUS=1)
++	range 0x0 0xf if (SMP && (NR_CPUS=4))
++	range 0x0 0x7 if (SMP && (NR_CPUS=3))
++	range 0x0 0x3 if (SMP && (NR_CPUS=2))
++	range 0x0 0x1 if !SMP
+ 	default 0x0
++
+ config MV_ETH_GROUP2_RXQ
+ 	hex "RXQ affinity for group2"
+-	depends on MV_ETH_NAPI && MV_ETH_NAPI_GR2
+ 	range 0x0 0xff
+ 	default 0x0
+-menuconfig MV_ETH_NAPI_GR3
+-        bool "NAPI configuration for group 3"
+-		depends on MV_ETH_NAPI && (MV_ETH_NAPI_GROUPS !=1) && (MV_ETH_NAPI_GROUPS !=2) && (MV_ETH_NAPI_GROUPS !=3)
+-        default y
++endmenu
++
++menu "NAPI group #3 configuration"
++	depends on (MV_ETH_NAPI_GROUPS != 1) && (MV_ETH_NAPI_GROUPS != 2) && (MV_ETH_NAPI_GROUPS != 3)
++
+ config MV_ETH_GROUP3_CPU
+ 	hex "CPU affinity for group3"
+-	depends on MV_ETH_NAPI && MV_ETH_NAPI_GR3
+-    range 0x0 0xf if (NR_CPUS=4)
+-    range 0x0 0x7 if (NR_CPUS=3)
+-    range 0x0 0x3 if (NR_CPUS=2)
+-	range 0x0 0x3 if (NR_CPUS=1)
++	range 0x0 0xf if (SMP && (NR_CPUS=4))
++	range 0x0 0x7 if (SMP && (NR_CPUS=3))
++	range 0x0 0x3 if (SMP && (NR_CPUS=2))
++	range 0x0 0x1 if !SMP
+ 	default 0x0
++
+ config MV_ETH_GROUP3_RXQ
+ 	hex "RXQ affinity for group3"
+-	depends on MV_ETH_NAPI && MV_ETH_NAPI_GR3
+ 	range 0x0 0xff
+ 	default 0x0
++endmenu
++endmenu
+ 
+ menu "PON support for Network driver"
+ 
+-- 
+1.7.9.5
+

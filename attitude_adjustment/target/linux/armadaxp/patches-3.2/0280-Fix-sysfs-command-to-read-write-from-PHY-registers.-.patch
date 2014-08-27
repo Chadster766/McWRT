@@ -1,0 +1,65 @@
+From 5c7e4f33e2f99a1812046d53536de94fee812161 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Mon, 10 Sep 2012 02:24:11 -0400
+Subject: [PATCH 280/609] Fix sysfs command to read/write from PHY registers.
+ All arguments for all commands in hex format
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../plat-armada/mv_drivers_lsp/mv_phy/phy_sysfs.c  |   13 ++++++-------
+ arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c     |    2 +-
+ 2 files changed, 7 insertions(+), 8 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_phy/phy_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_phy/phy_sysfs.c
+index b7c39ea..b2e599f 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_phy/phy_sysfs.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_phy/phy_sysfs.c
+@@ -34,18 +34,17 @@ disclaimer.
+ 
+ #include "gbe/mvNeta.h"
+ #include "net_dev/mv_netdev.h"
+-/*#include "../eth-phy/mvEthPhy.h"*/
+ #include "eth-phy/mvEthPhy.h"
+ 
+ static ssize_t phy_help(char *buf)
+ {
+ 	int off = 0;
+ 
+-	off += sprintf(buf+off, "echo a       > status        - print port Speed, Duplex, Auto-negotiation, Link, <a-phy address>. \n");
+-	off += sprintf(buf+off, "echo a r     > read_reg      - read ethernet phy <a-phy address> register <r-hex>\n");
+-	off += sprintf(buf+off, "echo a r v   > write_reg     - write value <v-hex> to ethernet phy register <r-hex>\n");
+-	off += sprintf(buf+off, "echo p       > phy_init      - init phy <p-port> .\n");
+-	off += sprintf(buf+off, "echo a       > restart_an    - restart ethernet Phy <a-phy address> Auto-Negotiationinit.\n");
++	off += sprintf(buf+off, "echo a       > status        - print phy status <a-phy address>.\n");
++	off += sprintf(buf+off, "echo a r     > read_reg      - read phy <a-phy address> register <r-hex>\n");
++	off += sprintf(buf+off, "echo a r v   > write_reg     - write value <v-hex> to  phy (a-phy address) register <r-hex>\n");
++	off += sprintf(buf+off, "echo p       > phy_init      - init phy <p-port>.\n");
++	off += sprintf(buf+off, "echo a       > restart_an    - restart phy <a-phy address> Auto-Negotiation.\n");
+ 
+ 	return off;
+ }
+@@ -107,7 +106,7 @@ static ssize_t phy_3_hex_store(struct device *dev,
+ 		return -EPERM;
+ 
+ 	err = p = reg = val = 0;
+-	sscanf(buf, "%d %x %x", &p, &reg, &val);
++	sscanf(buf, "%x %x %x", &p, &reg, &val);
+ 
+ 	local_irq_save(flags);
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
+index 9796c7f..f5a7846 100755
+--- a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
++++ b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
+@@ -280,7 +280,7 @@ MV_STATUS mvEthPhyRegPrint(MV_U32 phyAddr, MV_U32 regOffs)
+ 
+ 	status = mvEthPhyRegRead(phyAddr, regOffs, &data);
+ 	if (status == MV_OK)
+-		mvOsPrintf("reg=%d: 0x%04x\n", regOffs, data);
++		mvOsPrintf("phy=0x%x, reg=0x%x: 0x%04x\n", phyAddr, regOffs, data);
+ 	else
+ 		mvOsPrintf("Read failed\n");
+ 
+-- 
+1.7.9.5
+

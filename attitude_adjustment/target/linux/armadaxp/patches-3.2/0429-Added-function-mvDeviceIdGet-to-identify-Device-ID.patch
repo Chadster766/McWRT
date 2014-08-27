@@ -1,0 +1,73 @@
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
+index 7d3f9af..09deea4 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
+@@ -1070,6 +1070,45 @@ MV_STATUS mvCtrlModelRevNameGet(char *pNameBuff)
+ 	return MV_OK;
+ }
+ 
++MV_U32 gDevId = -1;
++/*******************************************************************************
++* mvCtrlDevFamilyIdGet - Get Device ID
++*
++* DESCRIPTION:
++*       This function returns Device ID.
++*
++* INPUT:
++*       ctrlModel.
++*
++* OUTPUT:
++*       None.
++*
++* RETURN:
++*       32bit board Device ID number, '-1' if Device ID is undefined.
++*
++*******************************************************************************/
++MV_U32 mvCtrlDevFamilyIdGet(MV_U16 ctrlModel)
++{
++	if (gDevId == -1)
++	{
++		switch (ctrlModel) {
++		case MV_78130_DEV_ID:
++		case MV_78160_DEV_ID:
++		case MV_78230_DEV_ID:
++		case MV_78260_DEV_ID:
++		case MV_78460_DEV_ID:
++		case MV_78000_DEV_ID:
++			gDevId=MV_78XX0;
++			return gDevId;
++			break;
++		default:
++			return MV_ERROR;
++		}
++	}
++	else
++		return gDevId;
++}
++
+ static const char *cntrlName[] = TARGETS_NAME_ARRAY;
+ 
+ /*******************************************************************************
+diff --git a/arch/arm/plat-armada/common/mvDeviceId.h b/arch/arm/plat-armada/common/mvDeviceId.h
+index 59d9f08..525edd5 100644
+--- a/arch/arm/plat-armada/common/mvDeviceId.h
++++ b/arch/arm/plat-armada/common/mvDeviceId.h
+@@ -253,6 +253,7 @@ extern "C" {
+ 
+ 
+ /* KW40 */
++#define MV_67XX				0x6700
+ #define MV_6710_DEV_ID		0x6710
+ 
+ #define MV_6710_Z1_REV		0x0
+@@ -286,6 +287,7 @@ extern "C" {
+ 
+ 
+ /* Armada XP Family */
++#define MV_78XX				0x7800
+ #define MV_78130_DEV_ID		0x7813
+ #define MV_78160_DEV_ID		0x7816
+ #define MV_78230_DEV_ID		0x7823
+-- 
+1.7.9.5
+

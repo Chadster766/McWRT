@@ -1,0 +1,75 @@
+diff -ru tokyocabinet-1.4.47/configure tokyocabinet-1.4.47-new/configure
+--- tokyocabinet-1.4.47/configure	2011-02-11 10:59:53.000000000 +0100
++++ tokyocabinet-1.4.47-new/configure	2011-06-01 16:54:33.082157954 +0200
+@@ -2066,24 +2066,14 @@
+ 
+ # Building flags
+ MYCFLAGS="-std=c99 -Wall -fPIC -fsigned-char -O2"
+-MYCPPFLAGS="-I. -I\$(INCLUDEDIR) -I$HOME/include -I/usr/local/include"
++MYCPPFLAGS="-I."
+ MYCPPFLAGS="$MYCPPFLAGS -DNDEBUG -D_GNU_SOURCE=1 -D_REENTRANT -D__EXTENSIONS__"
+-MYLDFLAGS="-L. -L\$(LIBDIR) -L$HOME/lib -L/usr/local/lib"
++MYLDFLAGS="-L."
+ MYCMDLDFLAGS=""
+ MYRUNPATH="\$(LIBDIR)"
+ MYLDLIBPATHENV="LD_LIBRARY_PATH"
+ MYPOSTCMD="true"
+ 
+-# Building paths
+-PATH="$PATH:$HOME/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"
+-PATH="$PATH:/opt/SUNWspro/bin:/usr/ccs/bin:/usr/xpg4/bin:/usr/xpg6/bin:/usr/ucb"
+-CPATH="$HOME/include:/usr/local/include:$CPATH"
+-LIBRARY_PATH="$HOME/lib:/usr/local/lib:$LIBRARY_PATH"
+-LD_LIBRARY_PATH="$HOME/lib:/usr/local/lib:$LD_LIBRARY_PATH"
+-PKG_CONFIG_PATH="$HOME/lib/pkgconfig:/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
+-export PATH CPATH LIBRARY_PATH LD_LIBRARY_PATH PKG_CONFIG_PATH
+-
+-
+ 
+ #================================================================
+ # Options
+diff -ru tokyocabinet-1.4.47/configure.in tokyocabinet-1.4.47-new/configure.in
+--- tokyocabinet-1.4.47/configure.in	2010-08-15 16:14:53.000000000 +0200
++++ tokyocabinet-1.4.47-new/configure.in	2011-06-01 16:53:34.645989924 +0200
+@@ -32,25 +32,14 @@
+ 
+ # Building flags
+ MYCFLAGS="-std=c99 -Wall -fPIC -fsigned-char -O2"
+-MYCPPFLAGS="-I. -I\$(INCLUDEDIR) -I$HOME/include -I/usr/local/include"
++MYCPPFLAGS="-I."
+ MYCPPFLAGS="$MYCPPFLAGS -DNDEBUG -D_GNU_SOURCE=1 -D_REENTRANT -D__EXTENSIONS__"
+-MYLDFLAGS="-L. -L\$(LIBDIR) -L$HOME/lib -L/usr/local/lib"
++MYLDFLAGS="-L."
+ MYCMDLDFLAGS=""
+ MYRUNPATH="\$(LIBDIR)"
+ MYLDLIBPATHENV="LD_LIBRARY_PATH"
+ MYPOSTCMD="true"
+ 
+-# Building paths
+-PATH="$PATH:$HOME/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"
+-PATH="$PATH:/opt/SUNWspro/bin:/usr/ccs/bin:/usr/xpg4/bin:/usr/xpg6/bin:/usr/ucb"
+-CPATH="$HOME/include:/usr/local/include:$CPATH"
+-LIBRARY_PATH="$HOME/lib:/usr/local/lib:$LIBRARY_PATH"
+-LD_LIBRARY_PATH="$HOME/lib:/usr/local/lib:$LD_LIBRARY_PATH"
+-PKG_CONFIG_PATH="$HOME/lib/pkgconfig:/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
+-export PATH CPATH LIBRARY_PATH LD_LIBRARY_PATH PKG_CONFIG_PATH
+-
+-
+-
+ #================================================================
+ # Options
+ #================================================================
+diff -ru tokyocabinet-1.4.47/Makefile.in tokyocabinet-1.4.47-new/Makefile.in
+--- tokyocabinet-1.4.47/Makefile.in	2010-07-04 10:36:20.000000000 +0200
++++ tokyocabinet-1.4.47-new/Makefile.in	2011-06-01 15:02:19.383826342 +0200
+@@ -54,8 +54,8 @@
+ LDFLAGS = @MYLDFLAGS@
+ CMDLDFLAGS = @MYCMDLDFLAGS@
+ LIBS = @LIBS@
+-LDENV = LD_RUN_PATH=/lib:/usr/lib:$(LIBDIR):$(HOME)/lib:/usr/local/lib:@MYRUNPATH@:.
+-RUNENV = @MYLDLIBPATHENV@=.:/lib:/usr/lib:$(LIBDIR):$(HOME)/lib:/usr/local/lib:@MYRUNPATH@
++LDENV = LD_RUN_PATH=$(LIBDIR):@MYRUNPATH@:.
++RUNENV = @MYLDLIBPATHENV@=.:$(LIBDIR):@MYRUNPATH@
+ POSTCMD = @MYPOSTCMD@
+ 
+ 

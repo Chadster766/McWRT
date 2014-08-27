@@ -1,0 +1,247 @@
+--- a/src/cmdline.c
++++ b/src/cmdline.c
+@@ -1335,7 +1335,7 @@ cmdline_parser_required (struct gengetop
+ #endif
+ 
+ int
+-cmdline_parser_internal (int argc, char * const *argv, struct gengetopt_args_info *args_info, int override, int initialize, int check_required, const char *additional_error)
++cmdline_parser_internal (int argc, char * const *argv, struct gengetopt_args_info *args_info, int override, int initialize, int check_required __attribute__((__unused__)), const char *additional_error)
+ {
+   int c;  /* Character of the parsed option.  */
+   char *multi_token, *multi_next; /* for multiple options */
+--- a/src/ippool.c
++++ b/src/ippool.c
+@@ -267,7 +267,7 @@ void ippool_getv6suffix(struct in6_addr
+ 
+ /* Get IP address and mask */
+ int ippool_aton(struct in_addr *addr, struct in_addr *mask,
+-                char *pool, int number)
++                char *pool, int number __attribute__((__unused__)))
+ {
+   /* Parse only first instance of network for now */
+   /* Eventually "number" will indicate the token which we want to parse */
+--- a/src/pepper.c
++++ b/src/pepper.c
+@@ -3305,7 +3305,7 @@ static int dnprot_accept(struct app_conn
+  * \return 0
+  * \author Sebastien Vincent
+  */
+-static int cb_tun6_ind(struct tun6_t* tun_obj, void* pack, unsigned len)
++static int cb_tun6_ind(struct tun6_t* tun_obj __attribute__((__unused__)), void* pack, unsigned len)
+ {
+   struct ippoolm_t* ipm = NULL;
+   struct in6_addr dst;
+@@ -3377,7 +3377,7 @@ static int cb_tun6_ind(struct tun6_t* tu
+  * \param len data length
+  * \return 0
+  */
+-int cb_tun_ind(struct tun_t *tun_obj, void *pack, unsigned len)
++int cb_tun_ind(struct tun_t *tun_obj __attribute__((__unused__)), void *pack, unsigned len)
+ {
+   struct ippoolm_t *ipm = NULL;
+   struct in_addr dst;
+@@ -3459,7 +3459,7 @@ int cb_tun_ind(struct tun_t *tun_obj, vo
+  * \param conn redir connection that we will filled up up-to-date value
+  * \return 0 if success, -1 otherwise
+  */
+-static int cb_redir_getstate(struct redir_t *redir_obj, struct in_addr *addr,
++static int cb_redir_getstate(struct redir_t *redir_obj __attribute__((__unused__)), struct in_addr *addr,
+                              struct redir_conn_t *conn)
+ {
+   struct ippoolm_t *ipm = NULL;
+@@ -3524,7 +3524,7 @@ static int cb_redir_getstate(struct redi
+  * \param conn redir connection that we will filled up up-to-date value
+  * \return 0 if success, -1 otherwise
+  */
+-static int cb_redir_getstatev6(struct redir_t* redir_obj, struct in6_addr* addr, struct redir_conn_t* conn)
++static int cb_redir_getstatev6(struct redir_t* redir_obj __attribute__((__unused__)), struct in6_addr* addr, struct redir_conn_t* conn)
+ {
+   struct ippoolm_t *ipm = NULL;
+   struct app_conn_t *appconn = NULL;
+@@ -4354,9 +4354,9 @@ int upprot_getipv6(struct app_conn_t *ap
+  * \param pack_req packet for request
+  * \return 0 if success, -1 otherwise
+  */
+-int radius_conf(struct radius_t *radius_obj,
++int radius_conf(struct radius_t *radius_obj __attribute__((__unused__)),
+                 struct radius_packet_t *pack,
+-                struct radius_packet_t *pack_req)
++                struct radius_packet_t *pack_req __attribute__((__unused__)))
+ {
+   struct radius_attr_t *attr = NULL;
+ 
+--- a/src/tun.c
++++ b/src/tun.c
+@@ -226,7 +226,7 @@ int tun_addaddr(struct tun_t *this,
+   struct sockaddr_nl local;
+   int addr_len = 0;
+   int fd = -1;
+-  int status = 0;
++  int status __attribute__((__unused__)) = 0;
+ 
+   struct sockaddr_nl nladdr;
+   struct iovec iov;
+@@ -507,7 +507,7 @@ int tun_setaddr(struct tun_t *this,
+  * \param delete 1 = delete route, 0 = add route
+  * \return 0 if success, -1 otherwise
+  */
+-static int tun_route(struct tun_t *this,
++static int tun_route(struct tun_t *this __attribute__((__unused__)),
+                      struct in_addr *dst,
+                      struct in_addr *gateway,
+                      struct in_addr *mask,
+--- a/src/dhcp.c
++++ b/src/dhcp.c
+@@ -2111,7 +2111,7 @@ int dhcp_timeout(struct dhcp_t *this)
+   return 0;
+ }
+ 
+-struct timeval* dhcp_timeleft(struct dhcp_t *this, struct timeval *tvp)
++struct timeval* dhcp_timeleft(struct dhcp_t *this __attribute__((__unused__)), struct timeval *tvp)
+ {
+   /* To avoid unused parameter warning */
+   this = NULL;
+@@ -2640,7 +2640,7 @@ static int dhcp_gettag(struct dhcp_packe
+  * \return 0 if success, -1 otherwise4
+  */
+ static int dhcp_sendOFFER(struct dhcp_conn_t *conn,
+-                          struct dhcp_fullpacket_t *pack, int len)
++                          struct dhcp_fullpacket_t *pack, int len __attribute__((__unused__)))
+ {
+   struct dhcp_t *this = conn->parent;
+   struct dhcp_fullpacket_t packet;
+@@ -2762,7 +2762,7 @@ static int dhcp_sendOFFER(struct dhcp_co
+  * \return 0 if success, -1 otherwise
+  */
+ static int dhcp_sendACK(struct dhcp_conn_t *conn,
+-                        struct dhcp_fullpacket_t *pack, int len)
++                        struct dhcp_fullpacket_t *pack, int len __attribute__((__unused__)))
+ {
+   struct dhcp_t *this = conn->parent;
+   struct dhcp_fullpacket_t packet;
+@@ -2895,7 +2895,7 @@ static int dhcp_sendACK(struct dhcp_conn
+  * \return 0 if success, -1 otherwise
+  */
+ static int dhcp_sendNAK(struct dhcp_conn_t *conn,
+-                        struct dhcp_fullpacket_t *pack, int len)
++                        struct dhcp_fullpacket_t *pack, int len __attribute__((__unused__)))
+ {
+   struct dhcp_t *this = conn->parent;
+   struct dhcp_fullpacket_t packet;
+@@ -3496,7 +3496,7 @@ int dhcp_data_req(struct dhcp_conn_t *co
+  * \return 0
+  */
+ static int dhcp_sendARP(struct dhcp_conn_t *conn,
+-                        struct dhcp_arp_fullpacket_t *pack, int len)
++                        struct dhcp_arp_fullpacket_t *pack, int len __attribute__((__unused__)))
+ {
+   struct dhcp_t *this = conn->parent;
+   struct dhcp_arp_fullpacket_t packet;
+--- a/src/radius.c
++++ b/src/radius.c
+@@ -210,7 +210,7 @@ static int radius_acctreq_authenticator(
+  * \param secretlen length of secret
+  * \return 0
+  */
+-static int radius_authresp_authenticator(struct radius_t *this,
++static int radius_authresp_authenticator(struct radius_t *this __attribute__((__unused__)),
+                                   struct radius_packet_t *pack,
+                                   uint8_t *req_auth,
+                                   char *secret, int secretlen)
+@@ -801,7 +801,7 @@ int radius_addattr(struct radius_t *this
+   return 0;
+ }
+ 
+-int radius_addattrv6(struct radius_t *this, struct radius_packet_t *pack,
++int radius_addattrv6(struct radius_t *this __attribute__((__unused__)), struct radius_packet_t *pack,
+                  uint8_t type, uint32_t vendor_id, uint8_t vendor_type,
+                  struct in6_addr value, uint8_t *data, uint16_t dlen)
+ {
+@@ -1124,7 +1124,7 @@ int radius_getattrv6(struct radius_packe
+   return 0;
+ }
+ 
+-int radius_keydecode(struct radius_t *this, uint8_t *dst, int dstsize,
++int radius_keydecode(struct radius_t *this __attribute__((__unused__)), uint8_t *dst, int dstsize,
+                      int *dstlen, uint8_t *src, int srclen,
+                      uint8_t *authenticator, char *secret, int secretlen)
+ {
+@@ -1346,7 +1346,7 @@ int radius_pwdecode(struct radius_t *thi
+   return 0;
+ }
+ 
+-int radius_pwencode(struct radius_t *this, uint8_t *dst, int dstsize,
++int radius_pwencode(struct radius_t *this __attribute__((__unused__)), uint8_t *dst, int dstsize,
+                     int *dstlen, uint8_t *src, int srclen,
+                     uint8_t *authenticator, char *secret, int secretlen)
+ {
+--- a/src/redir.c
++++ b/src/redir.c
+@@ -974,7 +974,7 @@ void redir_set(struct redir_t *redir, in
+  * \param dstsize size of dst
+  * \return 0 if success, -1 otherwise
+  */
+-static int redir_getpath(struct redir_t *redir, char *src, char *dst, int dstsize)
++static int redir_getpath(struct redir_t *redir __attribute__((__unused__)), char *src, char *dst, int dstsize)
+ {
+   char *p1 = NULL;
+   char *p2 = NULL;
+@@ -1045,7 +1045,7 @@ static int redir_getpath(struct redir_t
+ /**
+  * \brief Get the url of an HTTP request.
+  */
+-static int redir_geturl(struct redir_t *redir, char *src, char *dst, int dstsize)
++static int redir_geturl(struct redir_t *redir __attribute__((__unused__)), char *src, char *dst, int dstsize)
+ {
+   char *p1 = NULL;
+   char *p3 = NULL;
+@@ -1128,7 +1128,7 @@ static int redir_geturl(struct redir_t *
+  * \return 0 if found, -1 otherwise (not found, malformed HTTP response)
+  */
+ /* TODO: Should be merged with other parsers */
+-static int redir_getparam(struct redir_t *redir, char *src,
++static int redir_getparam(struct redir_t *redir __attribute__((__unused__)), char *src,
+                           char *param,
+                           char *dst, int dstsize)
+ {
+@@ -1362,9 +1362,9 @@ static int redir_getreq(struct redir_t *
+  * \param cbp pointer for callback
+  * \return 0
+  */
+-static int redir_cb_radius_auth_conf(struct radius_t *radius,
++static int redir_cb_radius_auth_conf(struct radius_t *radius __attribute__((__unused__)),
+                                      struct radius_packet_t *pack,
+-                                     struct radius_packet_t *pack_req, void *cbp)
++                                     struct radius_packet_t *pack_req __attribute__((__unused__)), void *cbp)
+ {
+   struct radius_attr_t *interimattr = NULL;
+   struct radius_attr_t *stateattr = NULL;
+@@ -1696,7 +1696,7 @@ static int redir_cb_radius_auth_conf(str
+  * \param conn redir connection
+  * \return 0 if success, -1 otherwise
+  */
+-static int redir_radius(struct redir_t *redir, struct sockaddr_storage *addr,
++static int redir_radius(struct redir_t *redir, struct sockaddr_storage *addr __attribute__((__unused__)),
+                         struct redir_conn_t *conn)
+ {
+   struct radius_t *radius = NULL;      /* Radius client instance */
+--- a/src/tun6.c
++++ b/src/tun6.c
+@@ -1080,7 +1080,7 @@ int tun6_setaddr(struct tun6_t *this, st
+   return code;
+ }
+ 
+-int tun6_addroute(struct tun6_t *this, struct in6_addr *dst, struct in6_addr *gateway, uint8_t prefixlen)
++int tun6_addroute(struct tun6_t *this __attribute__((__unused__)), struct in6_addr *dst __attribute__((__unused__)), struct in6_addr *gateway __attribute__((__unused__)), uint8_t prefixlen __attribute__((__unused__)))
+ {
+   /* TODO : use _iface_route */
+   this = NULL;
+@@ -1096,7 +1096,7 @@ int tun6_set_cb_ind(struct tun6_t *this,
+   return 0;
+ }
+ 
+-int tun6_runscript(struct tun6_t *tun, char* script)
++int tun6_runscript(struct tun6_t *tun __attribute__((__unused__)), char* script __attribute__((__unused__)))
+ {
+   /* TODO */
+   tun = NULL;

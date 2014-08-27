@@ -1,0 +1,83 @@
+From 72533bf99cd4756dcbaea0536c49fbc766256914 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Sun, 9 Dec 2012 15:16:28 +0200
+Subject: [PATCH 450/609] cleaned U-Boot compilation errors
+
+Change-Id: Id7f6b1f0756a2b66d752afe5f32857f13893eccd
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/boardEnv/mvBoardEnvLib.h      |    3 ++-
+ .../plat-armada/mv_hal/neta/gbe/mvNetaAddrDec.c    |    4 ++--
+ arch/arm/plat-armada/mv_hal/pex/mvPex.c            |    2 --
+ arch/arm/plat-armada/mv_hal/uart/mvUart.c          |    2 ++
+ 7 files changed, 13 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
+index c8cffd4..6fba9f0 100755
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
+@@ -367,7 +367,8 @@ MV_32 mvBoardPhyAddrGet(MV_U32 ethPortNum);
+ 
+ MV_32 mvBoardQuadPhyAddr0Get(MV_U32 ethPortNum);
+ MV_32 mvBoardPhyLinkCryptPortAddrGet(MV_U32 ethPortNum);
+-
++MV_32 mvBoardSwitchCpuPortGet(MV_U32 switchIdx);
++MV_32 mvBoardSmiScanModeGet(MV_U32 switchIdx);
+ MV_BOOL mvBoardSpecInitGet(MV_U32 *regOff, MV_U32 *data);
+ MV_U32 mvBoardTclkGet(MV_VOID);
+ MV_U32 mvBoardSysClkGet(MV_VOID);
+diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaAddrDec.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaAddrDec.c
+index 592ee8f..3838ebc 100755
+--- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaAddrDec.c
++++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaAddrDec.c
+@@ -179,13 +179,13 @@ MV_STATUS mvNetaWinWrite(MV_U32 port, MV_U32 winNum, MV_UNIT_WIN_INFO *pAddrDecW
+ 
+ 	size = pAddrDecWin->addrWin.size;
+ 	if (size == 0) {
+-		mvOsPrintf("%s: ERR. Invalid window size %d\n",	__func__, size);
++		mvOsPrintf("%s: ERR. Invalid window size %lld\n",	__func__, size);
+ 		return MV_BAD_PARAM;
+ 	}
+ 	if (!MV_IS_POWER_OF_2(size)) {
+ 		/* try to get a good size */
+ 		pAddrDecWin->addrWin.size = 1 << (mvLog2(size) + 1);
+-		mvOsPrintf("%s: WARN. Wrong window size %d, rounding to %lld\n",
++		mvOsPrintf("%s: WARN. Wrong window size %lld, rounding to %lld\n",
+ 			__func__, size, pAddrDecWin->addrWin.size);
+ 		size = pAddrDecWin->addrWin.size;
+ 	}
+diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPex.c b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
+index f0113f1..0f598e2 100755
+--- a/arch/arm/plat-armada/mv_hal/pex/mvPex.c
++++ b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
+@@ -86,11 +86,9 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+ 	MV_PEX_MODE pexMode;
+ 	MV_U32 regVal;
+ 	MV_U32 status;
+-	MV_U16 ctrlModel;
+ 	MV_U32 ctrlFamily;
+ 
+ 	mvOsMemcpy(&pexHalData[pexIf], halData, sizeof(MV_PEX_HAL_DATA));
+-	ctrlModel = pexHalData[pexIf].ctrlModel;
+ 	ctrlFamily=pexHalData[pexIf].ctrlFamily;
+ 
+ 	if (mvPexModeGet(pexIf, &pexMode) != MV_OK) {
+diff --git a/arch/arm/plat-armada/mv_hal/uart/mvUart.c b/arch/arm/plat-armada/mv_hal/uart/mvUart.c
+index 0b02026..b594a69 100644
+--- a/arch/arm/plat-armada/mv_hal/uart/mvUart.c
++++ b/arch/arm/plat-armada/mv_hal/uart/mvUart.c
+@@ -69,8 +69,10 @@ static volatile MV_UART_PORT * uartBase[MV_UART_MAX_CHAN]=
+ {
+ 	mvUartBase(0),
+ 	mvUartBase(1),
++#ifdef MV88F78X60
+ 	mvUartBase(2),
+ 	mvUartBase(3)
++#endif
+ };
+ 
+ 
+-- 
+1.7.9.5
+

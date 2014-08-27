@@ -1,0 +1,859 @@
+From fb46ade66cc4f791aee53304dfa60301c8569c5a Mon Sep 17 00:00:00 2001
+From: yonif <yonif@marvell.com>
+Date: Wed, 25 Apr 2012 11:55:24 +0300
+Subject: [PATCH 161/609] Add support for ip flow to rxq mapping via PNC
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/Makefile                    |    4 +-
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c   |   62 ++-
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |    2 +-
+ .../mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c         |   23 +-
+ .../mv_drivers_lsp/mv_neta/pnc/rxq_map_sysfs.c     |  193 +++++++++
+ arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c       |    2 +-
+ arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h       |    9 +
+ arch/arm/plat-armada/mv_hal/neta/pnc/mvPncRxq.c    |  412 ++++++++++++++++++++
+ 8 files changed, 702 insertions(+), 5 deletions(-)
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c
+ create mode 100755 arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/rxq_map_sysfs.c
+ create mode 100755 arch/arm/plat-armada/mv_hal/neta/pnc/mvPncRxq.c
+
+diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
+index 8356fe8..6df4c8a 100644
+--- a/arch/arm/mach-armadaxp/Makefile
++++ b/arch/arm/mach-armadaxp/Makefile
+@@ -147,7 +147,8 @@ ifeq ($(CONFIG_MV_ETH_NETA),y)
+ armadaxp-$(CONFIG_MV_ETH_NETA)	        += $(HAL_ETH_GBE_DIR)/mvNeta.o $(HAL_ETH_GBE_DIR)/mvNetaDebug.o \
+ 					   $(HAL_ETH_GBE_DIR)/mvNetaAddrDec.o $(HAL_IF_DIR)/mvSysNeta.o
+ armadaxp-$(CONFIG_MV_ETH_PNC)    	+= $(HAL_ETH_PNC_DIR)/mvTcam.o  $(HAL_ETH_PNC_DIR)/mvPncAging.o \
+-					$(HAL_ETH_PNC_DIR)/mvPnc.o $(HAL_ETH_PNC_DIR)/mvPncLb.o
++					   $(HAL_ETH_PNC_DIR)/mvPnc.o $(HAL_ETH_PNC_DIR)/mvPncLb.o
++armadaxp-$(CONFIG_MV_ETH_PNC_L3_FLOW)   += $(HAL_ETH_PNC_DIR)/mvPncRxq.o
+ armadaxp-$(CONFIG_MV_ETH_PNC_WOL)       += $(HAL_ETH_PNC_DIR)/mvPncWol.o
+ armadaxp-$(CONFIG_MV_ETH_BM) 	        += $(HAL_ETH_BM_DIR)/mvBm.o
+ armadaxp-$(CONFIG_MV_ETH_PMT)	        += $(HAL_ETH_PMT_DIR)/mvPmt.o
+@@ -185,6 +186,7 @@ endif
+ 
+ ifeq ($(CONFIG_MV_ETH_NETA),y)
+ obj-$(CONFIG_MV_ETH_PNC)                += $(LSP_PNC_DIR)/pnc_sysfs.o
++obj-$(CONFIG_MV_ETH_PNC_L3_FLOW)        += $(LSP_PNC_DIR)/rxq_map_sysfs.o
+ obj-$(CONFIG_MV_ETH_BM)                 += $(LSP_BM_DIR)/bm_sysfs.o  $(LSP_BM_DIR)/mv_eth_bm.o
+ obj-$(CONFIG_MV_ETH_PNC_WOL)            += $(LSP_PNC_DIR)/wol_sysfs.o
+ obj-$(CONFIG_MV_ETH_PMT)		+= $(LSP_PMT_DIR)/pmt_sysfs.o
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c
+old mode 100644
+new mode 100755
+index 0351f3e..2dc9973
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c
+@@ -49,7 +49,6 @@ disclaimer.
+ 
+ #include "gbe/mvNeta.h"
+ #include "bm/mvBm.h"
+-#include "pnc/mvPnc.h"
+ 
+ #include "mv_switch.h"
+ #include "mv_netdev.h"
+@@ -57,6 +56,11 @@ disclaimer.
+ #include "mvOs.h"
+ #include "mvSysHwConfig.h"
+ 
++#ifdef CONFIG_MV_ETH_PNC
++#include "pnc/mvPnc.h"
++#endif /* CONFIG_MV_ETH_PNC */
++
++
+ #define MV_ETH_TOOL_AN_TIMEOUT	5000
+ 
+ 
+@@ -812,6 +816,61 @@ static int mv_eth_tool_get_rxnfc(struct net_device *dev, struct ethtool_rxnfc *i
+ 	return 0;
+ }
+ 
++/******************************************************************************
++* mv_eth_tool_set_rx_ntuple
++* Description:
++*	ethtool set mapping from 2t/5t rule to rxq/drop
++*	ignore mask parameters (assume mask=0xFF for each byte provided)
++*	support only tcp4 / udp4 protocols
++*	support only full 2t/5t rules:
++*		** 2t - must provide src-ip, dst-ip
++*		** 5t - must provide src-ip, dst-ip, src-port, dst-port
++* INPUT:
++*	netdev		Network device structure pointer
++*	ntuple
++* OUTPUT
++*	None
++* RETURN:
++*
++*******************************************************************************/
++static int mv_eth_tool_set_rx_ntuple(struct net_device *dev, struct ethtool_rx_ntuple *ntuple)
++{
++#ifdef CONFIG_MV_ETH_PNC_L3_FLOW
++	unsigned int sip, dip, ports, sport, dport, proto;
++	struct eth_port *pp;
++
++	if ((ntuple->fs.flow_type != TCP_V4_FLOW) && (ntuple->fs.flow_type != UDP_V4_FLOW))
++		return -EOPNOTSUPP;
++
++	if ((ntuple->fs.action >= CONFIG_MV_ETH_RXQ) || (ntuple->fs.action < ETHTOOL_RXNTUPLE_ACTION_CLEAR))
++		return -EINVAL;
++
++	if (ntuple->fs.flow_type == TCP_V4_FLOW)
++		proto = 6; /* tcp */
++	else
++		proto = 17; /* udp */
++
++	sip = ntuple->fs.h_u.tcp_ip4_spec.ip4src;
++	dip = ntuple->fs.h_u.tcp_ip4_spec.ip4dst;
++	sport = ntuple->fs.h_u.tcp_ip4_spec.psrc;
++	dport = ntuple->fs.h_u.tcp_ip4_spec.pdst;
++	if (!sip || !dip)
++		return -EINVAL;
++
++	pp = MV_ETH_PRIV(dev);
++	if (!sport || !dport) { /* 2-tuple */
++		pnc_ip4_2tuple_rxq(pp->port, sip, dip, ntuple->fs.action);
++	} else {
++		ports = (dport << 16) | ((sport << 16) >> 16);
++		pnc_ip4_5tuple_rxq(pp->port, sip, dip, ports, proto, ntuple->fs.action);
++	}
++
++	return 0;
++#else
++	return 1;
++#endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
++}
++
+ 
+ /******************************************************************************
+ * mv_eth_tool_get_ethtool_stats
+@@ -861,5 +920,6 @@ const struct ethtool_ops mv_eth_tool_ops = {
+ 	.get_rxfh_indir				= mv_eth_tool_get_rxfh_indir,
+ 	.set_rxfh_indir				= mv_eth_tool_set_rxfh_indir,
+ 	.get_rxnfc                  = mv_eth_tool_get_rxnfc,
++	.set_rx_ntuple				= mv_eth_tool_set_rx_ntuple,
+ };
+ 
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index b69182d..9d1c50f 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -3604,7 +3604,7 @@ void mv_eth_config_show(void)
+ /* Set network device features on initialization. Take into account default compile time configuration. */
+ static void mv_eth_netdev_set_features(struct net_device *dev)
+ {
+-	dev->features 	 = NETIF_F_SG  | NETIF_F_LLTX;
++	dev->features 	 = NETIF_F_SG  | NETIF_F_LLTX | NETIF_F_NTUPLE;
+ 	dev->hw_features = NETIF_F_IP_CSUM | NETIF_F_SG;
+ 
+ #if defined(MV_ETH_PNC_LB) && defined(CONFIG_MV_ETH_PNC)
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c
+index dd3fe7e..c333ef3 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c
+@@ -41,7 +41,12 @@ disclaimer.
+ #include "pnc/mvPnc.h"
+ #include "pnc/mvTcam.h"
+ 
++#ifdef CONFIG_MV_ETH_PNC_L3_FLOW
++extern int __devinit rxq_map_sysfs_init(struct kobject *kobj);
++#endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
++
+ static struct tcam_entry te;
++static struct kobject *pnc_kobj;
+ 
+ static ssize_t tcam_help(char *buf)
+ {
+@@ -370,7 +375,6 @@ static struct attribute *pnc_attrs[] = {
+ };
+ 
+ static struct attribute_group pnc_group = {
+-	.name = "pnc",
+ 	.attrs = pnc_attrs,
+ };
+ 
+@@ -395,6 +399,23 @@ int __devinit pnc_sysfs_init(void)
+ 		printk(KERN_INFO "sysfs group failed %d\n", err);
+ 		goto out;
+ 	}
++
++	pnc_kobj = kobject_create_and_add("pnc", &pd->kobj);
++	if (!pnc_kobj) {
++		printk(KERN_INFO "could not create pnc kobject\n");
++		return -ENOMEM;
++	}
++
++	err = sysfs_create_group(pnc_kobj, &pnc_group);
++	if (err) {
++		printk(KERN_INFO "create sysfs pnc group failed %d\n", err);
++		goto out;
++	}
++
++#ifdef CONFIG_MV_ETH_PNC_L3_FLOW
++	rxq_map_sysfs_init(pnc_kobj);
++#endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
++
+ out:
+ 	return err;
+ }
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/rxq_map_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/rxq_map_sysfs.c
+new file mode 100755
+index 0000000..f8dad73
+--- /dev/null
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/rxq_map_sysfs.c
+@@ -0,0 +1,193 @@
++/*******************************************************************************
++Copyright (C) Marvell International Ltd. and its affiliates
++
++This software file (the "File") is owned and distributed by Marvell
++International Ltd. and/or its affiliates ("Marvell") under the following
++alternative licensing terms.  Once you have made an election to distribute the
++File under one of the following license alternatives, please (i) delete this
++introductory statement regarding license alternatives, (ii) delete the two
++license alternatives that you have not elected to use and (iii) preserve the
++Marvell copyright notice above.
++
++
++********************************************************************************
++Marvell GPL License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File in accordance with the terms and conditions of the General
++Public License Version 2, June 1991 (the "GPL License"), a copy of which is
++available along with the File in the license.txt file or by writing to the Free
++Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
++on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++
++THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
++DISCLAIMED.  The GPL License provides additional details about this warranty
++disclaimer.
++*******************************************************************************/
++#include <linux/module.h>
++#include <linux/kernel.h>
++#include <linux/types.h>
++#include <linux/capability.h>
++#include <linux/kernel.h>
++#include <linux/platform_device.h>
++
++#include "mvOs.h"
++#include "mvCommon.h"
++#include "ctrlEnv/mvCtrlEnvLib.h"
++
++#include "gbe/mvNeta.h"
++#include "pnc/mvPnc.h"
++
++#include "net_dev/mv_netdev.h"
++
++
++static ssize_t rxq_map_help(char *buf)
++{
++	int off = 0;
++
++	off += sprintf(buf+off, "cat                                   dump_all  - dump all rxq mapping rules\n");
++	off += sprintf(buf+off, "echo port sip dip rxq               > ip4_rxq   - add new mapping rule from <sip> <dip> to <rxq> via <port>\n");
++	off += sprintf(buf+off, "echo port sip dip                   > ip4_drop  - add new mapping rule from <sip> <dip> to drop via <port>\n");
++	off += sprintf(buf+off, "echo port sip dip                   > ip4_del   - delete existing rule with <sip> <dip>\n");
++
++	off += sprintf(buf+off, "echo port sip dip sport dport rxq   > udp4_rxq  - add new mapping rule from 5-tuple to <rxq> via <port>\n");
++	off += sprintf(buf+off, "echo port sip dip sport dport       > udp4_drop - add new mapping rule from 5-tuple to drop via <port>\n");
++	off += sprintf(buf+off, "echo port sip dip sport dport       > udp4_del  - delete existing rule\n");
++
++	off += sprintf(buf+off, "echo port sip dip sport dport rxq   > tcp4_rxq  - add new mapping rule from 5-tuple to <rxq> via <port>\n");
++	off += sprintf(buf+off, "echo port sip dip sport dport       > tcp4_drop - add new mapping rule from 5-tuple to drop via <port>\n");
++	off += sprintf(buf+off, "echo port sip dip sport dport       > tcp4_del  - delete existing rule\n");
++
++	off += sprintf(buf+off, "\nparameters: sip/dip = xxx.xxx.xxx.xxx\n");
++
++	return off;
++}
++
++static ssize_t rxq_map_show(struct device *dev,
++				  struct device_attribute *attr, char *buf)
++{
++	const char   *name = attr->attr.name;
++
++	if (!capable(CAP_NET_ADMIN))
++		return -EPERM;
++
++	if (!strcmp(name, "dump_all"))
++		pnc_rxq_map_dump();
++	else if (!strcmp(name, "help"))
++		return rxq_map_help(buf);
++
++	return 0;
++}
++
++
++static ssize_t rxq_map_2t_store(struct device *dev,
++			 struct device_attribute *attr, const char *buf, size_t len)
++{
++	unsigned int res = 0, err = 0, sip, dip, port;
++	int rxq;
++	const char *name = attr->attr.name;
++
++	if (!capable(CAP_NET_ADMIN))
++		return -EPERM;
++
++	res = sscanf(buf, "%d %hhu.%hhu.%hhu.%hhu %hhu.%hhu.%hhu.%hhu %d", &port, (unsigned char *)(&sip), (unsigned char *)(&sip) + 1,
++		(unsigned char *)(&sip) + 2, (unsigned char *)(&sip) + 3, (unsigned char *)(&dip), (unsigned char *)(&dip) + 1,
++		(unsigned char *)(&dip) + 2, (unsigned char *)(&dip) + 3, &rxq);
++	if (res < 9)
++		return -EINVAL;
++
++	if (!strcmp(name, "ip4_drop"))
++		rxq = -1;
++	else if (!strcmp(name, "ip4_del"))
++		rxq = -2;
++
++	err = pnc_ip4_2tuple_rxq(port, sip, dip, rxq);
++
++	return err ? -EINVAL : len;
++}
++
++static ssize_t rxq_map_5t_store(struct device *dev,
++			 struct device_attribute *attr, const char *buf, size_t len)
++{
++	unsigned int res = 0, err = 0, sip, dip, ports, proto, port;
++	int rxq;
++	const char *name = attr->attr.name;
++
++	if (!capable(CAP_NET_ADMIN))
++		return -EPERM;
++
++	res = sscanf(buf, "%d %hhu.%hhu.%hhu.%hhu %hhu.%hhu.%hhu.%hhu %hu %hu %d", &port, (unsigned char *)(&sip),
++		(unsigned char *)(&sip) + 1, (unsigned char *)(&sip) + 2, (unsigned char *)(&sip) + 3, (unsigned char *)(&dip),
++		(unsigned char *)(&dip) + 1, (unsigned char *)(&dip) + 2, (unsigned char *)(&dip) + 3,
++		(u16 *)&ports + 1, (u16 *)&ports, &rxq);
++	if (res < 11)
++		return -EINVAL;
++
++	if (!strcmp(name, "udp4_drop") || !strcmp(name, "tcp4_drop"))
++		rxq = -1;
++	else if (!strcmp(name, "udp4_del") || !strcmp(name, "tcp4_del"))
++		rxq = -2;
++
++	if (name[0] == 't')
++		proto = 6; /* tcp */
++	else
++		proto = 17; /* udp */
++
++	err = pnc_ip4_5tuple_rxq(port, sip, dip, MV_BYTE_SWAP_32BIT(ports), proto, rxq);
++
++	return err ? -EINVAL : len;
++}
++
++
++static DEVICE_ATTR(help,		S_IRUSR, rxq_map_show, rxq_map_2t_store);
++static DEVICE_ATTR(dump_all,		S_IRUSR, rxq_map_show, rxq_map_2t_store);
++//static DEVICE_ATTR(dump,        S_IWUSR, rxq_map_show, rxq_map_2t_store);
++static DEVICE_ATTR(ip4_rxq,	S_IWUSR, rxq_map_show, rxq_map_2t_store);
++static DEVICE_ATTR(ip4_drop,	S_IWUSR, rxq_map_show, rxq_map_2t_store);
++static DEVICE_ATTR(ip4_del,	S_IWUSR, rxq_map_show, rxq_map_2t_store);
++static DEVICE_ATTR(udp4_rxq,	S_IWUSR, rxq_map_show, rxq_map_5t_store);
++static DEVICE_ATTR(udp4_drop,	S_IWUSR, rxq_map_show, rxq_map_5t_store);
++static DEVICE_ATTR(udp4_del,	S_IWUSR, rxq_map_show, rxq_map_5t_store);
++static DEVICE_ATTR(tcp4_rxq,	S_IWUSR, rxq_map_show, rxq_map_5t_store);
++static DEVICE_ATTR(tcp4_drop,	S_IWUSR, rxq_map_show, rxq_map_5t_store);
++static DEVICE_ATTR(tcp4_del,	S_IWUSR, rxq_map_show, rxq_map_5t_store);
++
++static struct attribute *rxq_map_attrs[] = {
++	&dev_attr_help.attr,
++	&dev_attr_dump_all.attr,
++	&dev_attr_ip4_rxq.attr,
++	&dev_attr_ip4_drop.attr,
++	&dev_attr_ip4_del.attr,
++	&dev_attr_udp4_rxq.attr,
++	&dev_attr_udp4_drop.attr,
++	&dev_attr_udp4_del.attr,
++	&dev_attr_tcp4_rxq.attr,
++	&dev_attr_tcp4_drop.attr,
++	&dev_attr_tcp4_del.attr,
++	NULL
++};
++
++static struct attribute_group rxq_map_group = {
++	.name = "rxq_map",
++	.attrs = rxq_map_attrs,
++};
++
++int __devinit rxq_map_sysfs_init(struct kobject *kobj)
++{
++	int err;
++
++	err = sysfs_create_group(kobj, &rxq_map_group);
++	if (err) {
++		printk(KERN_INFO "sysfs group failed %d\n", err);
++		goto out;
++	}
++out:
++	return err;
++}
++
++
++
++MODULE_AUTHOR("Yoni Farhadian");
++MODULE_DESCRIPTION("PNC rule to rxq map for Marvell NetA");
++MODULE_LICENSE("GPL");
+diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
+index eace9d7..6cf6bef 100755
+--- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
++++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
+@@ -801,7 +801,7 @@ static void pnc_ip4_flow_next_lookup_set(struct tcam_entry *te)
+ }
+ 
+ /*
+- * pnc_ip4_tos - Add TOS prioroty rules
++ * pnc_ip4_tos - Add TOS priority rules
+  */
+ int pnc_ip4_dscp(int port, unsigned char dscp, unsigned char mask, int rxq)
+ {
+diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
+index 82e5ebd..9498a23 100755
+--- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
++++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
+@@ -126,6 +126,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define NETA_PNC_DA_UC      (RI_DA_ME >> 9)
+ #define NETA_PNC_PPPOE      (RI_PPPOE >> 9)
+ #define NETA_PNC_RX_SPECIAL (RI_RX_SPECIAL >> 9)
++
++#define CONFIG_MV_PNC_L3_FLOW_LINES 20
+ /*---------------------------------------------------------------------------*/
+ 
+ MV_STATUS   mvPncInit(MV_U8 *pncVirtBase);
+@@ -307,6 +309,13 @@ int pnc_mcast_all(unsigned int port, int en);
+ 
+ void    pnc_mac_show(void);
+ 
++#ifdef CONFIG_MV_ETH_PNC_L3_FLOW
++int pnc_ip4_2tuple_rxq(unsigned int eth_port, unsigned int sip, unsigned int dip, int rxq);
++int pnc_ip4_5tuple_rxq(unsigned int eth_port, unsigned int sip, unsigned int dip, unsigned int ports,
++						unsigned int proto, int rxq);
++int pnc_rxq_map_dump(void);
++#endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
++
+ /* Add TOS priority rule */
+ int     pnc_ip4_dscp(int port, unsigned char dscp, unsigned char mask, int rxq);
+ void    pnc_ipv4_dscp_show(int port);
+diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncRxq.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncRxq.c
+new file mode 100755
+index 0000000..d9f0cdc
+--- /dev/null
++++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncRxq.c
+@@ -0,0 +1,412 @@
++/*******************************************************************************
++Copyright (C) Marvell International Ltd. and its affiliates
++
++This software file (the "File") is owned and distributed by Marvell
++International Ltd. and/or its affiliates ("Marvell") under the following
++alternative licensing terms.  Once you have made an election to distribute the
++File under one of the following license alternatives, please (i) delete this
++introductory statement regarding license alternatives, (ii) delete the two
++license alternatives that you have not elected to use and (iii) preserve the
++Marvell copyright notice above.
++
++********************************************************************************
++Marvell Commercial License Option
++
++If you received this File from Marvell and you have entered into a commercial
++license agreement (a "Commercial License") with Marvell, the File is licensed
++to you under the terms of the applicable Commercial License.
++
++********************************************************************************
++Marvell GPL License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File in accordance with the terms and conditions of the General
++Public License Version 2, June 1991 (the "GPL License"), a copy of which is
++available along with the File in the license.txt file or by writing to the Free
++Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
++on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++
++THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
++DISCLAIMED.  The GPL License provides additional details about this warranty
++disclaimer.
++********************************************************************************
++Marvell BSD License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File under the following licensing terms.
++Redistribution and use in source and binary forms, with or without modification,
++are permitted provided that the following conditions are met:
++
++    *   Redistributions of source code must retain the above copyright notice,
++	this list of conditions and the following disclaimer.
++
++    *   Redistributions in binary form must reproduce the above copyright
++	notice, this list of conditions and the following disclaimer in the
++	documentation and/or other materials provided with the distribution.
++
++    *   Neither the name of Marvell nor the names of its contributors may be
++	used to endorse or promote products derived from this software without
++	specific prior written permission.
++
++THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
++ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
++WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
++DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
++ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
++(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
++LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
++ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
++SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++
++*******************************************************************************/
++
++#include "mvOs.h"
++#include "mvCommon.h"
++#include "mv802_3.h"
++#include "ctrlEnv/mvCtrlEnvLib.h"
++
++#include "gbe/mvNetaRegs.h"
++#include "gbe/mvEthRegs.h"
++
++#include "mvPnc.h"
++#include "mvTcam.h"
++
++#ifdef CONFIG_MV_ETH_PNC_L3_FLOW
++int first_2tuple_rule = TE_FLOW_L3_END + 1;
++int last_5tuple_rule = TE_FLOW_L3 - 1;
++
++extern int pnc_port_mask_check(unsigned int mask, int eth_port);
++
++static INLINE struct tcam_entry *pnc_create_2t_entry(unsigned int sip, unsigned int dip)
++{
++	struct tcam_entry *te = tcam_sw_alloc(TCAM_LU_FLOW_IP4);
++
++	tcam_sw_set_byte(te, 12, (sip >> 0) & 0xFF);
++	tcam_sw_set_byte(te, 13, (sip >> 8) & 0xFF);
++	tcam_sw_set_byte(te, 14, (sip >> 16) & 0xFF);
++	tcam_sw_set_byte(te, 15, (sip >> 24) & 0xFF);
++
++	tcam_sw_set_byte(te, 16, (dip >> 0) & 0xFF);
++	tcam_sw_set_byte(te, 17, (dip >> 8) & 0xFF);
++	tcam_sw_set_byte(te, 18, (dip >> 16) & 0xFF);
++	tcam_sw_set_byte(te, 19, (dip >> 24) & 0xFF);
++
++	return te;
++}
++
++static INLINE int tcam_sw_cmp_2tuple(struct tcam_entry *te, unsigned int sip, unsigned int dip)
++{
++	return !((tcam_sw_cmp_bytes(te, 12, 4, (unsigned char *)&sip) == 0)
++			&& (tcam_sw_cmp_bytes(te, 16, 4, (unsigned char *)&dip) == 0));
++}
++
++static INLINE int tcam_sw_cmp_5tuple(struct tcam_entry *te, unsigned int sip, unsigned int dip,
++								unsigned int ports, unsigned int proto)
++{
++	if (tcam_sw_cmp_2tuple(te, sip, dip) != 0)
++		return 1;
++
++	return !((tcam_sw_cmp_bytes(te, 9, 1, (unsigned char *)&proto) == 0) &&
++			(tcam_sw_cmp_bytes(te, 20, 2, (unsigned char *)&ports) == 0));
++}
++#endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
++
++static INLINE int pnc_mask_to_port(unsigned int mask)
++{
++#ifdef CONFIG_ARCH_FEROCEON_KW2
++	switch (mask) {
++	case 27:
++		return 0;
++	case 15:
++		return 1;
++	case 30:
++		return 2;
++	default:
++		return -1;
++	}
++#else
++	switch (mask) {
++	case 30:
++		return 0;
++	case 15:
++		return 1;
++	case 27:
++		return 2;
++	case 23:
++		return 3;
++	default:
++		return -1;
++	}
++#endif /* MV_ETH_PNC_NEW */
++}
++
++/*
++ * pnc_ip4_2tuple - Add 2-tuple priority rules
++ */
++int pnc_ip4_2tuple_rxq(unsigned int eth_port, unsigned int sip, unsigned int dip, int rxq)
++{
++#ifdef CONFIG_MV_ETH_PNC_L3_FLOW
++	struct tcam_entry *te;
++	unsigned int pdata, pmask;
++	int tid, empty = -1, min_index_occupied = TE_FLOW_L3_END + 1;
++
++	if (rxq < -2 || rxq >= CONFIG_MV_ETH_RXQ || eth_port >= CONFIG_MV_ETH_PORTS_NUM)
++		return 1;
++
++	for (tid = TE_FLOW_L3_END; tid > last_5tuple_rule; tid--) {
++		te = pnc_tcam_entry_get(tid);
++		/* Remember first Empty entry */
++		if (te == NULL) {
++			if (empty == -1)
++				empty = tid;
++			continue;
++		}
++
++		/* Find existing entry for this rule */
++		if (tcam_sw_cmp_2tuple(te, sip, dip) == 0) {
++			tcam_sw_get_port(te, &pdata, &pmask);
++			if (rxq == -2) { /* delete rule */
++				if (!pnc_port_mask_check(pmask, eth_port)) {
++					printk(KERN_ERR "%s: rule is not associated with this port (%d)\n", __func__, eth_port);
++					tcam_sw_free(te);
++					return 1;
++				}
++				if (first_2tuple_rule == tid)
++					first_2tuple_rule = min_index_occupied;
++				pnc_te_del(tid);
++				tcam_sw_free(te);
++				return 0;
++			}
++
++			if (!pnc_port_mask_check(pmask, eth_port)) { /* rule is already associated with another port */
++				printk(KERN_ERR "%s: rule is already associated with port %d\n",
++									__func__, pnc_mask_to_port(pmask));
++				return 1;
++			}
++			if (rxq == -1) { /* set rule to drop mode */
++				sram_sw_set_rinfo(te, RI_DROP, RI_DROP);
++				sram_sw_set_lookup_done(te, 1);
++				tcam_hw_write(te, tid);
++			} else { /* update rxq */
++				sram_sw_set_rinfo(te, 0, RI_DROP);
++				sram_sw_set_rinfo(te, RI_L3_FLOW, RI_L3_FLOW);
++				sram_sw_set_rxq(te, rxq, 0);
++				tcam_hw_write(te, tid);
++			}
++
++			tcam_sw_free(te);
++			return 0;
++		}
++		min_index_occupied = tid;
++		tcam_sw_free(te);
++	}
++
++	/* Add rule to PNC */
++	if (rxq == -2) {
++		mvOsPrintf("%s: Entry not found - sip=0x%x, dip=0x%x, rxq=%d\n", __func__, sip, dip, rxq);
++		return 1;
++	}
++	/* Not found existing entry and no free TCAM entry - Failed */
++	if ((empty == -1) || (empty <= last_5tuple_rule)) {
++		mvOsPrintf("%s: No free place - sip=0x%x, dip=0x%x, rxq=%d\n", __func__, sip, dip, rxq);
++		return 1;
++	}
++
++	/* update upper border of 2 tuple rules */
++	if (first_2tuple_rule > empty)
++		first_2tuple_rule = empty;
++
++	te = pnc_create_2t_entry(sip, dip);
++	pmask = pnc_port_mask(eth_port);
++	tcam_sw_set_port(te, 0, pmask);
++	sram_sw_set_lookup_done(te, 1);
++	tcam_sw_text(te, "ipv4_2t");
++
++	if (rxq == -1) {
++		sram_sw_set_rinfo(te, RI_DROP, RI_DROP);
++		sram_sw_set_lookup_done(te, 1);
++	} else {
++		sram_sw_set_rinfo(te, 0, RI_DROP);
++		sram_sw_set_rinfo(te, RI_L3_FLOW, RI_L3_FLOW);
++		sram_sw_set_rxq(te, rxq, 0);
++	}
++
++	tcam_hw_write(te, empty);
++	tcam_sw_free(te);
++
++	return 0;
++#else
++	return -1;
++#endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
++}
++
++/*
++ * pnc_ip4_5tuple - Add 5-tuple priority rules
++ */
++int pnc_ip4_5tuple_rxq(unsigned int eth_port, unsigned int sip, unsigned int dip, unsigned int ports,
++						unsigned int proto, int rxq)
++{
++#ifdef CONFIG_MV_ETH_PNC_L3_FLOW
++	struct tcam_entry *te;
++	unsigned int pdata, pmask;
++	int tid, empty = -1, max_index_occupied = TE_FLOW_L3 - 1;
++
++	if (rxq < -2 || rxq >= CONFIG_MV_ETH_RXQ || eth_port >= CONFIG_MV_ETH_PORTS_NUM)
++		return 1;
++
++	for (tid = TE_FLOW_L3; tid < first_2tuple_rule; tid++) {
++		te = pnc_tcam_entry_get(tid);
++		/* Remember first Empty entry */
++		if (te == NULL) {
++			if (empty == -1)
++				empty = tid;
++			continue;
++		}
++		/* Find existing entry for this rule */
++		if (tcam_sw_cmp_5tuple(te, sip, dip, ports, proto) == 0) {
++			tcam_sw_get_port(te, &pdata, &pmask);
++			if (rxq == -2) { /* delete rule */
++				if (!pnc_port_mask_check(pmask, eth_port)) {
++					printk(KERN_ERR "%s: rule is not associated with this port (%d)\n", __func__, eth_port);
++					tcam_sw_free(te);
++					return 1;
++				}
++				if (last_5tuple_rule == tid)
++					last_5tuple_rule = max_index_occupied;
++				pnc_te_del(tid);
++				tcam_sw_free(te);
++				return 0;
++			}
++
++			if (!pnc_port_mask_check(pmask, eth_port)) { /* rule is already associated with another port */
++				printk(KERN_ERR "%s: rule is already associated with port %d\n",
++									__func__, pnc_mask_to_port(pmask));
++				return 1;
++			}
++			if (rxq == -1) { /* set rule to drop mode */
++				sram_sw_set_rinfo(te, RI_DROP, RI_DROP);
++				sram_sw_set_lookup_done(te, 1);
++				tcam_hw_write(te, tid);
++			} else { /* update rxq */
++				sram_sw_set_rinfo(te, 0, RI_DROP);
++				sram_sw_set_rinfo(te, RI_L3_FLOW, RI_L3_FLOW);
++				sram_sw_set_rxq(te, rxq, 0);
++				tcam_hw_write(te, tid);
++			}
++
++			tcam_sw_free(te);
++			return 0;
++		}
++		max_index_occupied = tid;
++		tcam_sw_free(te);
++	}
++
++	/* Add rule to PNC */
++	if (rxq == -2) {
++		mvOsPrintf("%s: Entry not found - sip=0x%x, dip=0x%x, ports=0x%x, proto=%d, rxq=%d\n",
++				__func__, sip, dip, ports, proto, rxq);
++		return 1;
++	}
++	/* Not found existing entry and no free TCAM entry - Failed */
++	if ((empty == -1) || (empty >= first_2tuple_rule)) {
++		mvOsPrintf("%s: No free place - sip=0x%x, dip=0x%x, ports=0x%x, proto=%d, rxq=%d\n",
++				__func__, sip, dip, ports, proto, rxq);
++		return 1;
++	}
++
++	/* update lower border of 5 tuple rules */
++	if (last_5tuple_rule < empty)
++		last_5tuple_rule = empty;
++
++	te = pnc_create_2t_entry(sip, dip);
++
++	tcam_sw_set_byte(te, 9, proto);
++	tcam_sw_set_byte(te, 20, (ports >> 0) & 0xFF);
++	tcam_sw_set_byte(te, 21, (ports >> 8) & 0xFF);
++	tcam_sw_set_byte(te, 22, (ports >> 16) & 0xFF);
++	tcam_sw_set_byte(te, 23, (ports >> 24) & 0xFF);
++	pmask = pnc_port_mask(eth_port);
++	tcam_sw_set_port(te, 0, pmask);
++	sram_sw_set_lookup_done(te, 1);
++	tcam_sw_text(te, "ipv4_5t");
++
++	if (rxq == -1) {
++		sram_sw_set_rinfo(te, RI_DROP, RI_DROP);
++		sram_sw_set_lookup_done(te, 1);
++	} else {
++		sram_sw_set_rinfo(te, 0, RI_DROP);
++		sram_sw_set_rinfo(te, RI_L3_FLOW, RI_L3_FLOW);
++		sram_sw_set_rxq(te, rxq, 0);
++	}
++
++	tcam_hw_write(te, empty);
++	tcam_sw_free(te);
++
++	return 0;
++#else
++	return -1;
++#endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
++}
++
++
++/*
++ * pnc_rxq_map_dump - Dump all rules
++ */
++int pnc_rxq_map_dump()
++{
++#ifdef CONFIG_MV_ETH_PNC_L3_FLOW
++	struct tcam_entry *te;
++	unsigned int tid, sport, dport, word, shift, rinfo, mask, data;
++	unsigned char sip[4], dip[4], sip_buf[16], dip_buf[16], *proto;
++
++	mvOsPrintf(" Tid   Sip               Dip               Sport   Dport   Proto   Rxq    Port   Name\n");
++	for (tid = TE_FLOW_L3; tid <= TE_FLOW_L3_END; tid++) {
++		te = pnc_tcam_entry_get(tid);
++		/* Remember first Empty entry */
++		if (te) {
++			memset(sip_buf, 0, 16);
++			memset(dip_buf, 0, 16);
++
++			sip[0] = *(te->data.u.byte + 12);
++			sip[1] = *(te->data.u.byte + 13);
++			sip[2] = *(te->data.u.byte + 14);
++			sip[3] = *(te->data.u.byte + 15);
++			dip[0] = *(te->data.u.byte + 16);
++			dip[1] = *(te->data.u.byte + 17);
++			dip[2] = *(te->data.u.byte + 18);
++			dip[3] = *(te->data.u.byte + 19);
++			mvOsSPrintf(sip_buf, "%d.%d.%d.%d", sip[0], sip[1], sip[2], sip[3]);
++			mvOsSPrintf(dip_buf, "%d.%d.%d.%d", dip[0], dip[1], dip[2], dip[3]);
++			mvOsPrintf(" %-3d   %-15s   %-15s   ", tid, sip_buf, dip_buf);
++
++			if (te->ctrl.text[5] == '5') {
++				sport = MV_BYTE_SWAP_16BIT(*((u16 *)(te->data.u.byte + 20)));
++				dport = MV_BYTE_SWAP_16BIT(*((u16 *)(te->data.u.byte + 22)));
++				proto = (*(te->data.u.byte + 9) == 6) ? "TCP" : "UDP";
++				mvOsPrintf("%-5d   %-5d   %-5s   ", sport, dport, proto);
++			} else
++				mvOsPrintf("-----   -----   -----   ");
++
++			word = RI_VALUE_OFFS / 32;
++			shift = RI_VALUE_OFFS % 32;
++			rinfo = (te->sram.word[word] >> shift) & ((1 << RI_BITS) - 1);
++			if (rinfo & 1)
++				mvOsPrintf("DROP   ");
++			else
++				mvOsPrintf("%-4d   ", sram_sw_get_rxq(te, NULL));
++
++			tcam_sw_get_port(te, &data, &mask);
++			mvOsPrintf("%-4d   ", pnc_mask_to_port(mask));
++			mvOsPrintf("%s\n", te->ctrl.text);
++
++			tcam_sw_free(te);
++		}
++	}
++
++	return 0;
++#else
++	return -1;
++#endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
++}
+-- 
+1.7.9.5
+

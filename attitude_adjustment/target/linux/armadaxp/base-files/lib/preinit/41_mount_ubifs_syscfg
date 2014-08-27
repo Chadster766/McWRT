@@ -1,0 +1,30 @@
+#!/bin/sh
+# Copyright (C) 2006-2010 OpenWrt.org
+# Copyright (C) 2010 Vertical Communications
+
+SYSCFG_UBIFS_MNT=/tmp/syscfg
+find_mount_ubifs_syscfg () {
+    mkdir -p /tmp/overlay
+	mkdir -p ${SYSCFG_UBIFS_MNT}
+	mount -t ubifs -o noatime ubi0:syscfg $SYSCFG_UBIFS_MNT || return 1
+	[ ! -d $SYSCFG_UBIFS_MNT/openwrt_overlay ] && mkdir -p $SYSCFG_UBIFS_MNT/openwrt_overlay
+	mount -o bind $SYSCFG_UBIFS_MNT/openwrt_overlay /tmp/overlay
+	echo "find_mount_ubifs_syscfg...OK"
+}
+
+ubifs_syscfg_not_mounted() {
+    if [ "$pi_ubifs_syscfg_mount_success" != "true" ]; then
+	return 0
+    else
+	return 1
+    fi
+}
+
+do_mount_ubifs_syscfg() {
+    check_ubifs_syscfg_skip || {
+	find_mount_ubifs_syscfg && pi_ubifs_syscfg_mount_success=true
+    }
+}
+
+boot_hook_add preinit_mount_root do_mount_ubifs_syscfg
+

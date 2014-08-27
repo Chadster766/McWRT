@@ -1,0 +1,27 @@
+From 35adb5cebbb37441273d1d2ea0f41a16b0be2e26 Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Mon, 29 Aug 2011 17:18:46 +0300
+Subject: [PATCH 005/609] XOR: IOCC bug fix. Added io_sync prior to accessing
+ descriptor (LiorA)
+
+Signed-off-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ drivers/dma/mv_xor.c |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/dma/mv_xor.c b/drivers/dma/mv_xor.c
+index 6f6a782..6c80977 100644
+--- a/drivers/dma/mv_xor.c
++++ b/drivers/dma/mv_xor.c
+@@ -429,6 +429,7 @@ static void
+ mv_xor_slot_cleanup(struct mv_xor_chan *mv_chan)
+ {
+ 	spin_lock_bh(&mv_chan->lock);
++	dma_io_sync();
+ 	__mv_xor_slot_cleanup(mv_chan);
+ 	spin_unlock_bh(&mv_chan->lock);
+ }
+-- 
+1.7.9.5
+

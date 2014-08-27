@@ -1,0 +1,91 @@
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -37,6 +37,8 @@ AUTOCONF = @AUTOCONF@
+ AUTOMAKE = @AUTOMAKE@
+ AUTOHEADER = @AUTOHEADER@
+ 
++DESTDIR =
++
+ INSTALL = @INSTALL@
+ INSTALL_PROGRAM = @INSTALL_PROGRAM@
+ INSTALL_DATA = @INSTALL_DATA@
+@@ -235,11 +237,11 @@ maintainer-clean-libLTLIBRARIES:
+ 
+ install-libLTLIBRARIES: $(lib_LTLIBRARIES)
+ 	@$(NORMAL_INSTALL)
+-	$(mkinstalldirs) $(libdir)
++	$(mkinstalldirs) $(DESTDIR)$(libdir)
+ 	@list='$(lib_LTLIBRARIES)'; for p in $$list; do \
+ 	  if test -f $$p; then \
+-	    echo "$(LIBTOOL)  --mode=install $(INSTALL_PROGRAM) $$p $(libdir)/$$p"; \
+-	    $(LIBTOOL)  --mode=install $(INSTALL_PROGRAM) $$p $(libdir)/$$p; \
++	    echo "$(LIBTOOL)  --mode=install $(INSTALL_PROGRAM) $$p $(DESTDIR)$(libdir)/$$p"; \
++	    $(LIBTOOL)  --mode=install $(INSTALL_PROGRAM) $$p $(DESTDIR)$(libdir)/$$p; \
+ 	  else :; fi; \
+ 	done
+ 
+@@ -289,11 +291,11 @@ maintainer-clean-binPROGRAMS:
+ 
+ install-binPROGRAMS: $(bin_PROGRAMS)
+ 	@$(NORMAL_INSTALL)
+-	$(mkinstalldirs) $(bindir)
++	$(mkinstalldirs) $(DESTDIR)$(bindir)
+ 	@list='$(bin_PROGRAMS)'; for p in $$list; do \
+ 	  if test -f $$p; then \
+-	    echo " $(LIBTOOL)  --mode=install $(INSTALL_PROGRAM) $$p $(bindir)/`echo $$p|sed '$(transform)'`"; \
+-	    $(LIBTOOL)  --mode=install $(INSTALL_PROGRAM) $$p $(bindir)/`echo $$p|sed '$(transform)'`; \
++	    echo " $(LIBTOOL)  --mode=install $(INSTALL_PROGRAM) $$p $(DESTDIR)$(bindir)/`echo $$p|sed '$(transform)'`"; \
++	    $(LIBTOOL)  --mode=install $(INSTALL_PROGRAM) $$p $(DESTDIR)$(bindir)/`echo $$p|sed '$(transform)'`; \
+ 	  else :; fi; \
+ 	done
+ 
+@@ -357,21 +359,21 @@ DVIPS = dvips
+ 
+ install-info-am: $(INFO_DEPS)
+ 	@$(NORMAL_INSTALL)
+-	$(mkinstalldirs) $(infodir)
++	$(mkinstalldirs) $(DESTDIR)$(infodir)
+ 	@for file in $(INFO_DEPS); do \
+ 	  d=$(srcdir); \
+ 	  for ifile in `cd $$d && echo $$file $$file-[0-9] $$file-[0-9][0-9]`; do \
+ 	    if test -f $$d/$$ifile; then \
+-	      echo " $(INSTALL_DATA) $$d/$$ifile $(infodir)/$$ifile"; \
+-	      $(INSTALL_DATA) $$d/$$ifile $(infodir)/$$ifile; \
++	      echo " $(INSTALL_DATA) $$d/$$ifile $(DESTDIR)$(infodir)/$$ifile"; \
++	      $(INSTALL_DATA) $$d/$$ifile $(DESTDIR)$(infodir)/$$ifile; \
+ 	    else : ; fi; \
+ 	  done; \
+ 	done
+ 	@$(POST_INSTALL)
+ 	@if $(SHELL) -c 'install-info --version | sed 1q | fgrep -s -v -i debian' >/dev/null 2>&1; then \
+ 	  for file in $(INFO_DEPS); do \
+-	    echo " install-info --info-dir=$(infodir) $(infodir)/$$file";\
+-	    install-info --info-dir=$(infodir) $(infodir)/$$file || :;\
++	    echo " install-info --info-dir=$(infodir) $(DESTDIR)$(infodir)/$$file";\
++	    install-info --info-dir=$(infodir) $(DESTDIR)$(infodir)/$$file || :;\
+ 	  done; \
+ 	else : ; fi
+ 
+@@ -412,10 +414,10 @@ maintainer-clean-aminfo:
+ 
+ install-includeHEADERS: $(include_HEADERS)
+ 	@$(NORMAL_INSTALL)
+-	$(mkinstalldirs) $(includedir)
++	$(mkinstalldirs) $(DESTDIR)$(includedir)
+ 	@list='$(include_HEADERS)'; for p in $$list; do \
+-	  echo " $(INSTALL_DATA) $(srcdir)/$$p $(includedir)/$$p"; \
+-	  $(INSTALL_DATA) $(srcdir)/$$p $(includedir)/$$p; \
++	  echo " $(INSTALL_DATA) $(srcdir)/$$p $(DESTDIR)$(includedir)/$$p"; \
++	  $(INSTALL_DATA) $(srcdir)/$$p $(DESTDIR)$(includedir)/$$p; \
+ 	done
+ 
+ uninstall-includeHEADERS:
+@@ -508,7 +510,7 @@ all: Makefile $(INFO_DEPS) $(LTLIBRARIES
+ install-strip:
+ 	$(MAKE) INSTALL_PROGRAM='$(INSTALL_PROGRAM) -s' INSTALL_SCRIPT='$(INSTALL_PROGRAM)' install
+ installdirs:
+-	$(mkinstalldirs)  $(libdir) $(bindir) $(infodir) $(includedir)
++	$(mkinstalldirs)  $(DESTDIR)$(libdir) $(DESTDIR)$(bindir) $(DESTDIR)$(infodir) $(DESTDIR)$(includedir)
+ 
+ 
+ mostlyclean-generic:

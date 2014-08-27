@@ -1,0 +1,71 @@
+From d14e54ffbf1ee77cd9d9ebf22bc0f0b76540caea Mon Sep 17 00:00:00 2001
+From: Po-Yu Chuang <pychuang@marvell.com>
+Date: Fri, 12 Oct 2012 11:57:52 +0800
+Subject: [PATCH 339/609] fix compile error when disabling MV_INCLUDE_SPI
+
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/core.c   |    6 ++++++
+ arch/arm/mach-armadaxp/export.c |    2 ++
+ 2 files changed, 8 insertions(+)
+
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index 99a56ca..ad9da8d 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -1563,9 +1563,11 @@ static void __init axp_db_init(void)
+ 	if(mvUnitMapIsMine(RTC) == MV_TRUE)
+ 		rtc_init();
+ 
++#ifdef CONFIG_MV_INCLUDE_SPI
+ 	/* SPI */
+ 	if(mvUnitMapIsMine(SPI) == MV_TRUE)
+ 		mvSysSpiInit(0, _16M);
++#endif
+ 
+ 	/* ETH-PHY */
+ 	mvSysEthPhyInit();
+@@ -1733,8 +1735,10 @@ static void __init axp_gp_init(void)
+ 	/* RTC */
+ 	rtc_init();
+ 
++#ifdef CONFIG_MV_INCLUDE_SPI
+ 	/* SPI */
+ 	mvSysSpiInit(0, _16M);
++#endif
+ 
+ 	/* ETH-PHY */
+ 	mvSysEthPhyInit();
+@@ -1871,8 +1875,10 @@ static void __init axp_rd_nas_init(void)
+ 	/* RTC */
+ 	rtc_init();
+ 
++#ifdef CONFIG_MV_INCLUDE_SPI
+ 	/* SPI */
+ 	mvSysSpiInit(0, _16M);
++#endif
+ 
+ 	/* ETH-PHY */
+ 	mvSysEthPhyInit();
+diff --git a/arch/arm/mach-armadaxp/export.c b/arch/arm/mach-armadaxp/export.c
+index 92733f0..1d01e61 100644
+--- a/arch/arm/mach-armadaxp/export.c
++++ b/arch/arm/mach-armadaxp/export.c
+@@ -62,11 +62,13 @@ EXPORT_SYMBOL(mvBoardTdmSpiModeGet);
+ EXPORT_SYMBOL(mvBoardTdmSpiCsGet);
+ EXPORT_SYMBOL(mvBoardTdmDevicesCountGet);
+ 
++#ifdef CONFIG_MV_INCLUDE_SPI
+ #include "spi/mvSpiCmnd.h"
+ EXPORT_SYMBOL(mvSpiWriteThenWrite);
+ EXPORT_SYMBOL(mvSpiWriteThenRead);
+ #include "spi/mvSpi.h"
+ EXPORT_SYMBOL(mvSpiParamsSet);
++#endif
+ #include "gpp/mvGpp.h"
+ EXPORT_SYMBOL(mvGppValueSet);
+ 
+-- 
+1.7.9.5
+

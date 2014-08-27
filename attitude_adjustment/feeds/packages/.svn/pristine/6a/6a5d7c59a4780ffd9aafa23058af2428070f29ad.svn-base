@@ -1,0 +1,26 @@
+--- a/src/mod/endpoints/mod_gsmopen/Makefile
++++ b/src/mod/endpoints/mod_gsmopen/Makefile
+@@ -1,9 +1,16 @@
++BASE=../../../..
+ MODNAME=mod_gsmopen
+ SVNDEF := -D'GSMOPEN_SVN_VERSION="$(shell svnversion -n .)"'
+-#LOCAL_CFLAGS += $(SVNDEF) -I/usr/src/gsmlib-1.10
+-LOCAL_CFLAGS += $(SVNDEF) -I../../../../libs/spandsp/src -I../../../..//libs/tiff-3.8.2/libtiff
+-#LOCAL_LDFLAGS=-lasound -L/usr/src/gsmlib-1.10/gsmlib/.libs -lgsmme
+-LOCAL_LDFLAGS=-L../../../../libs/spandsp/src -lasound -lgsmme -lspandsp
+-LOCAL_OBJS=gsmopen_protocol.o 
+-#OUR_OBJS += /usr/src/gsmlib-1.10/gsmlib/libgsmme.la
+-include ../../../../build/modmake.rules
++LOCAL_CFLAGS += $(SVNDEF) -I$(BASE)/libs/spandsp/src -I$(BASE)/libs/tiff-3.8.2/libtiff -fpermissive
++LOCAL_LDFLAGS=-L$(BASE)/libs/spandsp/src -lasound -lgsmme -lspandsp
++LOCAL_OBJS=gsmopen_protocol.o
++
++include $(BASE)/build/modmake.rules
++
++TIFF_DIR=$(switch_srcdir)/libs/tiff-3.8.2
++TIFF_BUILDDIR=$(switch_builddir)/libs/tiff-3.8.2
++TIFF_LA=$(TIFF_BUILDDIR)/libtiff/libtiff.la
++
++SPANDSP_DIR=$(switch_srcdir)/libs/spandsp
++SPANDSP_BUILDDIR=$(switch_builddir)/libs/spandsp
++SPANDSP_LA=$(SPANDSP_BUILDDIR)/src/libspandsp.la

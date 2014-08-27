@@ -1,0 +1,340 @@
+From 23d02deeaca53415a33ca0d15b5807715e977a54 Mon Sep 17 00:00:00 2001
+From: Yehuda Y <yehuday@marvell.com>
+Date: Wed, 21 Mar 2012 10:26:03 +0200
+Subject: [PATCH 170/609] DSMP:AMP - Fixed L2 sharing for AMP Fixed PCI line
+ to unit mapping in UnitMap Fixed ctrlEnv AMP files
+ to work on VxWorks
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/ctrlEnv/mvSemaphore.c         |   35 ----------------
+ .../armada_xp_family/ctrlEnv/mvSemaphore.h         |    9 +++-
+ .../armada_xp_family/ctrlEnv/mvUnitMap.c           |   33 ++++++---------
+ .../armada_xp_family/ctrlEnv/mvUnitMap.h           |   18 +++++---
+ arch/arm/mach-armadaxp/core.c                      |    3 +-
+ arch/arm/mm/cache-aurora-l2.c                      |   44 +-------------------
+ 6 files changed, 34 insertions(+), 108 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
+index 0f7843e..264d4f1 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
+@@ -112,38 +112,3 @@ MV_BOOL mvSemaUnlock(MV_32 num)
+ 	MV_REG_BYTE_WRITE(MV_SEMA_REG_BASE+(num), 0xFF);
+ 	return MV_TRUE;
+ }
+-
+-
+-MV_VOID mvHwBarrier(MV_32 cpuCount)
+-{
+-	MV_U32 cpuId;
+-	MV_U32 myCpuId = whoAmI();
+-
+-	/* Let all the rest know i arrived */
+-	mvSemaLock(MV_SEMA_BARRIER(myCpuId));
+-
+-	cpuCount--;
+-
+-	/* Now try to find all the rest */
+-	while(cpuCount > 0){
+-		/* Scan all CPUs to see who arrived */
+-		for(cpuId = 0; cpuId < NR_CPUS; cpuId++){
+-			if(cpuId == myCpuId)
+-				continue;
+-
+-			if(mvSemaTryLock(MV_SEMA_BARRIER(cpuId)) == MV_TRUE)
+-				mvSemaUnlock(MV_SEMA_BARRIER(cpuId));
+-			else
+-				cpuCount--;
+-		}
+-
+-		/* Wait some cycles before retry to avoid overloading bus */
+-		if(cpuCount > 0)
+-			udelay(1);
+-	}
+-
+-	/* Release my semaphore so we can use it again */
+-	/* wait a little before leaving to allow other to see you */
+-	udelay(1);
+-	mvSemaUnlock(MV_SEMA_BARRIER(myCpuId));
+-}
+\ No newline at end of file
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h
+index 8b9f09d..e63d590 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h
+@@ -64,6 +64,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #ifndef mvsemaphore_h
+ #define mvsemaphore_h
+ 
++#ifdef MV_VXWORKS
++#include "common/mvTypes.h"
++#include "config.h"
++#endif
++
+ #define MV_SEMA_REG_BASE	(0x20500)
+ #define MV_MAX_SEMA 	    	128
+ #define MV_SEMA_SMI 		50
+@@ -75,11 +80,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define MV_SEMA_IRQ 		4
+ #define MV_SEMA_CLOCK		5
+ #define MV_SEMA_L2		6
+-
+-#define MV_SEMA_IPC_SNORT 	10
++#define MV_SEMA_TWSI		7
+ 
+ #define MV_SEMA_BARRIER(cpu)	(50 + cpu)
+ 
++
+ MV_BOOL mvSemaLock(MV_32 num);
+ MV_BOOL mvSemaTryLock(MV_32 num);
+ MV_BOOL mvSemaUnlock(MV_32 num);
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.c
+index 8500a1f..47ca278 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.c
+@@ -102,7 +102,7 @@ static MV_RES_MAP mv_res_table[] = {
+ 	{-1, "last"}
+ };
+ 
+-MV_BOOL mvUnitMapIsRsrcLimited()
++MV_BOOL mvUnitMapIsRsrcLimited(void)
+ {
+ 	return mv_rsrc_limited;
+ }
+@@ -120,20 +120,16 @@ MV_BOOL mvUnitMapIsMine(MV_SOC_UNIT unitIdx)
+ MV_BOOL mvUnitMapIsPexMine(int pciIf)
+ {
+ 	MV_SOC_UNIT unitIdx;
+-	int maxLaneId[4]; //YY - GET A DEFINE HERE instead of 4
+ 
+-	maxLaneId[0] = 		        + (3 * CONFIG_MV_PEX_0_4X1);
+-	maxLaneId[1] = maxLaneId[0] + 1 + (3 * CONFIG_MV_PEX_1_4X1);
+-	maxLaneId[2] = maxLaneId[1] + 1;
+-	maxLaneId[3] = maxLaneId[2] + 1;
+-
+-	if(pciIf <= maxLaneId[0])
++	/* Map line Number to PEX unit number */
++	/* This is compatible to mvCtrlSerdesPhyConfig in BoardEnvLib.c */
++	if(pciIf < PEX1_0x4)
+ 		unitIdx = PEX0;
+-	else if(pciIf <= maxLaneId[1])
++	else if(pciIf < PEX2_0x4)
+ 		unitIdx = PEX1;
+-	else if(pciIf <= maxLaneId[2])
++	else if(pciIf < PEX3_0x4)
+ 		unitIdx = PEX2;
+-	else if(pciIf <= maxLaneId[3])
++	else
+ 		unitIdx = PEX3;
+ 
+ 	return mv_res_table[unitIdx].isMine;
+@@ -142,10 +138,8 @@ MV_BOOL mvUnitMapIsPexMine(int pciIf)
+ MV_VOID mvUnitMapSetMine(MV_SOC_UNIT unitIdx)
+ {
+ 	if (MV_TRUE == mv_res_table[unitIdx].isMine)
+-	{
+-		mvOsPrintf("Warning! Unit %s is already mapped\n", mv_res_table[unitIdx].unitName);
+ 		return;
+-	}
++
+ 	mv_res_table[unitIdx].isMine = 1;
+ }
+ 
+@@ -153,7 +147,7 @@ MV_BOOL mvUnitMapSetup(char* cmdLine, STRSTR_FUNCPTR strstr_func)
+ {
+ 	int unitIdx;
+ 	char* match;
+-	const char *syntaxErr = "mvUnitMapSetup: syntax error (%s)\n";
++
+ 	for (unitIdx = 0; mv_res_table[unitIdx].isMine != (-1); unitIdx++) {
+ 		char *unitName = mv_res_table[unitIdx].unitName;
+ 		int len;
+@@ -162,7 +156,6 @@ MV_BOOL mvUnitMapSetup(char* cmdLine, STRSTR_FUNCPTR strstr_func)
+ 		/*Look for start delimiter*/
+ 		if (match > cmdLine) {
+ 			if (match[-1] != ' ' && match[-1] != ':') {
+-				mvOsPrintf(syntaxErr, mv_res_table[unitIdx].unitName);
+ 				continue;
+ 			}
+ 		}
+@@ -171,7 +164,6 @@ MV_BOOL mvUnitMapSetup(char* cmdLine, STRSTR_FUNCPTR strstr_func)
+ 		len = unitName - mv_res_table[unitIdx].unitName - 1;
+ 		/*Look for end delimiter*/
+ 		if (match[len] != ' ' && match[len] != ':' && match[len] != '\0') {
+-			mvOsPrintf(syntaxErr, mv_res_table[unitIdx].unitName);
+ 			continue;
+ 		}
+ 		mvUnitMapSetMine(unitIdx);
+@@ -253,14 +245,13 @@ MV_U32 mvSocUnitMapFillFlagFormTable(void)
+ }*/
+ MV_VOID mvUnitMapSetAllMine()
+ {
+-	int unitIdx, count;
+-	mvOsPrintf("AMP: No resource string: Allocating all resource to group:");
++	int unitIdx;
+ 	for (unitIdx = 0; mv_res_table[unitIdx].isMine != (-1); unitIdx++) {
+ 		mvUnitMapSetMine(unitIdx);
+ 	}
+ }
+ 
+-MV_VOID mvSocUnitMapPrint()
++MV_VOID mvUnitMapPrint()
+ {
+ 	int unitIdx;
+ 	mvOsPrintf("  AMP: Resources ");
+@@ -270,4 +261,4 @@ MV_VOID mvSocUnitMapPrint()
+ 		}
+ 	}
+ 	mvOsPrintf("\n");
+-}
+\ No newline at end of file
++}
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.h
+index 87ffb6b..ab101e2 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.h
+@@ -64,6 +64,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #ifndef mvUnitMap_h
+ #define mvUnitMap_h
+ 
++#ifdef MV_VXWORKS
++#include "common/mvTypes.h"
++#include "config.h"
++#endif
++
+ typedef enum
+ {
+ 	UART0=0,
+@@ -127,24 +132,25 @@ typedef struct __MV_RES_MAP
+ 
+ typedef char *(*STRSTR_FUNCPTR)(const char *s1, const char *s2);
+ 
++#ifdef CONFIG_MV_AMP_ENABLE
++
+ MV_BOOL mvUnitMapIsMine(MV_SOC_UNIT unitIdx);
+ MV_BOOL mvUnitMapIsPexMine(int pciIf);
+ MV_VOID mvUnitMapSetMine(MV_SOC_UNIT unitIdx);
+ MV_BOOL mvUnitMapSetup(char* p, STRSTR_FUNCPTR strstr_func);
+ MV_VOID mvUnitMapSetAllMine(void);
+-MV_VOID mvSocUnitMapPrint(void);
++MV_VOID mvUnitMapPrint(void);
+ MV_BOOL mvUnitMapIsRsrcLimited(void);
+ MV_VOID mvUnitMapSetRsrcLimited(MV_BOOL isLimited);
+-
+-#ifndef CONFIG_MV_AMP_ENABLE
++#else /* CONFIG_MV_AMP_ENABLE */
+ #define mvUnitMapIsMine(rsrc) 		MV_TRUE
+ #define mvUnitMapIsPexMine(pciIf) 	MV_TRUE
+ #define mvUnitMapIsRsrcLimited 	  	MV_TRUE
+ #define mvUnitMapSetRsrcLimited(limit)
+ #define mvUnitMapSetMine(rsrc)
+ #define mvUnitMapSetAllMine
+-#define mvSocUnitMapPrint
++#define mvUnitMapPrint
+ #define mvUnitMapSetup(str, strstr_func) MV_TRUE
+-#endif //CONFIG_MV_AMP_ENABLE
++#endif /* CONFIG_MV_AMP_ENABLE */
+ 
+-#endif //mvUnitMap_h
++#endif /* mvUnitMap_h */
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index 7a558f7..28b89ef 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -1077,7 +1077,7 @@ void print_board_info(void)
+ 	printk("  Detected Tclk %d, SysClk %d, FabricClk %d, PClk %d\n",mvTclk, mvSysclk, mvCpuL2ClkGet(), mvCpuPclkGet());
+ 	printk("  LSP version: %s\n", LSP_VERSION);
+ #ifdef CONFIG_MV_AMP_ENABLE
+-	mvSocUnitMapPrint();
++	mvUnitMapPrint();
+ #endif
+ 	printk("\n");
+ }
+@@ -1405,6 +1405,7 @@ static void __init axp_db_init(void)
+ 	/* Call Aurora/cpu special configurations */
+ 	cpu_fabric_common_init();
+ 
++
+ 	/* Select appropriate Board ID for Machine */
+ #ifdef CONFIG_ARMADA_XP_REV_A0
+ 	gBoardId = DB_88F78XX0_BP_REV2_ID;
+diff --git a/arch/arm/mm/cache-aurora-l2.c b/arch/arm/mm/cache-aurora-l2.c
+index b6297c0..3e4673d 100644
+--- a/arch/arm/mm/cache-aurora-l2.c
++++ b/arch/arm/mm/cache-aurora-l2.c
+@@ -529,34 +529,6 @@ static void __init enable_cache(u32 mask)
+ 	set_cr(cr1 | mask);
+ }
+ 
+-#ifdef CONFIG_MV_AMP_ENABLE
+-static bool is_l2_enabled(void)
+-{
+-	u32  reg;
+-	bool enabled;
+-
+-	/* Read and return enable bit */
+-	reg 	= readl(auroraL2_base + L2_CONTROL);
+-	enabled = (reg & 0x1);
+-
+-	return enabled;
+-}
+-
+-static void wait_l2_enabled(void)
+-{
+-	u32 usec_timeout = 1000;
+-
+-	while((is_l2_enabled() == 0) && (usec_timeout > 0))
+-	{
+-		udelay(1);
+-		usec_timeout--;
+-	}
+-
+-	if(usec_timeout == 0)
+-		printk(KERN_ERR "AMP: Waiting too long for L2 enable\n");
+-}
+-#endif /* CONFIG_MV_AMP_ENABLE */
+-
+ static void __init enable_l2(void)
+ {
+ 	u32 u, mask;
+@@ -572,25 +544,11 @@ static void __init enable_l2(void)
+ 	__asm__ __volatile__("mcr p15, 1, %0, c15, c2, 0\n" : : "r" (u));
+ 
+ 	u = readl(auroraL2_base+L2_CONTROL);
+-#ifdef CONFIG_MV_AMP_ENABLE
+-	if ((!(u & 1)) || (is_primary_amp() == 0)) {
+-#else
+ 	if (!(u & 1)) {
+-#endif
+ 		printk(KERN_INFO "Aurora L2 Cache Enabled\n");
+ 		u |= 1;
+ 		mask = invalidate_and_disable_cache();
+-
+-#ifdef CONFIG_MV_AMP_ENABLE
+-		mvHwBarrier(2); // Wait for all AMP groups YY - why 2 CPUs ??
+-
+-		if(is_primary_amp())
+-			writel(u, auroraL2_base + L2_CONTROL);
+-		else
+-			wait_l2_enabled();
+-#else
+ 		writel(u, auroraL2_base+L2_CONTROL);
+-#endif
+ 		enable_cache(mask);
+ 	}
+ }
+@@ -734,9 +692,9 @@ int __init aurora_l2_init(void __iomem *base)
+ 
+ 		/* 6. Enable L2 cache
+ 		*/
++		enable_l2();
+ 	}
+ 
+-	enable_l2();
+ 	auroraL2_enable = 1;
+ 
+ 	return 0;
+-- 
+1.7.9.5
+

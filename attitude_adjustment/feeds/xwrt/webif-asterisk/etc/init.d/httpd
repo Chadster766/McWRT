@@ -1,0 +1,25 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006 OpenWrt.org
+START=50
+
+start() 
+{
+  include /lib/network
+  scan_interfaces
+  config_get ifname wan hostname
+  [ -d /www ] && httpd -p 80 -h /www -r ${hostname:-OpenWrt}
+###   WebCallDisabled=$(nvram get "AST_WebCallDisabled")
+###  WebCallDisabled=$(uci get mars.system.AST_WebCallDisabled)
+  WebCallEnabled=$(uci get mars.webcall.AST_WebCallEnabled)
+
+
+  if [ "$WebCallEnabled" = "1" ]; then
+##  if [ "-$WebCallDisabled" = "-" ]; then
+    httpd -p 32345 -h /www/webcall -r MARS
+  fi
+
+}
+
+stop() {
+	killall httpd
+}

@@ -1,0 +1,78 @@
+From 8c4c858c58db9b89644229a9b6c3febbe334b13c Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Wed, 9 Jan 2013 13:58:13 +0200
+Subject: [PATCH 398/609] PM: Fix power management support for BE
+
+Change-Id: Ib13e0c9098e2e3937d7f9a2694d2a20ff4fb3469
+Reviewed-on: http://vgitil04.il.marvell.com:8080/906
+Reviewed-by: Tawfik Bayouk <tawfik@marvell.com>
+Tested-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/armada_suspend.S |   25 ++++++++++++++++++++++++-
+ 1 file changed, 24 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/plat-armada/armada_suspend.S b/arch/arm/plat-armada/armada_suspend.S
+index b850422..0562693 100644
+--- a/arch/arm/plat-armada/armada_suspend.S
++++ b/arch/arm/plat-armada/armada_suspend.S
+@@ -48,7 +48,13 @@ ENTRY(armadaxp_snoop_dis_virt)
+ 	ldr	r2, =(MV_COHERENCY_FABRIC_CTRL_REG + INTER_REGS_BASE)
+ 1:
+ 	ldrex r3, [r2]
++#ifdef CONFIG_BE8_ON_LE
++	rev r3, r3
++#endif
+ 	bic	r3, r3, r4, lsl r5
++#ifdef CONFIG_BE8_ON_LE
++	rev r3, r3
++#endif
+ 	strex r0, r3, [r2]
+ 	cmp	r0, #0
+ 	bne 1b
+@@ -94,8 +100,13 @@ ENTRY(armadaxp_cpu_suspend)
+ #ifdef CONFIG_ARMADA_DEEP_IDLE_SUPPORT_DRAM_SR
+ 	ldr	r3, =(INTER_REGS_BASE + 0x1418)
+ 	ldr	r4, [r3]
++#ifdef CONFIG_BE8_ON_LE
++	rev r4, r4
++#endif
+ 	orr	r4, r4, #0x7
+-
++#ifdef CONFIG_BE8_ON_LE
++	rev r4, r4
++#endif
+ 	dsb				@ Data Synchronization Barrier
+ 
+ 	.align 5
+@@ -123,7 +134,13 @@ ENTRY(armadaxp_cpu_suspend)
+ 	ldr	r2, =(MV_COHERENCY_FABRIC_CTRL_REG + INTER_REGS_BASE)
+ 1:
+ 	ldrex r3, [r2]
++#ifdef CONFIG_BE8_ON_LE
++	rev r3, r3
++#endif
+ 	orr	r3, r3, r4, lsl r5
++#ifdef CONFIG_BE8_ON_LE
++	rev r3, r3
++#endif
+ 	strex r0, r3, [r2]
+ 	cmp	r0, #0
+ 	bne 1b
+@@ -161,7 +178,13 @@ ENTRY(armadaxp_cpu_resume)
+ 	ldr	r2, =(MV_COHERENCY_FABRIC_CTRL_REG + INTER_REGS_PHYS_BASE)
+ 1:
+ 	ldrex r3, [r2]
++#ifdef CONFIG_BE8_ON_LE
++	rev r3, r3
++#endif
+ 	orr	r3, r3, r6, lsl r7
++#ifdef CONFIG_BE8_ON_LE
++	rev r3, r3
++#endif
+ 	strex r0, r3, [r2]
+ 	cmp	r0, #0
+ 	bne 1b
+-- 
+1.7.9.5
+

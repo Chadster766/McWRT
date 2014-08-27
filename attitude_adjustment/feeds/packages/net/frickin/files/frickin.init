@@ -1,0 +1,58 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2012 OpenWrt.org
+
+START=50
+
+SERVICE_DAEMONIZE=1
+SERVICE_WRITE_PID=1
+
+append_string() {
+	local var="$1"
+	local section="$2"
+	local option="$3"
+	local val="$4"
+	local _val
+	config_get _val "$section" "$option"
+	[ -n "$_val" ] && append "$var" "$val $_val"
+}
+
+section_enabled() {
+	local enabled
+	config_get_bool enabled "$1" 'enabled' 0
+	[ $enabled -gt 0 ]
+}
+
+start_instance() {
+	local section="$1"
+	local args
+
+	section_enabled "$section" || return 1
+
+	append_string args "$section" 'listen_ip' '-l'
+	append_string args "$section" 'server_ip' '-s'
+	append_string args "$section" 'conn_limit' '-c'
+
+	SERVICE_PID_FILE="/var/run/frickin-${section}.pid"
+	service_start /usr/sbin/frickin $args
+}
+
+stop_instance() {
+	local section="$1"
+	local id
+	local if
+
+	section_enabled "$section" || return 1
+
+	SERVICE_PID_FILE="/var/run/frickin-${section}.pid"
+	service_stop /usr/sbin/frickin
+}
+
+start() {
+	config_load 'frickin'
+	config_foreach start_instance 'frickin'
+}
+
+stop() {
+	config_load 'frickin'
+	config_foreach stop_instance 'frickin'
+}

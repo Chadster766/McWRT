@@ -1,0 +1,21 @@
+diff -r -u chillispot-1.1.0/src/chilli.c chillispot-1.1.0-macallowed/src/chilli.c
+--- chillispot-1.1.0/src/chilli.c       2006-09-24 19:48:25.000000000 +0200
++++ chillispot-1.1.0-macallowed/src/chilli.c    2008-07-18 07:58:03.000000000 +0200
+@@ -534,6 +534,8 @@
+     }
+   }
+   free(p3);
++
++  return 0;
+ }
+
+ int static process_options(int argc, char **argv, int firsttime) {
+@@ -2991,7 +2993,7 @@
+
+   /* Get Service Type */
+   if (!radius_getattr(pack, &stateattr, RADIUS_ATTR_SERVICE_TYPE, 0, 0, 0)) {
+-    if(ntohl(attr->v.i) == RADIUS_SERVICE_TYPE_CHILLISPOT_AUTHORIZE_ONLY) {
++    if(ntohl(stateattr->v.i) == RADIUS_SERVICE_TYPE_CHILLISPOT_AUTHORIZE_ONLY) {
+       sys_err(LOG_ERR, __FILE__, __LINE__, 0,
+              "Chillispot-Authorize-Only Service-Type in Access-Accept");
+       return dnprot_reject(appconn);

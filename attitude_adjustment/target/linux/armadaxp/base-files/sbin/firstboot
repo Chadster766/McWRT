@@ -1,0 +1,71 @@
+#!/bin/sh
+
+switch2jffs_hook=
+jffs2reset_hook=
+no_fo_hook=
+
+. /lib/functions/boot.sh
+
+firstboot_skip_next=false
+SYSCFG_UBIFS_MNT=/tmp/syscfg
+
+for fb_source_file in /lib/firstboot/*; do
+    . $fb_source_file
+done
+
+set_mtd_part
+set_rom_part
+set_jffs_part
+
+# invoked as an executable
+if [ "${0##*/}" = "firstboot" ]; then
+    if [ "$1" = "switch2jffs" ]; then
+	boot_run_hook switch2jffs
+    elif [ -n "$jffs" ]; then
+	reset_has_fo=true
+	echo "firstboot has already been run"
+	echo "jffs2 partition is mounted, only resetting files"
+	boot_run_hook jffs2reset
+    else
+		echo "recover ubifs_syscfg"
+		ubifs_recover_done=false
+		mtdpart_idx="$(echo $mtdpart | tr -d "/dev/mtdblock")"
+		[ -e /dev/ubi0 ] && ubidetach -m $mtdpart_idx
+		ubiattach -m $mtdpart_idx /dev/ubi_ctrl
+		if [ $? -eq 0 ]
+		then
+			{ ubinfo /dev/ubi0_0 | grep Name  | grep -qs syscfg ; } && {
+				tmp_mnt_point=/tmp/syscfg
+				mkdir -p $tmp_mnt_point 
+				mount -t ubifs ubi0:syscfg $tmp_mnt_point 
+				echo "recover ubifs by removing overlay files..."
+				if [ ! -d $tmp_mnt_point/openwrt_overlay ]
+				then
+					mkdir -p $tmp_mnt_point/openwrt_overlay
+				else
+					rm -rf $tmp_mnt_point/openwrt_overlay/*
+				fi
+				umount $tmp_mnt_point
+				rm -rf $tmp_mnt_point
+				ubifs_recover_done=true
+			}
+		fi
+		if [ "$ubifs_recover_done" = "false" ]
+		then
+			echo "recover ubifs by formatting $mtdpart..."
+			[ -e /dev/ubi0 ] && ubidetach -m $mtdpart_idx
+			ubiformat -y -q /dev/mtd$mtdpart_idx
+			ubiattach -m $mtdpart_idx /dev/ubi_ctrl
+			ubimkvol /dev/ubi0 -n 0 -N syscfg -t dynamic --maxavsize
+		fi
+		# mount pivot
+		[ -e /dev/ubi0 ] && ubidetach -m $mtdpart_idx
+		ubiattach -m $mtdpart_idx /dev/ubi_ctrl
+		mkdir -p ${SYSCFG_UBIFS_MNT}
+		mount -t ubifs -o noatime ubi0:syscfg $SYSCFG_UBIFS_MNT
+		[ ! -d $SYSCFG_UBIFS_MNT/openwrt_overlay ] && mkdir -p $SYSCFG_UBIFS_MNT/openwrt_overlay
+		mount -o bind $SYSCFG_UBIFS_MNT/openwrt_overlay /overlay
+		fopivot /overlay /rom 1
+    fi
+fi
+

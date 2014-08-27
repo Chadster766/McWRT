@@ -1,0 +1,137 @@
+--- a/modules/carrierroute/Makefile
++++ b/modules/carrierroute/Makefile
+@@ -12,10 +12,8 @@ NAME=carrierroute.so
+ BUILDER = $(shell which confuse-config)
+ 
+ ifeq ($(BUILDER),)
+-	CONFUSEDEFS=-I$(LOCALBASE)/include -I/usr/local/include -I/opt/include \
+-		-I/usr/sfw/include
+-	CONFUSELIBS=-L$(LOCALBASE)/lib -L/usr/local/lib -L/usr/sfw/lib \
+-		-L/opt/lib -lconfuse
++	CONFUSEDEFS=-I$(LOCALBASE)/include
++	CONFUSELIBS=-L$(LOCALBASE)/lib
+ else
+ 		CONFUSEDEFS = $(shell confuse-config --cflags)
+ 		CONFUSELIBS = $(shell confuse-config --libs)
+--- a/modules/h350/Makefile
++++ b/modules/h350/Makefile
+@@ -9,7 +9,8 @@ include ../../Makefile.defs
+ 
+ auto_gen=
+ NAME=h350.so
+-LIBS=
++
+ DEFS+=-I$(LOCALBASE)/include
++LIBS=-L$(LOCALBASE)/lib -lldap
+ 
+ include ../../Makefile.modules
+--- a/modules/ldap/Makefile
++++ b/modules/ldap/Makefile
+@@ -12,8 +12,8 @@ include ../../Makefile.defs
+ auto_gen=
+ NAME=ldap.so
+ 
+-LIBS=-L$(LOCALBASE)/lib -lldap
+ DEFS+=-I$(LOCALBASE)/include
++LIBS=-L$(LOCALBASE)/lib -lldap
+ 
+ ifeq ($(OS),solaris)
+        DEFS+=-I$(LOCALBASE)/include -I/usr/sfw/include -I/usr/local/include -I/opt/sfw/include -I/opt/csw/include
+--- a/modules/pua_bla/Makefile
++++ b/modules/pua_bla/Makefile
+@@ -9,8 +9,8 @@ include ../../Makefile.defs
+ auto_gen=
+ NAME=pua_bla.so
+ LIBS=
+-DEFS+=-I/usr/include/libxml2 -I$(LOCALBASE)/include/libxml2 -I$(LOCALBASE)/include
+-LIBS+=-L/usr/include/lib  -L$(LOCALBASE)/lib -lxml2
++DEFS+=-I$(LOCALBASE)/include/libxml2 -I$(LOCALBASE)/include
++LIBS+=-L$(LOCALBASE)/lib -lxml2
+ 
+ include ../../Makefile.modules
+ 
+--- a/modules/pua_xmpp/Makefile
++++ b/modules/pua_xmpp/Makefile
+@@ -10,7 +10,7 @@ auto_gen=
+ NAME= pua_xmpp.so
+ LIBS=
+ 
+-DEFS+=-I/usr/include/libxml2 -I$(LOCALBASE)/include/libxml2 -I$(LOCALBASE)/include
+-LIBS+=-L/usr/include/lib  -L$(LOCALBASE)/lib -lxml2
++DEFS+=-I$(LOCALBASE)/include/libxml2 -I$(LOCALBASE)/include
++LIBS+=-L$(LOCALBASE)/lib -lxml2
+ 
+ include ../../Makefile.modules
+--- a/modules/regex/Makefile
++++ b/modules/regex/Makefile
+@@ -7,10 +7,8 @@ NAME=regex.so
+ BUILDER = $(shell which pcre-config)
+ 
+ ifeq ($(BUILDER),)
+-	PCREDEFS=-I$(LOCALBASE)/include -I/usr/local/include -I/opt/include \
+-	-I/usr/sfw/include
+-	PCRELIBS=-L$(LOCALBASE)/lib -L/usr/local/lib -L/usr/sfw/lib \
+-	-L/opt/lib -lpcre
++	PCREDEFS=-I$(LOCALBASE)/include 
++	PCRELIBS=-L$(LOCALBASE)/lib -lpcre
+ else
+ 	PCREDEFS = $(shell pcre-config --cflags)
+ 	PCRELIBS = $(shell pcre-config --libs)
+--- a/modules/tlsops/Makefile
++++ b/modules/tlsops/Makefile
+@@ -7,8 +7,8 @@ auto_gen=
+ NAME=tlsops.so
+ LIBS=
+ 
+-DEFS+= -I$(LOCALBASE)/ssl/include
+-LIBS+= -L$(LOCALBASE)/lib -L$(LOCALBASE)/ssl/lib -lssl  -lcrypto
++DEFS+= -I$(LOCALBASE)/include
++LIBS+= -L$(LOCALBASE)/lib -lssl  -lcrypto
+ 
+ include ../../Makefile.modules
+ 
+--- a/modules/dialplan/Makefile
++++ b/modules/dialplan/Makefile
+@@ -9,10 +9,8 @@ NAME=dialplan.so
+ BUILDER = $(shell which pcre-config)
+ 
+ ifeq ($(BUILDER),)
+-	PCREDEFS=-I$(LOCALBASE)/include -I/usr/local/include -I/opt/include \
+-	-I/usr/sfw/include
+-	PCRELIBS=-L$(LOCALBASE)/lib -L/usr/local/lib -L/usr/sfw/lib \
+-	-L/opt/lib -lpcre
++	PCREDEFS=-I$(LOCALBASE)/include
++	PCRELIBS=-L$(LOCALBASE)/lib -lpcre
+ else
+ 	PCREDEFS = $(shell pcre-config --cflags)
+ 	PCRELIBS = $(shell pcre-config --libs)
+--- a/modules/lcr/Makefile
++++ b/modules/lcr/Makefile
+@@ -11,10 +11,8 @@ NAME=lcr.so
+ BUILDER = $(shell which pcre-config)
+ 
+ ifeq ($(BUILDER),)
+-	PCREDEFS=-I$(LOCALBASE)/include -I/usr/local/include -I/opt/include \
+-	-I/usr/sfw/include
+-	PCRELIBS=-L$(LOCALBASE)/lib -L/usr/local/lib -L/usr/sfw/lib \
+-	-L/opt/lib -lpcre
++	PCREDEFS=-I$(LOCALBASE)/include
++	PCRELIBS=-L$(LOCALBASE)/lib -lpcre
+ else
+ 	PCREDEFS = $(shell pcre-config --cflags)
+ 	PCRELIBS = $(shell pcre-config --libs)
+--- a/modules/purple/Makefile
++++ b/modules/purple/Makefile
+@@ -3,9 +3,9 @@ auto_gen=
+ NAME=purple.so
+ LIBS= 
+ 
+-DEFS+=-I/usr/lib/glib-2.0/include -I/usr/include/glib-2.0 \
+-		-I/usr/include/libxml2
+-LIBS+=-lglib-2.0 -lpurple -lxml2
++DEFS+=-I$(LOCALBASE)/include/glib-2.0/include -I$(LOCALBASE)/include/glib-2.0 \
++		-I$(LOCALBASE)/incldue/libxml2
++LIBS+=-L$(LOCALBASE)/lib -lglib-2.0 -lpurple -lxml2
+ 
+ 
+ include ../../Makefile.modules

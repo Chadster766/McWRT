@@ -1,0 +1,67 @@
+From aaec345492c49eb161286386782126ad3464ad1b Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Sun, 24 Jun 2012 17:30:48 +0300
+Subject: [PATCH 179/609] DSMP upading the nad_init.sh to 3.2 verstion.
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ tools/nas/nas_init.sh |   14 +++++++++-----
+ 1 file changed, 9 insertions(+), 5 deletions(-)
+
+diff --git a/tools/nas/nas_init.sh b/tools/nas/nas_init.sh
+index 3247017..3a06c63 100755
+--- a/tools/nas/nas_init.sh
++++ b/tools/nas/nas_init.sh
+@@ -1,8 +1,11 @@
+ #!/bin/bash
+ 
+-echo " * Version: 3.1"
++echo " * Version: 3.2"
+ 
+ # LOG:
++# 3.2:
++#   1. adding support for -l 0 to avoid network setup.
++#   2. updating smb.conf to improve single link performance.
+ # 3.1:
+ #   1. mount point updated.
+ #   2. XOR affinity update.
+@@ -120,8 +123,8 @@ while getopts "l:pbmzn:sf:t:h:" flag; do
+ 
+ 	l)	LINK_NUM=$OPTARG
+ 	    case "$OPTARG" in
+-		1|2|4) ;;
+-		*)	do_error "Usage: links options: 1|2|4" ;;
++		0|1|2|4) ;;
++		*)	do_error "Usage: links options: 0|1|2|4" ;;
+ 	    esac
+ 	    ;;
+ 
+@@ -347,6 +350,8 @@ elif [ "$LINK_NUM" == "1" ]; then
+     set -o verbose
+     ifconfig eth0 192.168.0.5 netmask 255.255.255.0 up
+     set +o verbose
++elif [ "$LINK_NUM" == "0" ]; then
++    echo -ne "Skipping network setup\n"
+ fi
+ echo -ne "[Done]\n"
+ 
+@@ -729,7 +734,7 @@ if [ "$FS" != "NONE" ]; then
+ 	echo ' dns proxy = no'				>>  /etc/smb.conf
+ 	echo ' max log size = 200'			>>  /etc/smb.conf
+ 	echo ' log level = 0'				>>  /etc/smb.conf
+-	echo ' socket options = IPTOS_LOWDELAY TCP_NODELAY SO_SNDBUF=131072 SO_RCVBUF=131072' >>  /etc/smb.conf
++	echo ' socket options = IPTOS_LOWDELAY TCP_NODELAY' >>  /etc/smb.conf
+ 	echo ' local master = no'			>>  /etc/smb.conf
+ 	echo ' dns proxy = no'				>>  /etc/smb.conf
+ 	echo ' ldap ssl = no'				>>  /etc/smb.conf
+@@ -750,7 +755,6 @@ if [ "$FS" != "NONE" ]; then
+ 	    echo ' min receivefile size = 128k'	>>  /etc/smb.conf
+ 	    echo ' strict allocate = yes'		>>  /etc/smb.conf
+ 	fi
+-	echo ' allocation roundup size = 10485760'	>>  /etc/smb.conf
+ 	echo ''						>>  /etc/smb.conf
+ 	echo '[public]'					>>  /etc/smb.conf
+ 	echo ' comment = my public share'		>>  /etc/smb.conf
+-- 
+1.7.9.5
+

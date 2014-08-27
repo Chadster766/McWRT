@@ -1,0 +1,381 @@
+From 68f452d6d4398efc43a463be4987a451f4e98299 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Tue, 12 Feb 2013 16:32:34 +0200
+Subject: [PATCH 528/609] GPIO: Add GPIO IRQ support for ArmadaXP SoC
+
+Add GPIO IRQ support based on the mainline plat-orion implementation.
+btns_driver was updated and can be used to test the driver.
+
+Testing the driver:
+The test implementation assumes push button is connected to GPIO 41 (btns_dev.h)
+Enable ARMADA_XP_BTNS_DEVICE config
+Set the correct MPP as GPIO in "mvBoardEnvSpec.h"
+
+This patch fixes BTS #192 and should be merged in stable branch
+
+Change-Id: I0ba6fd4c23b42e433895b922ca4c8cca315badba
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1129
+Reviewed-by: Tawfik Bayouk <tawfik@marvell.com>
+Tested-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/Kconfig                     |    5 ++
+ arch/arm/mach-armadaxp/Makefile                    |    6 +-
+ arch/arm/mach-armadaxp/btns_dev.h                  |   27 ++++++
+ arch/arm/mach-armadaxp/btns_device.c               |   93 ++++++++++++++++++++
+ arch/arm/mach-armadaxp/config/mvRules.mk           |    1 +
+ arch/arm/mach-armadaxp/include/mach/gpio.h         |    9 --
+ arch/arm/mach-armadaxp/include/mach/irqs.h         |    1 +
+ arch/arm/mach-armadaxp/irq.c                       |   46 +++++++++-
+ .../mv_drivers_lsp/mv_btns/btns_driver.c           |   21 +++--
+ 9 files changed, 186 insertions(+), 23 deletions(-)
+ create mode 100644 arch/arm/mach-armadaxp/btns_dev.h
+ create mode 100644 arch/arm/mach-armadaxp/btns_device.c
+
+diff --git a/arch/arm/mach-armadaxp/Kconfig b/arch/arm/mach-armadaxp/Kconfig
+index 07b4121..7ea7904 100644
+--- a/arch/arm/mach-armadaxp/Kconfig
++++ b/arch/arm/mach-armadaxp/Kconfig
+@@ -102,6 +102,11 @@ config ARMADAXP_USE_IRQ_INTERRUPT_ACK
+        default n
+        help
+ 
++config ARMADA_XP_BTNS_DEVICE
++	bool "Add support for ArmadaXP buttons driver for GPIOs"
++	default n
++	help
++
+ endmenu
+ 
+ endif
+diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
+index 699fb16..8a1bb8b 100644
+--- a/arch/arm/mach-armadaxp/Makefile
++++ b/arch/arm/mach-armadaxp/Makefile
+@@ -133,8 +133,10 @@ obj-$(CONFIG_MV_USE_XOR_ENGINE) 	+= $(PLAT_DRIVERS)/mv_xor/
+ obj-$(CONFIG_MV_CESA) 			+= $(PLAT_DRIVERS)/mv_cesa/
+ obj-$(CONFIG_MV_IPC_DRIVER)		+= $(PLAT_DRIVERS)/mv_ipc/
+ obj-$(CONFIG_MV_IPC_NET)		+= $(PLAT_DRIVERS)/mv_ipc_net/
+-#obj-y					+= $(PLAT_DRIVERS)/mv_btns/
+-obj-y					+= $(PLAT_DRIVERS)/mv_gpio/
++obj-$(CONFIG_GENERIC_GPIO)		+= $(PLAT_DRIVERS)/mv_btns/
++obj-$(CONFIG_GENERIC_GPIO)		+= $(PLAT_ORION_PATH)/gpio.o
++obj-$(CONFIG_ARMADA_XP_BTNS_DEVICE)	+= btns_device.o
++#obj-$(CONFIG_GENERIC_GPIO)		+= $(PLAT_DRIVERS)/mv_gpio/
+ obj-$(CONFIG_MV_DBG_TRACE)              += $(PLAT_DRIVERS)/mv_trace/
+ obj-$(CONFIG_MV_INCLUDE_SWITCH)         += $(LSP_SWITCH_DIR)/
+ obj-$(CONFIG_SENSORS_ARMADA)		+= hwmon.o
+diff --git a/arch/arm/mach-armadaxp/btns_dev.h b/arch/arm/mach-armadaxp/btns_dev.h
+new file mode 100644
+index 0000000..a4d325c
+--- /dev/null
++++ b/arch/arm/mach-armadaxp/btns_dev.h
+@@ -0,0 +1,27 @@
++/*******************************************************************************
++Marvell GPL License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File in accordance with the terms and conditions of the General
++Public License Version 2, June 1991 (the "GPL License"), a copy of which is
++available along with the File in the license.txt file or by writing to the Free
++Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
++on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++
++THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
++DISCLAIMED.  The GPL License provides additional details about this warranty
++disclaimer.
++*******************************************************************************/
++
++#ifndef _BTNS_DEV_H_
++#define _BTNS_DEV_H_
++
++#define TEST_GPP 41
++
++struct btns_platform_data {
++	unsigned int btns_num;
++	struct btn_data *btns_data_arr;
++};
++
++#endif /* _BTNS_DEV_H_ */
+diff --git a/arch/arm/mach-armadaxp/btns_device.c b/arch/arm/mach-armadaxp/btns_device.c
+new file mode 100644
+index 0000000..3d6d2f5
+--- /dev/null
++++ b/arch/arm/mach-armadaxp/btns_device.c
+@@ -0,0 +1,93 @@
++/******************************************************************************
++Marvell GPL License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File in accordance with the terms and conditions of the General
++Public License Version 2, June 1991 (the "GPL License"), a copy of which is
++available along with the File in the license.txt file or by writing to the Free
++Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
++on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++
++THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
++DISCLAIMED.  The GPL License provides additional details about this warranty
++disclaimer.
++*******************************************************************************/
++#include <linux/platform_device.h>
++#include <linux/miscdevice.h>
++#include "../plat-armada/mv_drivers_lsp/mv_btns/btns_driver.h"
++#include "btns_dev.h"
++#include "ctrlEnv/mvCtrlEnvLib.h"
++
++/*
++ * common debug for all
++ */
++#undef DEBUG
++
++#ifdef DEBUG
++#define dprintk   printk
++#else
++#define dprintk(a...)
++#endif
++
++static struct btns_platform_data btns_data;
++static struct btn_data btn_data_db[] = {
++	[0] = {
++		.gpp_id		= TEST_GPP,
++		.default_gpp_val = 0x0,
++		.btn_op		= BTN_PUSH,
++		.btn_name	= "TEST",
++	}
++};
++
++static struct platform_device btns_device = {
++	.name		= MV_BTNS_NAME,
++	.id		= 0,
++	.num_resources	= 0,
++	.dev = {
++		.platform_data  = &btns_data,
++	},
++};
++
++static int btns_init_data(struct platform_device *pdev)
++{
++	dprintk("%s - ArmadaXP board\n", __func__);
++	btns_data.btns_data_arr = btn_data_db;
++	btns_data.btns_num = (btns_data.btns_data_arr == NULL) ?
++			 0 : ARRAY_SIZE(btn_data_db);
++
++	if (btns_data.btns_num)
++		dprintk("%s - Number of configured buttons: %d\n",
++			__func__, btns_data.btns_num);
++
++	return 0;
++}
++
++static int __init mv_btns_init(void)
++{
++	int status;
++
++	printk(KERN_NOTICE "MV Buttons Device Load\n");
++
++	/* Initialize btns related structures and data*/
++	status = btns_init_data(&btns_device);
++	if (status) {
++		printk(KERN_WARNING
++			"Can't initialize Marvell Buttons Data, status=%d\n",
++			status);
++		return status;
++	}
++
++	/* register device */
++	status = platform_device_register(&btns_device);
++	if (status) {
++		printk(KERN_WARNING
++			"Can't register Marvell Buttons Device, status=%d\n",
++			status);
++		return status;
++	}
++
++	return 0;
++}
++
++subsys_initcall(mv_btns_init);
+diff --git a/arch/arm/mach-armadaxp/config/mvRules.mk b/arch/arm/mach-armadaxp/config/mvRules.mk
+index 216f5bc..dc54930 100644
+--- a/arch/arm/mach-armadaxp/config/mvRules.mk
++++ b/arch/arm/mach-armadaxp/config/mvRules.mk
+@@ -18,6 +18,7 @@ endif
+ # Main directory structure
+ PLAT_PATH	  = ../plat-armada
+ PLAT_DRIVERS	  = $(PLAT_PATH)/mv_drivers_lsp
++PLAT_ORION_PATH	  = ../plat-orion
+ HAL_DIR           = $(PLAT_PATH)/mv_hal
+ COMMON_DIR        = $(PLAT_PATH)/common
+ OSSERV_DIR        = $(PLAT_PATH)/linux_oss
+diff --git a/arch/arm/mach-armadaxp/include/mach/gpio.h b/arch/arm/mach-armadaxp/include/mach/gpio.h
+index 7ca789d..1fcac42 100644
+--- a/arch/arm/mach-armadaxp/include/mach/gpio.h
++++ b/arch/arm/mach-armadaxp/include/mach/gpio.h
+@@ -27,15 +27,6 @@
+ 
+ #define GPIO_BASE(pin)		((pin < 32) ? GPIO_BASE_LO : GPIO_BASE_HI)
+ 
+-#define GPIO_OUT(pin)		(GPIO_BASE(pin) + 0x00)
+-#define GPIO_IO_CONF(pin)	(GPIO_BASE(pin) + 0x04)
+-#define GPIO_BLINK_EN(pin)	(GPIO_BASE(pin) + 0x08)
+-#define GPIO_IN_POL(pin)	(GPIO_BASE(pin) + 0x0c)
+-#define GPIO_DATA_IN(pin)	(GPIO_BASE(pin) + 0x10)
+-#define GPIO_EDGE_CAUSE(pin)	(GPIO_BASE(pin) + 0x14)
+-#define GPIO_EDGE_MASK(pin)	(GPIO_BASE(pin) + 0x18)
+-#define GPIO_LEVEL_MASK(pin)	(GPIO_BASE(pin) + 0x1c)
+-
+ static inline int gpio_to_irq(int pin)
+ {
+ 	if (pin < NR_GPIO_IRQS)
+diff --git a/arch/arm/mach-armadaxp/include/mach/irqs.h b/arch/arm/mach-armadaxp/include/mach/irqs.h
+index 71716ea..a67744b 100644
+--- a/arch/arm/mach-armadaxp/include/mach/irqs.h
++++ b/arch/arm/mach-armadaxp/include/mach/irqs.h
+@@ -166,6 +166,7 @@
+  * IRQ HAL remapping
+  */
+ #define NET_TH_RXTX_IRQ_NUM(x)		(IRQ_AURORA_GBE0_FIC + ((x) * 2))
++#define IRQ_GPP_START			IRQ_AURORA_GPIO_START
+ #define SATA_IRQ_NUM			(IRQ_AURORA_SATA0)
+ #define CESA_IRQ(chan)			IRQ_AURORA_CRYPTO(chan)
+ #endif
+diff --git a/arch/arm/mach-armadaxp/irq.c b/arch/arm/mach-armadaxp/irq.c
+index a3041dc..70500f8 100644
+--- a/arch/arm/mach-armadaxp/irq.c
++++ b/arch/arm/mach-armadaxp/irq.c
+@@ -8,9 +8,21 @@
+ 
+ #include <linux/irq.h>
+ #include <linux/interrupt.h>
++#include <linux/gpio.h>
+ #include <plat/msi.h>
++#include <mach/armadaxp.h>
+ #include "include/mach/smp.h"
+ #include "mvOs.h"
++#include "mvSysGppConfig.h"
++
++/* Initialize gpiolib. */
++void __init orion_gpio_init(int gpio_base, int ngpio,
++			    u32 base, int mask_offset, int secondary_irq_base);
++/*
++ * GPIO interrupt handling.
++ */
++void orion_gpio_irq_handler(int irqoff);
++
+ 
+ unsigned int  irq_int_type[NR_IRQS];
+ #define ENABLED_DOORBELS 	(0xF0FF)
+@@ -145,6 +157,38 @@ void axp_ipi_init(void)
+ }
+ #endif
+ 
++static void gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
++{
++	BUG_ON(irq < IRQ_AURORA_GPIO_0_7 || irq > IRQ_AURORA_GPIO_56_63);
++
++	orion_gpio_irq_handler((irq - IRQ_AURORA_GPIO_0_7) << 3);
++}
++
++void axp_gpio_init(void)
++{
++	u32 irq;
++
++	orion_gpio_init(0, 32, INTER_REGS_VIRT_BASE + MV_GPP_REGS_BASE(0), 0,
++			 IRQ_AURORA_GPIO_START);
++	orion_gpio_init(32, 32, INTER_REGS_VIRT_BASE + MV_GPP_REGS_BASE(1), 0,
++			 IRQ_AURORA_GPIO_START + 32);
++	orion_gpio_init(64, 3, INTER_REGS_VIRT_BASE + MV_GPP_REGS_BASE(2), 0,
++			 IRQ_AURORA_GPIO_START + 64);
++
++	for (irq = IRQ_AURORA_GPIO_0_7; irq <= IRQ_AURORA_GPIO_64_66; irq++) {
++		if (irq == 86)
++			continue;
++		/* Enable GPIO interrupts */
++		axp_irq_unmask(irq_get_irq_data(irq));
++		/* Initialize gpiolib for GPIOs 0-64 */
++		irq_set_chained_handler(irq, gpio_irq_handler);
++#ifdef CONFIG_SMP
++		/* Set affinity */
++		axp_set_affinity(irq_get_irq_data(irq), cpumask_of(0), 0);
++#endif
++	}
++}
++
+ static struct irq_chip axp_irq_chip = {
+ 	.name		= "axp_irq",
+ 	.irq_mask	= axp_irq_mask,
+@@ -187,7 +231,7 @@ void __init axp_init_irq(void)
+ 
+ 	axp_ipi_init();
+ #endif
+-
++	axp_gpio_init();
+ 	armada_msi_init();
+ }
+ 
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_btns/btns_driver.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_btns/btns_driver.c
+index 8f89f04..b12156f 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_btns/btns_driver.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_btns/btns_driver.c
+@@ -13,8 +13,12 @@ WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
+ DISCLAIMED.  The GPL License provides additional details about this warranty
+ disclaimer.
+ *******************************************************************************/
++
++#include <linux/module.h>
+ #include <linux/platform_device.h>
+ #include <linux/miscdevice.h>
++#include <linux/interrupt.h>
++#include <mach/irqs.h>
+ #include "btns_dev.h"
+ #include "mvCommon.h"
+ #include "mvOs.h"
+@@ -22,7 +26,6 @@ disclaimer.
+ #include "gpp/mvGppRegs.h"
+ #include "btns_driver.h"
+ 
+-
+ /* MACROS */
+ #define GPP_GROUP(gpp) 	gpp/32
+ #define GPP_ID(gpp)   	gpp%32
+@@ -137,12 +140,8 @@ mv_btns_handler(int irq , void *dev_id)
+ 	return IRQ_HANDLED;
+ }
+ 
+-static int
+-btnsdev_ioctl(
+-        struct inode *inode,
+-        struct file *filp,
+-        unsigned int cmd,
+-        unsigned long arg)
++static long
++btnsdev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+ {
+ 	unsigned int btn_id;
+ 	BTN btn_sts;
+@@ -275,9 +274,9 @@ btnsdev_release(struct inode *inode, struct file *filp)
+ 
+ 
+ static struct file_operations btnsdev_fops = {
+-        .open = btnsdev_open,
+-        .release = btnsdev_release,
+-        .ioctl = btnsdev_ioctl,
++	.open = btnsdev_open,
++	.release = btnsdev_release,
++	.compat_ioctl = btnsdev_ioctl,
+ };
+ 
+ static struct miscdevice btnsdev = {
+@@ -356,5 +355,5 @@ module_exit(btnsdev_exit);
+ MODULE_LICENSE("GPL");
+ MODULE_AUTHOR("Ronen Shitrit & Haim Boot");
+ MODULE_DESCRIPTION("PH: Buttons press handling.");
+-
++MODULE_ALIAS("platform:mvbtns");
+ 
+-- 
+1.7.9.5
+

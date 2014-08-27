@@ -1,0 +1,18 @@
+#!/bin/sh
+
+init_fw_env() {
+	uboot_env_partname="u_env"
+	uboot_env_mtdpart="$(find_mtd_part $uboot_env_partname)"
+	if [ ! -n "${uboot_env_mtdpart}" ]
+	then
+		echo "init_fw_env: cannot find u_env partition"
+		return
+	fi
+	uboot_env_mtdpart_idx="$(echo $uboot_env_mtdpart | tr -d "/dev/mtdblock")"
+cat <<EOF > /tmp/fw_env.config
+# MTD device name       Device offset   Env. size       Flash sector size               Number of Sectos
+ /dev/mtd${uboot_env_mtdpart_idx}               0x0000         0x40000         0x20000                         2
+EOF
+}
+
+boot_hook_add preinit_main init_fw_env

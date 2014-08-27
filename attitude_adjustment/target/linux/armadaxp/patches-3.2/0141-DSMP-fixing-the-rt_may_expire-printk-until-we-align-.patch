@@ -1,0 +1,26 @@
+From 340a4352471555edaf290d4c7329191923394017 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Wed, 18 Apr 2012 15:39:00 +0300
+Subject: [PATCH 141/609] DSMP fixing the "rt_may_expire" printk until we
+ align 3.2 Kernel with the 3.0.x
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ net/ipv4/route.c |    1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/net/ipv4/route.c b/net/ipv4/route.c
+index 399b83d..30029cb 100644
+--- a/net/ipv4/route.c
++++ b/net/ipv4/route.c
+@@ -700,7 +700,6 @@ static int rt_may_expire(struct rtable *rth, unsigned long tmo1, unsigned long t
+ {
+ 	unsigned long age;
+ 	int ret = 0;
+-	printk("%s:\n", __func__);
+ 	if (atomic_read(&rth->dst.__refcnt))
+ 		goto out;
+ 
+-- 
+1.7.9.5
+

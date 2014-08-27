@@ -1,0 +1,35 @@
+From ddd27b49ca8541f2adef46fde65aba7a357f7827 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Tue, 12 Feb 2013 11:06:17 +0200
+Subject: [PATCH 520/609] NETA, PM: Enable NETA port powering-up for Armada
+ 370 when resuming from standby
+
+    Signed-off-by: Zbigniew Bodek <zbb@semihalf.com>
+
+Change-Id: I38a9196a477990bb14046fcd6df0e23323725399
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1124
+Reviewed-by: Tawfik Bayouk <tawfik@marvell.com>
+Tested-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |    3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 20caace..c6ae526 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -3332,9 +3332,8 @@ int mv_eth_port_resume(int port)
+ 		return MV_ERROR;
+ 	}
+ 	/*13q1 TODO: mvNetaPortPowerUp(port, mvBoardIsPortInSgmii(port), mvBoardIsPortInRgmii(port));*/
+-#if !defined(CONFIG_ARCH_ARMADA370)
+ 	mvNetaPortPowerUp(port, mvBoardIsPortInSgmii(port), !mvBoardIsPortInGmii(port));
+-#endif
++
+ 	mv_eth_win_init(port);
+ 
+ 	mv_eth_resume_network_interfaces(pp);
+-- 
+1.7.9.5
+

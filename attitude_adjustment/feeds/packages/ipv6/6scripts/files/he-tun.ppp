@@ -1,0 +1,24 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+ipaddr="$PPP_LOCAL"
+
+update_tun() {
+	local cfg="$1"
+	
+	config_get tunnelid "$cfg" tunnelid
+	config_get username "$cfg" username
+	config_get password "$cfg" password
+	config_get tunnel "$cfg" tunnel
+	
+	password=`echo -n $password | md5sum | cut -d ' ' -f 1`
+	wget -q -O /dev/null "http://ipv4.tunnelbroker.net/ipv4_end.php?ipv4b=$ipaddr&pass=$password&user_id=$username&tunnel_id=$tunnelid"
+	
+	uci set "6tunnel.@$tunnel[0].localip4=$ipaddr"
+	uci commit 6tunnel
+	/etc/init.d/6tunnel restart
+}
+
+config_load "hetun"
+config_foreach update_tun

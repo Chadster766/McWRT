@@ -1,0 +1,27 @@
+#!/bin/sh /etc/rc.common
+
+# To open multicast traffic, add the following rule at the end of
+# /etc/config/firewall file:
+#
+# config 'rule'
+#     option 'target' 'ACCEPT'
+#     option '_name' 'multicast'
+#     option 'src' 'wan'
+#     option 'proto' 'all'
+#     option 'dest_ip' '224.0.0.0/4'
+
+START=99
+STOP=10
+
+SERVICE_DAEMONIZE=1
+SERVICE_WRITE_PID=1
+
+OPTIONS="-T -S -p 4022"
+
+start() {
+	service_start /usr/bin/udpxy $OPTIONS
+}
+
+stop() {
+	service_stop /usr/bin/udpxy
+}

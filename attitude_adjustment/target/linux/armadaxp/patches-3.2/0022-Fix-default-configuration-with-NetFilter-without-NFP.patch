@@ -1,0 +1,445 @@
+From 27e15aae442575d3f2485cfb291f2cd0547175c6 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Thu, 24 Nov 2011 08:31:50 -0500
+Subject: [PATCH 022/609] Fix default configuration: with NetFilter, without
+ NFP
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/configs/armada_xp_defconfig               |  121 +++-----------------
+ .../arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig |   65 ++++++-----
+ net/ipv4/netfilter/Kconfig                         |    3 +-
+ net/ipv6/netfilter/Kconfig                         |    3 +-
+ 4 files changed, 52 insertions(+), 140 deletions(-)
+
+diff --git a/arch/arm/configs/armada_xp_defconfig b/arch/arm/configs/armada_xp_defconfig
+index 1132fd3..04264c8 100644
+--- a/arch/arm/configs/armada_xp_defconfig
++++ b/arch/arm/configs/armada_xp_defconfig
+@@ -336,11 +336,7 @@ CONFIG_MV_ETH_TOOL=y
+ CONFIG_NET_SKB_HEADROOM=96
+ CONFIG_NET_SKB_RECYCLE=y
+ CONFIG_NET_SKB_RECYCLE_DEF=1
+-CONFIG_MV_ETH_NFP=y
+-CONFIG_MV_ETH_NFP_DEF=0
+-CONFIG_MV_ETH_NFP_FIB=y
+-CONFIG_MV_ETH_NFP_NAT=y
+-# CONFIG_MV_ETH_NFP_SEC is not set
++# CONFIG_MV_ETH_NFP is not set
+ 
+ #
+ # BM configuration
+@@ -355,22 +351,22 @@ CONFIG_MV_ETH_BM_PORT_0=y
+ CONFIG_MV_ETH_BM_PORT_0_LONG_POOL=-1
+ CONFIG_MV_ETH_BM_PORT_0_SHORT_POOL=3
+ CONFIG_MV_ETH_BM_PORT_0_LONG_BUF_NUM=2048
+-CONFIG_MV_ETH_BM_PORT_0_SHORT_BUF_NUM=4096
++CONFIG_MV_ETH_BM_PORT_0_SHORT_BUF_NUM=3072
+ CONFIG_MV_ETH_BM_PORT_1=y
+ CONFIG_MV_ETH_BM_PORT_1_LONG_POOL=-1
+ CONFIG_MV_ETH_BM_PORT_1_SHORT_POOL=3
+ CONFIG_MV_ETH_BM_PORT_1_LONG_BUF_NUM=2048
+-CONFIG_MV_ETH_BM_PORT_1_SHORT_BUF_NUM=4096
++CONFIG_MV_ETH_BM_PORT_1_SHORT_BUF_NUM=3072
+ CONFIG_MV_ETH_BM_PORT_2=y
+ CONFIG_MV_ETH_BM_PORT_2_LONG_POOL=-1
+ CONFIG_MV_ETH_BM_PORT_2_SHORT_POOL=3
+ CONFIG_MV_ETH_BM_PORT_2_LONG_BUF_NUM=2048
+-CONFIG_MV_ETH_BM_PORT_2_SHORT_BUF_NUM=4096
++CONFIG_MV_ETH_BM_PORT_2_SHORT_BUF_NUM=3072
+ CONFIG_MV_ETH_BM_PORT_3=y
+ CONFIG_MV_ETH_BM_PORT_3_LONG_POOL=-1
+ CONFIG_MV_ETH_BM_PORT_3_SHORT_POOL=3
+ CONFIG_MV_ETH_BM_PORT_3_LONG_BUF_NUM=2048
+-CONFIG_MV_ETH_BM_PORT_3_SHORT_BUF_NUM=4096
++CONFIG_MV_ETH_BM_PORT_3_SHORT_BUF_NUM=3072
+ CONFIG_MV_ETH_LEGACY_PARSER=y
+ # CONFIG_MV_ETH_PNC is not set
+ # CONFIG_MV_ETH_PMT is not set
+@@ -428,24 +424,6 @@ CONFIG_MV_ETH_EXTRA_BUF_NUM=532
+ #
+ # NFP support
+ #
+-# CONFIG_MV_ETH_NFP_LIB is not set
+-CONFIG_MV_ETH_NFP_MODE_DEF=1
+-# CONFIG_MV_ETH_NFP_EXT is not set
+-CONFIG_MV_ETH_NFP_BRIDGE=y
+-CONFIG_MV_ETH_NFP_FDB_MODE=y
+-# CONFIG_MV_ETH_NFP_BRIDGE_MODE is not set
+-# CONFIG_MV_ETH_NFP_FDB_LEARN is not set
+-CONFIG_MV_ETH_NFP_VLAN=y
+-# CONFIG_MV_ETH_NFP_VLAN_LEARN is not set
+-CONFIG_MV_ETH_NFP_FIB_LEARN=y
+-CONFIG_MV_ETH_NFP_FIB_LEARN_DEF=0
+-CONFIG_MV_ETH_NFP_CT=y
+-CONFIG_MV_ETH_NFP_CT_LEARN=y
+-CONFIG_MV_ETH_NFP_CT_LEARN_DEF=0
+-# CONFIG_MV_ETH_NFP_LIMIT is not set
+-CONFIG_MV_ETH_NFP_CLASSIFY=y
+-CONFIG_MV_ETH_NFP_STATS=y
+-CONFIG_MV_ETH_NFP_DEBUG=y
+ 
+ #
+ # PON support for Network driver
+@@ -712,31 +690,16 @@ CONFIG_IPV6_NDISC_NODETYPE=y
+ # CONFIG_NETWORK_PHY_TIMESTAMPING is not set
+ CONFIG_NETFILTER=y
+ # CONFIG_NETFILTER_DEBUG is not set
+-CONFIG_NETFILTER_ADVANCED=y
+-CONFIG_BRIDGE_NETFILTER=y
++# CONFIG_NETFILTER_ADVANCED is not set
+ 
+ #
+ # Core Netfilter Configuration
+ #
+-# CONFIG_NETFILTER_NETLINK_QUEUE is not set
+ # CONFIG_NETFILTER_NETLINK_LOG is not set
+ CONFIG_NF_CONNTRACK=y
+-# CONFIG_NF_CONNTRACK_MARK is not set
+-# CONFIG_NF_CONNTRACK_EVENTS is not set
+-# CONFIG_NF_CONNTRACK_TIMESTAMP is not set
+-# CONFIG_NF_CT_PROTO_DCCP is not set
+-# CONFIG_NF_CT_PROTO_SCTP is not set
+-# CONFIG_NF_CT_PROTO_UDPLITE is not set
+-# CONFIG_NF_CONNTRACK_AMANDA is not set
+ CONFIG_NF_CONNTRACK_FTP=y
+-# CONFIG_NF_CONNTRACK_H323 is not set
+ # CONFIG_NF_CONNTRACK_IRC is not set
+-# CONFIG_NF_CONNTRACK_NETBIOS_NS is not set
+-# CONFIG_NF_CONNTRACK_SNMP is not set
+-# CONFIG_NF_CONNTRACK_PPTP is not set
+-# CONFIG_NF_CONNTRACK_SANE is not set
+ # CONFIG_NF_CONNTRACK_SIP is not set
+-# CONFIG_NF_CONNTRACK_TFTP is not set
+ # CONFIG_NF_CT_NETLINK is not set
+ CONFIG_NETFILTER_XTABLES=y
+ 
+@@ -744,60 +707,19 @@ CONFIG_NETFILTER_XTABLES=y
+ # Xtables combined modules
+ #
+ # CONFIG_NETFILTER_XT_MARK is not set
+-# CONFIG_NETFILTER_XT_CONNMARK is not set
+ 
+ #
+ # Xtables targets
+ #
+-# CONFIG_NETFILTER_XT_TARGET_CLASSIFY is not set
+-# CONFIG_NETFILTER_XT_TARGET_CONNMARK is not set
+-# CONFIG_NETFILTER_XT_TARGET_IDLETIMER is not set
+-# CONFIG_NETFILTER_XT_TARGET_MARK is not set
+ # CONFIG_NETFILTER_XT_TARGET_NFLOG is not set
+-# CONFIG_NETFILTER_XT_TARGET_NFQUEUE is not set
+-# CONFIG_NETFILTER_XT_TARGET_RATEEST is not set
+-# CONFIG_NETFILTER_XT_TARGET_TEE is not set
+ # CONFIG_NETFILTER_XT_TARGET_TCPMSS is not set
+ 
+ #
+ # Xtables matches
+ #
+-# CONFIG_NETFILTER_XT_MATCH_ADDRTYPE is not set
+-# CONFIG_NETFILTER_XT_MATCH_CLUSTER is not set
+-# CONFIG_NETFILTER_XT_MATCH_COMMENT is not set
+-# CONFIG_NETFILTER_XT_MATCH_CONNBYTES is not set
+-# CONFIG_NETFILTER_XT_MATCH_CONNLIMIT is not set
+-# CONFIG_NETFILTER_XT_MATCH_CONNMARK is not set
+ # CONFIG_NETFILTER_XT_MATCH_CONNTRACK is not set
+-# CONFIG_NETFILTER_XT_MATCH_CPU is not set
+-# CONFIG_NETFILTER_XT_MATCH_DCCP is not set
+-# CONFIG_NETFILTER_XT_MATCH_DEVGROUP is not set
+-# CONFIG_NETFILTER_XT_MATCH_DSCP is not set
+-# CONFIG_NETFILTER_XT_MATCH_ESP is not set
+-# CONFIG_NETFILTER_XT_MATCH_HASHLIMIT is not set
+-# CONFIG_NETFILTER_XT_MATCH_HELPER is not set
+-# CONFIG_NETFILTER_XT_MATCH_HL is not set
+-# CONFIG_NETFILTER_XT_MATCH_IPRANGE is not set
+-# CONFIG_NETFILTER_XT_MATCH_LENGTH is not set
+-# CONFIG_NETFILTER_XT_MATCH_LIMIT is not set
+-# CONFIG_NETFILTER_XT_MATCH_MAC is not set
+-# CONFIG_NETFILTER_XT_MATCH_MARK is not set
+-# CONFIG_NETFILTER_XT_MATCH_MULTIPORT is not set
+-# CONFIG_NETFILTER_XT_MATCH_OWNER is not set
+ # CONFIG_NETFILTER_XT_MATCH_POLICY is not set
+-# CONFIG_NETFILTER_XT_MATCH_PHYSDEV is not set
+-# CONFIG_NETFILTER_XT_MATCH_PKTTYPE is not set
+-# CONFIG_NETFILTER_XT_MATCH_QUOTA is not set
+-# CONFIG_NETFILTER_XT_MATCH_RATEEST is not set
+-# CONFIG_NETFILTER_XT_MATCH_REALM is not set
+-# CONFIG_NETFILTER_XT_MATCH_RECENT is not set
+-# CONFIG_NETFILTER_XT_MATCH_SCTP is not set
+ # CONFIG_NETFILTER_XT_MATCH_STATE is not set
+-# CONFIG_NETFILTER_XT_MATCH_STATISTIC is not set
+-# CONFIG_NETFILTER_XT_MATCH_STRING is not set
+-# CONFIG_NETFILTER_XT_MATCH_TCPMSS is not set
+-# CONFIG_NETFILTER_XT_MATCH_TIME is not set
+-# CONFIG_NETFILTER_XT_MATCH_U32 is not set
+ # CONFIG_IP_VS is not set
+ 
+ #
+@@ -806,20 +728,13 @@ CONFIG_NETFILTER_XTABLES=y
+ CONFIG_NF_DEFRAG_IPV4=y
+ CONFIG_NF_CONNTRACK_IPV4=y
+ CONFIG_NF_CONNTRACK_PROC_COMPAT=y
+-# CONFIG_IP_NF_QUEUE is not set
+ CONFIG_IP_NF_IPTABLES=y
+-# CONFIG_IP_NF_MATCH_AH is not set
+-# CONFIG_IP_NF_MATCH_ECN is not set
+-# CONFIG_IP_NF_MATCH_TTL is not set
+ # CONFIG_IP_NF_FILTER is not set
+ # CONFIG_IP_NF_TARGET_LOG is not set
+ # CONFIG_IP_NF_TARGET_ULOG is not set
+ CONFIG_NF_NAT=y
+ CONFIG_NF_NAT_NEEDED=y
+ CONFIG_IP_NF_TARGET_MASQUERADE=y
+-# CONFIG_IP_NF_TARGET_NETMAP is not set
+-CONFIG_IP_NF_TARGET_NFP=y
+-# CONFIG_IP_NF_TARGET_REDIRECT is not set
+ CONFIG_NF_NAT_FTP=y
+ # CONFIG_NF_NAT_IRC is not set
+ # CONFIG_NF_NAT_TFTP is not set
+@@ -828,30 +743,17 @@ CONFIG_NF_NAT_FTP=y
+ # CONFIG_NF_NAT_H323 is not set
+ # CONFIG_NF_NAT_SIP is not set
+ # CONFIG_IP_NF_MANGLE is not set
+-# CONFIG_IP_NF_RAW is not set
+-# CONFIG_IP_NF_ARPTABLES is not set
+ 
+ #
+ # IPv6: Netfilter Configuration
+ #
+ CONFIG_NF_DEFRAG_IPV6=y
+ CONFIG_NF_CONNTRACK_IPV6=y
+-# CONFIG_IP6_NF_QUEUE is not set
+ CONFIG_IP6_NF_IPTABLES=y
+-# CONFIG_IP6_NF_MATCH_AH is not set
+-# CONFIG_IP6_NF_MATCH_EUI64 is not set
+-# CONFIG_IP6_NF_MATCH_FRAG is not set
+-# CONFIG_IP6_NF_MATCH_OPTS is not set
+-# CONFIG_IP6_NF_MATCH_HL is not set
+ # CONFIG_IP6_NF_MATCH_IPV6HEADER is not set
+-# CONFIG_IP6_NF_MATCH_MH is not set
+-# CONFIG_IP6_NF_MATCH_RT is not set
+ # CONFIG_IP6_NF_TARGET_LOG is not set
+ # CONFIG_IP6_NF_FILTER is not set
+ # CONFIG_IP6_NF_MANGLE is not set
+-# CONFIG_IP6_NF_RAW is not set
+-CONFIG_IP6_NF_TARGET_NFP=y
+-# CONFIG_BRIDGE_NF_EBTABLES is not set
+ # CONFIG_IP_DCCP is not set
+ # CONFIG_IP_SCTP is not set
+ # CONFIG_RDS is not set
+@@ -1392,8 +1294,17 @@ CONFIG_WLAN=y
+ #
+ # CONFIG_FDDI is not set
+ # CONFIG_HIPPI is not set
+-# CONFIG_PPP is not set
++CONFIG_PPP=y
++# CONFIG_PPP_MULTILINK is not set
++# CONFIG_PPP_FILTER is not set
++# CONFIG_PPP_ASYNC is not set
++# CONFIG_PPP_SYNC_TTY is not set
++# CONFIG_PPP_DEFLATE is not set
++# CONFIG_PPP_BSDCOMP is not set
++# CONFIG_PPP_MPPE is not set
++CONFIG_PPPOE=y
+ # CONFIG_SLIP is not set
++CONFIG_SLHC=y
+ # CONFIG_NET_FC is not set
+ # CONFIG_NETCONSOLE is not set
+ # CONFIG_NETPOLL is not set
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
+index 177258f..d4bd197 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
+@@ -88,7 +88,7 @@ config  MV_ETH_BM_PORT_0_SHORT_BUF_NUM
+         int "Number of buffers for Short pool of GbE #0"
+         depends on MV_ETH_BM_PORT_0 && (MV_ETH_BM_PORT_0_LONG_POOL != MV_ETH_BM_PORT_0_SHORT_POOL)
+         range 128 16384
+-        default 4096
++        default 3072
+ 	---help---
+         Number of short buffers allocated for this port.
+ 
+@@ -128,7 +128,7 @@ config  MV_ETH_BM_PORT_1_SHORT_BUF_NUM
+         int "Number of buffers for Short pool of GbE #1"
+         depends on MV_ETH_BM_PORT_1 && (MV_ETH_BM_PORT_1_LONG_POOL != MV_ETH_BM_PORT_1_SHORT_POOL)
+         range 128 16384
+-        default 4096
++        default 3072
+         ---help---
+ 	Number of short buffers allocated for this port.
+ 
+@@ -168,7 +168,7 @@ config  MV_ETH_BM_PORT_2_SHORT_BUF_NUM
+         int "Number of buffers for Short pool of GbE #2"
+         depends on MV_ETH_BM_PORT_2 && (MV_ETH_BM_PORT_2_LONG_POOL != MV_ETH_BM_PORT_2_SHORT_POOL)
+         range 128 16384
+-        default 4096
++        default 3072
+         ---help---
+         Number of short buffers allocated for this port.
+ 
+@@ -208,7 +208,7 @@ config  MV_ETH_BM_PORT_3_SHORT_BUF_NUM
+         int "Number of buffers for Short pool of GbE #3"
+         depends on MV_ETH_BM_PORT_3 && (MV_ETH_BM_PORT_3_LONG_POOL != MV_ETH_BM_PORT_3_SHORT_POOL)
+         range 128 16384
+-        default 4096
++        default 3072
+         ---help---
+         Number of short buffers allocated for this port.
+ 
+@@ -278,7 +278,6 @@ config MV_ETH_PNC_WOL
+ 	default n
+ 	---help---
+ 	Use PNC rules for TCAM filtering for Wake on LAN support.
+-	When enabled, MV_ETH_NFP_PNC will be disabled.
+ 
+ menuconfig MV_ETH_HWF
+ 	depends on (MV_ETH_PNC && MV_ETH_BM)
+@@ -670,36 +669,36 @@ config  MV_ETH_NFP
+         Choosing this option will enable Network Fast Processing.
+ 
+ config MV_ETH_NFP_LIB
+-        bool "build a library (nfplib.a) for Network Fast Processing (NFP)"
+-		select MV_ETH_NFP
+-		select MV_ETH_NFP_CT
+-		select MV_ETH_NFP_CT_LEARN
+-		select MV_ETH_NFP_BRIDGE
+-		select MV_ETH_NFP_BRIDGE_LEARN
+-		select MV_ETH_NFP_VLAN
+-		select MV_ETH_NFP_VLAN_LEARN
+-		select MV_ETH_NFP_FIB
+-		select MV_ETH_NFP_FIB_LEARN
+-		select MV_ETH_NFP_CLASSIFY
+-		select MV_ETH_NFP_PPP
+-		select MV_ETH_NFP_PPP_LEARN
+-		select MV_ETH_NFP_NAT
+-		select MV_ETH_NFP_STATS
+-		select MV_ETH_NFP_DEBUG
+-		default n
+-        ---help---
+-        Choosing this option will enable building nfplib.a for NFP.
++	depends on MV_ETH_NFP
++        bool "Use a library (nfplib.a) for Network Fast Processing (NFP)"
++	select MV_ETH_NFP_CT
++	select MV_ETH_NFP_CT_LEARN
++	select MV_ETH_NFP_BRIDGE
++	select MV_ETH_NFP_BRIDGE_LEARN
++	select MV_ETH_NFP_VLAN
++	select MV_ETH_NFP_VLAN_LEARN
++	select MV_ETH_NFP_FIB
++	select MV_ETH_NFP_FIB_LEARN
++	select MV_ETH_NFP_CLASSIFY
++	select MV_ETH_NFP_PPP
++	select MV_ETH_NFP_PPP_LEARN
++	select MV_ETH_NFP_NAT
++	select MV_ETH_NFP_STATS
++	select MV_ETH_NFP_DEBUG
++	default n
++        ---help---
++        Choosing this option will enable using nfplib.a for NFP.
+ 
+ config MV_ETH_NFP_DEF
+         depends on MV_ETH_NFP
+-        int "Default value for NFP:  0 - OFF, 1 - ON"
++        int "Default value for NFP state:  0 - OFF, 1 - ON"
+         default 0
+ 	range 0 0 if MV_ETH_NFP_LIB
+         ---help---
+ 
+ config MV_ETH_NFP_MODE_DEF
+         depends on MV_ETH_NFP
+-        int "Default value for NFP:  1 - 2 tuple mode, 2 - 5 tuple mode"
++        int "Default value for NFP mode:  1 - 2 tuple mode, 2 - 5 tuple mode"
+         default 1
+ 	range 1 1 if MV_ETH_NFP_LIB
+         ---help---
+@@ -743,8 +742,9 @@ config  MV_ETH_NFP_BRIDGE_MODE
+ endchoice
+ 
+ config	MV_ETH_NFP_FDB_LEARN
+-	depends on MV_ETH_NFP_BRIDGE && MV_ETH_NFP_FDB_MODE
++	depends on MV_ETH_NFP_BRIDGE && MV_ETH_NFP_FDB_MODE && BRIDGE
+ 	bool "Support NFP FDB Dynamic Learning"
++	default y
+ 	---help---
+ 	  enable NFP bridging dynamic learning via NFP hooks
+ 
+@@ -763,7 +763,7 @@ config MV_ETH_NFP_VLAN
+         Choosing this option will enable NFP VLANs support.
+ 
+ config MV_ETH_NFP_VLAN_LEARN
+-        depends on MV_ETH_NFP_VLAN
++        depends on MV_ETH_NFP_VLAN && VLAN_8021Q
+         bool "Support NFP VLAN Dynamic Learning"
+         default y
+         ---help---
+@@ -801,13 +801,13 @@ config MV_ETH_NFP_FIB_LEARN_DEF
+ 
+ config MV_ETH_NFP_CT
+         bool "Support NFP 5 Tuple Rules"
+-        depends on MV_ETH_NFP_FIB && NF_CONNTRACK
++        depends on MV_ETH_NFP_FIB
+ 	default y
+         ---help---
+         Choosing this option will enable NFP 5 Tuple Rules support.
+ 
+ config MV_ETH_NFP_CT_LEARN
+-        depends on MV_ETH_NFP_CT
++        depends on MV_ETH_NFP_CT && NF_CONNTRACK
+         bool "Support NFP 5 Tuple Dynamic Learning"
+         default y
+         ---help---
+@@ -844,13 +844,13 @@ config  MV_ETH_NFP_CLASSIFY
+ 
+ config  MV_ETH_NFP_PPP
+ 	bool "Support NFP PPPoE"
+-	depends on MV_ETH_NFP_FIB && PPPOE && MV_ETH_PNC
++	depends on MV_ETH_NFP_FIB && MV_ETH_PNC
+ 	default n
+ 	 ---help---
+ 	Choosing this option will enable NFP PPPoE protocol.
+ 
+ config MV_ETH_NFP_PPP_LEARN
+-        depends on MV_ETH_NFP_PPP
++        depends on MV_ETH_NFP_PPP && PPPOE
+         bool "Support NFP PPPoE Dynamic Learning"
+         default y
+         ---help---
+@@ -864,7 +864,6 @@ config MV_ETH_NFP_PPP_LEARN_DEF
+ 	range 1 1 if MV_ETH_NFP_LIB
+         ---help---
+ 
+-
+ config  MV_ETH_NFP_STATS
+         bool "Collect NFP Statistics"
+ 	depends on MV_ETH_NFP
+diff --git a/net/ipv4/netfilter/Kconfig b/net/ipv4/netfilter/Kconfig
+index d926520..99c6492 100644
+--- a/net/ipv4/netfilter/Kconfig
++++ b/net/ipv4/netfilter/Kconfig
+@@ -184,7 +184,8 @@ config IP_NF_TARGET_NETMAP
+ 
+ config IP_NF_TARGET_NFP
+ 	tristate "NFP target support"
+-	depends on NF_CONNTRACK_IPV4 && MV_ETH_NFP_NAT
++	default y
++	depends on NF_CONNTRACK_IPV4 && MV_ETH_NFP_CT
+ 	help
+ 	  This target allows to process selected connections in NFP.
+ 	  To compile it as a module, choose M here.  If unsure, say N.
+diff --git a/net/ipv6/netfilter/Kconfig b/net/ipv6/netfilter/Kconfig
+index 292338b..b57be24 100644
+--- a/net/ipv6/netfilter/Kconfig
++++ b/net/ipv6/netfilter/Kconfig
+@@ -196,7 +196,8 @@ config IP6_NF_RAW
+ 
+ config IP6_NF_TARGET_NFP
+ 	tristate "NFP target support for IPv6"
+-	depends on NF_CONNTRACK_IPV6
++	default y
++	depends on NF_CONNTRACK_IPV6 && MV_ETH_NFP_CT
+ 	help
+ 	  This target allows to process selected connections in NFP.
+ 
+-- 
+1.7.9.5
+

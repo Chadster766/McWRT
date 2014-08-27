@@ -1,0 +1,1527 @@
+From b6bb59583362284f9cad964b2e0e42cbdcc9e321 Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Wed, 28 Dec 2011 14:55:32 +0200
+Subject: [PATCH 050/609] Port in Uboot 2.0.5 changes including AMC and RD-NAS
+ Support
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/boardEnv/mvBoardEnvLib.c      |   56 ++++++-
+ .../armada_xp_family/boardEnv/mvBoardEnvLib.h      |   13 +-
+ .../armada_xp_family/boardEnv/mvBoardEnvSpec.c     |  141 ++++++++++++++--
+ .../armada_xp_family/boardEnv/mvBoardEnvSpec.h     |  101 ++++++++++-
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.c    |    8 +
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvLib.c        |   84 ++++++++--
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h       |    3 +-
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h       |    4 +
+ .../armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h     |    7 +-
+ arch/arm/plat-armada/common/mvTypes.h              |    2 +-
+ arch/arm/plat-armada/common/mvVideo.h              |    2 +-
+ arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c     |  175 +++++++++++++++++++-
+ arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.h     |    1 +
+ arch/arm/plat-armada/mv_hal/eth/gbe/mvEthAddrDec.c |   15 +-
+ arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h        |   41 ++++-
+ arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h      |    2 +-
+ .../plat-armada/mv_hal/neta/gbe/mvNetaAddrDec.c    |   16 +-
+ arch/arm/plat-armada/mv_hal/pex/mvPex.c            |   11 +-
+ arch/arm/plat-armada/mv_hal/pex/mvPex.h            |    6 +
+ arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h        |    7 +
+ .../arm/plat-armada/mv_hal/sata/CoreDriver/mvOsS.h |    2 +-
+ .../plat-armada/mv_hal/sata/CoreDriver/mvSata.h    |    2 +-
+ arch/arm/plat-armada/mv_hal/spi/mvSpi.c            |    4 +-
+ arch/arm/plat-armada/mv_hal/twsi/mvTwsi.c          |   24 +--
+ arch/arm/plat-armada/mv_hal/usb/mvUsbAddrDec.c     |   14 +-
+ arch/arm/plat-armada/mv_hal/xor/mvXorAddrDec.c     |    4 +
+ 26 files changed, 662 insertions(+), 83 deletions(-)
+ mode change 100644 => 100755 arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
+ mode change 100644 => 100755 arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.c
+ mode change 100644 => 100755 arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
+ mode change 100644 => 100755 arch/arm/plat-armada/common/mvTypes.h
+ mode change 100644 => 100755 arch/arm/plat-armada/common/mvVideo.h
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.h
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/eth/gbe/mvEthAddrDec.c
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaAddrDec.c
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/pex/mvPex.c
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/pex/mvPex.h
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvOsS.h
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.h
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/spi/mvSpi.c
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/twsi/mvTwsi.c
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/usb/mvUsbAddrDec.c
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/xor/mvXorAddrDec.c
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+index 2d95e70..e8564ed 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+@@ -283,14 +283,17 @@ MV_BOOL mvBoardIsPortInSgmii(MV_U32 ethPortNum)
+ 		if (ethPortNum > 1)
+ 			return MV_TRUE;
+ 		break;
++	case DB_78X60_AMC_ID:
++		if (ethPortNum > 0)
++			return MV_TRUE;
++		break;
+ 	case RD_78460_SERVER_ID:
+ 		if (ethPortNum > 0)
+ 			return MV_TRUE;
+ 		break;
+ 	case DB_78X60_PCAC_ID:
+ 	case RD_78460_NAS_ID:
+-		return MV_TRUE;
+-		break;
++
+ 	default:
+ 		DB(mvOsPrintf("mvBoardSerdesCfgGet: Unsupported board!\n"));
+ 		return MV_FALSE;
+@@ -957,6 +960,10 @@ MV_VOID mvBoardMppModuleTypePrint(MV_VOID)
+ 	if (mvBoardIsLcdDviModuleConnected())
+ 		mvOsOutput("       LCD DVI module.\n");
+ 
++	/* Switch Module */
++	if (mvBoardIsSwitchModuleConnected())
++		mvOsOutput("       Switch module.\n");
++
+ 	/* GMII Module */
+ 	if (mvBoardIsGMIIModuleConnected())
+ 		mvOsOutput("       GMII module.\n");
+@@ -1396,6 +1403,8 @@ MV_VOID mvBoardIdSet(MV_VOID)
+ 		gBoardId = DB_88F78XX0_BP_REV2_ID;
+ #elif defined(RD_78460_NAS)
+ 		gBoardId = RD_78460_NAS_ID;
++#elif defined(DB_78X60_AMC)
++		gBoardId = DB_78X60_AMC_ID;
+ #else
+ 		mvOsPrintf("mvBoardIdSet: Board ID must be defined!\n");
+ 		while (1) {
+@@ -1887,7 +1896,8 @@ MV_U16 mvBoardPexCapabilityGet(MV_VOID)
+ 	switch (boardId) {
+ 	case DB_78X60_PCAC_ID:
+ 	case RD_78460_NAS_ID:
+-		sar = 0x2; /* Gen2 */
++	case DB_78X60_AMC_ID:
++		sar = 0x1; /* Gen2 */
+ 		break;
+ 	case DB_88F78XX0_BP_ID:
+ 	case RD_78460_SERVER_ID:
+@@ -1898,7 +1908,7 @@ MV_U16 mvBoardPexCapabilityGet(MV_VOID)
+ 		break;
+ 	}
+ 
+-	return (sar & 0xFF);
++	return (sar & 0x1);
+ }
+ 
+ /*******************************************************************************/
+@@ -2100,6 +2110,11 @@ MV_STATUS mvBoardOtherModulesScan(void)
+ 				BOARD_INFO(boardId)->pBoardModTypeValue->boardOtherMod |= MV_BOARD_UNKNOWN;
+ 			}
+ 		}
++	} else if (boardId == RD_78460_NAS_ID) {
++		if ((MV_REG_READ(GPP_DATA_IN_REG(2)) & MV_GPP66) == 0x0) {
++			DB(mvOsPrintf("mvBoardOtherModulesScan: SWITCH module DETECTED!\n"));
++			BOARD_INFO(boardId)->pBoardModTypeValue->boardOtherMod |= MV_BOARD_SWITCH;
++		}
+ 	}
+ 
+ 	return MV_OK;
+@@ -2132,6 +2147,33 @@ MV_BOOL mvBoardIsPexModuleConnected(void)
+ 
+ 	return MV_FALSE;
+ }
++/*******************************************************************************
++* mvBoardIsPexModuleConnected
++*
++* DESCRIPTION:
++*	Check if PEX module is connected to the board.
++*
++* INPUT:
++*	None.
++*
++* OUTPUT:
++*	None
++*
++* RETURN:
++*       MV_TRUE / MV_FALSE
++*
++*******************************************************************************/
++MV_BOOL mvBoardIsSwitchModuleConnected(void)
++{
++	MV_U32 boardId = mvBoardIdGet();
++
++	if (boardId != RD_78460_NAS_ID)
++		DB(mvOsPrintf("mvBoardIsSwitchModuleConnected: Unsupported board!\n"));
++	else if (BOARD_INFO(boardId)->pBoardModTypeValue->boardOtherMod & MV_BOARD_SWITCH)
++		return MV_TRUE;
++
++	return MV_FALSE;
++}
+ 
+ /*******************************************************************************
+ * mvBoardIsLvdsModuleConnected
+@@ -2430,7 +2472,6 @@ MV_SERDES_CFG *mvBoardSerdesCfgGet(void)
+ 		break;
+ 	}
+ 
+-
+ 	boardId = mvBoardIdGet();
+ 
+ 	switch (boardId) {
+@@ -2459,6 +2500,10 @@ MV_SERDES_CFG *mvBoardSerdesCfgGet(void)
+ 		if ( (moduleConnected) && (pex0 == 4) && (pex1 == 4))
+ 			serdesCfg = 5;
+ 		break;
++	case RD_78460_NAS_ID:
++		if (mvBoardIsSwitchModuleConnected())
++			serdesCfg = 1;
++		break;
+ 	}
+ 
+ 	return &BOARD_INFO(boardId)->pBoardSerdesConfigValue[serdesCfg];
+@@ -2490,6 +2535,7 @@ MV_BOARD_PEX_INFO *mvBoardPexInfoGet(void)
+ 	case FPGA_88F78XX0_ID:
+ 	case DB_88F78XX0_BP_REV2_ID:
+ 	case RD_78460_NAS_ID:
++	case DB_78X60_AMC_ID:
+ 		return &BOARD_INFO(boardId)->boardPexInfo;
+ 		break;
+ 	default:
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
+old mode 100644
+new mode 100755
+index 9411275..2428d49
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
+@@ -144,12 +144,14 @@ typedef enum _devBoardMppTypeClass {
+ } MV_BOARD_MPP_TYPE_CLASS;
+ 
+ typedef enum _devBoardOtherTypeClass {
+-	MV_BOARD_NONE = 0x00000000,
+-	MV_BOARD_LVDS = 0x00000001,
+-	MV_BOARD_PEX = 0x00000002,
++	MV_BOARD_NONE    = 0x00000000,
++	MV_BOARD_LVDS    = 0x00000001,
++	MV_BOARD_PEX     = 0x00000002,
++	MV_BOARD_SWITCH  = 0x00000004,
+ 	MV_BOARD_UNKNOWN = 0x80000000
+ } MV_BOARD_OTHER_TYPE_CLASS;
+ 
++
+ #define MV_BOARD_TDM	MV_BOARD_TDM_32CH
+ 
+ typedef struct _boardModuleTypeInfo {
+@@ -164,7 +166,7 @@ typedef enum _devBoardClass {
+ 	BOARD_DEV_FPGA,
+ 	BOARD_DEV_SRAM,
+ 	BOARD_DEV_SPI_FLASH,
+-	BOARD_DEV_OTHER,
++	BOARD_DEV_OTHER
+ } MV_BOARD_DEV_CLASS;
+ 
+ typedef enum _devTwsiBoardClass {
+@@ -238,7 +240,7 @@ typedef enum _boardMacSpeed {
+ 	BOARD_MAC_SPEED_10M,
+ 	BOARD_MAC_SPEED_100M,
+ 	BOARD_MAC_SPEED_1000M,
+-	BOARD_MAC_SPEED_AUTO,
++	BOARD_MAC_SPEED_AUTO
+ } MV_BOARD_MAC_SPEED;
+ 
+ typedef struct _boardMacInfo {
+@@ -416,6 +418,7 @@ MV_U16 mvBoardDramBusWidthGet(MV_VOID);
+ MV_STATUS mvBoardMppModulesScan(void);
+ MV_STATUS mvBoardOtherModulesScan(void);
+ MV_BOOL mvBoardIsPexModuleConnected(void);
++MV_BOOL mvBoardIsSwitchModuleConnected(void);
+ MV_BOOL mvBoardIsLvdsModuleConnected(void);
+ MV_BOOL mvBoardIsLcdDviModuleConnected(void);
+ MV_BOOL mvBoardIsGMIIModuleConnected(void);
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+index 8b652f5..4a9f4c0 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+@@ -296,7 +296,7 @@ MV_BOARD_MODULE_TYPE_INFO db88f78XX0rev2InfoBoardModTypeInfo[] = {
+ MV_BOARD_GPP_INFO db88f78XX0rev2InfoBoardGppInfo[] = {
+ 	/* {{MV_BOARD_GPP_CLASS	devClass, MV_U8	gppPinNum}} */
+ 	{BOARD_GPP_USB_VBUS,    24} /* from MPP map */
+-	//{BOARD_GPP_RESET,       47},
++	/*{BOARD_GPP_RESET,       47},*/
+ };
+ 
+ MV_DEV_CS_INFO db88f78XX0rev2InfoBoardDeCsInfo[] = {
+@@ -455,10 +455,10 @@ MV_BOARD_INFO db88f78XX0rev2Info = {
+ 
+ MV_BOARD_MAC_INFO rd78460nasInfoBoardMacInfo[] = {
+ 	/* {{MV_BOARD_MAC_SPEED	boardMacSpeed, MV_U8 boardEthSmiAddr}} */
+-	{BOARD_MAC_SPEED_AUTO, 0x0,0x0},
+-	{BOARD_MAC_SPEED_AUTO, 0x1,0x0},
+-	{BOARD_MAC_SPEED_AUTO, 0x19,0x800},  /* Port 1 */
+-	{BOARD_MAC_SPEED_AUTO, 0x1B,0x1800}  /* Port 3 */
++	{BOARD_MAC_SPEED_AUTO, 0x10,0x0},
++	{BOARD_MAC_SPEED_AUTO, 0x11,0x0},
++	{BOARD_MAC_SPEED_AUTO, 0x12,0x0},
++	{BOARD_MAC_SPEED_AUTO, 0x13,0x0}
+ };
+ 
+ MV_BOARD_MODULE_TYPE_INFO rd78460nasInfoBoardModTypeInfo[] = {
+@@ -470,17 +470,13 @@ MV_BOARD_MODULE_TYPE_INFO rd78460nasInfoBoardModTypeInfo[] = {
+ 
+ MV_BOARD_GPP_INFO rd78460nasInfoBoardGppInfo[] = {
+ 	/* {{MV_BOARD_GPP_CLASS	devClass, MV_U8	gppPinNum}} */
+-	{BOARD_GPP_USB_VBUS,    24} /* from MPP map */
+-	//{BOARD_GPP_RESET,       47},
++	{BOARD_GPP_RESET, 21}
+ };
+ 
+ MV_DEV_CS_INFO rd78460nasInfoBoardDeCsInfo[] = {
+ 	/*{deviceCS, params, devType, devWidth, busWidth }*/
+ #if defined(MV_INCLUDE_SPI)
+-	{SPI_CS0, N_A, BOARD_DEV_SPI_FLASH, 8, 8}, /* SPI DEV */
+-#endif
+-#if defined(MV_INCLUDE_NOR)
+-	{DEV_BOOCS, N_A, BOARD_DEV_NOR_FLASH, 16, 16} /* NOR DEV */
++	{SPI_CS0, N_A, BOARD_DEV_SPI_FLASH, 8, 8} /* SPI DEV */
+ #endif
+ };
+ 
+@@ -499,9 +495,8 @@ MV_BOARD_MPP_INFO rd78460nasInfoBoardMppConfigValue[] = {
+ };
+ 
+ MV_SERDES_CFG rd78460nasInfoBoardSerdesConfigValue[] = {
+-	{MV_TRUE, 0x00226001, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED, PEX_BUS_MODE_X4, 0x00000030},	/* Default */
+-	{MV_TRUE, 0x43320301, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED, PEX_BUS_MODE_X4, 0x00000030},	/* Switch module */
+-
++	{0x00223001, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED, PEX_BUS_MODE_X4, 0x00000030},	/* Default */
++	{0x33320201, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED, PEX_BUS_MODE_X4, 0x00000030},	/* Switch module */
+ };
+ 
+ MV_BOARD_INFO rd78460nasInfo = {
+@@ -913,11 +908,127 @@ MV_BOARD_INFO fpga88f78XX0Info = {
+ 	.nandFlashControl		= FPGA_88F78XX0_BOARD_NAND_CONTROL
+ };
+ 
++/***************************/
++/* ARMADA-XP AMC BOARD     */
++/***************************/
++#define DB_78X60_AMC_BOARD_NAND_READ_PARAMS		0x000C0282
++#define DB_78X60_AMC_BOARD_NAND_WRITE_PARAMS		0x00010305
++/*NAND care support for small page chips*/
++#define DB_78X60_AMC_BOARD_NAND_CONTROL			0x01c00543
++
++MV_U8	db78X60amcInfoBoardDebugLedIf[] = {53, 54, 55, 56}; /* 7 segment MPPs*/
++
++MV_BOARD_TWSI_INFO	db78X60amcInfoBoardTwsiDev[] = {
++	/* No TWSI devices on board*/
++};
++
++MV_BOARD_MAC_INFO db78X60amcInfoBoardMacInfo[] = {
++	/* {{MV_BOARD_MAC_SPEED	boardMacSpeed, MV_U8 boardEthSmiAddr}} */
++	{BOARD_MAC_SPEED_AUTO, 0x1,0x0},
++	{BOARD_MAC_SPEED_AUTO, 0xF,0x0},
++	{BOARD_MAC_SPEED_AUTO, 0xE,0x0},
++	{BOARD_MAC_SPEED_AUTO, 0x0,0x0}
++};
++
++
++MV_BOARD_MODULE_TYPE_INFO db78X60amcInfoBoardModTypeInfo[] = {
++	/* No Modules */
++};
++
++MV_BOARD_GPP_INFO db78X60amcInfoBoardGppInfo[] = {
++	/* {{MV_BOARD_GPP_CLASS	devClass, MV_U8	gppPinNum}} */
++	{BOARD_GPP_USB_VBUS,    46} /* from MPP map */
++};
++
++MV_DEV_CS_INFO db78X60amcInfoBoardDeCsInfo[] = {
++	/*{deviceCS, params, devType, devWidth}*/
++#if defined(MV_INCLUDE_SPI)
++	{SPI_CS0, N_A, BOARD_DEV_SPI_FLASH, 8, 8}, /* SPI DEV */
++#endif
++};
++
++MV_BOARD_MPP_INFO db78X60amcInfoBoardMppConfigValue[] = {
++	{ {
++		DB_78X60_AMC_MPP0_7,
++		DB_78X60_AMC_MPP8_15,
++		DB_78X60_AMC_MPP16_23,
++		DB_78X60_AMC_MPP24_31,
++		DB_78X60_AMC_MPP32_39,
++		DB_78X60_AMC_MPP40_47,
++		DB_78X60_AMC_MPP48_55,
++		DB_78X60_AMC_MPP56_63,
++		DB_78X60_AMC_MPP64_67,
++	} }
++};
++
++MV_SERDES_CFG db78X60amcInfoBoardSerdesConfigValue[] = {
++	 {0x33111111, 0x00010001, PEX_BUS_MODE_X1, PEX_BUS_MODE_X1, PEX_BUS_MODE_X1, 0x00000030} /* Default */
++};
++
++
++MV_BOARD_TDM_INFO	db78X60amcTdm880[]	= {};
++MV_BOARD_TDM_INFO	db78X60amcTdm792[]	= {};
++MV_BOARD_TDM_INFO	db78X60amcTdm3215[]	= {};
++
++MV_BOARD_INFO db78X60amcInfo = {
++	.boardName			= "DB-78460-AMC",
++	.numBoardMppTypeValue		= ARRSZ(db78X60amcInfoBoardModTypeInfo),
++	.pBoardModTypeValue		= db78X60amcInfoBoardModTypeInfo,
++	.numBoardMppConfigValue		= ARRSZ(db78X60amcInfoBoardMppConfigValue),
++	.pBoardMppConfigValue		= db78X60amcInfoBoardMppConfigValue,
++	.numBoardSerdesConfigValue	= ARRSZ(db78X60amcInfoBoardSerdesConfigValue),
++	.pBoardSerdesConfigValue	= db78X60amcInfoBoardSerdesConfigValue,
++	.intsGppMaskLow			= 0,
++	.intsGppMaskMid			= 0,
++	.intsGppMaskHigh		= 0,
++	.numBoardDeviceIf		= ARRSZ(db78X60amcInfoBoardDeCsInfo),
++	.pDevCsInfo			= db78X60amcInfoBoardDeCsInfo,
++	.numBoardTwsiDev		= ARRSZ(db78X60amcInfoBoardTwsiDev),
++	.pBoardTwsiDev			= db78X60amcInfoBoardTwsiDev,
++	.numBoardMacInfo		= ARRSZ(db78X60amcInfoBoardMacInfo),
++	.pBoardMacInfo			= db78X60amcInfoBoardMacInfo,
++	.numBoardGppInfo		= ARRSZ(db78X60amcInfoBoardGppInfo),
++	.pBoardGppInfo			= db78X60amcInfoBoardGppInfo,
++	.activeLedsNumber		= ARRSZ(db78X60amcInfoBoardDebugLedIf),
++	.pLedGppPin			= db78X60amcInfoBoardDebugLedIf,
++	.ledsPolarity			= 0,
++
++	/* GPP values */
++	.gppOutEnValLow			= DB_78X60_AMC_GPP_OUT_ENA_LOW,
++	.gppOutEnValMid			= DB_78X60_AMC_GPP_OUT_ENA_MID,
++	.gppOutEnValHigh		= DB_78X60_AMC_GPP_OUT_ENA_HIGH,
++	.gppOutValLow			= DB_78X60_AMC_GPP_OUT_VAL_LOW,
++	.gppOutValMid			= DB_78X60_AMC_GPP_OUT_VAL_MID,
++	.gppOutValHigh			= DB_78X60_AMC_GPP_OUT_VAL_HIGH,
++	.gppPolarityValLow		= DB_78X60_AMC_GPP_POL_LOW,
++	.gppPolarityValMid		= DB_78X60_AMC_GPP_POL_MID,
++	.gppPolarityValHigh		= DB_78X60_AMC_GPP_POL_HIGH,
++
++
++	/* TDM configuration */
++	/* We hold a different configuration array for each possible slic that
++	 ** can be connected to board.
++	 ** When modules are scanned, then we select the index of the relevant
++	 ** slic's information array.
++	 ** For RD and Customers boards we only need to initialize a single
++	 ** entry of the arrays below, and set the boardTdmInfoIndex to 0.
++	*/
++	.numBoardTdmInfo		= {},
++	.pBoardTdmInt2CsInfo		= {},
++	.boardTdmInfoIndex		= -1,
++
++	/* NAND init params */
++	.nandFlashReadParams		= DB_78X60_AMC_BOARD_NAND_READ_PARAMS,
++	.nandFlashWriteParams		= DB_78X60_AMC_BOARD_NAND_WRITE_PARAMS,
++	.nandFlashControl		= DB_78X60_AMC_BOARD_NAND_CONTROL
++};
++
+ MV_BOARD_INFO *boardInfoTbl[] = {
+ 	&db88f78XX0Info,
+ 	&rd78460Info,
+ 	&db78X60pcacInfo,
+ 	&fpga88f78XX0Info,
+ 	&db88f78XX0rev2Info,
+-	&rd78460nasInfo
++	&rd78460nasInfo,
++	&db78X60amcInfo
+ };
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
+index d4c268f..5167309 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
+@@ -95,7 +95,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define FPGA_88F78XX0_ID			(DB_78X60_PCAC_ID + 1)
+ #define DB_88F78XX0_BP_REV2_ID			(FPGA_88F78XX0_ID + 1)
+ #define RD_78460_NAS_ID                         (DB_88F78XX0_BP_REV2_ID + 1)
+-#define MV_MAX_BOARD_ID				(RD_78460_NAS_ID + 1)
++#define DB_78X60_AMC_ID				(RD_78460_NAS_ID + 1)
++#define MV_MAX_BOARD_ID				(DB_78X60_AMC_ID + 1)
+ #define INVALID_BAORD_ID			0xFFFFFFFF
+ 
+ /******************/
+@@ -203,7 +204,7 @@ MPP#	NAME			IN/OUT
+ #define RD_78460_NAS_GPP_OUT_ENA_MID	(~(0x0))
+ #define RD_78460_NAS_GPP_OUT_ENA_HIGH	(~(0x0))
+ 
+-#define RD_78460_NAS_GPP_OUT_VAL_LOW	0x0
++#define RD_78460_NAS_GPP_OUT_VAL_LOW	(BIT21)
+ #define RD_78460_NAS_GPP_OUT_VAL_MID	0x0
+ #define RD_78460_NAS_GPP_OUT_VAL_HIGH	0x0
+ 
+@@ -339,4 +340,100 @@ MPP#	NAME			IN/OUT
+ #define FPGA_88F78XX0_GPP_POL_MID		0x0
+ #define FPGA_88F78XX0_GPP_POL_HIGH		0x0
+ 
++/********************/
++/* DB-78460-AMC     */
++/********************/
++
++#define DB_78X60_AMC_MPP0_7			0x11111111
++#define DB_78X60_AMC_MPP8_15			0x00001111
++#define DB_78X60_AMC_MPP16_23			0x00000000
++#define DB_78X60_AMC_MPP24_31			0x00000000
++#define DB_78X60_AMC_MPP32_39			0x11110000
++#define DB_78X60_AMC_MPP40_47			0x00004000
++#define DB_78X60_AMC_MPP48_55			0x00001111
++#define DB_78X60_AMC_MPP56_63			0x11111110
++#define DB_78X60_AMC_MPP64_67			0x00000111
++
++/* GPPs
++MPP#	NAME		IN/OUT
++----------------------------------------------
++16	MB_INT#		IN
++17	Phy1_INT#	IN
++18	Phy2_INT#	IN
++19	Brd_Led_0	OUT
++21	Brd_Led_1	OUT
++23	Brd_Led_2	OUT
++29	Brd_Led_3	OUT
++30	Brd_Led_4	OUT
++34	Dbg_JP0		IN
++35	Dbg_JP1		IN
++40	Dbg_JP2		IN
++41	Dbg_JP3		IN
++42	Dbg_JP4		IN
++53	7 Segment 0	OUT
++54	7 Segment 1	OUT
++55	7 Segment 2	OUT
++56	7 Segment 3	OUT
++*/
++
++#define DB_78X60_AMC_GPP_OUT_ENA_LOW		(~(BIT19 | BIT21 | BIT23 | BIT29 | BIT30))
++#define DB_78X60_AMC_GPP_OUT_ENA_MID		(~(BIT21 | BIT22 | BIT23 | BIT24))
++#define DB_78X60_AMC_GPP_OUT_ENA_HIGH		(~(0x0))
++
++#define DB_78X60_AMC_GPP_OUT_VAL_LOW		0x0
++#define DB_78X60_AMC_GPP_OUT_VAL_MID		0x0
++#define DB_78X60_AMC_GPP_OUT_VAL_HIGH		0x0
++
++#define DB_78X60_AMC_GPP_POL_LOW		0x0
++#define DB_78X60_AMC_GPP_POL_MID		0x0
++#define DB_78X60_AMC_GPP_POL_HIGH		0x0
++
++/********************/
++/* DB-78460-AMC     */
++/********************/
++
++#define DB_78X60_AMC_MPP0_7			0x11111111
++#define DB_78X60_AMC_MPP8_15			0x00001111
++#define DB_78X60_AMC_MPP16_23			0x00000000
++#define DB_78X60_AMC_MPP24_31			0x00000000
++#define DB_78X60_AMC_MPP32_39			0x11110000
++#define DB_78X60_AMC_MPP40_47			0x00004000
++#define DB_78X60_AMC_MPP48_55			0x00001111
++#define DB_78X60_AMC_MPP56_63			0x11111110
++#define DB_78X60_AMC_MPP64_67			0x00000111
++
++/* GPPs
++MPP#	NAME		IN/OUT
++----------------------------------------------
++16	MB_INT#		IN
++17	Phy1_INT#	IN
++18	Phy2_INT#	IN
++19	Brd_Led_0	OUT
++21	Brd_Led_1	OUT
++23	Brd_Led_2	OUT
++29	Brd_Led_3	OUT
++30	Brd_Led_4	OUT
++34	Dbg_JP0		IN
++35	Dbg_JP1		IN
++40	Dbg_JP2		IN
++41	Dbg_JP3		IN
++42	Dbg_JP4		IN
++53	7 Segment 0	OUT
++54	7 Segment 1	OUT
++55	7 Segment 2	OUT
++56	7 Segment 3	OUT
++*/
++
++#define DB_78X60_AMC_GPP_OUT_ENA_LOW		(~(BIT19 | BIT21 | BIT23 | BIT29 | BIT30))
++#define DB_78X60_AMC_GPP_OUT_ENA_MID		(~(BIT21 | BIT22 | BIT23 | BIT24))
++#define DB_78X60_AMC_GPP_OUT_ENA_HIGH		(~(0x0))
++
++#define DB_78X60_AMC_GPP_OUT_VAL_LOW		0x0
++#define DB_78X60_AMC_GPP_OUT_VAL_MID		0x0
++#define DB_78X60_AMC_GPP_OUT_VAL_HIGH		0x0
++
++#define DB_78X60_AMC_GPP_POL_LOW		0x0
++#define DB_78X60_AMC_GPP_POL_MID		0x0
++#define DB_78X60_AMC_GPP_POL_HIGH		0x0
++
+ #endif /* __INCmvBoardEnvSpech */
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.c
+old mode 100644
+new mode 100755
+index 8449c15..7ad882c
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.c
+@@ -113,6 +113,14 @@ MV_STATUS mvCtrlAttribGet(MV_TARGET target, MV_TARGET_ATTRIB *targetAttrib)
+ 
+ 	return MV_OK;
+ }
++/*******************************************************************************/
++MV_STATUS mvCtrlAttribSet(MV_TARGET target, MV_TARGET_ATTRIB *targetAttrib)
++{
++	mvTargetDefaultsArray[MV_CHANGE_BOOT_CS(target)].attrib  = targetAttrib->attrib;
++	mvTargetDefaultsArray[MV_CHANGE_BOOT_CS(target)].targetId= targetAttrib->targetId;
++
++	return MV_OK;
++}
+ 
+ /*******************************************************************************
+ * mvCtrlGetAttrib -
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
+index 0e1a026..7ce4842 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
+@@ -1,10 +1,3 @@
+-
+-
+-
+-
+-
+-
+-
+ /*******************************************************************************
+ Copyright (C) Marvell International Ltd. and its affiliates
+ 
+@@ -79,10 +72,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #include "gpp/mvGppRegs.h"
+ #include "mvSysEthConfig.h"
+ 
+-#if defined(MV_INCLUDE_PEX)
+ #include "pex/mvPex.h"
+ #include "pex/mvPexRegs.h"
+-#endif
+ 
+ #if defined(MV_INCLUDE_GIG_ETH)
+ #if defined(MV_ETH_LEGACY)
+@@ -416,7 +407,6 @@ MV_U32 mvCtrlPexMaxIfGet(MV_VOID)
+ 	case MV_6710_DEV_ID:
+ 	case MV_78230_DEV_ID:
+ 		return 7;
+-/* TODO: alior fix PexMaxIfGet for KW40... */
+ 
+ 	case MV_78160_DEV_ID:
+ 	case MV_78260_DEV_ID:
+@@ -428,6 +418,8 @@ MV_U32 mvCtrlPexMaxIfGet(MV_VOID)
+ 		return 0;
+ 	}
+ }
++#endif
++
+ /*******************************************************************************
+ * mvCtrlPexMaxUnitGet - Get Marvell controller number of PEX units.
+ *
+@@ -466,7 +458,6 @@ MV_U32 mvCtrlPexMaxUnitGet(MV_VOID)
+ 	}
+ }
+ 
+-#endif
+ 
+ #if defined(MV_INCLUDE_PCI)
+ /*******************************************************************************
+@@ -1212,7 +1203,10 @@ static void mvUnitAddrDecShow(MV_U8 numUnits, MV_UNIT_ID unitId, const char *nam
+ 						   mvCtrlTargetNameGet(mvCtrlTargetByWinInfoGet(&win)),
+ 						   win.addrWin.baseLow);
+ 					mvOsOutput("....");
+-					mvSizePrint(win.addrWin.size);
++					if (win.addrWin.size == 0)
++						mvOsOutput("size %3dGB ", 4);
++					else
++						mvSizePrint(win.addrWin.size);
+ 					mvOsOutput("\n");
+ 				} else
+ 					mvOsOutput("disable\n");
+@@ -1971,6 +1965,7 @@ MV_STATUS mvCtrlSerdesPhyConfig(MV_VOID)
+ 	MV_BOARD_PEX_INFO 	*boardPexInfo = mvBoardPexInfoGet();
+ 	MV_STATUS	status = MV_OK;
+ 	MV_U32		tmp;
++
+ /* this is a mapping of the final power management clock gating control register value @ 0x18220.*/
+ 	MV_U32	powermngmntctrlregmap = 0x0;
+ 	MV_U32	ethport = 0;
+@@ -2102,7 +2097,25 @@ MV_STATUS mvCtrlSerdesPhyConfig(MV_VOID)
+ 			pRegVal[4]  = 0;
+ 
+ 			/* Termination enable */
+-			pRegVal[5]  = (0x48 << 16) | (pexLineNum << 24) | 0x9080;
++			/* Termination enable */
++                        if ( (pSerdesInfo->pex0Mod == PEX_BUS_MODE_X4) && (pexLineNum == 0) )
++                                pRegVal[5]  = (0x48 << 16) | (pexLineNum << 24) | 0x1080; /* x4 */
++                        else if (pSerdesInfo->pex0Mod == PEX_BUS_MODE_X1)
++                                pRegVal[5]  = (0x48 << 16) | (pexLineNum << 24) | 0x9080; /* x1 */
++
++                        if ( (pSerdesInfo->pex1Mod == PEX_BUS_MODE_X4) && (pexLineNum == 1) )
++                                pRegVal[5]  = (0x48 << 16) | (pexLineNum << 24) | 0x1080; /* x4 */
++                        else if (pSerdesInfo->pex1Mod == PEX_BUS_MODE_X1)
++                                pRegVal[5]  = (0x48 << 16) | (pexLineNum << 24) | 0x9080; /* x1 */
++
++                        if (pexLineNum == 2) /* PEX2 is always x4*/
++                                pRegVal[5]  = (0x48 << 16) | (pexLineNum << 24) | 0x1080; /* x4 */
++
++                        if ( (pSerdesInfo->pex3Mod == PEX_BUS_MODE_X4) && (pexLineNum == 3) )
++                                pRegVal[5]  = (0x48 << 16) | (pexLineNum << 24) | 0x1080; /* x4 */
++                        else if (pSerdesInfo->pex3Mod == PEX_BUS_MODE_X1)
++                                pRegVal[5]  = (0x48 << 16) | (pexLineNum << 24) | 0x9080; /* x1 */
++
+ 		} else if (serdesLineCfg == serdesCfg[serdesLineNum][SERDES_UNIT_SATA]) {
+ 
+ 			MV_U8	sataPort;
+@@ -2180,13 +2193,47 @@ MV_STATUS mvCtrlSerdesPhyConfig(MV_VOID)
+ 
+ 
+ 			if (serdesLineCfg == serdesCfg[serdesLineNum][SERDES_UNIT_QSGMII]) {
++				//pRegVal[1]  = 0x400;
++				//pRegVal[3]  = 0x667;
++				//pRegAddr[6] = QSGMII_GEN_1_SETTING_REG(sgmiiPort);
++				//pRegVal[6]  = 0xCD5C;
++
++				pRegAddr[0] = 0x72e04; //SGMII_PWR_PLL_CTRL_REG(sgmiiPort);
++				pRegAddr[1] = 0x72e8c; //SGMII_DIG_LP_ENA_REG(sgmiiPort);
++				pRegAddr[2] = 0x72f18; //SGMII_REF_CLK_SEL_REG(sgmiiPort);
++				pRegAddr[3] = 0x72f20; //SGMII_SERDES_CFG_REG(sgmiiPort);
++				pRegAddr[4] = 0x724a4; //SGMII_SERDES_STAT_REG(sgmiiPort);
++				pRegAddr[5] = 0x724a0; //SGMII_COMPHY_CTRL_REG(sgmiiPort);
++				pRegAddr[6] = 0x72e34;
++				pRegAddr[7] = 0;
++				pRegAddr[8] = 0;
++				pRegAddr[9] = 0;
++				pRegVal[0]  = 0xF881;
+ 				pRegVal[1]  = 0x400;
+-				pRegVal[3]  = 0x667;
++				pRegVal[2]  = 0x400;
++				pRegVal[3]  = 0x9080; //(pSerdesInfo->busSpeed & (1 << serdesLineNum)) != 0 ? 0x1547 : 0xCC7;
++				pRegVal[4]  = 0x7;
++				pRegVal[5]  = 0x667;
++				pRegVal[6]  = 0xcd5c;
+ 
+ 			}
+ 		}
+ 
+ 	} /* for each serdes lane*/
++	/* QSGMII enable */
++	for (serdesLineNum = 0; serdesLineNum < maxSerdesLines; serdesLineNum++) {
++		if (serdesLineNum < 8)
++			serdesLineCfg = (pSerdesInfo->serdesLine0_7 >> (serdesLineNum << 2)) & 0xF;
++		else
++			serdesLineCfg = (pSerdesInfo->serdesLine8_15 >> ((serdesLineNum - 8) << 2)) & 0xF;
++
++		if (serdesLineCfg == serdesCfg[serdesLineNum][SERDES_UNIT_QSGMII]) {
++			/* QSGMII Active bit set to true */
++			tmp = MV_REG_READ(QSGMII_CONTROL_1_REG);
++			tmp |= BIT30;
++			MV_REG_WRITE(QSGMII_CONTROL_1_REG,  tmp);
++		}
++	}
+ 
+ 
+ 	if(mvBoardIsSerdesConfigurationEnabled() == MV_FALSE){
+@@ -2266,8 +2313,9 @@ MV_STATUS mvCtrlSerdesPhyConfig(MV_VOID)
+ 		 register SOC_Misc/General Purpose2 (Address= 182F8)*/
+ 		tmp = MV_REG_READ(GEN_PURP_RES_2_REG);
+ 
+-		if (pSerdesInfo->pex0Mod == PEX_BUS_MODE_X4)
++		if (pSerdesInfo->pex0Mod == PEX_BUS_MODE_X4) {
+ 			DB(mvOsPrintf("\n"));
++		}
+ 
+ 		/* Step 2 [PEX-X4 Only] To create PEX-Link that contain 4-lanes you need to config the
+ 		 register SOC_Misc/General Purpose2 (Address= 182F8)*/
+@@ -2294,12 +2342,14 @@ MV_STATUS mvCtrlSerdesPhyConfig(MV_VOID)
+ 			if (boardPexInfo->pexUnitCfg[pexUnit].pexCfg == PEX_BUS_DISABLED)
+ 				continue;
+ 			DB(mvOsPrintf("Step[3].1 Addr[0x%08x] Value[0x%08x]\n", PEX_PHY_ACCESS_REG(pexUnit), (0xC1 << 16) | 0xA5));
+-			if (boardPexInfo->pexUnitCfg[pexUnit].pexCfg == PEX_BUS_MODE_X4)
++			if (boardPexInfo->pexUnitCfg[pexUnit].pexCfg == PEX_BUS_MODE_X4) {
+ 				DB(mvOsPrintf("Step[3].2 Addr[0x%08x] Value[0x%08x]\n", \
+ 							  PEX_PHY_ACCESS_REG(pexUnit), (0xC2 << 16) | 0x200));
+-			if (boardPexInfo->pexUnitCfg[pexUnit].pexCfg == PEX_BUS_MODE_X1)
++			}
++			if (boardPexInfo->pexUnitCfg[pexUnit].pexCfg == PEX_BUS_MODE_X1) {
+ 				DB(mvOsPrintf("Step[3].3 Addr[0x%08x] Value[0x%08x]\n", \
+ 							  PEX_PHY_ACCESS_REG(pexUnit), (0xC3 << 16) | 0x0F));
++			}
+ 
+ 			DB(mvOsPrintf("Step[3].4 Addr[0x%08x] Value[0x%08x]\n", \
+ 						  PEX_PHY_ACCESS_REG(pexUnit), (0xC8 << 16) | 0x05));
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
+index ebc21ac..53c7044 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
+@@ -331,10 +331,11 @@ extern "C" {
+ #define SGMII_SERDES_CFG_REG(port)		(0x724A0 + ((port)%2)*0x4000 - ((port)/2)*0x40000)
+ #define SGMII_SERDES_STAT_REG(port)		(0x724A4 + ((port)%2)*0x4000 - ((port)/2)*0x40000)
+ #define SGMII_COMPHY_CTRL_REG(port)		(0x72F20 + ((port)%2)*0x4000 - ((port)/2)*0x40000)
++#define QSGMII_GEN_1_SETTING_REG(port)		(0x72E38 + ((port)%2)*0x4000 - ((port)/2)*0x40000)
+ 
+ #define SERDES_LINE_MUX_REG_0_7			0x18270
+ #define SERDES_LINE_MUX_REG_8_15		0x18274
+-
++#define QSGMII_CONTROL_1_REG                    0x18404
+ /* Controler environment registers offsets */
+ #define GEN_PURP_RES_1_REG			0x182F4
+ #define GEN_PURP_RES_2_REG			0x182F8
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
+index 58ddd89..6857a91 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
+@@ -94,7 +94,11 @@ extern "C" {
+ #define MV_UART_REGS_OFFSET(chanNum)		(0x12000 + (chanNum * 0x100))
+ #define MV_RUNIT_PMU_REGS_OFFSET		(0x1C000)
+ #define MV_MPP_REGS_OFFSET			(0x18000)
++#ifdef MV88F78X60_Z1
+ #define MV_GPP_REGS_OFFSET(unit)		(0x18100 + ((unit) * 0x20))
++#else
++#define MV_GPP_REGS_OFFSET(unit)		(0x18100 + ((unit) * 0x40))
++#endif
+ #define MV_MISC_REGS_OFFSET			(0x18200)
+ #define MV_MBUS_REGS_OFFSET			(0x20000)
+ #define MV_COHERENCY_FABRIC_OFFSET		(0x20200)
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
+old mode 100644
+new mode 100755
+index 6a6caa3..527581f
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
+@@ -80,6 +80,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+ #define CPU_CONFIG_REG(cpu)			(MV_CPUIF_REGS_BASE(cpu))
+ #define CPU_CTRL_STAT_REG(cpu)			(MV_CPUIF_REGS_BASE(cpu) + 0x8)
++#define CPU_RESUME_ADDR_REG(cpu)		(MV_CPUIF_SHARED_REGS_BASE + (0x2124) + (cpu)*0x100)
++#define CPU_RESET_REG(cpu)			(MV_CPUIF_SHARED_REGS_BASE + (0x800+(cpu)*8))
++#define CPU_RESUME_CTRL_REG			(MV_CPUIF_SHARED_REGS_BASE + (0x988))
+ #define CPU_RSTOUTN_MASK_REG			(MV_MISC_REGS_BASE + 0x60)
+ #define CPU_SYS_SOFT_RST_REG			(MV_MISC_REGS_BASE + 0x64)
+ #define CPU_L2_CTRL_REG				(MV_L2C_REGS_BASE + 0x100)
+@@ -248,7 +251,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define CL2ACR_REP_STRGY_OFFS			27
+ #define CL2ACR_REP_STRGY_MASK			(3 << CL2ACR_REP_STRGY_OFFS)
+ 
+-#define CL2ACR_REP_STRGY_PLRU_MASK			(1 << 28)
++#define CL2ACR_REP_STRGY_LFSR_MASK              (0x1 << CL2ACR_REP_STRGY_OFFS)
++#define CL2ACR_REP_STRGY_semiPLRU_MASK		(0x2 << CL2ACR_REP_STRGY_OFFS)
++#define CL2ACR_REP_STRGY_semiPLRU_WA_MASK          (0x3 << CL2ACR_REP_STRGY_OFFS)
+ 
+ 
+ /* SOC_CTRL_REG fields */
+diff --git a/arch/arm/plat-armada/common/mvTypes.h b/arch/arm/plat-armada/common/mvTypes.h
+old mode 100644
+new mode 100755
+index 18d5296..814db81
+--- a/arch/arm/plat-armada/common/mvTypes.h
++++ b/arch/arm/plat-armada/common/mvTypes.h
+@@ -182,7 +182,7 @@ typedef enum {
+ 	ETH_MAC_SPEED_10M,
+ 	ETH_MAC_SPEED_100M,
+ 	ETH_MAC_SPEED_1000M,
+-	ETH_MAC_SPEED_AUTO,
++	ETH_MAC_SPEED_AUTO
+ 
+ } MV_ETH_MAC_SPEED;
+ 
+diff --git a/arch/arm/plat-armada/common/mvVideo.h b/arch/arm/plat-armada/common/mvVideo.h
+old mode 100644
+new mode 100755
+index e9918b1..d1f6e86
+--- a/arch/arm/plat-armada/common/mvVideo.h
++++ b/arch/arm/plat-armada/common/mvVideo.h
+@@ -98,7 +98,7 @@ typedef enum mvPixFormatId {
+ 	MV_PIX_FORMAT_ID_RGB555 = 0x555,
+ 	MV_PIX_FORMAT_ID_RGB565 = 0x565,
+ 	MV_PIX_FORMAT_ID_YUV422 = 0x422,
+-	MV_PIX_FORMAT_ID_RAW_BAYER = 0x111,
++	MV_PIX_FORMAT_ID_RAW_BAYER = 0x111
+ } MV_PIX_FORMAT_ID;
+ 
+ typedef struct mvPixelFormat {
+diff --git a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
+old mode 100644
+new mode 100755
+index 6d8695f..ae38a92
+--- a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
++++ b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
+@@ -1231,7 +1231,7 @@ MV_VOID mvEthInternalGEPhyBasicInit(MV_U32 ethPortNum)
+ {
+ }
+ 
+-MV_VOID mvEth1540PhyBasicInit(MV_U32 ethPortNum, MV_BOOL eeeEnable)
++MV_VOID mvEth1540Y0PhyBasicInit(MV_U32 ethPortNum, MV_BOOL eeeEnable)
+ {
+ 	MV_U16 reg;
+ 	MV_U16 i = ethphyHalData.phyAddr[ethPortNum];
+@@ -1678,6 +1678,11 @@ MV_VOID mvEth1540PhyBasicInit(MV_U32 ethPortNum, MV_BOOL eeeEnable)
+ 
+ 	mvEthPhyRegWrite(i, 0x16, 0x0000);
+ 
++	/* SGMII fix*/
++	mvEthPhyRegWrite(i, 0x16, 0x12);
++	mvEthPhyRegWrite(i, 0x1b, 0x0);
++	mvEthPhyRegWrite(i, 0x16, 0x0);
++
+ 
+ 	/* Power up the phy */
+ 	mvEthPhyRegRead(i, ETH_PHY_CTRL_REG, &reg);
+@@ -1689,6 +1694,152 @@ MV_VOID mvEth1540PhyBasicInit(MV_U32 ethPortNum, MV_BOOL eeeEnable)
+ 
+ }
+ 
++MV_VOID mvEth1540A0PhyBasicInit(MV_U32 ethPortNum, MV_BOOL eeeEnable)
++{
++	int i = ethphyHalData.phyAddr[ethPortNum];
++	MV_U16 reg;
++	int startAddr, endAddr;
++
++	/* Enable QSGMII AN */
++	/* Set page to 4. */
++	mvEthPhyRegWrite(i, 0x16, 4);
++	/* Enable AN */
++	mvEthPhyRegWrite(i, 0x0, 0x1140);
++	/* Set page to 0. */
++	mvEthPhyRegWrite(i, 0x16, 0);
++
++	/* Power up the phy */
++	mvEthPhyRegRead(i, ETH_PHY_CTRL_REG, &reg);
++	reg &= ~(ETH_PHY_CTRL_POWER_DOWN_MASK);
++	mvEthPhyRegWrite(i, ETH_PHY_CTRL_REG, reg);
++
++	/* Disable Drop BadTag */
++	mvEthPhyRegWrite(i, 22, 0x0010);
++	mvEthPhyRegWrite(i, 1, 0x000B);
++	mvEthPhyRegWrite(i, 2, 0x0000);
++	mvEthPhyRegWrite(i, 3, 0x0FB4);
++	mvEthPhyRegWrite(i, 1, 0x080B);
++	mvEthPhyRegWrite(i, 2, 0x0000);
++	mvEthPhyRegWrite(i, 3, 0x0FB4);
++	mvEthPhyRegWrite(i, 1, 0x100B);
++	mvEthPhyRegWrite(i, 2, 0x0000);
++	mvEthPhyRegWrite(i, 3, 0x0FB4);
++	mvEthPhyRegWrite(i, 1, 0x180B);
++	mvEthPhyRegWrite(i, 2, 0x0000);
++	mvEthPhyRegWrite(i, 3, 0x0FB4);
++	mvEthPhyRegWrite(i, 22, 0x0000);
++	mvEthPhyRegWrite(i, 22, 0x00FA);
++	mvEthPhyRegWrite(i, 8, 0x0010);
++
++	mvEthPhyRegWrite(i, 22, 0x00FB);
++	mvEthPhyRegWrite(i, 1, 0x4099);
++	mvEthPhyRegWrite(i, 3, 0x1120);
++	mvEthPhyRegWrite(i, 11, 0x113C);
++	mvEthPhyRegWrite(i, 14, 0x8100);
++	mvEthPhyRegWrite(i, 15, 0x112A);
++
++	mvEthPhyRegWrite(i, 22, 0x00FC);
++	mvEthPhyRegWrite(i, 1, 0x20B0);
++
++	mvEthPhyRegWrite(i, 22, 0x00FF);
++	mvEthPhyRegWrite(i, 17, 0x0000);
++	mvEthPhyRegWrite(i, 16, 0x2000);
++	mvEthPhyRegWrite(i, 17, 0x4444);
++	mvEthPhyRegWrite(i, 16, 0x2140);
++	mvEthPhyRegWrite(i, 17, 0x8064);
++	mvEthPhyRegWrite(i, 16, 0x2141);
++	mvEthPhyRegWrite(i, 17, 0x0108);
++	mvEthPhyRegWrite(i, 16, 0x2144);
++	mvEthPhyRegWrite(i, 17, 0x0F16);
++	mvEthPhyRegWrite(i, 16, 0x2146);
++	mvEthPhyRegWrite(i, 17, 0x8C44);
++	mvEthPhyRegWrite(i, 16, 0x214B);
++
++	mvEthPhyRegWrite(i, 17, 0x0F90);
++	mvEthPhyRegWrite(i, 16, 0x214C);
++	mvEthPhyRegWrite(i, 17, 0xBA33);
++	mvEthPhyRegWrite(i, 16, 0x214D);
++	mvEthPhyRegWrite(i, 17, 0x39AA);
++	mvEthPhyRegWrite(i, 16, 0x214F);
++	mvEthPhyRegWrite(i, 17, 0x8433);
++	mvEthPhyRegWrite(i, 16, 0x2151);
++	mvEthPhyRegWrite(i, 17, 0x2010);
++	mvEthPhyRegWrite(i, 16, 0x2152);
++	mvEthPhyRegWrite(i, 17, 0x99EB);
++	mvEthPhyRegWrite(i, 16, 0x2153);
++	mvEthPhyRegWrite(i, 17, 0x2F3B);
++	mvEthPhyRegWrite(i, 16, 0x2154);
++	mvEthPhyRegWrite(i, 17, 0x584E);
++	mvEthPhyRegWrite(i, 16, 0x2156);
++	mvEthPhyRegWrite(i, 17, 0x1223);
++	mvEthPhyRegWrite(i, 16, 0x2158);
++	mvEthPhyRegWrite(i, 22, 0x0000);
++
++	/* Enable EEE_Auto-neg for 1000BASE-T and 100BASE-TX */
++	mvEthPhyRegWrite(i, 22, 0x0000);
++	mvEthPhyRegWrite(i, 13, 0x0007);
++	mvEthPhyRegWrite(i, 14, 0x003C);
++	mvEthPhyRegWrite(i, 13, 0x4007);
++	mvEthPhyRegWrite(i, 14, 0x0006);
++
++	/* Enable MACSec (Reg 27_2.13 = '1') */
++	mvEthPhyRegWrite(i, 22, 0x0012);
++	mvEthPhyRegRead(i, 27, &reg);
++	reg |= (1 << 13);
++	mvEthPhyRegWrite(i, 27, reg);
++
++	if (eeeEnable == MV_TRUE) {
++		/* Enable EEE Master (Legacy) Mode */
++		mvEthPhyRegWrite(i, 22, 0x0010);
++		mvEthPhyRegWrite(i, 1, 0x03c1);
++		mvEthPhyRegWrite(i, 2, 0x0001);
++		mvEthPhyRegWrite(i, 3, 0x0000);
++		mvEthPhyRegWrite(i, 1, 0x0bc1);
++		mvEthPhyRegWrite(i, 2, 0x0001);
++		mvEthPhyRegWrite(i, 3, 0x0000);
++		mvEthPhyRegWrite(i, 1, 0x13c1);
++		mvEthPhyRegWrite(i, 2, 0x0001);
++		mvEthPhyRegWrite(i, 3, 0x0000);
++		mvEthPhyRegWrite(i, 1, 0x1bc1);
++		mvEthPhyRegWrite(i, 2, 0x0001);
++		mvEthPhyRegWrite(i, 3, 0x0000);
++		mvEthPhyRegWrite(i, 22, 0x0000);
++	}
++	/* Configure LED */
++	mvEthPhyRegWrite(i, 22, 3);
++	mvEthPhyRegWrite(i, 16, 0x1111);
++
++	mvEthPhyRegWrite(i, 22, 0x0000);
++	mvEthPhyRegWrite(i, 0, 0x9140);
++
++	mvOsDelay(100);
++	/*  Sleep 3000 */
++	/* mvOsDelay(300); */
++}
++
++MV_VOID mvEth1540PhyBasicInit(MV_U32 ethPortNum, MV_BOOL eeeEnable)
++{
++	MV_U16 reg;
++	int startAddr = ethphyHalData.phyAddr[ethPortNum];
++
++	/* Reads ID2 */
++	if (mvEthPhyRegRead(startAddr, 3, &reg) != MV_OK)
++		return;
++
++
++	/* Identify PHY Revision. */
++	mvEthPhyRegWrite(startAddr, 0x16, 0xFB);
++	mvEthPhyRegRead(startAddr, 0x1F, &reg);
++	mvEthPhyRegWrite(startAddr, 0x16, 0x0);
++
++	if (reg == 0x100)
++		mvEth1540Y0PhyBasicInit(ethPortNum, eeeEnable);
++	else
++		mvEth1540A0PhyBasicInit(ethPortNum, eeeEnable);
++
++	return;
++}
++
+ MV_VOID mvEth1340PhyBasicInit(void)
+ {
+ 	int i;
+@@ -1743,10 +1894,32 @@ MV_VOID mvEth1340PhyBasicInit(void)
+ *******************************************************************************/
+ MV_VOID mvEthE1512PhyBasicInit(MV_U32 ethPortNum)
+ {
++/*
+ 	mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x16, 0x12);
+ 	mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x14, 0x201);
+ 	mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x14, 0x8201);
+ 	mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x16, 0);
++*/
++	mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x16, 0x00FF);
++	mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x11, 0x214B);
++	mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x10, 0x2144);
++	mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x11, 0x0C28);
++	mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x10, 0x2146);
++	mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x11, 0xB233);
++	mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x10, 0x214D);
++	mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x11, 0xCC0C);
++	mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x10, 0x2159);
++	mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x16, 0x00FB);
++	mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x07, 0xC00D);
++
++	if (ethphyHalData.isSgmii[ethPortNum]) {
++
++		mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x16, 0x0012);
++		mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x14, 0x0001);
++		mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x14, 0x8001);
++	}
++	mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x16, 0x0000);
++
+ }
+ 
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.h b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.h
+old mode 100644
+new mode 100755
+index 4a3076d..864b02c
+--- a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.h
++++ b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.h
+@@ -109,6 +109,7 @@ typedef struct {
+ 	MV_U32		specRegOff;		/* Board specific register offset, Valid if boardSpecInit == TRUE */
+ 	MV_U32		specData;  		/* Board specific data to write, Valid if boardSpecInit == TRUE */
+ 	MV_U32		ethPhySmiReg;		/* Ethernet unit PHY SMI register offset */
++	MV_BOOL		isSgmii[MV_ETH_MAX_PORTS];
+ } MV_ETHPHY_HAL_DATA;
+ 
+ MV_STATUS 	mvEthPhyHalInit(MV_ETHPHY_HAL_DATA *halData);
+diff --git a/arch/arm/plat-armada/mv_hal/eth/gbe/mvEthAddrDec.c b/arch/arm/plat-armada/mv_hal/eth/gbe/mvEthAddrDec.c
+old mode 100644
+new mode 100755
+index 92dd3d5..7348a1a
+--- a/arch/arm/plat-armada/mv_hal/eth/gbe/mvEthAddrDec.c
++++ b/arch/arm/plat-armada/mv_hal/eth/gbe/mvEthAddrDec.c
+@@ -195,6 +195,10 @@ MV_STATUS mvEthWinWrite(MV_U32 port, MV_U32 winNum, MV_UNIT_WIN_INFO *pAddrDecWi
+ 	MV_U32 size, alignment;
+ 	MV_U32 baseReg, sizeReg;
+ 
++	if (!MV_IS_POWER_OF_2(pAddrDecWin->addrWin.size)) {
++		/* try to get a good size */
++		pAddrDecWin->addrWin.size = 1 << (mvLog2(pAddrDecWin->addrWin.size) + 1);
++	}
+ 	/* Parameter checking   */
+ 	if (winNum >= ETH_MAX_DECODE_WIN) {
+ 		mvOsPrintf("mvEthWinSet: ERR. Invalid win num %d\n", winNum);
+@@ -215,12 +219,13 @@ MV_STATUS mvEthWinWrite(MV_U32 port, MV_U32 winNum, MV_UNIT_WIN_INFO *pAddrDecWi
+ 		return MV_ERROR;
+ 	}
+ 
+-	size = pAddrDecWin->addrWin.size;
+-	if (!MV_IS_POWER_OF_2(size)) {
+-		mvOsPrintf("mvEthWinWrite: Error setting AUDIO window %d. " "Window size is not a power to 2.", winNum);
+-		return MV_BAD_PARAM;
++	if (pAddrDecWin->addrWin.size != 0) {
++		size = pAddrDecWin->addrWin.size;
++		if (!MV_IS_POWER_OF_2(size)) {
++			mvOsPrintf("mvEthWinWrite: Error setting AUDIO window %d. " "Window size is not a power to 2.", winNum);
++			return MV_BAD_PARAM;
++		}
+ 	}
+-
+ 	baseReg = (pAddrDecWin->addrWin.baseLow & ETH_WIN_BASE_MASK);
+ 	sizeReg = MV_REG_READ(ETH_WIN_SIZE_REG(port, winNum));
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h b/arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h
+old mode 100644
+new mode 100755
+index 6a82968..4d7ab18
+--- a/arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h
++++ b/arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h
+@@ -104,7 +104,44 @@ extern "C" {
+ #define    MV_GPP30 BIT30
+ #define    MV_GPP31 BIT31
+ 
+-	/* registers offsets */
++#define    MV_GPP32  BIT0
++#define    MV_GPP33  BIT1
++#define    MV_GPP34  BIT2
++#define    MV_GPP35  BIT3
++#define    MV_GPP36  BIT4
++#define    MV_GPP37  BIT5
++#define    MV_GPP38  BIT6
++#define    MV_GPP39  BIT7
++#define    MV_GPP40  BIT8
++#define    MV_GPP41  BIT9
++#define    MV_GPP42 BIT10
++#define    MV_GPP43 BIT11
++#define    MV_GPP44 BIT12
++#define    MV_GPP45 BIT13
++#define    MV_GPP46 BIT14
++#define    MV_GPP47 BIT15
++#define    MV_GPP48 BIT16
++#define    MV_GPP49 BIT17
++#define    MV_GPP50 BIT18
++#define    MV_GPP51 BIT19
++#define    MV_GPP52 BIT20
++#define    MV_GPP53 BIT21
++#define    MV_GPP54 BIT22
++#define    MV_GPP55 BIT23
++#define    MV_GPP56 BIT24
++#define    MV_GPP57 BIT25
++#define    MV_GPP58 BIT26
++#define    MV_GPP59 BIT27
++#define    MV_GPP60 BIT28
++#define    MV_GPP61 BIT29
++#define    MV_GPP62 BIT30
++#define    MV_GPP63 BIT31
++
++#define    MV_GPP64  BIT0
++#define    MV_GPP65  BIT1
++#define    MV_GPP66  BIT2
++
++/* registers offsets */
+ 
+ #define GPP_DATA_OUT_REG(grp)			(MV_GPP_REGS_BASE(grp) + 0x00)
+ #define GPP_DATA_OUT_REG_0			(MV_GPP_REGS_BASE_0 + 0x00)	/* Used in .S files */
+@@ -118,7 +155,7 @@ extern "C" {
+ 
+ #define GPP_FUNC_SELECT_REG			(MV_GPP_REGS_BASE(0) + 0x40)
+ 
+-	/* Relevant for MV78XX0 */
++/* Relevant for MV78XX0 */
+ #define GPP_DATA_OUT_SET_REG			(MV_GPP_REGS_BASE(0) + 0x20)
+ #define GPP_DATA_OUT_CLEAR_REG			(MV_GPP_REGS_BASE(0) + 0x24)
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
+old mode 100644
+new mode 100755
+index 3172b72..fe8afa2
+--- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
++++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
+@@ -199,7 +199,7 @@ typedef enum {
+ 	MV_ETH_FC_AN_ASYM,
+ 	MV_ETH_FC_DISABLE,
+ 	MV_ETH_FC_ENABLE,
+-	MV_ETH_FC_ACTIVE,
++	MV_ETH_FC_ACTIVE
+ 
+ } MV_ETH_PORT_FC;
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaAddrDec.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaAddrDec.c
+old mode 100644
+new mode 100755
+index ebd8fe1..03edf46
+--- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaAddrDec.c
++++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaAddrDec.c
+@@ -170,6 +170,10 @@ MV_STATUS mvNetaWinWrite(MV_U32 port, MV_U32 winNum, MV_UNIT_WIN_INFO *pAddrDecW
+ 	MV_U32 size, alignment;
+ 	MV_U32 baseReg, sizeReg;
+ 
++	if (!MV_IS_POWER_OF_2(pAddrDecWin->addrWin.size)) {
++		/* try to get a good size */
++		pAddrDecWin->addrWin.size = 1 << (mvLog2(pAddrDecWin->addrWin.size) + 1);
++	}
+ 	/* Parameter checking   */
+ 	if (winNum >= ETH_MAX_DECODE_WIN) {
+ 		mvOsPrintf("mvNetaWinSet: ERR. Invalid win num %d\n", winNum);
+@@ -190,11 +194,13 @@ MV_STATUS mvNetaWinWrite(MV_U32 port, MV_U32 winNum, MV_UNIT_WIN_INFO *pAddrDecW
+ 		return MV_ERROR;
+ 	}
+ 
+-	size = pAddrDecWin->addrWin.size;
+-	if (!MV_IS_POWER_OF_2(size)) {
+-		mvOsPrintf("mvNetaWinWrite: Error setting AUDIO window %d. "
+-			   "Window size is not a power to 2.", winNum);
+-		return MV_BAD_PARAM;
++	if (pAddrDecWin->addrWin.size != 0) {
++		size = pAddrDecWin->addrWin.size;
++		if (!MV_IS_POWER_OF_2(size)) {
++			mvOsPrintf("mvNetaWinWrite: Error setting AUDIO window %d. "
++				"Window size is not a power to 2.", winNum);
++			return MV_BAD_PARAM;
++		}
+ 	}
+ 
+ 	baseReg = (pAddrDecWin->addrWin.baseLow & ETH_WIN_BASE_MASK);
+diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c
+old mode 100644
+new mode 100755
+diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPex.c b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
+old mode 100644
+new mode 100755
+index 11c4579..25903bd
+--- a/arch/arm/plat-armada/mv_hal/pex/mvPex.c
++++ b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
+@@ -296,12 +296,19 @@ MV_U32 mvPexModeGet(MV_U32 pexIf, MV_PEX_MODE *pexMode)
+ 
+ 		/* If there is no link, the auto negotiation data is worthless */
+ 		pexMode->pexWidth = MV_PEX_WITDH_INVALID;
+-	} else {
+-		pexMode->pexLinkUp = MV_TRUE;
++	}
++	else { /* We have Link negotiation started */
++		if ((MV_REG_READ(PEX_DBG_STATUS_REG(pexIf))) == 0x7e)
++			pexMode->pexLinkUp = MV_TRUE;
++		else {
++			printf("Link negotiation failed ");
++			pexMode->pexLinkUp = MV_FALSE;
++		}
+ 
+ 		/* We have link. The link width is now valid */
+ 		pexData = MV_REG_READ(PEX_CFG_DIRECT_ACCESS(pexIf, PEX_LINK_CTRL_STAT_REG));
+ 		pexMode->pexWidth = ((pexData & PXLCSR_NEG_LNK_WDTH_MASK) >> PXLCSR_NEG_LNK_WDTH_OFFS);
++		pexMode->pexGen = ((pexData & PXLCSR_NEG_LNK_GEN_MASK) >> PXLCSR_NEG_LNK_GEN_OFFS);
+ 	}
+ 
+ 	return MV_OK;
+diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPex.h b/arch/arm/plat-armada/mv_hal/pex/mvPex.h
+old mode 100644
+new mode 100755
+index 5a20a29..a403da5
+--- a/arch/arm/plat-armada/mv_hal/pex/mvPex.h
++++ b/arch/arm/plat-armada/mv_hal/pex/mvPex.h
+@@ -91,6 +91,11 @@ extern "C" {
+ 		MV_PEX_END_POINT	/* end point device */
+ 	} MV_PEX_TYPE;
+ 
++	typedef enum _mvPexGen {
++		MV_PEX_GEN1_1 = 1,
++		MV_PEX_GEN2_0
++	} MV_PEX_GEN;
++
+ 	typedef enum _mvPexWidth {
+ 		MV_PEX_WITDH_X1 = 1,
+ 		MV_PEX_WITDH_X2,
+@@ -104,6 +109,7 @@ extern "C" {
+ 		MV_PEX_TYPE pexType;
+ 		MV_PEX_WIDTH pexWidth;
+ 		MV_BOOL pexLinkUp;
++		MV_PEX_GEN pexGen;
+ 	} MV_PEX_MODE;
+ 
+ 	/* PEX Bar attributes */
+diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h b/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h
+old mode 100644
+new mode 100755
+index f883d84..04266bf
+--- a/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h
++++ b/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h
+@@ -184,6 +184,7 @@ extern "C" {
+ #define PEX_TL_CTRL_REG(pexIf)				(MV_PEX_IF_REGS_BASE(pexIf) - (pexIf)*0x10000)
+ #define PEX_RAM_PARITY_CTRL_REG(pexIf) 			((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A50)
+ #define PEX_DBG_CTRL_REG(pexIf) 			((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A60)
++#define PEX_DBG_STATUS_REG(pexIf) 			((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A64)
+ 
+ #define PEX_LINK_CTRL_STATUS_REG(pexIf) 		((MV_PEX_IF_REGS_BASE(pexIf)) + 0x70)
+ 
+@@ -336,6 +337,7 @@ extern "C" {
+ #define PEX_DEV_CTRL_STAT_REG						0x68
+ #define PEX_LINK_CAPABILITY_REG						0x6C
+ #define PEX_LINK_CTRL_STAT_REG						0x70
++#define PEX_LINK_CTRL_STAT_2_REG					0x90
+ 
+ #define PEX_ADV_ERR_RPRT_HDR_TRGT_REG					0x100
+ #define PEX_UNCORRECT_ERR_STAT_REG					0x104
+@@ -683,6 +685,11 @@ extern "C" {
+ #define PXLCSR_NEG_LNK_WDTH_MASK 		(0x3f << PXLCSR_NEG_LNK_WDTH_OFFS)
+ #define PXLCSR_NEG_LNK_WDTH_X1			(0x1 << PXLCSR_NEG_LNK_WDTH_OFFS)
+ 
++#define PXLCSR_NEG_LNK_GEN_OFFS			16	/* Negotiated Link GEN */
++#define PXLCSR_NEG_LNK_GEN_MASK 		(0xf << PXLCSR_NEG_LNK_GEN_OFFS)
++#define PXLCSR_NEG_LNK_GEN_1_1			(0x1 << PXLCSR_NEG_LNK_GEN_OFFS)
++#define PXLCSR_NEG_LNK_GEN_2_0			(0x2 << PXLCSR_NEG_LNK_GEN_OFFS)
++
+ #define PXLCSR_LNK_TRN 				BIT27	/* Link Training */
+ 
+ #define PXLCSR_SLT_CLK_CFG_OFFS			28	/* Slot Clock Configuration */
+diff --git a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvOsS.h b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvOsS.h
+old mode 100644
+new mode 100755
+index 374bc5f..e057f27
+--- a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvOsS.h
++++ b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvOsS.h
+@@ -86,7 +86,7 @@ extern "C" {
+ 
+ #elif defined(MV_VXWORKS)
+ 
+-#include "mvOsSVxw.h"
++#include "VxWorks/mvOsSVxw.h"
+ 
+ #elif defined(MV_NETBSD)
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.h b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.h
+old mode 100644
+new mode 100755
+index b35b893..4528e7f
+--- a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.h
++++ b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.h
+@@ -290,7 +290,7 @@ typedef enum mvPMSwitchingmode {
+ 	MV_SATA_SWITCHING_MODE_NONE = 0,
+ 	MV_SATA_SWITCHING_MODE_CBS,
+ 	MV_SATA_SWITCHING_MODE_QCBS,
+-	MV_SATA_SWITCHING_MODE_FBS,
++	MV_SATA_SWITCHING_MODE_FBS
+ } MV_SATA_SWITCHING_MODE;
+ 
+ struct mvDmaRequestQueueEntry;
+diff --git a/arch/arm/plat-armada/mv_hal/spi/mvSpi.c b/arch/arm/plat-armada/mv_hal/spi/mvSpi.c
+old mode 100644
+new mode 100755
+index f92bb1f..36c56e6
+--- a/arch/arm/plat-armada/mv_hal/spi/mvSpi.c
++++ b/arch/arm/plat-armada/mv_hal/spi/mvSpi.c
+@@ -82,12 +82,12 @@ static MV_SPI_TYPE_INFO spiTypes[] = {
+ 	{
+ 		.en16Bit = MV_TRUE,
+ 		.byteCsAsrt = MV_FALSE,
+-		.baudRate = (20 << 20), /*  20M */
++		.baudRate = (20 << 20) /*  20M */
+ 	},
+ 	{
+ 		.en16Bit = MV_FALSE,
+ 		.byteCsAsrt = MV_TRUE,
+-		.baudRate = _8M,
++		.baudRate = _8M
+ 	}
+ };
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/twsi/mvTwsi.c b/arch/arm/plat-armada/mv_hal/twsi/mvTwsi.c
+old mode 100644
+new mode 100755
+index 257be24..582b35e
+--- a/arch/arm/plat-armada/mv_hal/twsi/mvTwsi.c
++++ b/arch/arm/plat-armada/mv_hal/twsi/mvTwsi.c
+@@ -152,7 +152,7 @@ MV_STATUS mvTwsiStartBitSet(MV_U8 chanNum)
+ 
+ 	/* check for timeout */
+ 	if (MV_TRUE == twsiTimeoutChk(timeout,
+-				      (const MV_U8 *)"TWSI: mvTwsiStartBitSet ERROR - Start Clear bit TimeOut .\n"))
++				      (const MV_8 *)"TWSI: mvTwsiStartBitSet ERROR - Start Clear bit TimeOut .\n"))
+ 		return MV_TIMEOUT;
+ 
+ 	/* check that start bit went down */
+@@ -210,7 +210,7 @@ MV_STATUS mvTwsiStopBitSet(MV_U8 chanNum)
+ 		;
+ 
+ 	/* check for timeout */
+-	if (MV_TRUE == twsiTimeoutChk(timeout, (const MV_U8 *)"TWSI: mvTwsiStopBitSet ERROR - Stop bit TimeOut .\n"))
++	if (MV_TRUE == twsiTimeoutChk(timeout, (const MV_8 *)"TWSI: mvTwsiStopBitSet ERROR - Stop bit TimeOut .\n"))
+ 		return MV_TIMEOUT;
+ 
+ 	/* check that the stop bit went down */
+@@ -556,7 +556,7 @@ static MV_STATUS twsiAddr10BitSet(MV_U8 chanNum, MV_U32 deviceAddress, MV_TWSI_C
+ 
+ 	/* check for timeout */
+ 	if (MV_TRUE ==
+-	    twsiTimeoutChk(timeout, (const MV_U8 *)"TWSI: twsiAddr10BitSet ERROR - 1st addr (10Bit) Int TimeOut.\n"))
++	    twsiTimeoutChk(timeout, (const MV_8 *)"TWSI: twsiAddr10BitSet ERROR - 1st addr (10Bit) Int TimeOut.\n"))
+ 		return MV_TIMEOUT;
+ 
+ 	/* check the status */
+@@ -585,7 +585,7 @@ static MV_STATUS twsiAddr10BitSet(MV_U8 chanNum, MV_U32 deviceAddress, MV_TWSI_C
+ 
+ 	/* check for timeout */
+ 	if (MV_TRUE ==
+-	    twsiTimeoutChk(timeout, (const MV_U8 *)"TWSI: twsiAddr10BitSet ERROR - 2nd (10 Bit) Int TimOut.\n"))
++	    twsiTimeoutChk(timeout, (const MV_8 *)"TWSI: twsiAddr10BitSet ERROR - 2nd (10 Bit) Int TimOut.\n"))
+ 		return MV_TIMEOUT;
+ 
+ 	/* check the status */
+@@ -647,7 +647,7 @@ static MV_STATUS twsiAddr7BitSet(MV_U8 chanNum, MV_U32 deviceAddress, MV_TWSI_CM
+ 
+ 	/* check for timeout */
+ 	if (MV_TRUE ==
+-	    twsiTimeoutChk(timeout, (const MV_U8 *)"TWSI: twsiAddr7BitSet ERROR - Addr (7 Bit) int TimeOut.\n"))
++	    twsiTimeoutChk(timeout, (const MV_8 *)"TWSI: twsiAddr7BitSet ERROR - Addr (7 Bit) int TimeOut.\n"))
+ 		return MV_TIMEOUT;
+ 
+ 	/* check the status */
+@@ -709,7 +709,7 @@ static MV_STATUS twsiDataTransmit(MV_U8 chanNum, MV_U8 *pBlock, MV_U32 blockSize
+ 
+ 	/* check for timeout */
+ 	if (MV_TRUE ==
+-	    twsiTimeoutChk(timeout, (const MV_U8 *)"TWSI: twsiDataTransmit ERROR - Read Data Int TimeOut.\n"))
++	    twsiTimeoutChk(timeout, (const MV_8 *)"TWSI: twsiDataTransmit ERROR - Read Data Int TimeOut.\n"))
+ 		return MV_TIMEOUT;
+ 
+ 	while (blockSizeWr) {
+@@ -728,7 +728,7 @@ static MV_STATUS twsiDataTransmit(MV_U8 chanNum, MV_U8 *pBlock, MV_U32 blockSize
+ 
+ 		/* check for timeout */
+ 		if (MV_TRUE ==
+-		    twsiTimeoutChk(timeout, (const MV_U8 *)"TWSI: twsiDataTransmit ERROR - Read Data Int TimeOut.\n"))
++		    twsiTimeoutChk(timeout, (const MV_8 *)"TWSI: twsiDataTransmit ERROR - Read Data Int TimeOut.\n"))
+ 			return MV_TIMEOUT;
+ 
+ 		/* check the status */
+@@ -789,7 +789,7 @@ static MV_STATUS twsiDataReceive(MV_U8 chanNum, MV_U8 *pBlock, MV_U32 blockSize)
+ 
+ 	/* check for timeout */
+ 	if (MV_TRUE ==
+-	    twsiTimeoutChk(timeout, (const MV_U8 *)"TWSI: twsiDataReceive ERROR - Read Data int Time out .\n"))
++	    twsiTimeoutChk(timeout, (const MV_8 *)"TWSI: twsiDataReceive ERROR - Read Data int Time out .\n"))
+ 		return MV_TIMEOUT;
+ 
+ 	while (blockSizeRd) {
+@@ -807,7 +807,7 @@ static MV_STATUS twsiDataReceive(MV_U8 chanNum, MV_U8 *pBlock, MV_U32 blockSize)
+ 
+ 		/* check for timeout */
+ 		if (MV_TRUE ==
+-		    twsiTimeoutChk(timeout, (const MV_U8 *)"TWSI: twsiDataReceive ERROR - Read Data Int Time out .\n"))
++		    twsiTimeoutChk(timeout, (const MV_8 *)"TWSI: twsiDataReceive ERROR - Read Data Int Time out .\n"))
+ 			return MV_TIMEOUT;
+ 
+ 		/* check the status */
+@@ -910,11 +910,11 @@ MV_STATUS mvTwsiRead(MV_U8 chanNum, MV_TWSI_SLAVE *pTwsiSlave, MV_U8 *pBlock, MV
+ {
+ 	MV_STATUS rc;
+ 	MV_STATUS ret = MV_FAIL;
++	MV_U32 counter = 0;
+ 
+ 	if ((NULL == pBlock) || (NULL == pTwsiSlave))
+ 		return MV_BAD_PARAM;
+ 
+-	MV_U32 counter = 0;
+ 	do	{
+ 		if (counter > 0) /* wait for 1 mili sec for the clear to take effect */
+ 			mvOsDelay(1);
+@@ -1033,11 +1033,11 @@ MV_STATUS mvTwsiRead(MV_U8 chanNum, MV_TWSI_SLAVE *pTwsiSlave, MV_U8 *pBlock, MV
+ *******************************************************************************/
+ MV_STATUS mvTwsiWrite(MV_U8 chanNum, MV_TWSI_SLAVE *pTwsiSlave, MV_U8 *pBlock, MV_U32 blockSize)
+ {
++	MV_STATUS ret = MV_FAIL;
++	MV_U32 counter = 0;
+ 	if ((NULL == pBlock) || (NULL == pTwsiSlave))
+ 		return MV_BAD_PARAM;
+ 
+-	MV_STATUS ret = MV_FAIL;
+-	MV_U32 counter = 0;
+ 	do	{
+ 		if (counter > 0) /* wait for 1 mili sec for the clear to take effect */
+ 			mvOsDelay(1);
+diff --git a/arch/arm/plat-armada/mv_hal/usb/mvUsbAddrDec.c b/arch/arm/plat-armada/mv_hal/usb/mvUsbAddrDec.c
+old mode 100644
+new mode 100755
+index b24a868..cecafd4
+--- a/arch/arm/plat-armada/mv_hal/usb/mvUsbAddrDec.c
++++ b/arch/arm/plat-armada/mv_hal/usb/mvUsbAddrDec.c
+@@ -172,6 +172,12 @@ MV_STATUS mvUsbWinWrite(MV_U32 dev, MV_U32 winNum, MV_UNIT_WIN_INFO *pDecWin)
+ 	MV_U32 sizeReg, baseReg;
+ 	MV_U32 size;
+ 
++	/* check if the size of the bar is illeggal */
++	if (!MV_IS_POWER_OF_2(pDecWin->addrWin.size)) {
++		/* try to get a good size */
++		pDecWin->addrWin.size = 1 << (mvLog2(pDecWin->addrWin.size) + 1);
++	}
++
+ 	/* Parameter checking   */
+ 	if (winNum >= MV_USB_MAX_ADDR_DECODE_WIN) {
+ 		mvOsPrintf("%s: ERR. Invalid win num %d\n", __func__, winNum);
+@@ -192,9 +198,11 @@ MV_STATUS mvUsbWinWrite(MV_U32 dev, MV_U32 winNum, MV_UNIT_WIN_INFO *pDecWin)
+ 		return MV_ERROR;
+ 	}
+ 
+-	if (!MV_IS_POWER_OF_2(pDecWin->addrWin.size)) {
+-		mvOsPrintf("mvUsbWinWrite: Bad windows size.\n");
+-		return MV_BAD_PARAM;
++	if (pDecWin->addrWin.size != 0) {
++		if (!MV_IS_POWER_OF_2(pDecWin->addrWin.size)) {
++			mvOsPrintf("mvUsbWinWrite: Bad windows size.\n");
++			return MV_BAD_PARAM;
++		}
+ 	}
+ 
+ 	size = pDecWin->addrWin.size / MV_USB_WIN_SIZE_ALIGN - 1;
+diff --git a/arch/arm/plat-armada/mv_hal/xor/mvXorAddrDec.c b/arch/arm/plat-armada/mv_hal/xor/mvXorAddrDec.c
+old mode 100644
+new mode 100755
+index 21dc1e9..da7ed88
+--- a/arch/arm/plat-armada/mv_hal/xor/mvXorAddrDec.c
++++ b/arch/arm/plat-armada/mv_hal/xor/mvXorAddrDec.c
+@@ -206,6 +206,10 @@ MV_STATUS mvXorTargetWinWrite(MV_U32 unit, MV_U32 winNum,
+ 	MV_U32 sizeReg, baseReg;
+ 	MV_U32 chan;
+ 
++	if (!MV_IS_POWER_OF_2(pAddrDecWin->addrWin.size)) {
++		/* try to get a good size */
++		pAddrDecWin->addrWin.size = 1 << (mvLog2(pAddrDecWin->addrWin.size) + 1);
++	}
+ 	/* Parameter checking */
+ 	if (winNum >= XOR_MAX_ADDR_DEC_WIN) {
+ 		DB(mvOsPrintf("%s: ERR. Invalid win num %d\n",  __func__, winNum));
+-- 
+1.7.9.5
+

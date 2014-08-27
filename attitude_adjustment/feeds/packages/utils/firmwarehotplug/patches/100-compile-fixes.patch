@@ -1,0 +1,36 @@
+Index: firmwarehotplug-0.1/ezusb/midi/original/Makefile
+===================================================================
+--- firmwarehotplug-0.1.orig/ezusb/midi/original/Makefile	2010-10-29 19:21:43.867000023 +0200
++++ firmwarehotplug-0.1/ezusb/midi/original/Makefile	2010-10-29 19:27:09.590002911 +0200
+@@ -1,15 +1,18 @@
+ VERSION = $(shell date +%Y_%m_%d)
+ RELEASE_NAME =	ezusbmidi-$(VERSION)
+ 
++SDCC = sdcc
++PACKIHX = packihx
++
+ all: ezusbmidi1x1.ihx ezusbmidi2x2.ihx
+ 
+ ezusbmidi1x1.ihx: ezusbmidi.c ezusb_reg.h bufsync.h
+-	rm -rf sdcc; mkdir sdcc; cp $^ sdcc
+-	cd sdcc; sdcc -DCONFIG_MidiSport1x1 -I. $<; packihx ezusbmidi.ihx > ../$@
++	rm -rf sdcc.1x1 && mkdir sdcc.1x1 && cp $^ sdcc.1x1/
++	cd sdcc.1x1 && $(SDCC) -DCONFIG_MidiSport1x1 -I. $< && $(PACKIHX) ezusbmidi.ihx > ../$@
+ 
+ ezusbmidi2x2.ihx: ezusbmidi.c ezusb_reg.h bufsync.h
+-	rm -rf sdcc; mkdir sdcc; cp $^ sdcc
+-	cd sdcc; sdcc -DCONFIG_MidiSport2x2  -I. $<; packihx ezusbmidi.ihx > ../$@
++	rm -rf sdcc.2x2 && mkdir sdcc.2x2 && cp $^ sdcc.2x2/
++	cd sdcc.2x2 && $(SDCC) -DCONFIG_MidiSport2x2 -I. $< && $(PACKIHX) ezusbmidi.ihx > ../$@
+ 
+ ezusbmidi.ps: ezusbmidi.sgml descriptor.png
+ 	sgml2latex --output=ps $<
+@@ -27,7 +30,7 @@
+ 	fakeroot dpkg-buildpackage
+ 
+ clean:
+-	rm -rf sdcc
++	rm -rf sdcc*
+ 	rm -f [1-9] *.pdf *.html *.ps *.ihx *.tar.gz *.tar.bz2 ezusbmidi.spec
+ 	rm -rf debian/ezusbmidi debian/files build-stamp configure-stamp
+ 

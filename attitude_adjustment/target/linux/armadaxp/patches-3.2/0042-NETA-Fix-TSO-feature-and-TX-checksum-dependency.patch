@@ -1,0 +1,108 @@
+From d6a71f6a5b76907479f9c43b5481490317e4432c Mon Sep 17 00:00:00 2001
+From: Liron Kuch <lironk@localhost.localdomain>
+Date: Thu, 15 Dec 2011 16:09:13 +0200
+Subject: [PATCH 042/609] NETA: Fix TSO feature and TX checksum dependency
+
+Signed-off-by: Liron Kuch <lironk@localhost.localdomain>
+Signed-off-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c   |    9 ++++--
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |   31 +++++++++++++++-----
+ 2 files changed, 31 insertions(+), 9 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c
+index ee5f8aa..d2d486d 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c
+@@ -686,10 +686,15 @@ int mv_eth_tool_set_rx_csum(struct net_device *netdev, uint32_t data)
+ int mv_eth_tool_set_tx_csum(struct net_device *netdev, uint32_t data)
+ {
+ #ifdef CONFIG_MV_ETH_TX_CSUM_OFFLOAD
+-	if (data)
++	if (data) {
++		if (netdev->mtu > MV_ETH_TX_CSUM_MAX_SIZE) {
++			printk(KERN_ERR "Cannot set TX checksum when MTU > %d\n", MV_ETH_TX_CSUM_MAX_SIZE);
++			return -EOPNOTSUPP;
++		}
+ 		netdev->features |= NETIF_F_IP_CSUM;
+-	else
++	} else {
+ 		netdev->features &= ~NETIF_F_IP_CSUM;
++	}
+ 
+ 	return 0;
+ #else
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index c6a0bff..f39f8e0 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -178,6 +178,7 @@ static int  mv_eth_config_get(struct eth_port *pp, u8 *mac);
+ static int  mv_eth_hal_init(struct eth_port *pp);
+ struct net_device *mv_eth_netdev_init(struct eth_port *pp, int mtu, u8 *mac);
+ static void mv_eth_netdev_set_features(struct net_device *dev);
++static void mv_eth_netdev_update_features(struct net_device *dev);
+ 
+ static MV_STATUS mv_eth_pool_create(int pool, int capacity);
+ static int mv_eth_pool_add(int pool, int buf_num);
+@@ -4434,26 +4435,42 @@ void mv_eth_config_show(void)
+ 	printk(KERN_ERR "\n");
+ }
+ 
++/* Set network device features on initialization. Take into account default compile time configuration. */
+ static void mv_eth_netdev_set_features(struct net_device *dev)
+ {
+ 	dev->features = NETIF_F_SG | NETIF_F_LLTX;
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 34)
+-	dev->features |= NETIF_F_NTUPLE;
+-#endif
+ 
+ #ifdef CONFIG_MV_ETH_TX_CSUM_OFFLOAD_DEF
+ 	if (dev->mtu <= MV_ETH_TX_CSUM_MAX_SIZE)
+ 		dev->features |= NETIF_F_IP_CSUM;
+ #endif /* CONFIG_MV_ETH_TX_CSUM_OFFLOAD_DEF */
+ 
++#ifdef CONFIG_MV_ETH_TSO_DEF
++	if (dev->features & NETIF_F_IP_CSUM)
++		dev->features |= NETIF_F_TSO;
++#endif /* CONFIG_MV_ETH_TSO_DEF */
++
+ #ifdef CONFIG_MV_ETH_GRO_DEF
+ 	dev->features |= NETIF_F_GRO;
+ #endif /* CONFIG_MV_ETH_GRO_DEF */
++}
+ 
+-#ifdef CONFIG_MV_ETH_TSO_DEF
+-	dev->features |= NETIF_F_TSO;
+-#endif /* CONFIG_MV_ETH_TSO_DEF */
++/* Update network device features after changing MTU.	*/
++static void mv_eth_netdev_update_features(struct net_device *dev)
++{
++#ifdef CONFIG_MV_ETH_TX_CSUM_OFFLOAD
++	if (dev->mtu > MV_ETH_TX_CSUM_MAX_SIZE) {
++		dev->features &= ~NETIF_F_IP_CSUM;
++		printk(KERN_ERR "Removing NETIF_F_IP_CSUM in device %s features\n", dev->name);
++	}
++#endif /* CONFIG_MV_ETH_TX_CSUM_OFFLOAD */
+ 
++#ifdef CONFIG_MV_ETH_TSO
++	if (!(dev->features & NETIF_F_IP_CSUM)) {
++		dev->features &= ~NETIF_F_TSO;
++		printk(KERN_ERR "Removing NETIF_F_TSO in device %s features\n", dev->name);
++	}
++#endif /* CONFIG_MV_ETH_TSO */
+ }
+ 
+ int mv_eth_napi_set_cpu_affinity(int port, int group, int affinity)
+@@ -5170,7 +5187,7 @@ int mv_eth_change_mtu_internals(struct net_device *dev, int mtu)
+ 	}
+ 	dev->mtu = mtu;
+ 
+-	mv_eth_netdev_set_features(dev);
++	mv_eth_netdev_update_features(dev);
+ 
+ 	return 0;
+ }
+-- 
+1.7.9.5
+

@@ -1,0 +1,25 @@
+#!/bin/sh
+# override functions and find ubifs partition
+
+set_mtd_part() {
+    partname="syscfg"
+    mtdpart="$(find_mtd_part $partname)"
+}
+
+set_rom_part() {
+    rom=$(awk '/jffs2 ro/ {print $2}' /proc/mounts)
+}
+
+set_jffs_part() {
+	jffs=$(awk '/ubifs/ {print $2}' /proc/mounts | tail -n 1)
+}
+
+determine_rom_part() {
+    check_skip || {
+	set_rom_part
+	if [ -z "$rom" ]; then
+	    echo "You do not have a read-only jffs2 partition; aborting"
+	    exit 1
+	fi
+    }
+}

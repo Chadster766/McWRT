@@ -1,0 +1,201 @@
+From 9ed0d426684f3da5b95c6a892f496fb5e12ca001 Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Mon, 29 Aug 2011 17:06:02 +0300
+Subject: [PATCH 004/609] LCD: Dividers fix (ShadiA)
+
+Signed-off-by: Seif Mazareeb <seif@seif-desktop.(none)>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/core.c      |    1 +
+ drivers/video/marvell/dovefb_gfx.c |  104 +++++++++++++++++++-----------------
+ 2 files changed, 55 insertions(+), 50 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index 4b3df6c..5c8e72e 100644
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -1291,6 +1291,7 @@ static void __init axp_db_init(void)
+ 		kw_lcd0_dmi.lvds_info.enabled = 1;
+ 		kw_lcd0_dmi.fixed_full_div = 1;
+ 		kw_lcd0_dmi.full_div_val = 7;	
++//		kw_lcd0_dmi.lcd_ref_clk = 27000000;
+ 		printk(KERN_INFO "LCD Panel enabled.\n");
+ 	}
+ 	clcd_platform_init(&kw_lcd0_dmi, &kw_lcd0_vid_dmi, &dsmp_backlight_data);
+diff --git a/drivers/video/marvell/dovefb_gfx.c b/drivers/video/marvell/dovefb_gfx.c
+index e5e0db7..5770369 100644
+--- a/drivers/video/marvell/dovefb_gfx.c
++++ b/drivers/video/marvell/dovefb_gfx.c
+@@ -57,26 +57,25 @@ static const u8 edid_header[] = {
+         0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00
+ };
+ 
+-static u32 get_lcd_k_div_by_n_m(u32 f_in, u32 n_div, u32 m_div)
++static u32 get_lcd_k_div_by_ld(u32 tar_freq, u32 l_div)
+ {
+ 	u32 k = 1;
+-	u64 f_vco;
++	u64 f_out;
+ 
+-	/* Calculate K according to Fvco. */
+-	f_vco = f_in * n_div;
+-	do_div(f_vco, m_div);
+-	do_div(f_vco, 1000000);
++	/* Calculate K according to F-out. */
++	f_out = tar_freq / l_div;
++	do_div(f_out, 1000000);
+ 
+-	/* K is calculated according to (f_in * N / M). */
+-	if((f_vco >= 600) && (f_vco <= 2400))
++	/* K is calculated according to (tar_freq / ld). */
++	if((f_out >= 700) && (f_out <= 4000))
+ 		k = 1;
+-	else if((f_vco >= 300) && (f_vco < 600))
++	else if((f_out >= 350) && (f_out <= 2000))
+ 		k = 2;
+-	else if((f_vco >= 150) && (f_vco < 300))
++	else if((f_out >= 175) && (f_out <= 1000))
+ 		k = 4;
+-	else if((f_vco >= 75) && (f_vco < 150))
++	else if((f_out >= 87) && (f_out <= 500))
+ 		k = 8;
+-	else if(/*(f_vco >= 37) &&*/ (f_vco < 75))
++	else
+ 		k = 16;
+ 
+ 	return k;
+@@ -95,36 +94,38 @@ static void set_lcd_clock_dividers(struct dovefb_layer_info *dfli, u32 f_in,
+ 	f_vco = f_in * n_div;
+ 	do_div(f_vco, m_div);
+ 	do_div(f_vco, 1000000);
+-#if 0
+-	/* K is calculated according to (f_in * N / M). */
+-	if((f_vco >= 600) && (f_vco <= 2400))
+-		k = 1;
+-	else if((f_vco >= 300) && (f_vco < 600))
+-		k = 2;
+-	else if((f_vco >= 150) && (f_vco < 300))
+-		k = 4;
+-	else if((f_vco >= 75) && (f_vco < 150))
+-		k = 8;
+-	else if(/*(f_vco >= 37) &&*/ (f_vco < 75))
+-		k = 16;
+ 
+-	k = 1;
+-#endif
+ 	pll_vco = f_vco; //f_in * n_div;
+-	if(/*(pll_vco >= 600) &&*/ (pll_vco <= 720))
++	if(pll_vco <= 920)
+ 		pll_vco = 1;
+-	else if((pll_vco > 720) && (pll_vco <= 840))
++	else if(pll_vco <= 1140)
+ 		pll_vco = 2;
+-	else if((pll_vco > 840) && (pll_vco <= 960))
++	else if(pll_vco <= 1360)
+ 		pll_vco = 3;
+-	else if((pll_vco > 960) && (pll_vco <= 1080))
++	else if(pll_vco <= 1580)
+ 		pll_vco = 4;
+-	else if((pll_vco > 1080) && (pll_vco <= 1200))
++	else if(pll_vco <= 1800)
+ 		pll_vco = 5;
+-	else if((pll_vco > 1200) && (pll_vco <= 1320))
++	else if(pll_vco <= 2020)
+ 		pll_vco = 6;
+-	else
++	else if(pll_vco <= 2240)
+ 		pll_vco = 7;
++	else if(pll_vco <= 2460)
++		pll_vco = 8;
++	else if(pll_vco <= 2680)
++		pll_vco = 9;
++	else if(pll_vco <= 2900)
++		pll_vco = 10;
++	else if(pll_vco <= 3120)
++		pll_vco = 11;
++	else if(pll_vco <= 3340)
++		pll_vco = 12;
++	else if(pll_vco <= 3560)
++		pll_vco = 13;
++	else if(pll_vco <= 3780)
++		pll_vco = 14;
++	else
++		pll_vco = 15;
+ 
+ 	/* Set APLL LPF */
+ 	if (n_div <= 4)
+@@ -213,6 +214,7 @@ static void calc_best_clock_div(struct dovefb_info *info,  u32 tar_freq, u32 f_i
+ 	u32 half_div = 0;
+ 	u64 rem;
+ 	u64 temp;
++	u32 temp_32;
+ 	u32 n, m, x, k, ld;
+ 	int override = 0; 	/* Used to mark special cases where the LCD */
+ 	u32 n_max;
+@@ -222,7 +224,7 @@ static void calc_best_clock_div(struct dovefb_info *info,  u32 tar_freq, u32 f_i
+ 	if (info->fixed_full_div) {
+ 		x_start = info->full_div_val;
+ 		x_end = x_start + 1;
+-		ld_end = (64 << 10) + 1;
++		ld_end = 2;
+ 	} else {
+ 		x_start = 1;
+ 		x_end = 64;
+@@ -234,14 +236,17 @@ static void calc_best_clock_div(struct dovefb_info *info,  u32 tar_freq, u32 f_i
+ 	/* Look for the best N & M values assuming that we will NOT use the
+ 	** HALF divider.
+ 	*/
+-	for (n = 1; n < n_max; n++) {
+-		for(m = 1; m < 4; m++) {
+-			/* N * K must be smaller than 480 */
+-			k = get_lcd_k_div_by_n_m(f_in, n, m);
+-			if((n * k) > 480)
+-				continue;
+-			for(x = x_start; x < x_end; x++) {
+-				for(ld = 1; ld < ld_end; ld++) {
++
++	for(ld = 1; ld < ld_end; ld++) {
++		for (n = 1; n < n_max; n++) {
++			for(m = 1; m < 4; m++) {
++				/* N * K must be smaller than 480 */
++				k = get_lcd_k_div_by_ld(tar_freq, ld);
++				/* 700 < F_in * N / (M * K) < 4000 */
++				temp_32 = (((f_in * n) / 1000000) / m / k);
++				if ((temp_32 < (700 / k)) || (temp_32 > (4000 / k)))
++					continue;
++				for(x = x_start; x < x_end; x++) {
+ 					temp = (u64)f_in * (u64)n;
+ 					do_div(temp, m);
+ 					/* Fin * N / M Must be < 1500MHz */
+@@ -251,6 +256,7 @@ static void calc_best_clock_div(struct dovefb_info *info,  u32 tar_freq, u32 f_i
+ 					do_div(temp, x);
+ 					do_div(temp, ld);
+ 					rem = calc_diff(tar_freq, temp);
++					/* It's better not to select k = 1. */
+ 					if ((rem < best_rem) ||
+ 					    ((override == 1) && (rem == best_rem)) ||
+ 					    ((rem == best_rem) && (k < best_k))) {
+@@ -272,14 +278,12 @@ static void calc_best_clock_div(struct dovefb_info *info,  u32 tar_freq, u32 f_i
+ 	** HALF divider.
+ 	*/
+ 	if ((info->fixed_full_div == 0) && (best_rem != 0)) {
+-		for (n = 1; n < n_max; n++) {
+-			for(m = 1; m < 4; m++) {
+-				k = get_lcd_k_div_by_n_m(f_in, n, m);
+-				if((n * k) > 480)
+-					continue;
+-				/* Half div can be between 5.5 & 31.5 */
+-				for (x = 55; x <= 315; x += 10) {
+-					for(ld = 1; ld < ld_end; ld++) {
++		for(ld = 1; ld < ld_end; ld++) {
++			for (n = 1; n < n_max; n++) {
++				for(m = 1; m < 4; m++) {
++					k = get_lcd_k_div_by_ld(tar_freq, ld);
++					/* Half div can be between 5.5 & 31.5 */
++					for (x = 55; x <= 315; x += 10) {
+ 						temp = (u64)f_in * (u64)n * 10;
+ 						do_div(temp, m);
+ 						/* Fin * N / M Must be < 1500MHz */
+-- 
+1.7.9.5
+

@@ -1,0 +1,79 @@
+#!/bin/sh
+#
+# Webif post-install script.
+#
+
+
+#########################################################################################
+# functions
+
+TestInstall()
+{
+	this_version="__SVN_REVISION__"
+	installed_version=$(cat "${IPKG_INSTROOT}/www/.version")
+	if [ -f "/www/.version" ] && [ "$this_version" = "$installed_version" ]; then
+		echo "SUCCESS! Webif^2 installation appears OK. Welcome to X-Wrt!"
+		echo "You may need to do a hard REFRESH to clear old CSS style from your browser."
+	else
+		echo "WARNING: Installation may have failed."
+		echo " Detected r$installed_version is installed, but this is r$this_version."
+	fi
+}
+
+ExecuteIfExists()
+{
+	# $1 = exec name
+	# $2-$9 = params
+	[ -f "$1" ] && {
+		"$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9"
+	}
+}
+
+#########################################################################################
+# entry point
+
+# initialize webifmetabin binaries
+# todo: move back to makefile because this won't be cleaned up good
+ln -sf /usr/bin/webifmetabin "${IPKG_INSTROOT}/usr/bin/bstrip"
+ln -sf /usr/bin/webifmetabin "${IPKG_INSTROOT}/usr/bin/webif-page"
+ln -sf /usr/bin/webifmetabin "${IPKG_INSTROOT}/usr/bin/wepkeygen"
+ln -sf /usr/bin/webifmetabin "${IPKG_INSTROOT}/usr/bin/int2human"
+
+# only run below on 'real' system (not image builder)
+if [ -z "${IPKG_INSTROOT}" ]; then
+	. /etc/functions.sh
+	. /lib/config/uci.sh
+	#Force redetection at install time.
+	uci_set webif general firstboot 1
+	uci_commit webif
+
+	/etc/init.d/webif enable
+	/etc/init.d/custom-user-startup enable
+
+	# start X-Wrt specific services
+#	/etc/init.d/syslog enable
+	/etc/init.d/dmesgbackup enable
+	/etc/init.d/timezone enable
+	/etc/init.d/webiffirewalllog enable
+	
+	ExecuteIfExists "/etc/init.d/timezone" start
+	ExecuteIfExists "/etc/init.d/webif" start
+
+	# test installation successfulness
+	TestInstall
+	if [ -e /etc/httpd.conf ]; then
+		httpd_1=$(cat /tmp/httpd.conf.old)
+		httpd_2=$(cat /etc/httpd.conf)
+		[ "$httpd_1" != "$httpd_2" ] && {
+			echo "Reinitializing httpd ..."		
+			ExecuteIfExists "/etc/init.d/uhttpd" restart
+		}
+	fi
+
+fi
+
+#remove lock file if it exists otherwise it can cause issues on first apply.
+if [ -e "/tmp/.uci/webif.lock" ]; then
+	rm -f tmp/.uci/webif.lock
+fi
+exit 0

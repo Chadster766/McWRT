@@ -1,0 +1,62 @@
+diff -Naur imsniff.orig/docs/imsniff.conf.sample imsniff/docs/imsniff.conf.sample
+--- imsniff.orig/docs/imsniff.conf.sample	2005-05-23 21:14:06.000000000 +0300
++++ imsniff/docs/imsniff.conf.sample	2007-07-25 04:20:31.000000000 +0300
+@@ -1,7 +1,7 @@
+-daemonize = 0
++daemonize = 1
+ promisc = 0
+-verbose = 2
+-chatdir = /tmp/chats
+-debugdir = /tmp/debug
+-interface eth0
++verbose = 1
++chatdir = /var/log/imsnif
++debugdir = /var/log
++interface = eth0.1
+ 
+diff -Naur imsniff.orig/src/imsniff.cpp imsniff/src/imsniff.cpp
+--- imsniff.orig/src/imsniff.cpp	2005-09-02 15:52:28.000000000 +0300
++++ imsniff/src/imsniff.cpp	2007-07-25 03:14:00.000000000 +0300
+@@ -4,8 +4,8 @@
+ //char debuglogdir[1024]="/var/log";
+ 
+ 
+-char chatlogdir[MAX_DIR_LENGTH+1]="";
+-char debuglogdir[MAX_DIR_LENGTH+1]="";
++char chatlogdir[MAX_DIR_LENGTH+1]="/var/log/imsnif";
++char debuglogdir[MAX_DIR_LENGTH+1]="/var/log";
+ int daemonize=0;
+ char *currentversion = "0.04";
+ int data_offset = -1;
+@@ -652,7 +652,14 @@
+ 		c--;
+ 	c++; /* Start of real name */
+ 	if (strlen (c) == 0) /* Uh? */
++	{ //Jake's hack to read default configuration file if it exists.
++		f = fopen("/etc/imsnif.conf", "r");
++		if (f!=NULL)
++		{
++		    read_file (f);
++		}
+ 		return 0;
++	}
+ 	if (strchr (c, '%')!=NULL) /* Prevent strange things */
+ 		return -1;
+ 	fn = (char *) malloc (strlen (c) + 11);
+diff -Naur imsniff.orig/src/util.cpp imsniff/src/util.cpp
+--- imsniff.orig/src/util.cpp	2005-09-02 15:27:58.000000000 +0300
++++ imsniff/src/util.cpp	2007-07-25 04:17:36.000000000 +0300
+@@ -254,11 +254,11 @@
+ #ifdef WIN32
+ 			struct tm *stm;
+ 			stm= localtime (&now);
+-			sprintf (fn, "%s/imsniff_%04d-%02d-%02d.log", debuglogdir, stm->tm_year, stm->tm_mon, stm->tm_mday);
++			sprintf (fn, "%s/imsnif_%04d-%02d-%02d.log", debuglogdir, stm->tm_year, stm->tm_mon, stm->tm_mday);
+ #else
+ 			struct tm stm;
+ 			localtime_r (&now, &stm);
+-			sprintf (fn, "%s/imsniff_%04d-%02d-%02d.log", debuglogdir, stm.tm_year, stm.tm_mon, stm.tm_mday);
++			sprintf (fn, "%s/imsnif_%04d-%02d-%02d.log", debuglogdir, stm.tm_year, stm.tm_mon, stm.tm_mday);
+ #endif
+ 			FILE *o=fopen (fn, "a+t");
+ 			if (o!=NULL)

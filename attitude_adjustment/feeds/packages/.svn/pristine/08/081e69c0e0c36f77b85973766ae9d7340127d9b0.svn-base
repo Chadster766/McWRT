@@ -1,0 +1,112 @@
+diff -urN numpy-1.0.4/numpy/core/include/numpy/ufuncobject.h numpy-1.0.4.patched/numpy/core/include/numpy/ufuncobject.h
+--- numpy-1.0.4/numpy/core/include/numpy/ufuncobject.h	2007-11-07 22:05:15.000000000 +0000
++++ numpy-1.0.4.patched/numpy/core/include/numpy/ufuncobject.h	2008-05-25 11:07:14.000000000 +0100
+@@ -284,7 +284,7 @@
+ #elif defined(__GLIBC__) || defined(__APPLE__) || defined(__CYGWIN__) || defined(__MINGW32__)
+ 
+ #if defined(__GLIBC__) || defined(__APPLE__) || defined(__MINGW32__)
+-#include <fenv.h>
++#include "fenv/fenv.h"
+ #elif defined(__CYGWIN__)
+ #include "fenv/fenv.c"
+ #endif
+diff -urN numpy-1.0.4/numpy/core/setup.py numpy-1.0.4.patched/numpy/core/setup.py
+--- numpy-1.0.4/numpy/core/setup.py	2007-11-07 22:06:43.000000000 +0000
++++ numpy-1.0.4.patched/numpy/core/setup.py	2008-05-25 11:07:14.000000000 +0100
+@@ -36,6 +36,7 @@
+ 
+     def generate_config_h(ext, build_dir):
+         target = join(build_dir,'config.h')
++        log.info("-----------------------abc")
+         if newer(__file__,target):
+             config_cmd = config.get_config_cmd()
+             log.info('Generating %s',target)
+@@ -73,6 +74,7 @@
+                     nosmp = 1
+                 except KeyError:
+                     nosmp = 0
++            nosmp = 1
+             if nosmp: moredefs = [('NPY_ALLOW_THREADS', '0')]
+             else: moredefs = []
+             #
+@@ -123,8 +125,9 @@
+                     target_f.write('#define %s\n' % (d))
+                 else:
+                     target_f.write('#define %s %s\n' % (d[0],d[1]))
+-            if not nosmp:  # default is to use WITH_THREAD
+-                target_f.write('#ifdef WITH_THREAD\n#define NPY_ALLOW_THREADS 1\n#else\n#define NPY_ALLOW_THREADS 0\n#endif\n')
++            log.info("-----------------------abc")
++            #if not nosmp:  # default is to use WITH_THREAD
++            target_f.write('#ifdef WITH_THREAD\n#define NPY_ALLOW_THREADS 1\n#else\n#define NPY_ALLOW_THREADS 0\n#endif\n')
+             target_f.close()
+             print 'File:',target
+             target_f = open(target)
+diff -urN numpy-1.0.4/numpy/distutils/unixccompiler.py numpy-1.0.4.patched/numpy/distutils/unixccompiler.py
+--- numpy-1.0.4/numpy/distutils/unixccompiler.py	2007-11-07 22:05:15.000000000 +0000
++++ numpy-1.0.4.patched/numpy/distutils/unixccompiler.py	2008-05-25 11:07:14.000000000 +0100
+@@ -9,11 +9,36 @@
+ from numpy.distutils.ccompiler import replace_method
+ 
+ import log
++def UnixCCompiler__link_executable (self,
++                         objects,
++                         output_progname,
++                         output_dir=None,
++                         libraries=None,
++                         library_dirs=None,
++                         runtime_library_dirs=None,
++                         debug=0,
++                         extra_preargs=None,
++                         extra_postargs=None,
++                         target_lang=None):
++		if output_progname == "_configtest":
++			self.spawn(['gcc', '-lm', '-o',output_progname]+objects, display = "")
++		else:
++			print "#### Running " + str(CCompiler.EXECUTABLE)
++			self.link(CCompiler.EXECUTABLE, objects,
++                  self.executable_filename(output_progname), output_dir,
++                  libraries, library_dirs, runtime_library_dirs, None,
++                  debug, extra_preargs, extra_postargs+ ['-lm'], None, target_lang)
++
++replace_method(UnixCCompiler, 'link_executable', UnixCCompiler__link_executable)
+ 
+ # Note that UnixCCompiler._compile appeared in Python 2.3
+ def UnixCCompiler__compile(self, obj, src, ext, cc_args, extra_postargs, pp_opts):
+     display = '%s: %s' % (os.path.basename(self.compiler_so[0]),src)
+     try:
++      if src == "_configtest.c":
++        self.spawn(['gcc', '-fwrapv', '-O2', '-Wall', '-Wstrict-prototypes', '-I/umc/blogic/olpc/staging_dir/i386/usr/include', '-I/umc/blogic/olpc/staging_dir/i386/include', '-I/umc/blogic/olpc/staging_dir/i386/usr/include/python2.5','-I/umc/blogic/olpc/staging_dir/i386/usr/include', '-I/umc/blogic/olpc/staging_dir/i386/include', '-fPIC'] + cc_args + [src, '-o', obj] +
++                  extra_postargs, display = display)
++      else:
+         self.spawn(self.compiler_so + cc_args + [src, '-o', obj] +
+                    extra_postargs, display = display)
+     except DistutilsExecError, msg:
+diff -urN numpy-1.0.4/numpy/numarray/_capi.c numpy-1.0.4.patched/numpy/numarray/_capi.c
+--- numpy-1.0.4/numpy/numarray/_capi.c	2007-11-07 22:05:16.000000000 +0000
++++ numpy-1.0.4.patched/numpy/numarray/_capi.c	2008-05-25 11:07:14.000000000 +0100
+@@ -5,7 +5,7 @@
+ #include <float.h>
+ 
+ #if defined(__GLIBC__) || defined(__APPLE__) || defined(__MINGW32__)
+-#include <fenv.h>
++#include "numpy/fenv/fenv.h"
+ #elif defined(__CYGWIN__)
+ #include "numpy/fenv/fenv.h"
+ #include "numpy/fenv/fenv.c"
+diff -urN numpy-1.0.4.p2/numpy/core/setup.py numpy-1.0.4/numpy/core/setup.py
+--- numpy-1.0.4.p2/numpy/core/setup.py	2008-05-25 11:18:19.000000000 +0100
++++ numpy-1.0.4/numpy/core/setup.py	2008-05-25 11:18:52.000000000 +0100
+@@ -6,13 +6,11 @@
+ from distutils.dep_util import newer
+ 
+ FUNCTIONS_TO_CHECK = [
+-    ('expl', 'HAVE_LONGDOUBLE_FUNCS'),
+     ('expf', 'HAVE_FLOAT_FUNCS'),
+     ('log1p', 'HAVE_LOG1P'),
+     ('expm1', 'HAVE_EXPM1'),
+     ('asinh', 'HAVE_INVERSE_HYPERBOLIC'),
+     ('atanhf', 'HAVE_INVERSE_HYPERBOLIC_FLOAT'),
+-    ('atanhl', 'HAVE_INVERSE_HYPERBOLIC_LONGDOUBLE'),
+     ('isnan', 'HAVE_ISNAN'),
+     ('isinf', 'HAVE_ISINF'),
+     ('rint', 'HAVE_RINT'),

@@ -1,0 +1,225 @@
+Source-Makefile: target/linux/x86/Makefile
+Target: x86
+Target-Board: x86
+Target-Name: x86
+Target-Path: /home/chad/WRT1900AC/Mamba/attitude_adjustment
+Target-Arch: i386
+Target-Arch-Packages: x86
+Target-Features: ext4 jffs2 pci pcmcia rtc squashfs targz usb vdi vmdk
+Target-Depends: 
+Target-Optimization: -O2 -pipe -march=i486 -fno-caller-saves
+Linux-Version: 3.3.8
+Linux-Release: 1
+Linux-Kernel-Arch: x86
+Target-Description:
+
+@@
+Default-Packages: base-files libc libgcc busybox dropbear mtd uci opkg hotplug2 netifd dnsmasq iptables ppp ppp-mod-pppoe kmod-ipt-nathelper firewall
+Target: x86/generic
+Target-Board: x86
+Target-Name: Generic
+Target-Path: target/linux/x86
+Target-Arch: i386
+Target-Arch-Packages: x86
+Target-Features: display ext4 jffs2 pci pcie pcmcia rtc squashfs targz usb vdi vmdk
+Target-Depends: 
+Target-Optimization: -O2 -pipe -march=i486 -fno-caller-saves
+Linux-Version: 3.3.8
+Linux-Release: 1
+Linux-Kernel-Arch: x86
+Target-Description:
+	Build firmware images for x86 based boards
+	(e.g : Soekris, ...)
+@@
+Default-Packages: base-files libc libgcc busybox dropbear mtd uci opkg hotplug2 netifd dnsmasq iptables ppp ppp-mod-pppoe kmod-ipt-nathelper firewall
+Target-Profile: Generic
+Target-Profile-Name: Generic
+Target-Profile-Packages: kmod-3c59x kmod-e100 kmod-e1000 kmod-natsemi kmod-ne2k-pci kmod-pcnet32 kmod-8139too kmod-r8169 kmod-sis900 kmod-tg3 kmod-via-rhine kmod-via-velocity
+Target-Profile-Config: 
+
+@@
+Target-Profile-Description:
+	Generic Profile
+@@
+
+Target-Profile: Soekris45xx
+Target-Profile-Name: Soekris Net45xx
+Target-Profile-Packages: kmod-natsemi kmod-leds-net48xx kmod-wdt-sc520
+Target-Profile-Config: 
+
+@@
+Target-Profile-Description:
+        Package set compatible with the Soekris Net45xx. Net4511 and 4521 need PCMCIA Cardbus support. Please add manually.
+@@
+
+Target-Profile: Soekris48xx
+Target-Profile-Name: Soekris Net48xx
+Target-Profile-Packages: kmod-i2c-scx200 kmod-natsemi kmod-leds-net48xx kmod-gpio-scx200 kmod-wdt-scx200 kmod-hwmon-pc87360
+Target-Profile-Config: 
+
+@@
+Target-Profile-Description:
+        Package set compatible with the Soekris Net4801. Contains I2C/LEDS/GPIO/Sensors support
+@@
+
+Target-Profile: Wrap
+Target-Profile-Name: PCEngines WRAP
+Target-Profile-Packages: kmod-i2c-scx200 kmod-natsemi kmod-leds-wrap kmod-gpio-scx200 kmod-wdt-scx200 kmod-hwmon-pc87360
+Target-Profile-Config: 
+
+@@
+Target-Profile-Description:
+	Package set compatible with the PCEngines WRAP. Contains I2C/LEDS/GPIO/Sensors support
+@@
+
+Target: x86/olpc
+Target-Board: x86
+Target-Name: OLPC XO-1
+Target-Path: target/linux/x86
+Target-Arch: i386
+Target-Arch-Packages: x86
+Target-Features: display ext4 gpio jffs2 pci pcmcia rtc squashfs targz usb vdi vmdk
+Target-Depends: 
+Target-Optimization: -O2 -pipe -march=i486 -fno-caller-saves
+Linux-Version: 3.3.8
+Linux-Release: 1
+Linux-Kernel-Arch: x86
+Target-Description:
+
+@@
+Default-Packages: base-files libc libgcc busybox dropbear mtd uci opkg hotplug2 netifd kmod-natsemi kmod-ne2k-pci kmod-libertas dnsmasq iptables ppp ppp-mod-pppoe kmod-ipt-nathelper firewall
+Target: x86/xen_domu
+Target-Board: x86
+Target-Name: Xen Paravirt Guest
+Target-Path: target/linux/x86
+Target-Arch: i386
+Target-Arch-Packages: x86
+Target-Features: =display pci rtc usb
+Target-Depends: 
+Target-Optimization: -O2 -pipe -march=i486 -fno-caller-saves
+Linux-Version: 3.3.8
+Linux-Release: 1
+Linux-Kernel-Arch: x86
+Target-Description:
+
+@@
+Default-Packages: base-files libc libgcc busybox dropbear mtd uci opkg hotplug2 netifd kmod-xen-fs kmod-xen-evtchn kmod-xen-netdev kmod-xen-kbddev dnsmasq iptables ppp ppp-mod-pppoe kmod-ipt-nathelper firewall
+Target: x86/ep80579
+Target-Board: x86
+Target-Name: Intel EP80579
+Target-Path: target/linux/x86
+Target-Arch: i386
+Target-Arch-Packages: x86
+Target-Features: ext4 jffs2 pci pcmcia rtc squashfs targz usb vdi vmdk
+Target-Depends: 
+Target-Optimization: -O2 -pipe -march=i486 -fno-caller-saves
+Linux-Version: 3.3.8
+Linux-Release: 1
+Linux-Kernel-Arch: x86
+Target-Description:
+	Build firmware images for Intel EP80579 based boards
+	(e.g : ADI Engineering Ocracoke Island)
+@@
+Default-Packages: base-files libc libgcc busybox dropbear mtd uci opkg hotplug2 netifd kmod-ep80579-can kmod-ep80579-eth kmod-ep80579-misc kmod-usb-core kmod-usb2 kmod-usb-hid kmod-usb-uhci dnsmasq iptables ppp ppp-mod-pppoe kmod-ipt-nathelper firewall
+Target: x86/net5501
+Target-Board: x86
+Target-Name: Soekris net5501
+Target-Path: target/linux/x86
+Target-Arch: i386
+Target-Arch-Packages: x86
+Target-Features: ext4 gpio jffs2 pci rtc squashfs usb
+Target-Depends: 
+Target-Optimization:  -march=geode -Os -mmmx -m3dnow -fno-align-jumps -fno-align-functions -fno-align-labels -fno-align-loops -pipe -fomit-frame-pointer
+Linux-Version: 3.3.8
+Linux-Release: 1
+Linux-Kernel-Arch: x86
+Target-Description:
+	Build firmware images for Soekris net5501 board
+@@
+Default-Packages: base-files libc libgcc busybox dropbear mtd uci opkg hotplug2 netifd kmod-crypto-hw-geode kmod-crypto-ocf kmod-gpio-cs5535-new kmod-gpio-nsc kmod-wdt-geode kmod-cs5535-clockevt kmod-cs5535-mfgpt kmod-cs5536 kmod-hwmon-core kmod-hwmon-pc87360 kmod-gpio-pc8736x kmod-via-rhine kmod-solos-pci kmod-i2c-core kmod-i2c-gpio kmod-i2c-algo-bit kmod-i2c-algo-pca kmod-i2c-algo-pcf kmod-i2c-scx200-acb kmod-usb-core kmod-usb2 kmod-usb-ohci kmod-cfg80211 kmod-mac80211 kmod-mppe kmod-pppoe kmod-pppoa kmod-pppol2tp kmod-ath kmod-ath5k kmod-ath9k kmod-leds-gpio kmod-input-gpio-keys-polled kmod-button-hotplug kmod-ledtrig-heartbeat kmod-ledtrig-gpio kmod-ledtrig-netdev kmod-cpu-msr hwclock wpad dnsmasq iptables ppp ppp-mod-pppoe kmod-ipt-nathelper firewall
+Target: x86/kvm_guest
+Target-Board: x86
+Target-Name: KVM Guest
+Target-Path: target/linux/x86
+Target-Arch: i386
+Target-Arch-Packages: x86
+Target-Features: display ext4 jffs2 pci pcie pcmcia rtc squashfs targz usb vdi vmdk
+Target-Depends: 
+Target-Optimization: -O2 -pipe -march=i486 -fno-caller-saves
+Linux-Version: 3.3.8
+Linux-Release: 1
+Linux-Kernel-Arch: x86
+Target-Description:
+
+@@
+Default-Packages: base-files libc libgcc busybox dropbear mtd uci opkg hotplug2 netifd kmod-virtio-balloon kmod-virtio-net kmod-virtio-random dnsmasq iptables ppp ppp-mod-pppoe kmod-ipt-nathelper firewall
+Target: x86/geos
+Target-Board: x86
+Target-Name: Traverse Geos
+Target-Path: target/linux/x86
+Target-Arch: i386
+Target-Arch-Packages: x86
+Target-Features: ext4 gpio jffs2 pci rtc squashfs usb
+Target-Depends: 
+Target-Optimization:  -march=geode -Os -mmmx -m3dnow -fno-align-jumps -fno-align-functions -fno-align-labels -fno-align-loops -pipe -fomit-frame-pointer
+Linux-Version: 3.3.8
+Linux-Release: 1
+Linux-Kernel-Arch: x86
+Target-Description:
+    Build firmware images for Traverse Geos board
+@@
+Default-Packages: base-files libc libgcc busybox dropbear mtd uci opkg hotplug2 netifd kmod-crypto-hw-geode kmod-crypto-ocf kmod-gpio-cs5535-new kmod-gpio-nsc kmod-wdt-geode kmod-cs5535-clockevt kmod-cs5535-mfgpt kmod-cs5536 kmod-hwmon-core kmod-hwmon-lm90 kmod-8139cp kmod-solos-pci kmod-sched kmod-i2c-core kmod-i2c-gpio kmod-i2c-algo-bit kmod-i2c-algo-pca kmod-i2c-algo-pcf kmod-i2c-scx200-acb kmod-usb-core kmod-usb2 kmod-usb-ohci kmod-cfg80211 kmod-mac80211 kmod-mppe kmod-pppoa kmod-pppol2tp kmod-ath5k kmod-ath9k kmod-leds-gpio kmod-input-gpio-keys-polled kmod-button-hotplug kmod-ledtrig-heartbeat kmod-ledtrig-gpio kmod-ledtrig-netdev kmod-cpu-msr soloscli linux-atm br2684ctl ppp-mod-pppoa pppdump pppstats hwclock wpad flashrom tc dnsmasq iptables ppp ppp-mod-pppoe kmod-ipt-nathelper firewall
+Target: x86/alix2
+Target-Board: x86
+Target-Name: PCEngines alix2
+Target-Path: target/linux/x86
+Target-Arch: i386
+Target-Arch-Packages: x86
+Target-Features: ext4 gpio jffs2 pci rtc squashfs usb
+Target-Depends: 
+Target-Optimization:  -march=geode -Os -mmmx -m3dnow -fno-align-jumps -fno-align-functions -fno-align-labels -fno-align-loops -pipe -fomit-frame-pointer
+Linux-Version: 3.3.8
+Linux-Release: 1
+Linux-Kernel-Arch: x86
+Target-Description:
+	Build firmware images for PCEngines alix2 board
+@@
+Default-Packages: base-files libc libgcc busybox dropbear mtd uci opkg hotplug2 netifd kmod-crypto-hw-geode kmod-crypto-ocf kmod-crypto-aes kmod-crypto-cbc kmod-gpio-cs5535-new kmod-gpio-nsc kmod-wdt-geode kmod-cs5535-clockevt kmod-cs5535-mfgpt kmod-cs5536 kmod-hwmon-core kmod-hwmon-lm90 kmod-via-rhine kmod-i2c-core kmod-i2c-gpio kmod-i2c-algo-bit kmod-i2c-algo-pca kmod-i2c-algo-pcf kmod-i2c-scx200-acb kmod-usb-core kmod-usb2 kmod-usb-ohci kmod-cfg80211 kmod-mac80211 kmod-mppe kmod-pppoe kmod-pppol2tp kmod-ath5k kmod-ath9k kmod-leds-gpio kmod-input-gpio-keys-polled kmod-button-hotplug kmod-ledtrig-heartbeat kmod-ledtrig-gpio kmod-ledtrig-netdev kmod-cpu-msr hwclock wpad dnsmasq iptables ppp ppp-mod-pppoe kmod-ipt-nathelper firewall
+Target: x86/thincan
+Target-Board: x86
+Target-Name: Artec ThinCan
+Target-Path: target/linux/x86
+Target-Arch: i386
+Target-Arch-Packages: x86
+Target-Features: ext4 jffs2 pci pcmcia rtc squashfs targz usb vdi vmdk
+Target-Depends: 
+Target-Optimization: -O2 -pipe -march=geode -mtune=geode -funit-at-a-time
+Linux-Version: 3.3.8
+Linux-Release: 1
+Linux-Kernel-Arch: x86
+Target-Description:
+	Build firmware images for Artec ThinCan
+
+	Note that NBD, NFS, DHCP and ethernet module are built into kernel
+@@
+Default-Packages: base-files busybox hotplug2 libc libgcc opkg uci udevtrigger kmod-fs-msdos kmod-fs-vfat kmod-fs-ext2 kmod-fs-ext3 kmod-fs-ext4 kmod-usb-core kmod-usb-ohci kmod-usb-hid kmod-usb-storage kmod-usb2 kmod-sound-core kmod-sound-cs5535audio kmod-crypto-core kmod-crypto-hw-geode kmod-crypto-ocf kmod-crypto-aes 
+Target-Profile: DBE61
+Target-Profile-Name: DBE61
+Target-Profile-Packages: 
+Target-Profile-Config: 
+
+@@
+Target-Profile-Description:
+	Compile OpenWrt for Artec ThinCan DBE61
+
+	ThinCan DBE61 is a thin-client featuring:
+	  * AMD Geode LX700
+	  * AMD CS5535 companion device
+	  * 64MB or 256MB NAND Flash or none
+	  * 128MB or 256MB DDR SDRAM
+	  * Realtek RTL8139
+
+	http://wiki.thincan.org/DBE61
+@@
+
+

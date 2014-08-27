@@ -1,0 +1,58 @@
+From b620ad297fdce2ecb7b1f7e44b3f5f9032bfa1df Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Mon, 25 Feb 2013 14:01:16 +0200
+Subject: [PATCH 546/609] sflash,hal: Fix improper SPI Flash behavior on HE &
+ GP boards due to missing define
+
+- Added MV_M25Q128_ADDR_CYC_CNT definition
+- SPI partitions were visible in the system (/proc/mtd) however all SFlash
+  partitions were pointing to the same location in Flash. In addition, the
+  data that could be found under SPI Flash related mtd devices was not entirely
+  consistent with the actual state.
+  Because of missing define, SFlash related routines were operating on a wrong
+  data and issuing improper commands.
+
+Signed-off-by: Zbigniew Bodek <zbb@semihalf.com>
+
+Change-Id: Ia3927d6bf299f07bc1a371a92ec21219ede7db03
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1184
+Reviewed-by: Neta Zur Hershkovits <neta@marvell.com>
+Reviewed-by: Star_Automation <star@marvell.com>
+Reviewed-by: Eli Nidam <elini@marvell.com>
+Reviewed-by: Kosta Zertsekel <konszert@marvell.com>
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Tested-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c     |    2 +-
+ arch/arm/plat-armada/mv_hal/sflash/mvSFlashSpec.h |    1 +
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c b/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c
+index 3be5237..d1be5a2 100644
+--- a/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c
++++ b/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c
+@@ -203,7 +203,7 @@ static MV_SFLASH_DEVICE_PARAMS sflash[] = {
+ 	MV_M25Q128_MAX_SPI_FREQ,
+ 	MV_M25Q128_MAX_FAST_SPI_FREQ,
+ 	MV_M25Q128_FAST_READ_DUMMY_BYTES,
+-	MV_M25P128_ADDR_CYC_CNT
++	MV_M25Q128_ADDR_CYC_CNT
+     },
+     /* Macronix MXIC MX25L6405 SPI flash, 8MB, 128 sectors of 64K each */
+     {
+diff --git a/arch/arm/plat-armada/mv_hal/sflash/mvSFlashSpec.h b/arch/arm/plat-armada/mv_hal/sflash/mvSFlashSpec.h
+index 7c50289..aef8a9c 100644
+--- a/arch/arm/plat-armada/mv_hal/sflash/mvSFlashSpec.h
++++ b/arch/arm/plat-armada/mv_hal/sflash/mvSFlashSpec.h
+@@ -131,6 +131,7 @@ extern "C" {
+ #define     MV_M25Q128_MAX_SPI_FREQ             20000000    /* 20MHz */
+ #define     MV_M25Q128_MAX_FAST_SPI_FREQ        50000000    /* 50MHz */
+ #define     MV_M25Q128_FAST_READ_DUMMY_BYTES    1
++#define     MV_M25Q128_ADDR_CYC_CNT             3
+ 
+ 
+ /* Sector Sizes and population per device model*/
+-- 
+1.7.9.5
+

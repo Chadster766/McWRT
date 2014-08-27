@@ -1,0 +1,93 @@
+From 769177b479aa4f480684dd7ae06da6486ad65a84 Mon Sep 17 00:00:00 2001
+From: Yoni Farhadian <yonif@marvell.com>
+Date: Thu, 26 Apr 2012 11:42:52 +0300
+Subject: [PATCH 162/609] PNC - L3 fows to rxq map. Fix sysfs + number of
+ entries
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig |    9 +++++++++
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |    5 ++++-
+ .../mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c         |    6 ------
+ arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h       |    3 +--
+ 4 files changed, 14 insertions(+), 9 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
+index 5882663..976c6c8 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
+@@ -272,6 +272,15 @@ config MV_ETH_PNC_L3_FLOW
+         Use PNC rules for IPv4 and IPv6 Flows processing.
+         When enabled, MV_ETH_PNC_WOL will be disabled.
+ 
++config MV_ETH_PNC_L3_FLOW_LINES
++	depends on MV_ETH_PNC_L3_FLOW
++        int "Number of PNC L3 flows entries"
++        range 20 256
++        default 25
++        ---help---
++        Number of PNC L3 flows entries
++
++
+ config MV_ETH_PNC_WOL
+ 	depends on MV_ETH_PNC
+ 	bool "Use PNC for Wake On LAN support"
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 9d1c50f..5ab45b1 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -3604,9 +3604,12 @@ void mv_eth_config_show(void)
+ /* Set network device features on initialization. Take into account default compile time configuration. */
+ static void mv_eth_netdev_set_features(struct net_device *dev)
+ {
+-	dev->features 	 = NETIF_F_SG  | NETIF_F_LLTX | NETIF_F_NTUPLE;
++	dev->features 	 = NETIF_F_SG  | NETIF_F_LLTX;
+ 	dev->hw_features = NETIF_F_IP_CSUM | NETIF_F_SG;
+ 
++#ifdef CONFIG_MV_ETH_PNC_L3_FLOW
++	dev->features |= NETIF_F_NTUPLE;
++#endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
+ #if defined(MV_ETH_PNC_LB) && defined(CONFIG_MV_ETH_PNC)
+ 	dev->hw_features |= NETIF_F_RXHASH;
+ #endif
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c
+index c333ef3..b2e8d5d 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c
+@@ -394,12 +394,6 @@ int __devinit pnc_sysfs_init(void)
+ 		pd = &platform_bus;
+ 	}
+ 
+-	err = sysfs_create_group(&pd->kobj, &pnc_group);
+-	if (err) {
+-		printk(KERN_INFO "sysfs group failed %d\n", err);
+-		goto out;
+-	}
+-
+ 	pnc_kobj = kobject_create_and_add("pnc", &pd->kobj);
+ 	if (!pnc_kobj) {
+ 		printk(KERN_INFO "could not create pnc kobject\n");
+diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
+index 9498a23..570db18 100755
+--- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
++++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
+@@ -127,7 +127,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define NETA_PNC_PPPOE      (RI_PPPOE >> 9)
+ #define NETA_PNC_RX_SPECIAL (RI_RX_SPECIAL >> 9)
+ 
+-#define CONFIG_MV_PNC_L3_FLOW_LINES 20
+ /*---------------------------------------------------------------------------*/
+ 
+ MV_STATUS   mvPncInit(MV_U8 *pncVirtBase);
+@@ -188,7 +187,7 @@ enum {
+ #ifdef CONFIG_MV_ETH_PNC_L3_FLOW
+ 	/* Session Lookup for IPv4 and IPv6 */
+ 	TE_FLOW_L3,
+-	TE_FLOW_L3_END = TE_FLOW_L3 + CONFIG_MV_PNC_L3_FLOW_LINES - 1,
++	TE_FLOW_L3_END = TE_FLOW_L3 + CONFIG_MV_ETH_PNC_L3_FLOW_LINES - 1,
+ 	TE_FLOW_IP4_EOF,
+ 	TE_FLOW_IP6_A_EOF,
+ 	TE_FLOW_IP6_B_EOF,
+-- 
+1.7.9.5
+

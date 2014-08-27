@@ -1,0 +1,211 @@
+From 4f8b7cc015d47cb877523ccf382065320efdedea Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Sun, 2 Sep 2012 12:55:54 +0300
+Subject: [PATCH 274/609] Fix IO window config when using more than 4GB DRAM
+
+The issue happens when BM is enabled in the GBe driver and causes
+an address overlap between the BM window and the DRAM when accessed
+from the IO engine (not from CPU).
+
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.c    |  124 ++++++++++++++++----
+ arch/arm/mach-armadaxp/config/mvSysHwConfig.h      |    4 +
+ arch/arm/mach-armadaxp/include/mach/armadaxp.h     |    5 +
+ 3 files changed, 109 insertions(+), 24 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.c
+index 6a15521..96026aa 100755
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.c
+@@ -201,10 +201,13 @@ MV_TARGET mvCtrlTargetByWinInfoGet(MV_UNIT_WIN_INFO *unitWinInfo)
+ MV_STATUS mvCtrlAddrWinMapBuild(MV_UNIT_WIN_INFO *pAddrWinMap, MV_U32 len)
+ {
+ 	MV_CPU_DEC_WIN cpuAddrDecWin;
+-	MV_U32 i;
++	MV_U32 i, j;
+ 	MV_TARGET_ATTRIB targetAttrib;
+ 	MV_STATUS status;
+ 	MV_U64 startAddr, endAddr;
++	MV_UNIT_WIN_INFO ioDdrWin[4];
++	MV_U32 base;
++	MV_U64 size;
+ 
+ 	/* Check size of CPU address win table */
+ 	if (len <= MAX_TARGETS) {
+@@ -212,44 +215,117 @@ MV_STATUS mvCtrlAddrWinMapBuild(MV_UNIT_WIN_INFO *pAddrWinMap, MV_U32 len)
+ 		return MV_BAD_PARAM;
+ 	}
+ 
+-	/* Fill in the pAddrWinMap fields       */
+-	for (i = 0; i < MAX_TARGETS; i++) {
++	/* Prepare an array of DRAM info */
++	base = 0x0;
++	j = 0;
++	for (i = SDRAM_CS0; i <= SDRAM_CS3; i++) {
+ 		status = mvCpuIfTargetWinGet(i, &cpuAddrDecWin);
+ 		if (status != MV_OK) {
+ 			if (status == MV_NO_SUCH) {
+-				pAddrWinMap[i].enable = MV_FALSE;
++				ioDdrWin[i].enable = MV_FALSE;
+ 				continue;
+ 			} else {
+ 				mvOsPrintf("mvCtrlAddrWinMapBuild() - mvCpuIfTargetWinGet() failed.\n");
+ 				return MV_ERROR;
+ 			}
+ 		}
+-		if (MV_TARGET_IS_DRAM(i)) {
+-			/* As all IO address decode windows support only 32-bit
+-			** addresses, limit the DRAM base / size to 4GB max.
+-			*/
+-			startAddr = (MV_U64)((((MV_U64)cpuAddrDecWin.addrWin.baseHigh << 32ll)) +
+-					(MV_U64)cpuAddrDecWin.addrWin.baseLow);
+-			endAddr = (MV_U64)(startAddr + (MV_U64)cpuAddrDecWin.addrWin.size) - 1;
+-			if (endAddr > 0xFFFFFFFFll) {
+-				if (startAddr <= 0xFFFFFFFFll)
+-					cpuAddrDecWin.addrWin.size = (0x100000000ll - cpuAddrDecWin.addrWin.baseLow);
+-				else
+-					cpuAddrDecWin.enable = MV_FALSE;	
+-			}
++
++		/* As all IO address decode windows support only 32-bit
++		** addresses, limit the DRAM base / size to 4GB max.
++		*/
++		startAddr = (MV_U64)((((MV_U64)cpuAddrDecWin.addrWin.baseHigh << 32ll)) +
++				(MV_U64)cpuAddrDecWin.addrWin.baseLow);
++		endAddr = (MV_U64)(startAddr + (MV_U64)cpuAddrDecWin.addrWin.size) - 1;
++		if (endAddr > 0xFFFFFFFFll) {
++			if (startAddr <= 0xFFFFFFFFll)
++				cpuAddrDecWin.addrWin.size = (0x100000000ll -
++						cpuAddrDecWin.addrWin.baseLow);
++			else
++				cpuAddrDecWin.enable = MV_FALSE;
+ 		}
+ 
+-		pAddrWinMap[i].addrWin.baseLow = cpuAddrDecWin.addrWin.baseLow;
+-		pAddrWinMap[i].addrWin.baseHigh = cpuAddrDecWin.addrWin.baseHigh;
+-		pAddrWinMap[i].addrWin.size = cpuAddrDecWin.addrWin.size;
+-		pAddrWinMap[i].enable = cpuAddrDecWin.enable;
++		if (cpuAddrDecWin.enable == MV_FALSE)
++			continue;
++
++		/* If the endAddr passes minBase, then we need to split
++		** this window to several windows up to minBase.
++		** For example: minBase=0xE0000000, and CS0=2, CS1=2G,
++		** Then we need to split the windwos as follows:
++		** Win0: CS-0, 2GB (Base 0x0)
++		** win1: CS-1, 1GB (Base 0x80000000)
++		** Win2: CS-1, 0.5GB (Base 0xC0000000)
++		*/
++		if (endAddr > MV_DRAM_IO_RESERVE_BASE)
++			/* Need to cut down this CS to IO reserve base
++			** address.
++			*/
++			size = MV_DRAM_IO_RESERVE_BASE -
++				cpuAddrDecWin.addrWin.baseLow;
++		else
++			size = cpuAddrDecWin.addrWin.size;
+ 
+ 		if (mvCtrlAttribGet(i, &targetAttrib) != MV_OK) {
+-			mvOsPrintf("mvCtrlAddrWinMapBuild() - mvCtrlAttribGet() failed.\n");
++			mvOsPrintf("mvCtrlAddrWinMapBuild() - "
++					"mvCtrlAttribGet() failed.\n");
+ 			return MV_ERROR;
+ 		}
+-		pAddrWinMap[i].attrib = targetAttrib.attrib;
+-		pAddrWinMap[i].targetId = targetAttrib.targetId;
++		/* Now, spread the last CS into several windows, and make sure
++		** that each of has a power-of-2 size.
++		*/
++		while (size != 0) {
++			ioDdrWin[j].enable = MV_TRUE;
++			ioDdrWin[j].attrib = targetAttrib.attrib;
++			ioDdrWin[j].targetId = targetAttrib.targetId;
++			ioDdrWin[j].addrWin.baseHigh = 0;
++			if (MV_IS_POWER_OF_2(size))
++				ioDdrWin[j].addrWin.size = size;
++			else
++				ioDdrWin[j].addrWin.size = (MV_U64)(1ll << (MV_U64)mvLog2(size));
++			size -= ioDdrWin[j].addrWin.size;
++			ioDdrWin[j].addrWin.baseLow = base;
++			base += ioDdrWin[j].addrWin.size;
++			j++;
++		}
++	}
++
++	/* Fill in the pAddrWinMap fields       */
++	for (i = 0; i < MAX_TARGETS; i++) {
++		if (MV_TARGET_IS_DRAM(i)) {
++			pAddrWinMap[i].addrWin.baseLow = ioDdrWin[i].addrWin.baseLow;
++			pAddrWinMap[i].addrWin.baseHigh = ioDdrWin[i].addrWin.baseHigh;
++			pAddrWinMap[i].addrWin.size = ioDdrWin[i].addrWin.size;
++			pAddrWinMap[i].enable = ioDdrWin[i].enable;
++			pAddrWinMap[i].attrib = ioDdrWin[i].attrib;
++			pAddrWinMap[i].targetId = ioDdrWin[i].targetId;
++		} else {
++			status = mvCpuIfTargetWinGet(i, &cpuAddrDecWin);
++			if (status != MV_OK) {
++				if (status == MV_NO_SUCH) {
++					pAddrWinMap[i].enable = MV_FALSE;
++					continue;
++				} else {
++					mvOsPrintf("mvCtrlAddrWinMapBuild()"
++					" - mvCpuIfTargetWinGet() failed.\n");
++					return MV_ERROR;
++				}
++			}
++
++			pAddrWinMap[i].addrWin.baseLow =
++				cpuAddrDecWin.addrWin.baseLow;
++			pAddrWinMap[i].addrWin.baseHigh =
++				cpuAddrDecWin.addrWin.baseHigh;
++			pAddrWinMap[i].addrWin.size =
++				cpuAddrDecWin.addrWin.size;
++			pAddrWinMap[i].enable = cpuAddrDecWin.enable;
++
++			if (mvCtrlAttribGet(i, &targetAttrib) != MV_OK) {
++				mvOsPrintf("mvCtrlAddrWinMapBuild() - "
++						"mvCtrlAttribGet() failed.\n");
++				return MV_ERROR;
++			}
++			pAddrWinMap[i].attrib = targetAttrib.attrib;
++			pAddrWinMap[i].targetId = targetAttrib.targetId;
++		}
+ 	}
+ 	pAddrWinMap[i].addrWin.baseLow = TBL_TERM;
+ 	pAddrWinMap[i].addrWin.baseHigh = TBL_TERM;
+diff --git a/arch/arm/mach-armadaxp/config/mvSysHwConfig.h b/arch/arm/mach-armadaxp/config/mvSysHwConfig.h
+index b0f7c6e..25e0f13 100755
+--- a/arch/arm/mach-armadaxp/config/mvSysHwConfig.h
++++ b/arch/arm/mach-armadaxp/config/mvSysHwConfig.h
+@@ -58,6 +58,10 @@ disclaimer.
+ #define _1G         0x40000000
+ #define _2G         0x80000000
+ 
++#ifdef CONFIG_DRAM_IO_RESERVE_BASE
++#define MV_DRAM_IO_RESERVE_BASE	CONFIG_DRAM_IO_RESERVE_BASE
++#endif
++
+ /****************************************/
+ /* Soc supporeted Units definitions	*/
+ /****************************************/
+diff --git a/arch/arm/mach-armadaxp/include/mach/armadaxp.h b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
+index 26a63aa..05e9bff 100644
+--- a/arch/arm/mach-armadaxp/include/mach/armadaxp.h
++++ b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
+@@ -19,6 +19,11 @@
+ /******************* System Address Mapping *********************/
+ /****************************************************************/
+ 
++/* The base address of memory that should be reserved for IO windows.
++** The reserved end address is 0xFFFFFFFF.
++*/
++#define CONFIG_DRAM_IO_RESERVE_BASE	0xC0000000ll
++
+ /*
+  * Armada-XP address maps.
+  *
+-- 
+1.7.9.5
+

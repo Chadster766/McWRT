@@ -1,0 +1,31 @@
+--- a/tools/autoconf.c
++++ b/tools/autoconf.c
+@@ -222,6 +222,9 @@
+ 
+ int checkendian()
+ {
++#ifdef ENDIANESS
++    return ENDIANESS;
++#else
+     char xyz[]="\x01\x02\x03\x04";
+     unsigned long *lp;    
+     unsigned long result;
+@@ -229,6 +232,7 @@
+     result=*lp;
+     if(result==67305985) return 0x1;
+     return 0x0;
++#endif
+ }
+ 
+ int main()
+--- a/Makefile
++++ b/Makefile
+@@ -7,7 +7,7 @@
+ 	@$(HOSTCC) tools/convconf.c -o tools/convconf
+ 	@tools/convconf
+ 	@echo [*] Running Autoconfig.
+-	@$(HOSTCC) -I. tools/autoconf.c -o tools/autoconf
++	@$(HOSTCC) -I. -DENDIANESS=$(ENDIANESS) tools/autoconf.c -o tools/autoconf
+ 	@tools/autoconf
+ 	@echo [*] Compiling MakeSalt for Encryption..
+ 	@$(HOSTCC) -I. -o makesalt tools/makesalt.c

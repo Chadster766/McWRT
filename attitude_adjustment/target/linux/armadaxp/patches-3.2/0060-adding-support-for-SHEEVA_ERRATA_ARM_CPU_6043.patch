@@ -1,0 +1,178 @@
+From 290abc9d43dcd54b7b9088eee4cdcf07d6b23eb5 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Mon, 9 Jan 2012 14:53:45 +0200
+Subject: [PATCH 060/609] adding support for SHEEVA_ERRATA_ARM_CPU_6043
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/include/asm/tlbflush.h                    |   10 ++++++++++
+ arch/arm/mm/Kconfig                                |   19 +++++++++++++++++++
+ arch/arm/mm/cache-v7.S                             |   10 +++++++++-
+ arch/arm/plat-armada/linux_oss/mvOs.h              |   18 +++++++++++++++++-
+ .../plat-armada/mv_drivers_lsp/mv_xor/mv_netdma.c  |    5 +++++
+ 5 files changed, 60 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/include/asm/tlbflush.h b/arch/arm/include/asm/tlbflush.h
+index d794718..3ba837c 100644
+--- a/arch/arm/include/asm/tlbflush.h
++++ b/arch/arm/include/asm/tlbflush.h
+@@ -489,8 +489,13 @@ static inline void flush_pmd_entry(void *pmd)
+         	raw_local_irq_save(flags);
+ 		dmb();
+ #endif
++#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043
++		asm("mcr        p15, 0, %0, c7, c14, 1  @ flush_pmd"
++                        : : "r" (pmd) : "cc");
++#else
+ 		asm("mcr	p15, 0, %0, c7, c10, 1	@ flush_pmd"
+ 			: : "r" (pmd) : "cc");
++#endif
+ #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_4611
+ 		raw_local_irq_restore(flags);
+ 	}
+@@ -519,8 +524,13 @@ static inline void clean_pmd_entry(void *pmd)
+                 raw_local_irq_save(flags);
+                 dmb();
+ #endif
++#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043
++		asm("mcr        p15, 0, %0, c7, c14, 1  @ flush_pmd"
++                        : : "r" (pmd) : "cc");
++#else
+ 		asm("mcr	p15, 0, %0, c7, c10, 1	@ flush_pmd"
+ 			: : "r" (pmd) : "cc");
++#endif
+ #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_4611
+ 		raw_local_irq_restore(flags);
+ 	}
+diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
+index 5e3f612..fa941ca 100644
+--- a/arch/arm/mm/Kconfig
++++ b/arch/arm/mm/Kconfig
+@@ -967,6 +967,25 @@ config SHEEVA_ERRATA_ARM_CPU_5980
+ 		MCR p15, 1, <Rd>, c15, c1,2
+ 
+ 
++
++config SHEEVA_ERRATA_ARM_CPU_6043
++
++        bool "Sheeva Errata 6043: clean operations can cause victim data to be written out of order"
++        depends on  CPU_SHEEVA_PJ4B_V7 && ARMADA_XP_REV_A0
++        default y
++        help
++		Cache maintenance clean operations leave the L1 in a "right to modify" state.  If a clean operation is stalled due to the
++		memory buffers being full, another store transaction to the same address in L1 can occur, leaving the line in a dirty
++		state.  At this time, if a separate request causes this newly modified line to get evicted, there is a scenario where the
++		more recently modified data can be written out to memory ahead of the original cache maintenance clean operation's
++		data, resulting in data corruption.
++		Workaround:
++		 Note the failure is very rare, and more likely to occur when multiple ways of the L1 cache are locked, increasing the
++		victim traffic.
++		One possible workaround is to replace "Clean" with "Clean & Invalidate" operations.
++		Alternatively, if a DMB or DSB instruction is issued after completing a group of clean operations (before executing any
++		stores to the cleaned lines), the issue also cannot occur.
++
+ config SHEEVA_ERRATA_ARM_CPU_PMU_RESET
+ 	bool "Sheeva Errata CPU Performance counters reset"
+ 	depends on CPU_SHEEVA_PJ4B_V6 || CPU_SHEEVA_PJ4B_V7
+diff --git a/arch/arm/mm/cache-v7.S b/arch/arm/mm/cache-v7.S
+index be1c8e5..f66be7e 100644
+--- a/arch/arm/mm/cache-v7.S
++++ b/arch/arm/mm/cache-v7.S
+@@ -185,7 +185,11 @@ ENTRY(v7_coherent_user_range)
+ 	ALT_UP(W(nop))
+ #endif
+ 1:
+- USER(	mcr	p15, 0, r12, c7, c11, 1	)	@ clean D line to the point of unification
++#ifdef SHEEVA_ERRATA_ARM_CPU_6043
++	USER(  mcr     p15, 0, r12, c7, c14, 1 )       @ clean & invalidate D line to the point of unification
++#else
++	USER(	mcr	p15, 0, r12, c7, c11, 1	)	@ clean D line to the point of unification
++#endif
+ 	add	r12, r12, r2
+ 	cmp	r12, r1
+ 	blo	1b
+@@ -305,7 +309,11 @@ v7_dma_clean_range:
+ 	ALT_UP(W(nop))
+ #endif
+ 1:
++#ifdef SHEEVA_ERRATA_ARM_CPU_6043
++	mcr     p15, 0, r12, c7, c14, 1         @ clean & invalidate D line to the point of unification
++#else
+ 	mcr	p15, 0, r0, c7, c10, 1		@ clean D / U line
++#endif
+ 	add	r0, r0, r2
+ 	cmp	r0, r1
+ 	blo	1b
+diff --git a/arch/arm/plat-armada/linux_oss/mvOs.h b/arch/arm/plat-armada/linux_oss/mvOs.h
+index c8818fb..2eaa93b 100644
+--- a/arch/arm/plat-armada/linux_oss/mvOs.h
++++ b/arch/arm/plat-armada/linux_oss/mvOs.h
+@@ -340,7 +340,11 @@ static __inline void mvOsBridgeReorderWA(void)
+  #if defined(CONFIG_L2_CACHE_ENABLE) || defined(CONFIG_CACHE_FEROCEON_L2)
+  #define mvOsCacheLineFlush(handle, addr)                     \
+  {                                                               \
++#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043
++   __asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));\
++#else
+    __asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 1" : : "r" (addr));\
++#endif
+    __asm__ __volatile__ ("mcr p15, 1, %0, c15, c9, 1" : : "r" (addr));\
+    __asm__ __volatile__ ("mcr p15, 0, r0, c7, c10, 4");          \
+  }
+@@ -348,7 +352,11 @@ static __inline void mvOsBridgeReorderWA(void)
+  #define mvOsCacheLineFlush(handle, addr)                     \
+  {                                                               \
+    DSBWA_4611(addr);						 \
+-   __asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 1" : : "r" (addr)); /* Clean D$ line by MVA to PoC */ \
++#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043
++        __asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));\
++#else
++	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 1" : : "r" (addr)); /* Clean D$ line by MVA to PoC */ \
++#endif
+    writel(__virt_to_phys(((int)addr) & ~0x1f), (INTER_REGS_BASE + MV_AURORA_L2_REGS_OFFSET + 0x7B0/*L2_CLEAN_PA*/)); \
+    writel(0x0, (INTER_REGS_BASE + MV_AURORA_L2_REGS_OFFSET + 0x700/*L2_SYNC*/)); \
+    __asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 4" : : "r" (addr)); /* DSB */ \
+@@ -357,7 +365,11 @@ static __inline void mvOsBridgeReorderWA(void)
+  #define mvOsCacheLineFlush(handle, addr)                     \
+  {                                                               \
+    DSBWA_4611(addr);						 \
++#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043
++   __asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));\
++#else
+    __asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 1" : : "r" (addr));\
++#endif
+    __asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 4" : : "r" (addr)); \
+  }
+  #endif
+@@ -370,7 +382,11 @@ static inline void mvOsCacheMultiLineFlush(void *handle, void *addr, int size)
+ #if defined(CONFIG_CACHE_AURORA_L2) && !defined(CONFIG_AURORA_IO_CACHE_COHERENCY)
+ 		DSBWA_4611(addr);
+ 		while (size > 0) {
++#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043
++			__asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));
++#else
+ 			__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 1" : : "r" (addr)); /* Clean D$ line by MVA to PoC */
++#endif
+ 			writel(__virt_to_phys(((int)addr) & ~0x1f), (INTER_REGS_BASE + MV_AURORA_L2_REGS_OFFSET + 0x7B0/*L2_CLEAN_PA*/));
+ 			size -= CPU_D_CACHE_LINE_SIZE;
+ 			addr += CPU_D_CACHE_LINE_SIZE;
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_xor/mv_netdma.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_xor/mv_netdma.c
+index 39d0be6..da40daf 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_xor/mv_netdma.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_xor/mv_netdma.c
+@@ -511,7 +511,12 @@ static inline void xor_put(struct xor_channel* xch)
+ static inline void dmac_clean_dcache_line(void* addr)
+ {
+ //#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,26)
++
++#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043
++	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));
++#else
+ 	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 1" : : "r" (addr));
++#endif
+ 	__asm__ __volatile__ ("mcr p15, 1, %0, c15, c9, 1" : : "r" (addr));
+ 
+ //#else
+-- 
+1.7.9.5
+

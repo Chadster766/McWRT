@@ -1,0 +1,49 @@
+diff --git a/lib/ftdecode.c b/lib/ftdecode.c
+index ff6b0cf..8884db9 100644
+--- a/lib/ftdecode.c
++++ b/lib/ftdecode.c
+@@ -122,8 +122,10 @@ int ftpdu_verify(struct ftpdu *ftpdu)
+   ret = -1;
+ 
+   /* enough bytes to decode the count and version? */
+-  if (ftpdu->bused < 4)
++  if (ftpdu->bused < 4) {
++    fterr_warnx("not enough bytes to decode the count and version.");
+     goto ftpdu_verify_out_quick;
++  }
+ 
+   ph = (struct ftpdu_header*)&ftpdu->buf;
+ 
+@@ -158,15 +160,22 @@ #endif /* LITTLE_ENDIAN */
+     case 5:
+ 
+       /* max PDU's in record */
+-      if (ph->count > FT_PDU_V5_MAXFLOWS)
++      if (ph->count > FT_PDU_V5_MAXFLOWS) {
++	fterr_warnx("too many pdus (%d) in record, max %d", ph->count,
++		FT_PDU_V5_MAXFLOWS);
+         goto ftpdu_verify_out;
++      }
++
+ 
+       size = offsetof(struct ftpdu_v5, records) +
+              ph->count * sizeof (struct ftrec_v5);
+ 
+       /* PDU received size == PDU expected size? */
+-      if (size != ftpdu->bused)
++      if (size != ftpdu->bused) {
++        fterr_warnx("pdu received size was wrong.  expected %d got %d",
++                ftpdu->bused, size);
+         goto ftpdu_verify_out;
++      }
+ 
+       ftpdu->ftv.d_version = 5;
+       ftpdu->decodef = fts3rec_pdu_v5_decode;
+@@ -516,6 +525,7 @@ #endif /* LITTLE_ENDIAN */
+       break; /* 8 */
+ 
+       default:
++	  fterr_warnx("ftpdu version not set.");
+           goto ftpdu_verify_out;
+ 
+   } /* switch ph->version */

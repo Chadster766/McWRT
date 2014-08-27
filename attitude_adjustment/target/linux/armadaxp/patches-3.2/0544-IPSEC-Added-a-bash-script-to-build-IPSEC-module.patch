@@ -1,0 +1,43 @@
+From 1c11c5c065784e2364d8b2dc237879c3ed74a7cc Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 4 Mar 2013 13:28:02 +0200
+Subject: [PATCH 544/609] IPSEC: Added a bash script to build IPSEC module
+
+Change-Id: I0d96fca2eb5dbf692be42e48c9bb8bf5361df93d
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1201
+Tested-by: Eran Ben-Avi <benavi@marvell.com>
+Reviewed-by: Eran Ben-Avi <benavi@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ cesa/openswan/ipsec_build.sh |   18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+ create mode 100755 cesa/openswan/ipsec_build.sh
+
+diff --git a/cesa/openswan/ipsec_build.sh b/cesa/openswan/ipsec_build.sh
+new file mode 100755
+index 0000000..41b42df
+--- /dev/null
++++ b/cesa/openswan/ipsec_build.sh
+@@ -0,0 +1,18 @@
++# IPSEC Module build script
++
++# Optionaly download the sources from web
++#wget http://download.openswan.org/openswan/openswan-2.6.37.tar.gz
++
++# Extract sources localy
++tar -zxvf openswan-2.6.37.tar.gz
++cd openswan-2.6.37
++
++# Apply marvell patch over openswan sources
++patch -p1 < ../0001-mv_openswan_2_6_37.patch
++
++# Build ipsec module
++make KERNELSRC=../../../ module ARCH=arm
++
++# Copy to modules output directory
++mkdir -p ${1}/kernel/ipsec
++cp modobj26/ipsec.ko ${1}/kernel/ipsec
+-- 
+1.7.9.5
+

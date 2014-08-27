@@ -1,0 +1,98 @@
+Index: aMule-2.2.6/configure
+===================================================================
+--- aMule-2.2.6.orig/configure	2012-07-28 23:50:12.000000000 +0200
++++ aMule-2.2.6/configure	2012-07-28 23:50:51.000000000 +0200
+@@ -18375,93 +18375,6 @@
+ 
+ 
+ 
+-# Check for bfd.h (to have proper backtraces without using wxExecute)
+-
+-	echo "$as_me:$LINENO: checking for bfd" >&5
+-echo $ECHO_N "checking for bfd... $ECHO_C" >&6
+-	result=no
+-	for bfd_ldadd in "" "${LIBINTL}"; do
+-		mule_backup_LIBS="$LIBS"
+-		mule_backup_LDFLAGS="$LDFLAGS"
+-		LIBS="-lbfd -liberty ${bfd_ldadd} ${ZLIB_LIBS} $LIBS"
+-		LDFLAGS="$LDFLAGS ${ZLIB_LDFLAGS}"
+-		cat >conftest.$ac_ext <<_ACEOF
+-
+-			/* confdefs.h.  */
+-_ACEOF
+-cat confdefs.h >>conftest.$ac_ext
+-cat >>conftest.$ac_ext <<_ACEOF
+-/* end confdefs.h.  */
+-
+-				#include <ansidecl.h>
+-				#include <bfd.h>
+-
+-int
+-main ()
+-{
+-
+-				char *dummy = bfd_errmsg(bfd_get_error());
+-
+-  ;
+-  return 0;
+-}
+-
+-_ACEOF
+-rm -f conftest.$ac_objext conftest$ac_exeext
+-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+-  (eval $ac_link) 2>conftest.er1
+-  ac_status=$?
+-  grep -v '^ *+' conftest.er1 >conftest.err
+-  rm -f conftest.er1
+-  cat conftest.err >&5
+-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); } &&
+-	 { ac_try='test -z "$ac_c_werror_flag"
+-			 || test ! -s conftest.err'
+-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+-  (eval $ac_try) 2>&5
+-  ac_status=$?
+-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); }; } &&
+-	 { ac_try='test -s conftest$ac_exeext'
+-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+-  (eval $ac_try) 2>&5
+-  ac_status=$?
+-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); }; }; then
+-
+-			result=yes
+-			BFD_CPPFLAGS="-DHAVE_BFD"
+-			BFD_LIBS="-lbfd -liberty ${bfd_ldadd}"
+-			LIBS="$mule_backup_LIBS"
+-			LDFLAGS="$mule_backup_LDFLAGS"
+-			break
+-
+-else
+-  echo "$as_me: failed program was:" >&5
+-sed 's/^/| /' conftest.$ac_ext >&5
+-
+-fi
+-rm -f conftest.err conftest.$ac_objext \
+-      conftest$ac_exeext conftest.$ac_ext
+-		LIBS="$mule_backup_LIBS"
+-		LDFLAGS="$mule_backup_LDFLAGS"
+-	done
+-
+-	echo "$as_me:$LINENO: result: $result" >&5
+-echo "${ECHO_T}$result" >&6
+-
+-	if test $result = no; then
+-  { echo "$as_me:$LINENO: WARNING:
+-	bfd.h not found or unusable, please install binutils development
+-	package if you are a developer or want to help testing aMule" >&5
+-echo "$as_me: WARNING:
+-	bfd.h not found or unusable, please install binutils development
+-	package if you are a developer or want to help testing aMule" >&2;}
+-
+-fi
+-
+-
+ 	echo "$as_me:$LINENO: checking for <execinfo.h> and backtrace()" >&5
+ echo $ECHO_N "checking for <execinfo.h> and backtrace()... $ECHO_C" >&6
+ 	cat >conftest.$ac_ext <<_ACEOF

@@ -1,0 +1,25 @@
+From 7bd66a35a269922affd46c2ce5544588bf625cb4 Mon Sep 17 00:00:00 2001
+From: Matthew Fatheree <Matthew.Fatheree@belkin.com>
+Date: Sun, 11 May 2014 00:00:40 +0700
+Subject: [PATCH 06/31] Add kernel make call for "oldconfig prepare scripts"
+
+Signed-off-by: Matthew Fatheree <Matthew.Fatheree@belkin.com>
+---
+ include/kernel-defaults.mk |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/include/kernel-defaults.mk b/include/kernel-defaults.mk
+index 8075079..483495d 100644
+--- a/include/kernel-defaults.mk
++++ b/include/kernel-defaults.mk
+@@ -108,6 +108,7 @@ define Kernel/Configure/Default
+ 	rm -rf $(KERNEL_BUILD_DIR)/modules
+ 	[ -d $(LINUX_DIR)/user_headers ] || $(MAKE) $(KERNEL_MAKEOPTS) INSTALL_HDR_PATH=$(LINUX_DIR)/user_headers headers_install
+ 	$(SH_FUNC) grep '=[ym]' $(LINUX_DIR)/.config | LC_ALL=C sort | md5s > $(LINUX_DIR)/.vermagic
++	yes "" | $(MAKE) $(KERNEL_MAKEOPTS) oldconfig
+ endef
+ 
+ define Kernel/CompileModules/Default
+-- 
+1.7.9.5
+

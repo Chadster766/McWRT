@@ -1,0 +1,26 @@
+From 17a18ccad341ec30b7e7304b0e5448855cf3e0d7 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Tue, 26 Jun 2012 16:03:44 +0300
+Subject: [PATCH 199/609] fix compilation when BM is not enabled
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index e3f6706..7e37a99 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -4424,7 +4424,7 @@ int mv_eth_resume_internals(struct eth_port *pp, int mtu)
+ 			}
+ #else
+ 			/* Fill RXQ with buffers from RX pool */
+-			mvNetaRxqBufSizeSet(pp->port, rxq, RX_BUF_SIZE(pkt_size));
++			mvNetaRxqBufSizeSet(pp->port, rxq, RX_BUF_SIZE(pp->pool_long->pkt_size));
+ 			mvNetaRxqBmDisable(pp->port, rxq);
+ #endif /* CONFIG_MV_ETH_BM_CPU */
+ 			if (mvNetaRxqFreeDescNumGet(pp->port, rxq) == 0)
+-- 
+1.7.9.5
+

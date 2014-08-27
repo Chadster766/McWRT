@@ -1,0 +1,40 @@
+#!/bin/sh /etc/rc.common
+# Sample init script reading its
+# configuration from /etc/config/package
+
+START=46
+STOP=46
+
+start_service() {
+	local section="$1"
+
+	. /lib/functions/network.sh
+
+	network_get_device LAN lan ifname
+	config_get option1 "$section" option1
+	config_get option2 "$section" option2
+
+	# Do some action with the variables
+	echo "option1 = $option1"
+}
+
+stop_service() {
+	local section="$1"
+
+	. /lib/functions/network.sh
+
+	network_get_device LAN lan ifname
+	config_get option1 "$section" option1
+	config_get option2 "$section" option2
+}
+start() {
+	# Do some optionnal testing
+	# before starting the program
+	config_load "package"
+	config_foreach start_service package
+}
+
+stop() {
+	config_load "package"
+	config_foreach stop_service package
+}

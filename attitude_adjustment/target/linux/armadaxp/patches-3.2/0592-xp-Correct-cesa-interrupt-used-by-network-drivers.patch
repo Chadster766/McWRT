@@ -1,0 +1,85 @@
+From db574da9cbe622112209d2267f908f1c2e854a90 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Sun, 7 Apr 2013 10:13:57 +0300
+Subject: [PATCH 592/609] xp: Correct cesa interrupt used by network drivers.
+
+Regardless of CESA mode, the mv_eth_l2sec.c and mv_nfp_sec.c drivers
+were using the AccAndTDMAInt interrupt.
+For interrupt coalescing mode they should use EopCoalInt interrupt
+like in cesa_ocf_drv.c.
+
+Change-Id: I35391d3b6f4d8438b250e8e39d0df6963f9bf90c
+Signed-off-by: Michal Mazur <arg@semihalf.com>
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1441
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.c     |   10 ++++++++--
+ .../mv_drivers_lsp/mv_network/nfp_mgr/mv_nfp_sec.c |   14 +++++++++++---
+ 2 files changed, 19 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.c
+index 6134495..9913e15 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.c
+@@ -439,7 +439,7 @@ static void mv_l2sec_casa_param_init(void)
+ 
+ int mv_l2sec_cesa_init(void)
+ {
+-	int chan;
++	int chan, mask;
+ 	printk(KERN_INFO "%s: start.\n", __func__);
+ 	if (mvCtrlPwrClckGet(CESA_UNIT_ID, 0) == MV_FALSE)
+ 		return 0;
+@@ -449,10 +449,16 @@ int mv_l2sec_cesa_init(void)
+ 		return EINVAL;
+ 	}
+ 
++#ifdef CONFIG_MV_CESA_INT_COALESCING_SUPPORT
++	mask = MV_CESA_CAUSE_EOP_COAL_MASK;
++#else
++	mask = MV_CESA_CAUSE_ACC_DMA_MASK;
++#endif
++
+ 	for (chan = 0 ; chan < CESA_CHAN; chan++) {
+ 		/* clear and unmask channel 0 interrupt */
+ 		MV_REG_WRITE(MV_CESA_ISR_CAUSE_REG(chan), 0);
+-		MV_REG_WRITE(MV_CESA_ISR_MASK_REG(chan), MV_CESA_CAUSE_ACC_DMA_MASK);
++		MV_REG_WRITE(MV_CESA_ISR_MASK_REG(chan), mask);
+ 
+ 		/* register channel 0 interrupt */
+ 		if (request_irq(CESA_IRQ(chan), mv_l2sec_interrupt_handler, (IRQF_DISABLED), "cesa", NULL)) {
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_network/nfp_mgr/mv_nfp_sec.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_network/nfp_mgr/mv_nfp_sec.c
+index 2f19868..914fddc 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_network/nfp_mgr/mv_nfp_sec.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_network/nfp_mgr/mv_nfp_sec.c
+@@ -674,15 +674,23 @@ static void nfp_sec_init_rule(void)
+ 
+ static int nfp_sec_init(void)
+ {
++	int mask;
++
+ 	spin_lock_init( &nfp_sec_lock );
+ 	if( MV_OK != mvCesaInit(MV_NFP_SEC_MAX_SES, MV_NFP_SEC_Q_SIZE, (char *)mv_crypto_base_get(),
+ 				NULL) ) {
+-            	printk("%s,%d: mvCesaInit Failed. \n", __FILE__, __LINE__);
++		printk("%s,%d: mvCesaInit Failed.\n", __FILE__, __LINE__);
+ 		return EINVAL;
+ 	}
++
++#ifdef CONFIG_MV_CESA_INT_COALESCING_SUPPORT
++	mask = MV_CESA_CAUSE_EOP_COAL_MASK;
++#else
++	mask = MV_CESA_CAUSE_ACC_DMA_MASK;
++#endif
+ 	/* clear and unmask Int */
+-	MV_REG_WRITE( MV_CESA_ISR_CAUSE_REG, 0);
+-	MV_REG_WRITE( MV_CESA_ISR_MASK_REG, MV_CESA_CAUSE_ACC_DMA_MASK);
++	MV_REG_WRITE(MV_CESA_ISR_CAUSE_REG, 0);
++	MV_REG_WRITE(MV_CESA_ISR_MASK_REG, mask);
+ 
+ 	tasklet_init(&nfp_sec_tasklet, req_handler, (unsigned long) 0);
+ 	/* register interrupt */
+-- 
+1.7.9.5
+

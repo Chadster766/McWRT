@@ -1,0 +1,396 @@
+From 074ac655f7b00709f9022bbd6bb101790e1810ee Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Mon, 5 Mar 2012 02:06:49 +0200
+Subject: [PATCH 089/609] Power Management - Standby support patch #2
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/configs/armada_xp_defconfig |   22 ++++++++++++--
+ arch/arm/mach-armadaxp/pm.c          |   42 +++++++++++++++++++--------
+ arch/arm/mm/Kconfig                  |    4 +++
+ arch/arm/plat-armada/cpuidle.c       |   52 ++++++++++++++++++++--------------
+ arch/arm/plat-armada/cpuidle.h       |    8 +++++-
+ drivers/tty/serial/serial_core.c     |   13 +++++++++
+ 6 files changed, 104 insertions(+), 37 deletions(-)
+ mode change 100644 => 100755 arch/arm/plat-armada/cpuidle.c
+
+diff --git a/arch/arm/configs/armada_xp_defconfig b/arch/arm/configs/armada_xp_defconfig
+index 1d3d99a..b9d2a48 100644
+--- a/arch/arm/configs/armada_xp_defconfig
++++ b/arch/arm/configs/armada_xp_defconfig
+@@ -67,7 +67,6 @@ CONFIG_GENERIC_IRQ_CHIP=y
+ # RCU Subsystem
+ #
+ CONFIG_TREE_RCU=y
+-# CONFIG_TINY_RCU is not set
+ # CONFIG_PREEMPT_RCU is not set
+ # CONFIG_RCU_TRACE is not set
+ CONFIG_RCU_FANOUT=32
+@@ -264,6 +263,7 @@ CONFIG_ARMADA_XP=y
+ CONFIG_ARMADA_XP_REV_A0=y
+ CONFIG_MACH_ARMADA_XP_DB=y
+ CONFIG_MACH_ARMADA_XP_RDSRV=y
++CONFIG_MACH_ARMADA_XP_RD_NAS=y
+ # CONFIG_CFU_DRAM_BYPASS is not set
+ # CONFIG_ARMADAXP_USE_IRQ_INDIRECT_MODE is not set
+ # CONFIG_ARMADAXP_USE_IRQ_INTERRUPT_ACK is not set
+@@ -295,6 +295,11 @@ CONFIG_MV_INCLUDE_SPI=y
+ CONFIG_MV_INCLUDE_NOR=y
+ CONFIG_MV_INCLUDE_SDIO=y
+ # CONFIG_MV_INCLUDE_SWITCH is not set
++
++#
++# Armada AMP options
++#
++# CONFIG_MV_AMP_ENABLE is not set
+ CONFIG_MV_GPP_MAX_PINS=67
+ CONFIG_MV_DCACHE_SIZE=0x8000
+ 
+@@ -479,7 +484,17 @@ CONFIG_SHEEVA_ERRATA_ARM_CPU_4659=y
+ CONFIG_SHEEVA_ERRATA_ARM_CPU_4611=y
+ # CONFIG_SHEEVA_ERRATA_ARM_CPU_BTS61 is not set
+ # CONFIG_SHEEVA_ERRATA_ARM_CPU_4948 is not set
++CONFIG_SHEEVA_ERRATA_ARM_CPU_5980=y
++CONFIG_SHEEVA_ERRATA_ARM_CPU_6043=y
++CONFIG_SHEEVA_ERRATA_ARM_CPU_6075=y
++CONFIG_SHEEVA_ERRATA_ARM_CPU_6076=y
++CONFIG_SHEEVA_ERRATA_ARM_CPU_6136=y
+ CONFIG_SHEEVA_ERRATA_ARM_CPU_PMU_RESET=y
++CONFIG_SHEEVA_DEEP_IDLE=y
++# CONFIG_STANDBY_UART_WAKE is not set
++# CONFIG_ARMADA_XP_DEEP_IDLE_L2_WA is not set
++CONFIG_ARMADA_XP_DEEP_IDLE_UNMASK_INTS_WA=y
++CONFIG_STANDBY_UART_WAKE=y
+ CONFIG_CACHE_AURORA_L2=y
+ CONFIG_AURORA_L2_PT_WALK=y
+ # CONFIG_AURORA_L2_OUTER_WA is not set
+@@ -587,7 +602,9 @@ CONFIG_CMDLINE=""
+ #
+ # CPU Power Management
+ #
+-# CONFIG_CPU_IDLE is not set
++CONFIG_CPU_IDLE=y
++CONFIG_CPU_IDLE_GOV_LADDER=y
++CONFIG_CPU_IDLE_GOV_MENU=y
+ 
+ #
+ # Floating point emulation
+@@ -989,6 +1006,7 @@ CONFIG_SCSI_WAIT_SCAN=m
+ # CONFIG_SCSI_SAS_LIBSAS is not set
+ # CONFIG_SCSI_SRP_ATTRS is not set
+ CONFIG_SCSI_LOWLEVEL=y
++# CONFIG_SCSI_MV_THOR is not set
+ # CONFIG_ISCSI_TCP is not set
+ # CONFIG_ISCSI_BOOT_SYSFS is not set
+ # CONFIG_SCSI_CXGB3_ISCSI is not set
+diff --git a/arch/arm/mach-armadaxp/pm.c b/arch/arm/mach-armadaxp/pm.c
+index e0a0ec5..63b98e3 100644
+--- a/arch/arm/mach-armadaxp/pm.c
++++ b/arch/arm/mach-armadaxp/pm.c
+@@ -20,7 +20,15 @@
+ #include "ctrlEnv/mvCtrlEnvSpec.h"
+ 
+ #ifdef CONFIG_SHEEVA_DEEP_IDLE
+-extern void armadaxp_deepidle(void);
++extern void armadaxp_deepidle(int power_state);
++
++typedef enum  {
++	DISABLED,
++	WFI,
++	DEEP_IDLE,
++	SNOOZE,
++} MV_PM_STATES;
++
+ /*
+  * Logical check for Armada XP valid PM states
+  */
+@@ -34,17 +42,22 @@ static int armadaxp_pm_valid(suspend_state_t state)
+  */
+ static int armadaxp_pm_enter(suspend_state_t state)
+ {
+-	unsigned int backup[2];
++	unsigned int reg;
+ 
+ 	switch (state)	{
+ 	case PM_SUSPEND_STANDBY:
+ 
++		/* Reenable the Uart IRQ in order to wake from it */
+ 		/* Enable Uart IRQ */
+-		backup[0] = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0));
+-		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0), 0x1 | backup[0]);
++		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0));
++		reg |= 0x1;
++		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0), reg);
++
+ 		/* Disable IPI IRQs */
+-		backup[1] = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_IN_DRBL_LOW));
+-		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_IN_DRBL_LOW), 0);
++		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_IN_DRBL_LOW));
++		reg &= ~0x1;
++		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_IN_DRBL_LOW), reg);
++
+ #if 0
+ 		printk(KERN_INFO "Entering Wol Mode (Neta IRQs 8,10,12,14 are enabled now)...\n");
+ 
+@@ -65,14 +78,19 @@ static int armadaxp_pm_enter(suspend_state_t state)
+ 		reg |= 0x1;
+ 		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE3_FIC), reg);
+ #endif
+-		armadaxp_deepidle();
++		armadaxp_deepidle(SNOOZE);
++
++		/* Enable IPI IRQs - return to original state */
++		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_IN_DRBL_LOW));
++		reg |= 0x1;
++		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_IN_DRBL_LOW), reg);
+ 
+-		/* Disable Uart IRQ */
+-		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0), backup[0]);
+-		/* Enable IPI IRQs */
+-		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_IN_DRBL_LOW), backup[1]);
+-#if 0
+ 		/* Disable it since it will be re-enabled by the stack */
++		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0));
++		reg &= ~0x1;
++		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0), reg);
++
++#if 0
+ 		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE0_FIC));
+ 		reg &= ~0x1;
+ 		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE0_FIC), reg);
+diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
+index ee42804..dbfaf05 100644
+--- a/arch/arm/mm/Kconfig
++++ b/arch/arm/mm/Kconfig
+@@ -1066,6 +1066,10 @@ config SHEEVA_DEEP_IDLE
+ 	bool "Enable CPU/L2 Deep Idle Power Management"
+ 	depends on ARCH_ARMADA_XP && CPU_IDLE
+ 
++config STANDBY_UART_WAKE
++	bool "Enable wake up from standby by UART"
++	depends on ARCH_ARMADA_XP && CPU_IDLE && HOTPLUG_CPU
++
+ config ARMADA_XP_DEEP_IDLE_L2_WA
+         bool "Manage Aurora L2 on deepIdle"
+         depends on SHEEVA_DEEP_IDLE && CACHE_AURORA_L2
+diff --git a/arch/arm/plat-armada/cpuidle.c b/arch/arm/plat-armada/cpuidle.c
+old mode 100644
+new mode 100755
+index 9a62b0f..fc062cf
+--- a/arch/arm/plat-armada/cpuidle.c
++++ b/arch/arm/plat-armada/cpuidle.c
+@@ -86,24 +86,26 @@ static int build_identity_page_table(void)
+ 	return 0;
+ }
+ 
+-int pm_mode = 0;
+-int pm_support = 0;
++int pm_mode = DISABLED;
++int pm_support = SNOOZE;
++
+ static int __init pm_enable_setup(char *str)
+ {
+ 	if (!strncmp(str, "wfi", 3))
+-		pm_support = 1;
++		pm_support = WFI;
+ 	else if (!strncmp(str, "idle", 4))
+-		pm_support = 2;
++		pm_support = DEEP_IDLE;
+ 	else if (!strncmp(str, "snooze", 6))
+-		pm_support = 3;
++		pm_support = SNOOZE;
++	else if (!strncmp(str, "off", 3))
++		pm_support = DISABLED;
+ 	else
+-		pm_support = 0;
++		pm_support = SNOOZE;
+ 
+ 	return 1;
+ }
+ 
+-__setup("pm_enable=", pm_enable_setup);
+-
++__setup("pm_level=", pm_enable_setup);
+ 
+ #define ARMADAXP_IDLE_STATES	3
+ 
+@@ -193,7 +195,7 @@ void armadaxp_fabric_prepare_deepIdle(void)
+ 	 */
+ 	/* TODO */
+ #ifdef CONFIG_CACHE_AURORA_L2
+-	if (pm_mode > 2) {
++	if (pm_mode == SNOOZE) {
+ 		/* ask HW to power down the L2 Cache if possible */
+ 		reg = MV_REG_READ(PM_CONTROL_AND_CONFIG_REG(processor_id));
+ 		reg |= PM_CONTROL_AND_CONFIG_L2_PWDDN;
+@@ -252,10 +254,11 @@ void armadaxp_fabric_restore_deepIdle(void)
+ /*
+  * Enter the DEEP IDLE mode (power off CPU only)
+  */
+-void armadaxp_deepidle(void)
++void armadaxp_deepidle(int power_state)
+ {
+ 	pr_debug("armadaxp_deepidle: Entering DEEP IDLE mode.\n");
+ 
++	pm_mode = power_state;
+ #ifdef CONFIG_IWMMXT
+ 	/* force any iWMMXt context to ram **/
+ 	if (elf_hwcap & HWCAP_IWMMXT)
+@@ -265,7 +268,6 @@ void armadaxp_deepidle(void)
+ #if defined(CONFIG_VFP)
+         vfp_save();
+ #endif
+-
+ 	aurora_l2_pm_enter();
+ 	/* none zero means deepIdle wasn't entered and regret event happened */
+ 	armadaxp_cpu_suspend();
+@@ -276,6 +278,9 @@ void armadaxp_deepidle(void)
+ #if defined(CONFIG_VFP)
+ 	vfp_restore();
+ #endif
++
++	pm_mode = pm_support;
++
+ 	pr_debug("armadaxp_deepidle: Exiting DEEP IDLE.\n");
+ }
+ 
+@@ -294,17 +299,20 @@ static int armadaxp_enter_idle(struct cpuidle_device *dev,
+ //		printk(KERN_ERR "armadaxp_enter_idle: WFI \n");
+ #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_BTS61
+ 		/* Deep Idle */
+-		armadaxp_deepidle();
++		armadaxp_deepidle(DEEP_IDLE);
+ #else
+ 		/* Wait for interrupt state */
+ 		cpu_do_idle();
+ #endif
+ 
+-	}
+-	else if (index == 1) {
++	} else if (index == 1) {
+ //		printk(KERN_ERR "armadaxp_enter_idle: Deep Idle \n");
+ 		/* Deep Idle */
+-		armadaxp_deepidle();
++		armadaxp_deepidle(DEEP_IDLE);
++	} else if (index == 2) {
++//		printk(KERN_ERR "armadaxp_enter_idle: Snooze \n");
++		/* Snooze */
++		armadaxp_deepidle(SNOOZE);
+ 	}
+ 	do_gettimeofday(&after);
+ 	local_fiq_enable();
+@@ -327,9 +335,9 @@ struct proc_dir_entry *cpu_idle_proc;
+ static int mv_cpu_idle_write(struct file *file, const char *buffer,
+ 			     unsigned long count, void *data)
+ {
+-
+ 	int i;
+ 	unsigned int backup[IRQ_MAIN_INTS_NUM];
++	MV_PM_STATES target_power_state;
+ 
+ 	struct cpuidle_device *	device = &per_cpu(armadaxp_cpuidle_device, smp_processor_id());
+ 
+@@ -353,11 +361,11 @@ static int mv_cpu_idle_write(struct file *file, const char *buffer,
+ 	} else if (!strncmp (buffer, "deep", strlen("deep")) || !strncmp (buffer, "snooze", strlen("snooze")) ||
+ 				   !strncmp (buffer, "wfi", strlen("wfi"))) {
+ 		if (!strncmp (buffer, "deep", strlen("deep")))
+-			pm_mode = 2;
++			target_power_state = DEEP_IDLE;
+ 		else if (!strncmp (buffer, "snooze", strlen("snooze")))
+-			pm_mode = 3;
++			target_power_state = SNOOZE;
+ 		else		/* WFI */
+-			pm_mode = 1;
++			target_power_state = WFI;
+ 
+ 		for (i=0; i<IRQ_MAIN_INTS_NUM; i++) {
+ 			if (i == IRQ_AURORA_UART0)
+@@ -369,8 +377,8 @@ static int mv_cpu_idle_write(struct file *file, const char *buffer,
+ 
+ 		printk(KERN_INFO "Processor id = %d, Press any key to leave deep idle:",smp_processor_id());
+ 
+-		if (pm_mode > 1)
+-			armadaxp_deepidle();
++		if (target_power_state > WFI)
++			armadaxp_deepidle(target_power_state);
+ 		else
+ 			cpu_do_idle();
+ 
+@@ -380,7 +388,7 @@ static int mv_cpu_idle_write(struct file *file, const char *buffer,
+ 			MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(i), backup[i]);
+ 		}
+ 
+-//		pm_mode = pm_support;
++		pm_mode = pm_support;
+ 	}
+ 
+ 	return count;
+diff --git a/arch/arm/plat-armada/cpuidle.h b/arch/arm/plat-armada/cpuidle.h
+index e15d842..e13ea15 100644
+--- a/arch/arm/plat-armada/cpuidle.h
++++ b/arch/arm/plat-armada/cpuidle.h
+@@ -16,9 +16,15 @@ void armadaxp_fabric_setup_deepIdle(void);
+ void armadaxp_fabric_prepare_deepIdle(void);
+ void armadaxp_fabric_prepare_hotplug(void);
+ void armadaxp_fabric_restore_deepIdle(void);
+-void armadaxp_deepidle(void);
++void armadaxp_deepidle(int power_state);
+ void armadaxp_smp_prepare_idle(unsigned int processor_id);
+ void armadaxp_smp_restore_idle(unsigned int processor_id);
+ 
++typedef enum  {
++	DISABLED,
++	WFI,
++	DEEP_IDLE,
++	SNOOZE,
++} MV_PM_STATES;
+ 
+ #endif /* __PLAT_ARMADA_CPUIDLE_H*/
+diff --git a/drivers/tty/serial/serial_core.c b/drivers/tty/serial/serial_core.c
+index af5ffb9..14bcf03 100644
+--- a/drivers/tty/serial/serial_core.c
++++ b/drivers/tty/serial/serial_core.c
+@@ -1884,6 +1884,16 @@ static int serial_match_port(struct device *dev, void *data)
+ 	return dev->devt == devt; /* Actually, only one tty per port */
+ }
+ 
++#ifdef CONFIG_STANDBY_UART_WAKE
++int uart_suspend_port(struct uart_driver *drv, struct uart_port *uport)
++{
++	return 0;
++}
++int uart_resume_port(struct uart_driver *drv, struct uart_port *uport)
++{
++	return 0;
++}
++#else
+ int uart_suspend_port(struct uart_driver *drv, struct uart_port *uport)
+ {
+ 	struct uart_state *state = drv->state + uport->line;
+@@ -1934,6 +1944,7 @@ int uart_suspend_port(struct uart_driver *drv, struct uart_port *uport)
+ 
+ 		if (console_suspend_enabled || !uart_console(uport))
+ 			ops->shutdown(uport);
++
+ 	}
+ 
+ 	/*
+@@ -1952,6 +1963,7 @@ int uart_suspend_port(struct uart_driver *drv, struct uart_port *uport)
+ 
+ int uart_resume_port(struct uart_driver *drv, struct uart_port *uport)
+ {
++
+ 	struct uart_state *state = drv->state + uport->line;
+ 	struct tty_port *port = &state->port;
+ 	struct device *tty_dev;
+@@ -2031,6 +2043,7 @@ int uart_resume_port(struct uart_driver *drv, struct uart_port *uport)
+ 
+ 	return 0;
+ }
++#endif
+ 
+ static inline void
+ uart_report_port(struct uart_driver *drv, struct uart_port *port)
+-- 
+1.7.9.5
+

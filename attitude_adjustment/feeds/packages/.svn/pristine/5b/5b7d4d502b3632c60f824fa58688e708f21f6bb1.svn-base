@@ -1,0 +1,24 @@
+#!/bin/sh /etc/rc.common
+# Startup init script for vblade for Openwrt
+START=95
+STOP=10
+
+start_service() {
+	local section="$1"
+	config_get shelf "$section" shelf
+	config_get slot "$section" slot
+	config_get netif "$section" netif
+	config_get device "$section" device
+	config_get options "$section" options
+	vbladed $options $shelf $slot $netif $device
+}
+
+start() {
+	config_load vblade
+	config_foreach start_service vblade
+}
+
+stop() {
+	/usr/bin/pkill -f /usr/sbin/vblade
+}
+

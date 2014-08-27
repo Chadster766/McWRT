@@ -1,0 +1,129 @@
+# all in one info script for use with a Webif^2 page
+print "##### Wireless WAN Modem's Information for Webif^2 #####\n"
+opengt
+# common GPRS commands
+set com 115200n81
+set senddelay 0.05
+send "AT+CFUN=1^m"
+:manufacturer
+waitquiet 2 0.1
+send "AT+CGMI^m"
+get 1 "^m" $s
+get 1 "^m" $s
+let x=len($s)
+if x<1 goto model
+dec x
+let $s=$right($s,x)
+print "@TR<<status_wwaninfo_comgt_PManufacturer#Product Manufacturer>>: ",$s,"\n"
+:model
+waitquiet 2 0.1
+send "AT+CGMM^m"
+get 1 "^m" $s
+get 1 "^m" $s
+let x=len($s)
+if x<1 goto serial
+dec x
+let $s=$right($s,x)
+print "@TR<<status_wwaninfo_comgt_ModelInfo#Model Information>>: ",$s,"\n"
+:serial
+waitquiet 5 0.1
+send "AT+CGSN^m"
+get 2 "^m" $s
+get 2 "^m" $s
+let x=len($s)
+if x<1 goto revision
+dec x
+let $s=$right($s,x)
+print "@TR<<status_wwaninfo_comgt_IMEISN#IMEI and Serial Number>>: ",$s,"\n"
+:revision
+waitquiet 2 0.1
+send "AT+CGMR^m"
+get 1 "^m" $s
+get 1 "^m" $s
+let x=len($s)
+if x<1 goto hardware
+dec x
+let $s=$right($s,x)
+print "@TR<<status_wwaninfo_comgt_PRevision#Product Revision>>: ",$s,"\n"
+# Globetrotter's proprietary commands
+:hardware
+waitquiet 5 0.1
+send "AT_OHWV^m"
+get 2 " ^m" $s
+get 2 " ^m" $s
+get 2 " ^m" $s
+if len($s)<1 goto networklock
+print "@TR<<status_wwaninfo_comgt_HRevision#Hardware Revision>>: ",$s,"\n"
+:networklock
+waitquiet 5 0.1
+send "AT+CLCK=\"PN\",2^m"
+get 2 " ^m" $s
+get 2 " ^m" $s
+get 2 " ^m" $s
+if len($s)<1 goto customized
+let $m="@TR<<status_wwaninfo_comgt_NLock#Network Locked>>: "
+if $s="0" print $m,"@TR<<status_wwaninfo_comgt_No#No>>"
+if $s="1" print $m,"@TR<<status_wwaninfo_comgt_Yes#Yes>>"
+print " [",$s,"]\n"
+:customized
+waitquiet 5 0.1
+send "AT_OCST^m"
+get 2 " ^m" $s
+get 2 " ^m" $s
+get 2 ",^m" $s
+if len($s)<1 goto bandsettings
+print "@TR<<status_wwaninfo_comgt_Custom#Customization>>: ",$s,"\n"
+:bandsettings
+waitquiet 5 0.1
+send "AT_OSBM?^m"
+get 2 " ^m" $s
+get 2 " ^m" $s
+get 2 " ^m" $s
+if len($s)<1 goto apn
+let $m="@TR<<status_wwaninfo_comgt_BandSettings#Band settings>>: "
+if $s="0" print $m,"@TR<<status_wwaninfo_comgt_Band_Unknown#Unknown>>"
+if $s="1" print $m,"@TR<<status_wwaninfo_comgt_Band_900#Single band 900 MHz>>"
+if $s="2" print $m,"@TR<<status_wwaninfo_comgt_Band_1800#Single band 1800 MHz (Europe)>>"
+if $s="3" print $m,"@TR<<status_wwaninfo_comgt_Band_1900#Single band 1900 MHz (USA)>>"
+if $s="4" print $m,"@TR<<status_wwaninfo_comgt_Band_9_18#Dual band 900/1800 MHz (Europe)>>"
+if $s="5" print $m,"@TR<<status_wwaninfo_comgt_Band_9_19#Dual band 900/1900 MHz (USA)>>"
+print " [",$s,"]\n"
+:apn
+waitquiet 5 0.1
+send "AT+CGDCONT?^m"
+get 2 " ^m" $s
+get 2 " ^m" $s
+get 2 " ^m" $s
+if len($s)<1 goto signal
+print "@TR<<status_wwaninfo_comgt_APN#Access Point Name>>: ",$s,"\n"
+# common GPRS commands
+:signal
+waitquiet 2 0.5
+let c=0
+:signalloop
+waitquiet 1 0.1
+send "AT+CSQ^m"
+get 2 "^m" $s
+get 2 "^m" $s
+let a=len($s)
+let a=a-6
+let $s=$right($s,a)
+if $s <> "0,0" goto signalcont
+if c > 3 goto signalcont
+let c=c+1
+pause 1
+goto signalloop
+:signalcont
+if len($s)>0 print "+CSQ: ",$s,"\n"
+waitquiet 2 0.1
+:batcar
+waitquiet 1 0.1
+send "AT+CBC^m"
+get 2 "^m" $s
+get 2 "^m" $s
+let a=len($s)
+let a=a-6
+let $s=$right($s,a)
+if len($s)>0 print "+CBC: ",$s,"\n"
+waitquiet 5 0.1
+print "##### END #####\n"

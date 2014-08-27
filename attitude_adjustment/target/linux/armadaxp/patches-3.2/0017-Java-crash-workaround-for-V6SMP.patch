@@ -1,0 +1,31 @@
+From 332597739cd3f4523f1758fc54f016d7e9b4fa0d Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Wed, 23 Nov 2011 18:56:49 +0200
+Subject: [PATCH 017/609] Java crash workaround for V6SMP
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/kernel/smp_tlb.c |    4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/arch/arm/kernel/smp_tlb.c b/arch/arm/kernel/smp_tlb.c
+index 1d62e02..09658a6 100644
+--- a/arch/arm/kernel/smp_tlb.c
++++ b/arch/arm/kernel/smp_tlb.c
+@@ -141,9 +141,13 @@ void flush_tlb_kernel_range(unsigned long start, unsigned long end)
+ #if ( ( defined( CONFIG_SMP ) && defined( CONFIG_CPU_V6 ) ) || ( defined( CONFIG_SMP ) && defined( CONFIG_CPU_V6K ) ) )
+ static inline void ipi_flush_cache_user_range(void *arg)
+ {
++#if 0
+ 	struct tlb_args *ta = (struct tlb_args *)arg;
+ 	printk("function %s  line %d\n", __func__,__LINE__);
+ 	local_flush_cache_user_range((struct vm_area_struct *)ta->ta_vma, ta->ta_start, ta->ta_end);
++#else /* To verify that JAVA is working */
++	__cpuc_flush_kern_all();
++#endif
+ }
+ 
+ //#if defined(CONFIG_SMP) && defined(CONFIG_CPU_V6)
+-- 
+1.7.9.5
+

@@ -1,0 +1,684 @@
+From 6ef614546b7775e3a6967eff48df878bc856ab48 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Tue, 21 Feb 2012 06:12:20 -0500
+Subject: [PATCH 116/609] PNC: fix DSCP and VLAN priority per port
+ configuration
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig |   14 +-
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c  |   20 +-
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |   32 ++-
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h     |    1 +
+ arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c      |   12 +-
+ arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c       |  257 ++++++++++++++++----
+ arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h       |   18 +-
+ 7 files changed, 264 insertions(+), 90 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
+index 342f682..aeb6e22 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
+@@ -242,11 +242,11 @@ config MV_ETH_PNC_MCAST_NUM
+ 
+ config MV_ETH_PNC_VLAN_PRIO
+         depends on MV_ETH_PNC
+-        bool "Use PnC for VLAN priority mapping"
+-        default y
++        int "Use PnC for VLAN priority mapping"
++        range 0 32
++        default 7
+         ---help---
+-	Enable using PNC to map packets with different VLAN priorities to different RXQs.
+-	When enabled, 7 PnC rules will be allocated for this purpose
++	Number of VLAN priorities can be mapped to different RXQs for all ports
+ 
+ config MV_ETH_PNC_ETYPE
+         depends on MV_ETH_PNC
+@@ -259,10 +259,10 @@ config MV_ETH_PNC_ETYPE
+ config MV_ETH_PNC_DSCP_PRIO
+         depends on MV_ETH_PNC
+         int "Use PnC for DSCP priority mapping"
+-        default 4
++        range 0 256
++        default 16
+         ---help---
+-        Number of DSCP priorities can be mapped to different RXQs.
+-        Valid range from 1 to 8.
++        Number of DSCP priorities can be mapped to different RXQs for all ports
+ 
+ config MV_ETH_PNC_L3_FLOW
+ 	depends on MV_ETH_PNC
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
+index 52ec0b2..c3cfa37 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
+@@ -41,16 +41,13 @@ static ssize_t mv_eth_help(char *buf)
+ 	int off = 0;
+ 
+ 	off += sprintf(buf+off, "cat                ports           - show all ports info\n");
+-	off += sprintf(buf+off, "echo p             > napi         - show port NAPI groups: CPUs and RXQs\n");
+-#ifdef CONFIG_MV_ETH_PNC
+-	off += sprintf(buf+off, "echo {0|1}         > pnc           - enable / disable PNC access\n");
+-#endif /* CONFIG_MV_ETH_PNC */
+-	off += sprintf(buf+off, "echo {0|1}         > skb           - enable / disable SKB recycle\n");
+ 	off += sprintf(buf+off, "echo p             > port          - show a port info\n");
+ 	off += sprintf(buf+off, "echo p             > stats         - show a port statistics\n");
+ 	off += sprintf(buf+off, "echo p mib         > cntrs         - show a port counters\n");
+ 	off += sprintf(buf+off, "echo p             > tos           - show RX and TX TOS map for port <p>\n");
+ 	off += sprintf(buf+off, "echo p             > mac           - show MAC info for port <p>\n");
++	off += sprintf(buf+off, "echo p             > vprio         - show VLAN priority map for port <p>\n");
++	off += sprintf(buf+off, "echo p             > napi          - show port NAPI groups: CPUs and RXQs\n");
+ 	off += sprintf(buf+off, "echo p             > p_regs        - show port registers for <p>\n");
+ #ifdef MV_ETH_GMAC_NEW
+ 	off += sprintf(buf+off, "echo p             > gmac_regs     - show gmac registers for <p>\n");
+@@ -61,6 +58,10 @@ static ssize_t mv_eth_help(char *buf)
+ 	off += sprintf(buf+off, "echo p txp txq     > txq_regs      - show TXQ registers for <p/txp/txq>\n");
+ 	off += sprintf(buf+off, "echo p rxq v       > rxq           - show RXQ descriptors ring for <p/rxq>. v=0-brief, v=1-full\n");
+ 	off += sprintf(buf+off, "echo p txp txq v   > txq           - show TXQ descriptors ring for <p/txp/txq>. v=0-brief, v=1-full\n");
++#ifdef CONFIG_MV_ETH_PNC
++	off += sprintf(buf+off, "echo {0|1}         > pnc           - enable / disable PNC access\n");
++#endif /* CONFIG_MV_ETH_PNC */
++	off += sprintf(buf+off, "echo {0|1}         > skb           - enable / disable SKB recycle\n");
+ 	off += sprintf(buf+off, "echo p {0|1}       > mh_en         - enable Marvell Header\n");
+ 	off += sprintf(buf+off, "echo p {0|1}       > tx_nopad      - disable zero padding\n");
+ 	off += sprintf(buf+off, "echo p hex         > mh_2B         - set 2 bytes of Marvell Header\n");
+@@ -71,7 +72,6 @@ static ssize_t mv_eth_help(char *buf)
+ 	off += sprintf(buf+off, "echo p group cpus  > cpu_group     - set <cpus mask>  for <port/napi group>.\n");
+ 	off += sprintf(buf+off, "echo p group rxqs  > rxq_group     - set  <rxqs mask> for <port/napi group>.\n");
+ 	off += sprintf(buf+off, "echo p rxq prio    > rxq_vlan      - set <rxq> for incoming VLAN packets with <prio>\n");
+-	off += sprintf(buf+off, "echo p rxq cpus    > rxq_cpus      - set <cpus> enable to process packets incoming to <rxq>\n");
+ 	off += sprintf(buf+off, "echo p rxq v       > rxq_size      - set number of descriptors <v> for <port/rxq>.\n");
+ 	off += sprintf(buf+off, "echo p rxq v       > rxq_pkts_coal - set RXQ interrupt coalesing. <v> - number of received packets\n");
+ 	off += sprintf(buf+off, "echo p rxq v       > rxq_time_coal - set RXQ interrupt coalesing. <v> - time in microseconds\n");
+@@ -216,6 +216,8 @@ static ssize_t mv_eth_port_store(struct device *dev,
+ 		mv_eth_tos_map_show(p);
+ 	} else if (!strcmp(name, "mac")) {
+ 		mv_eth_mac_show(p);
++	} else if (!strcmp(name, "vprio")) {
++		mv_eth_vlan_prio_show(p);
+ 	} else if (!strcmp(name, "p_regs")) {
+ 		printk(KERN_INFO "\n[NetA Port: port=%d]\n", p);
+ 		mvEthRegs(p);
+@@ -267,8 +269,6 @@ static ssize_t mv_eth_3_hex_store(struct device *dev,
+ 		err = mv_eth_rxq_tos_map_set(p, i, v);
+ 	} else if (!strcmp(name, "rxq_vlan")) {
+ 		err = mv_eth_rxq_vlan_prio_set(p, i, v);
+-	} else if (!strcmp(name, "rxq_cpus")) {
+-		err = mvNetaRxqCpuMaskSet(p, i, v);
+ 	} else if (!strcmp(name, "cpu_group")) {
+ 		err = mv_eth_napi_set_cpu_affinity(p, i, v);
+ 	} else if (!strcmp(name, "rxq_group")) {
+@@ -413,7 +413,6 @@ static DEVICE_ATTR(ejp,         S_IWUSR, mv_eth_show, mv_eth_3_store);
+ static DEVICE_ATTR(buf_num,     S_IWUSR, mv_eth_show, mv_eth_3_store);
+ static DEVICE_ATTR(rxq_tos,     S_IWUSR, mv_eth_show, mv_eth_3_hex_store);
+ static DEVICE_ATTR(rxq_vlan,    S_IWUSR, mv_eth_show, mv_eth_3_hex_store);
+-static DEVICE_ATTR(rxq_cpus,    S_IWUSR, mv_eth_show, mv_eth_3_hex_store);
+ static DEVICE_ATTR(txq_tos,     S_IWUSR, mv_eth_show, mv_eth_3_hex_store);
+ static DEVICE_ATTR(mh_en,       S_IWUSR, mv_eth_show, mv_eth_port_store);
+ static DEVICE_ATTR(mh_2B,       S_IWUSR, mv_eth_show, mv_eth_port_store);
+@@ -426,6 +425,7 @@ static DEVICE_ATTR(port,        S_IWUSR, mv_eth_show, mv_eth_port_store);
+ static DEVICE_ATTR(rxq_regs,    S_IWUSR, mv_eth_show, mv_eth_3_store);
+ static DEVICE_ATTR(txq_regs,    S_IWUSR, mv_eth_show, mv_eth_4_store);
+ static DEVICE_ATTR(mac,         S_IWUSR, mv_eth_show, mv_eth_port_store);
++static DEVICE_ATTR(vprio,       S_IWUSR, mv_eth_show, mv_eth_port_store);
+ static DEVICE_ATTR(tos,         S_IWUSR, mv_eth_show, mv_eth_port_store);
+ static DEVICE_ATTR(stats,       S_IWUSR, mv_eth_show, mv_eth_port_store);
+ static DEVICE_ATTR(skb,	        S_IWUSR, mv_eth_show, mv_eth_port_store);
+@@ -463,7 +463,6 @@ static struct attribute *mv_eth_attrs[] = {
+ 	&dev_attr_txp_reset.attr,
+ 	&dev_attr_ejp.attr,
+ 	&dev_attr_buf_num.attr,
+-	&dev_attr_rxq_cpus.attr,
+ 	&dev_attr_rxq_tos.attr,
+ 	&dev_attr_rxq_vlan.attr,
+ 	&dev_attr_txq_tos.attr,
+@@ -481,6 +480,7 @@ static struct attribute *mv_eth_attrs[] = {
+ 	&dev_attr_ports.attr,
+ 	&dev_attr_tos.attr,
+ 	&dev_attr_mac.attr,
++	&dev_attr_vprio.attr,
+ 	&dev_attr_skb.attr,
+ 	&dev_attr_p_regs.attr,
+ 	&dev_attr_gmac_regs.attr,
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index ff01e53..db7531e 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -4229,6 +4229,19 @@ void mv_eth_mac_show(int port)
+ #endif /* CONFIG_MV_ETH_PNC */
+ }
+ 
++void mv_eth_vlan_prio_show(int port)
++{
++#ifdef CONFIG_MV_ETH_PNC
++        if (mv_eth_pnc_ctrl_en) {
++                mvOsPrintf("PnC VLAN Priority Rules - port #%d:\n", port);
++                pnc_vlan_prio_show(port);
++        } else
++                mvOsPrintf("%s: PNC control is disabled\n", __func__);
++#else /* Legacy parser */
++        mvEthVlanPriorityShow(port);
++#endif /* CONFIG_MV_ETH_PNC */
++}
++
+ void mv_eth_tos_map_show(int port)
+ {
+ 	int tos, txq;
+@@ -4241,7 +4254,7 @@ void mv_eth_tos_map_show(int port)
+ 
+ #ifdef CONFIG_MV_ETH_PNC
+ 	if (mv_eth_pnc_ctrl_en)
+-		pnc_ipv4_dscp_show();
++		pnc_ipv4_dscp_show(port);
+ 	else
+ 		mvOsPrintf("%s: PNC control is disabled\n", __func__);
+ #else
+@@ -4267,11 +4280,11 @@ void mv_eth_tos_map_show(int port)
+ 
+ int mv_eth_rxq_tos_map_set(int port, int rxq, unsigned char tos)
+ {
+-	int status = 1;
++	int status = -1;
+ 
+ #ifdef CONFIG_MV_ETH_PNC
+ 	if (mv_eth_pnc_ctrl_en)
+-		status = pnc_ip4_dscp(tos, 0xFF, rxq);
++		status = pnc_ip4_dscp(port, tos, 0xFF, rxq);
+ 	else
+ 		mvOsPrintf("%s: PNC control is disabled\n", __func__);
+ #else /* Legacy parser */
+@@ -4280,7 +4293,7 @@ int mv_eth_rxq_tos_map_set(int port, int rxq, unsigned char tos)
+ 
+ 	if (status == 0)
+ 		printk(KERN_ERR "Succeeded\n");
+-	else if (status == 1)
++	else if (status == -1)
+ 		printk(KERN_ERR "Not supported\n");
+ 	else
+ 		printk(KERN_ERR "Failed\n");
+@@ -4290,17 +4303,24 @@ int mv_eth_rxq_tos_map_set(int port, int rxq, unsigned char tos)
+ 
+ int mv_eth_rxq_vlan_prio_set(int port, int rxq, unsigned char prio)
+ {
+-	int status = 1;
++	int status = -1;
+ 
+ #ifdef CONFIG_MV_ETH_PNC
+ 	if (mv_eth_pnc_ctrl_en)
+-		status = pnc_vlan_set(prio, rxq);
++		status = pnc_vlan_prio_set(port, prio, rxq);
+ 	else
+ 		mvOsPrintf("%s: PNC control is disabled\n", __func__);
+ #else /* Legacy parser */
+ 	status = mvNetaVprioToRxqSet(port, prio, rxq);
+ #endif /* CONFIG_MV_ETH_PNC */
+ 
++        if (status == 0)
++                printk(KERN_ERR "Succeeded\n");
++        else if (status == -1)
++                printk(KERN_ERR "Not supported\n");
++        else
++                printk(KERN_ERR "Failed\n");
++
+ 	return status;
+ }
+ 
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+index 1cf9b34..5892247 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+@@ -653,6 +653,7 @@ int         mv_eth_napi_set_rxq_affinity(int port, int group, int rxq);
+ void        mv_eth_napi_group_show(int port);
+ 
+ int         mv_eth_rxq_vlan_prio_set(int port, int rxq, unsigned char prio);
++void        mv_eth_vlan_prio_show(int port);
+ 
+ void        mv_eth_netdev_print(struct net_device *netdev);
+ void        mv_eth_status_print(void);
+diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
+index 1641ae9..ce52552 100644
+--- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
++++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
+@@ -2002,16 +2002,16 @@ int     mvNetaTosToRxqGet(int port, int tos)
+ }
+ 
+ /*******************************************************************************
+-* mvNetaTosToRxqSet - Map packets with special TOS value to special RX queue
++* mvNetaVprioToRxqSet - Map packets with special VLAN priority to special RX queue
+ *
+ * DESCRIPTION:
+ *
+ * INPUT:
+-*		int     portNo		- Port number.
+-*       int     vprio       - Vlan Priority value in packet header
+-*       int     rxq         - RX Queue for packets with the configured TOS value
+-*                           Negative value (-1) means no special processing for these packets,
+-*                           so they will be processed as regular packets.
++*       int     portNo  - Port number.
++*       int     vprio   - Vlan Priority value in packet header
++*       int     rxq     - RX Queue for packets with the configured TOS value
++*                         Negative value (-1) means no special processing for these packets,
++*                         so they will be processed as regular packets.
+ *
+ * RETURN:   MV_STATUS
+ *******************************************************************************/
+diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
+index 8edf7c6..eace9d7 100755
+--- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
++++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
+@@ -190,6 +190,19 @@ int pnc_te_del(unsigned int tid)
+ }
+ 
+ /* pnc port setting: data: 0 for all bits, mask: 0 - for accepted ports, 1 - for rejected ports */
++int pnc_port_mask_check(unsigned int mask, int eth_port)
++{
++	int pnc_port = pnc_eth_port_map(eth_port);
++
++	if (pnc_port < 0)
++		return 0;
++
++	if (mask & (1 << pnc_port))
++		return 0;
++
++	return 1;
++}
++
+ unsigned int pnc_port_mask_update(unsigned int mask, int eth_port, int add)
+ {
+ 	int pnc_port = pnc_eth_port_map(eth_port);
+@@ -217,6 +230,22 @@ unsigned int pnc_port_mask(int eth_port)
+ 	return mask;
+ }
+ 
++/* Get TCAM entry if valid, NULL if invalid */
++struct tcam_entry *pnc_tcam_entry_get(int tid)
++{
++	struct tcam_entry *te;
++
++	te = tcam_sw_alloc(0);
++
++	tcam_hw_read(te, tid);
++
++	if (te->ctrl.flags & TCAM_F_INV) {
++		tcam_sw_free(te);
++		return NULL;
++	}
++	return te;
++}
++
+ int pnc_tcam_port_update(int tid, int eth_port, int add)
+ {
+ 	struct tcam_entry *te;
+@@ -243,22 +272,6 @@ int pnc_tcam_port_update(int tid, int eth_port, int add)
+  ******************************************************************************
+  */
+ 
+-/* Get TCAM entry if valid, NULL if invalid */
+-struct tcam_entry *pnc_tcam_entry_get(int tid)
+-{
+-	struct tcam_entry *te;
+-
+-	te = tcam_sw_alloc(0);
+-
+-	tcam_hw_read(te, tid);
+-
+-	if (te->ctrl.flags & TCAM_F_INV) {
+-		tcam_sw_free(te);
+-		return NULL;
+-	}
+-	return te;
+-}
+-
+ /*
+  * pnc_mac_fc_drop - Add Flow Control MAC address match rule to the MAC section
+  * to drop PAUSE frames arriving without Marvell Header on all ports
+@@ -516,56 +529,137 @@ static void pnc_match_etype(struct tcam_entry *te, unsigned short ethertype)
+ 	tcam_sw_set_byte(te, 1, ethertype & 0xFF);
+ }
+ 
+-/* Set VLAN entry */
+-int pnc_vlan_set(int prio, int rxq)
++/* Set VLAN priority entry */
++int pnc_vlan_prio_set(int port, int prio, int rxq)
+ {
++#if (CONFIG_MV_ETH_PNC_VLAN_PRIO > 0)
+ 	struct tcam_entry *te;
+-	int tid;
++	unsigned int pdata, pmask;
++	int q, tid, empty = -1;
+ 
+ 	PNC_DBG("%s\n", __func__);
+ 
+ 	/* check validity */
+-	if ((TE_VLAN + prio) > TE_VLAN_EOF)
++	if ((prio < 0) || (prio > 7))
+ 		return 1;
+ 
+-	if ((prio < 0) || (prio > 7))
++	if ((rxq < -1) || (rxq > CONFIG_MV_ETH_RXQ))
+ 		return 1;
+ 
+-	te = tcam_sw_alloc(TCAM_LU_L2);
+-	pnc_match_etype(te, MV_VLAN_TYPE);
++	/* Find match TCAM entry */
++	for (tid = TE_VLAN_PRIO; tid <= TE_VLAN_PRIO_END; tid++) {
++		te = pnc_tcam_entry_get(tid);
++		/* Remember first Empty entry */
++		if (te == NULL) {
++			if (empty == -1)
++				empty = tid;
++			continue;
++		}
++		/* find VLAN entry with the same priority */
++		if (tcam_sw_cmp_byte(te, 2, ((unsigned char)prio << 5)) == 0) {
++			tcam_sw_get_port(te, &pdata, &pmask);
++			if (rxq == -1) {
++				if (!pnc_port_mask_check(pmask, port)) {
++					tcam_sw_free(te);
++					continue;
++				}
++				pmask = pnc_port_mask_update(pmask, port, 0);
++				if (pmask == PORT_MASK) {	/* No valid ports */
++					tcam_hw_inv(tid);
++				} else {
++					tcam_sw_set_port(te, pdata, pmask);
++					tcam_hw_write(te, tid);
++				}
++			} else {
++				q = sram_sw_get_rxq(te, NULL);
++				if (rxq == q) {
++					/* Add port to this entry */
++					pmask = pnc_port_mask_update(pmask, port, 1);
++					tcam_sw_set_port(te, pdata, pmask);
++					tcam_hw_write(te, tid);
++				} else {
++					/* Update RXQ */
++					pmask = pnc_port_mask_update(pmask, port, 0);
++					if (pmask == PORT_MASK) {
++						/* No valid ports - use the same entry */
++						pmask = pnc_port_mask_update(pmask, port, 1);
++						tcam_sw_set_port(te, pdata, pmask);
++						sram_sw_set_rxq(te, rxq, 0);
++						tcam_hw_write(te, tid);
++						tcam_sw_free(te);
++					} else {
++						tcam_sw_free(te);
++						continue;
++					}
++				}
++			}
++			tcam_sw_free(te);
++			return 0;
++		}
++		tcam_sw_free(te);
++	}
++	if (rxq == -1) {
++		mvOsPrintf("%s: Entry not found - vprio=%d, rxq=%d\n",
++					__func__, prio, rxq);
++		return 1;
++	}
+ 
+-	tcam_sw_set_byte(te, 2, prio << 5);
+-	if (prio == 0) {
+-		/* Set default VLAN entry */
+-		tid = TE_VLAN_EOF;
+-		tcam_sw_set_mask(te, 2, 0);
+-	} else {
+-		tid = TE_VLAN + prio - 1;
+-		tcam_sw_set_mask(te, 2, 7 << 5);
++	/* Not found existing entry and no free TCAM entry - Failed */
++	if (empty == -1) {
++		mvOsPrintf("%s: No free place - vprio=%d, rxq=%d\n",
++					__func__, prio, rxq);
++		return 1;
+ 	}
+ 
+-	sram_sw_set_rxq(te, rxq, 0);
++	/* Not found existing entry - add to free TCAM entry */
++	te = tcam_sw_alloc(TCAM_LU_L2);
++	pnc_match_etype(te, MV_VLAN_TYPE);
++	tcam_sw_set_byte(te, 2, prio << 5);
++	tcam_sw_set_mask(te, 2, 7 << 5);
++	tcam_sw_text(te, "vlan_prio");
+ 
+ 	sram_sw_set_rinfo(te, RI_VLAN, RI_VLAN);
+ 	sram_sw_set_next_lookup(te, TCAM_LU_L2);
+ 	sram_sw_set_shift_update(te, 0, MV_VLAN_HLEN);
+-	tcam_sw_text(te, "vlan");
++	sram_sw_set_rxq(te, rxq, 0);
+ 
+-	tcam_hw_write(te, tid);
++	/* single port mask */
++	pmask = pnc_port_mask(port);
++	tcam_sw_set_port(te, 0, pmask);
++
++	tcam_sw_text(te, "vlan_prio");
++
++	tcam_hw_write(te, empty);
+ 	tcam_sw_free(te);
+ 
+ 	return 0;
++#else
++	return -1;
++#endif /* CONFIG_MV_ETH_PNC_VLAN_PRIO > 0 */
+ }
+ 
+ int pnc_vlan_init(void)
+ {
+-	int prio;
++	struct tcam_entry *te;
++	int tid;
+ 
+ 	PNC_DBG("%s\n", __func__);
+ 
+-	for (prio = 0; prio <= 7; prio++)
+-		if (pnc_vlan_set(prio, rxq_vlan))
+-			break;
++	/* Set default VLAN entry */
++	tid = TE_VLAN_EOF;
++	te = tcam_sw_alloc(TCAM_LU_L2);
++	pnc_match_etype(te, MV_VLAN_TYPE);
++	tcam_sw_set_mask(te, 2, 0);
++	tcam_sw_text(te, "vlan_def");
++
++	sram_sw_set_rxq(te, rxq_vlan, 0);
++
++	sram_sw_set_rinfo(te, RI_VLAN, RI_VLAN);
++	sram_sw_set_next_lookup(te, TCAM_LU_L2);
++	sram_sw_set_shift_update(te, 0, MV_VLAN_HLEN);
++
++	tcam_hw_write(te, tid);
++	tcam_sw_free(te);
+ 
+ 	return 0;
+ }
+@@ -709,11 +803,15 @@ static void pnc_ip4_flow_next_lookup_set(struct tcam_entry *te)
+ /*
+  * pnc_ip4_tos - Add TOS prioroty rules
+  */
+-int pnc_ip4_dscp(unsigned char dscp, unsigned char mask, int rxq)
++int pnc_ip4_dscp(int port, unsigned char dscp, unsigned char mask, int rxq)
+ {
+ #if (CONFIG_MV_ETH_PNC_DSCP_PRIO > 0)
+ 	struct tcam_entry *te;
+-	int tid, empty = -1;
++	unsigned int pdata, pmask;
++	int tid, q, empty = -1;
++
++	if ((rxq < -1) || (rxq > CONFIG_MV_ETH_RXQ))
++		return 1;
+ 
+ 	for (tid = TE_IP4_DSCP; tid <= TE_IP4_DSCP_END; tid++) {
+ 		PNC_DBG("%s: tid=%d, dscp=0x%02x, mask=0x%02x, rxq=%d\n", __func__, tid, dscp, mask, rxq);
+@@ -723,19 +821,46 @@ int pnc_ip4_dscp(unsigned char dscp, unsigned char mask, int rxq)
+ 		if (te == NULL) {
+ 			if (empty == -1)
+ 				empty = tid;
+-
+ 			continue;
+ 		}
+ 		/* Find existing entry for this TOS */
+ 		if (tcam_sw_cmp_bytes(te, 1, 1, &dscp) == 0) {
+-			if (rxq == -1)
+-				tcam_hw_inv(tid);
+-			else {
+-				/* Update RXQ */
+-				sram_sw_set_rxq(te, rxq, 0);
+-				tcam_hw_write(te, tid);
+-				tcam_sw_free(te);
++			tcam_sw_get_port(te, &pdata, &pmask);
++			if (rxq == -1) {
++				if (!pnc_port_mask_check(pmask, port)) {
++					tcam_sw_free(te);
++					continue;
++				}
++				pmask = pnc_port_mask_update(pmask, port, 0);
++				if (pmask == PORT_MASK) {	/* No valid ports */
++					tcam_hw_inv(tid);
++				} else {
++					tcam_sw_set_port(te, pdata, pmask);
++					tcam_hw_write(te, tid);
++				}
++			} else {
++				q = sram_sw_get_rxq(te, NULL);
++				if (rxq == q) {
++					/* Add port to this entry */
++					pmask = pnc_port_mask_update(pmask, port, 1);
++					tcam_sw_set_port(te, pdata, pmask);
++					tcam_hw_write(te, tid);
++				} else {
++					/* Update RXQ */
++					pmask = pnc_port_mask_update(pmask, port, 0);
++					if (pmask == PORT_MASK) {
++						/* No valid ports - use the same entry */
++						pmask = pnc_port_mask_update(pmask, port, 1);
++						tcam_sw_set_port(te, pdata, pmask);
++						sram_sw_set_rxq(te, rxq, 0);
++						tcam_hw_write(te, tid);
++					} else {
++						tcam_sw_free(te);
++						continue;
++					}
++				}
+ 			}
++			tcam_sw_free(te);
+ 			return 0;
+ 		}
+ 		tcam_sw_free(te);
+@@ -744,14 +869,14 @@ int pnc_ip4_dscp(unsigned char dscp, unsigned char mask, int rxq)
+ 	if (rxq == -1) {
+ 		mvOsPrintf("%s: Entry not found - tos=0x%x, rxq=%d\n",
+ 					__func__, dscp, rxq);
+-		return 2;
++		return 1;
+ 	}
+ 
+ 	/* Not found existing entry and no free TCAM entry - Failed */
+ 	if (empty == -1) {
+ 		mvOsPrintf("%s: No free place - tos=0x%x, rxq=%d\n",
+ 					__func__, dscp, rxq);
+-		return 2;
++		return 1;
+ 	}
+ 
+ 	/* Not found existing entry - add to free TCAM entry */
+@@ -759,6 +884,8 @@ int pnc_ip4_dscp(unsigned char dscp, unsigned char mask, int rxq)
+ 	tcam_sw_set_byte(te, 1, (MV_U8) dscp);
+ 	tcam_sw_set_mask(te, 1, (MV_U8) mask);
+ 	sram_sw_set_rxq(te, rxq, 0);
++	pmask = pnc_port_mask(port);
++	tcam_sw_set_port(te, 0, pmask);
+ 	sram_sw_set_next_lookup(te, TCAM_LU_IP4);
+ 	tcam_sw_set_ainfo(te, 0, AI_DONE_MASK);
+ 	sram_sw_set_ainfo(te, AI_DONE_MASK, AI_DONE_MASK);
+@@ -769,7 +896,7 @@ int pnc_ip4_dscp(unsigned char dscp, unsigned char mask, int rxq)
+ 	tcam_sw_free(te);
+ 	return 0;
+ #else
+-	return 1;
++	return -1;
+ #endif /* (CONFIG_MV_ETH_PNC_DSCP_PRIO > 0) */
+ }
+ 
+@@ -1266,7 +1393,33 @@ static void pnc_port_sprintf(struct tcam_entry *te, char *buf)
+ 	}
+ }
+ 
+-void pnc_ipv4_dscp_show(void)
++void pnc_vlan_prio_show(int port)
++{
++#if (CONFIG_MV_ETH_PNC_VLAN_PRIO > 0)
++	struct tcam_entry *te;
++	int tid;
++	unsigned char prio;
++	char buf[16];
++
++	mvOsPrintf("Prio   Mask       Ports     RXQ    Name\n");
++	for (tid = TE_VLAN_PRIO; tid <= TE_VLAN_PRIO_END; tid++) {
++		te = pnc_tcam_entry_get(tid);
++		if (te) {
++			prio = *(te->data.u.byte + 2);
++			mvOsPrintf("0x%02x", prio >> 5);
++			prio = *(te->mask.u.byte + 2);
++			mvOsPrintf("   0x%02x", prio >> 5);
++			pnc_port_sprintf(te, buf);
++			mvOsPrintf(" %12s", buf);
++			mvOsPrintf("     %d", sram_sw_get_rxq(te, NULL));
++			mvOsPrintf("     %s\n", te->ctrl.text);
++			tcam_sw_free(te);
++		}
++	}
++#endif /* (CONFIG_MV_ETH_PNC_VLAN_PRIO > 0) */
++	return;
++}
++void pnc_ipv4_dscp_show(int port)
+ {
+ #if (CONFIG_MV_ETH_PNC_DSCP_PRIO > 0)
+ 	struct tcam_entry *te;
+diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
+index a03b2e4..82e5ebd 100755
+--- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
++++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
+@@ -149,12 +149,11 @@ enum {
+ 	TE_MAC_EOF,
+ 
+     /* VLAN Lookup */
+-	TE_VLAN,
+-#ifdef CONFIG_MV_ETH_PNC_VLAN_PRIO
+-	TE_VLAN_EOF = TE_VLAN + 7,
+-#else
+-	TE_VLAN_EOF = TE_VLAN,
+-#endif /* CONFIG_MV_ETH_PNC_VLAN_PRIO */
++#if (CONFIG_MV_ETH_PNC_VLAN_PRIO > 0)
++	TE_VLAN_PRIO,
++	TE_VLAN_PRIO_END = TE_VLAN_PRIO + CONFIG_MV_ETH_PNC_VLAN_PRIO,
++#endif /* (CONFIG_MV_ETH_PNC_VLAN_PRIO > 0) */
++	TE_VLAN_EOF,
+ 
+     /* Ethertype Lookup */
+ 	TE_ETYPE_ARP,
+@@ -291,7 +290,8 @@ int pnc_mac_me(unsigned int port, unsigned char *mac, int rxq);
+ int pnc_mcast_me(unsigned int port, unsigned char *mac);
+ 
+ /* Set VLAN priority entry */
+-int pnc_vlan_set(int prio, int rxq);
++int pnc_vlan_prio_set(int port, int prio, int rxq);
++void pnc_vlan_prio_show(int port);
+ 
+ /* match arp */
+ void pnc_etype_arp(int rxq);
+@@ -308,8 +308,8 @@ int pnc_mcast_all(unsigned int port, int en);
+ void    pnc_mac_show(void);
+ 
+ /* Add TOS priority rule */
+-int     pnc_ip4_dscp(unsigned char dscp, unsigned char mask, int rxq);
+-void    pnc_ipv4_dscp_show(void);
++int     pnc_ip4_dscp(int port, unsigned char dscp, unsigned char mask, int rxq);
++void    pnc_ipv4_dscp_show(int port);
+ 
+ 
+ /* 2 tuple match */
+-- 
+1.7.9.5
+

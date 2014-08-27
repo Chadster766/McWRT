@@ -1,0 +1,80 @@
+From 4a04d53b07b038f1c5f63f7ff11822fced365856 Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Thu, 13 Dec 2012 19:43:43 +0200
+Subject: [PATCH 472/609] Armada300,drivers: Fix indendation in drivers code.
+
+Change-Id: I950b13eecde2c640ef9ad881912ccee59410c23e
+Signed-off-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ drivers/dma/Kconfig               |    2 +-
+ drivers/scsi/Kconfig              |    8 ++++----
+ drivers/scsi/thor/Makefile.kbuild |    2 +-
+ fs/splice.c                       |    6 +++---
+ 4 files changed, 9 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/dma/Kconfig b/drivers/dma/Kconfig
+index ddb8df3..6260cfc 100644
+--- a/drivers/dma/Kconfig
++++ b/drivers/dma/Kconfig
+@@ -262,7 +262,7 @@ config NET_DMA
+ 	  say N.
+ 
+ config SPLICE_NET_DMA_SUPPORT
+-        bool "Net DMA support for splice"
++	bool "Net DMA support for splice"
+ 	depends on NET_DMA && !HIGHMEM
+ 	default n
+ 	help
+diff --git a/drivers/scsi/Kconfig b/drivers/scsi/Kconfig
+index 81a4fd1..df68469 100644
+--- a/drivers/scsi/Kconfig
++++ b/drivers/scsi/Kconfig
+@@ -367,10 +367,10 @@ menuconfig SCSI_LOWLEVEL
+ if SCSI_LOWLEVEL && SCSI
+ 
+ config SCSI_MV_THOR
+-        tristate "Marvell Storage Controller 6121/6122/6141/6145"
+-        depends on SCSI && BLK_DEV_SD
+-        help
+-                Provides support for Marvell thor Storage Controller series.
++	tristate "Marvell Storage Controller 6121/6122/6141/6145"
++	depends on SCSI && BLK_DEV_SD
++	help
++		Provides support for Marvell thor Storage Controller series.
+ 
+ config ISCSI_TCP
+ 	tristate "iSCSI Initiator over TCP/IP"
+diff --git a/drivers/scsi/thor/Makefile.kbuild b/drivers/scsi/thor/Makefile.kbuild
+index 4c0992e..214b1c6 100644
+--- a/drivers/scsi/thor/Makefile.kbuild
++++ b/drivers/scsi/thor/Makefile.kbuild
+@@ -39,7 +39,7 @@ CONFIG_SUSE_KERNEL=$(shell [ -f $(KERNEL_BLD_DIR)/.config ] && cat $(KERNEL_BLD_
+ ifeq ($(ARCH), )
+ ifeq ($(strip $(CONFIG_64BIT)),y)
+ 	ARCH_TYPE=x86_64
+-		RAID_LIB_NAME=libmv$(LIB_TYPE)64
++	RAID_LIB_NAME=libmv$(LIB_TYPE)64
+ else
+ 	ARCH_TYPE=i386
+ 	ifeq ($(strip $(CONFIG_REGPARM)),y)
+diff --git a/fs/splice.c b/fs/splice.c
+index de9c797..2700e55 100644
+--- a/fs/splice.c
++++ b/fs/splice.c
+@@ -1442,9 +1442,9 @@ struct common_mempool
+ };
+ 
+ bool common_mempool_check_internal(common_mempool_t * pool,
+-                                          void * ptr,
+-                                          common_mpool_hdr_t * hdr,
+-                                          common_mpool_ftr_t * ftr)
++					void * ptr,
++					common_mpool_hdr_t * hdr,
++					common_mpool_ftr_t * ftr)
+ {
+ 	if (!ptr) {
+ 		printk(KERN_ERR "illegal ptr NULL");
+-- 
+1.7.9.5
+

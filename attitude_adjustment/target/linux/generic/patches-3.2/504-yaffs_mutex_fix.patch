@@ -1,0 +1,22 @@
+Index: linux-3.4.25_openwrt/fs/yaffs2/yaffs_vfs_glue.c
+===================================================================
+--- linux-3.4.25_openwrt.orig/fs/yaffs2/yaffs_vfs_glue.c	2013-06-19 16:06:29.000000000 +0300
++++ linux-3.4.25_openwrt/fs/yaffs2/yaffs_vfs_glue.c	2013-06-23 15:28:48.000000000 +0300
+@@ -3036,7 +3036,7 @@
+         YINIT_LIST_HEAD(&(yaffs_dev_to_lc(dev)->searchContexts));
+         param->remove_obj_fn = yaffs_remove_obj_callback;
+ 
+-	init_MUTEX(&(yaffs_dev_to_lc(dev)->grossLock));
++	sema_init(&(yaffs_dev_to_lc(dev)->grossLock), 1);
+ 
+ 	yaffs_gross_lock(dev);
+ 
+@@ -3494,7 +3494,7 @@
+ 
+ 
+ 
+-	init_MUTEX(&yaffs_context_lock);
++	sema_init((&yaffs_context_lock), 1);
+ 
+ 	/* Install the proc_fs entries */
+ 	my_proc_entry = create_proc_entry("yaffs",

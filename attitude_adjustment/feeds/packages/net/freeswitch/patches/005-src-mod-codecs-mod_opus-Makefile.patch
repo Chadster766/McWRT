@@ -1,0 +1,18 @@
+--- a/src/mod/codecs/mod_opus/Makefile
++++ b/src/mod/codecs/mod_opus/Makefile
+@@ -13,13 +13,14 @@ SILK_LA=$(OPUS_BUILDDIR)/silk/libSKP_SIL
+ LOCAL_LIBADD=$(IETF_LA) $(CELT_LA) $(SILK_LA) -lm -lz
+ 
+ include $(BASE)/build/modmake.rules
++include $(BASE)/build/openwrt_rules.mk
+ 
+ $(OPUS_DIR):
+ 	$(GETLIB) $(OPUS).tar.gz
+ 
+ $(OPUS_BUILDDIR)/Makefile: $(OPUS_DIR)
+ 	mkdir -p $(OPUS_BUILDDIR)
+-	cd $(OPUS_BUILDDIR) && $(DEFAULT_VARS) $(OPUS_DIR)/configure --disable-shared --with-pic --srcdir=$(OPUS_DIR)
++	cd $(OPUS_BUILDDIR) && $(DEFAULT_VARS) $(OPUS_DIR)/configure --host=$(GNU_TARGET_NAME) --disable-shared --with-pic --srcdir=$(OPUS_DIR)
+ 	$(TOUCH_TARGET)
+ 
+ $(IETF_LA): $(OPUS_BUILDDIR)/Makefile

@@ -1,0 +1,191 @@
+From 55ed4e5b153f00c6e295cc418a8d1e4f9b96e112 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Tue, 11 Sep 2012 01:45:39 -0400
+Subject: [PATCH 281/609] Fix skb_recycle for kernel 3.2.27
+
+	Free hw_cookie on skb_expand_head function
+	Add extra checking for validity of skb recycle:
+	skb->head == pkt->pBuf
+	*skb->head == pkt when BM supported
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |   63 +++++++++++++++-----
+ net/core/skbuff.c                                  |   10 ++++
+ 2 files changed, 59 insertions(+), 14 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index d4320cc..8d4f549 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -1279,15 +1279,41 @@ static inline int mv_eth_tx_policy(struct eth_port *pp, struct sk_buff *skb)
+ int mv_eth_skb_recycle(struct sk_buff *skb)
+ {
+ 	struct eth_pbuf *pkt = skb->hw_cookie;
+-	struct bm_pool *pool = &mv_eth_pool[pkt->pool];
+-	int status = 0;
++	struct bm_pool  *pool;
++	int             status = 0;
++
++#if defined(CONFIG_MV_ETH_DEBUG_CODE) && defined(CONFIG_MV_ETH_BM_CPU)
++	/* Check that first 4 bytes of the buffer contain hw_cookie */
++	if (*((MV_U32 *) skb->head) != (MV_U32)pkt) {
++		printk(KERN_ERR "%s: Wrong skb->head=%p (0x%x) != hw_cookie=%p\n",
++			__func__, skb->head, *((MV_U32 *) skb->head), pkt);
++		mv_eth_skb_print(skb);
++		mvDebugMemDump(skb->head, (skb->data - skb->head), 1);
++		printk(KERN_ERR "\n");
++		goto err;
++	}
++#endif /* CONFIG_MV_ETH_DEBUG_CODE && CONFIG_MV_ETH_BM_CPU */
++
++	/* Check validity of skb->head - some Linux functions (skb_expand_head) reallocate it */
++	if (skb->head != pkt->pBuf) {
++		printk(KERN_ERR "%s: skb=%p, pkt=%p, Wrong skb->head=%p != pkt->pBuf=%p\n",
++			__func__, skb, pkt, skb->head, pkt->pBuf);
++		mv_eth_pkt_print(pkt);
++		mv_eth_skb_print(skb);
++		printk(KERN_ERR "\n");
++		goto err;
++	}
+ 
++	pool = &mv_eth_pool[pkt->pool];
+ 	if (skb_recycle_check(skb, pool->pkt_size)) {
+ 
+ #ifdef CONFIG_MV_ETH_DEBUG_CODE
+ 		/* Sanity check */
+-		if (skb->truesize != ((skb->end - skb->head) + sizeof(struct sk_buff)))
++		if (SKB_TRUESIZE(skb->end - skb->head) != skb->truesize) {
++			printk(KERN_ERR "%s: skb=%p, Wrong SKB_TRUESIZE(end - head)=%d\n",
++				__func__, skb, SKB_TRUESIZE(skb->end - skb->head));
+ 			mv_eth_skb_print(skb);
++		}
+ #endif /* CONFIG_MV_ETH_DEBUG_CODE */
+ 
+ 		STAT_DBG(pool->stats.skb_recycled_ok++);
+@@ -1302,14 +1328,13 @@ int mv_eth_skb_recycle(struct sk_buff *skb)
+ 
+ 		return 0;
+ 	}
++	STAT_DBG(pool->stats.skb_recycled_err++);
+ 
+ 	/* printk(KERN_ERR "mv_eth_skb_recycle failed: pool=%d, pkt=%p, skb=%p\n", pkt->pool, pkt, skb); */
+-
++err:
+ 	mvOsFree(pkt);
+ 	skb->hw_cookie = NULL;
+ 
+-	STAT_DBG(pool->stats.skb_recycled_err++);
+-
+ 	return 1;
+ }
+ EXPORT_SYMBOL(mv_eth_skb_recycle);
+@@ -1343,6 +1368,7 @@ static struct sk_buff *mv_eth_skb_alloc(struct bm_pool *pool, struct eth_pbuf *p
+ 
+ 	pkt->osInfo = (void *)skb;
+ 	pkt->pBuf = skb->head;
++	pkt->bytes = 0;
+ 	pkt->physAddr = mvOsCacheInvalidate(NULL, skb->head, RX_BUF_SIZE(pool->pkt_size));
+ 	pkt->offset = NET_SKB_PAD;
+ 	pkt->pool = pool->pool;
+@@ -1620,8 +1646,10 @@ static inline int mv_eth_rx(struct eth_port *pp, int rx_todo, int rxq)
+ #endif /* !CONFIG_MV_ETH_PNC */
+ 
+ #ifdef CONFIG_MV_ETH_DEBUG_CODE
+-		if (pp->flags & MV_ETH_F_DBG_RX)
++		if (pp->flags & MV_ETH_F_DBG_RX) {
++			printk(KERN_ERR "pkt=%p, pBuf=%p, ksize=%d\n", pkt, pkt->pBuf, ksize(pkt->pBuf));
+ 			mvDebugMemDump(pkt->pBuf + pkt->offset, 64, 1);
++		}
+ #endif /* CONFIG_MV_ETH_DEBUG_CODE */
+ 
+ #if defined(CONFIG_MV_ETH_PNC) && defined(CONFIG_MV_ETH_RX_SPECIAL)
+@@ -1856,9 +1884,9 @@ static int mv_eth_tx(struct sk_buff *skb, struct net_device *dev)
+ #ifdef CONFIG_MV_ETH_DEBUG_CODE
+ 	if (pp->flags & MV_ETH_F_DBG_TX) {
+ 		printk(KERN_ERR "\n");
+-		printk(KERN_ERR "%s - eth_tx_%lu: port=%d, txp=%d, txq=%d, skb=%p, head=%p, data=%p, size=%d\n",
+-		       dev->name, dev->stats.tx_packets, pp->port, tx_spec.txp, tx_spec.txq, skb,
+-			   skb->head, skb->data, skb->len);
++		printk(KERN_ERR "%s - eth_tx_%lu: cpu=%d, in_intr=0x%lx, port=%d, txp=%d, txq=%d\n",
++		       dev->name, dev->stats.tx_packets, smp_processor_id(), in_interrupt(), pp->port, tx_spec.txp, tx_spec.txq);
++		printk(KERN_ERR "\t skb=%p, head=%p, data=%p, size=%d\n", skb, skb->head, skb->data, skb->len);
+ 		mv_eth_tx_desc_print(tx_desc);
+ 		/*mv_eth_skb_print(skb);*/
+ 		mvDebugMemDump(skb->data, 64, 1);
+@@ -1893,8 +1921,11 @@ out:
+ 
+ 		}
+ 		/* If after calling mv_eth_txq_done, txq_ctrl->txq_count equals frags, we need to set the timer */
+-		if ((txq_ctrl->txq_count == frags) && (frags > 0))
+-			mv_eth_add_tx_done_timer(pp->cpu_config[smp_processor_id()]);
++		if ((txq_ctrl->txq_count == frags) && (frags > 0)) {
++			struct cpu_ctrl *cpuCtrl = pp->cpu_config[smp_processor_id()];
++
++			mv_eth_add_tx_done_timer(cpuCtrl);
++		}
+ 	}
+ #endif /* CONFIG_MV_ETH_TXDONE_ISR */
+ 
+@@ -4780,9 +4811,9 @@ static void mv_eth_tx_done_timer_callback(unsigned long data)
+ 
+ 	clear_bit(MV_ETH_F_TX_DONE_TIMER_BIT, &(cpuCtrl->flags));
+ 
+-
+ 	if (!test_bit(MV_ETH_F_STARTED_BIT, &(pp->flags))) {
+ 		STAT_INFO(pp->stats.netdev_stop++);
++
+ #ifdef CONFIG_MV_ETH_DEBUG_CODE
+ 		if (pp->flags & MV_ETH_F_DBG_TX)
+ 			printk(KERN_ERR "%s: port #%d is stopped, STARTED_BIT = 0, exit timer.\n", __func__, pp->port);
+@@ -5226,7 +5257,7 @@ void mv_eth_netdev_print(struct net_device *dev)
+ {
+ 	struct eth_netdev *dev_priv = MV_DEV_PRIV(dev);
+ 
+-	printk(KERN_ERR "%s net_device status: dev=%p, pp=%p\n\n", dev->name, dev, MV_ETH_PRIV(dev));
++	printk(KERN_ERR "%s net_device status: dev=%p, pp=%p\n", dev->name, dev, MV_ETH_PRIV(dev));
+ 	printk(KERN_ERR "ifIdx=%d, features=0x%x, flags=0x%x, mtu=%u, size=%d, MAC=" MV_MACQUAD_FMT "\n",
+ 	       dev->ifindex, (unsigned int)(dev->features), (unsigned int)(dev->flags),
+ 	       dev->mtu, RX_PKT_SIZE(dev->mtu), MV_MACQUAD(dev->dev_addr));
+@@ -5234,6 +5265,7 @@ void mv_eth_netdev_print(struct net_device *dev)
+ 	if (dev_priv)
+ 		printk(KERN_ERR "group=%d, tx_vlan_mh=0x%04x, switch_port_map=0x%x, switch_port_link_map=0x%x\n",
+ 		       dev_priv->group, dev_priv->tx_vlan_mh, dev_priv->port_map, dev_priv->link_map);
++	printk(KERN_ERR "\n");
+ }
+ 
+ void mv_eth_status_print(void)
+@@ -5378,6 +5410,9 @@ void mv_eth_port_status_print(unsigned int port)
+ 	}
+ 	printk(KERN_CONT "\n");
+ 
++	if (pp->dev)
++		mv_eth_netdev_print(pp->dev);
++
+ #ifdef CONFIG_MV_ETH_SWITCH
+ 	if (pp->flags & MV_ETH_F_SWITCH)
+ 		mv_eth_switch_status_print(port);
+diff --git a/net/core/skbuff.c b/net/core/skbuff.c
+index 414db81..6379120 100644
+--- a/net/core/skbuff.c
++++ b/net/core/skbuff.c
+@@ -940,6 +940,16 @@ int pskb_expand_head(struct sk_buff *skb, int nhead, int ntail,
+ 	       offsetof(struct skb_shared_info, frags[skb_shinfo(skb)->nr_frags]));
+ 
+ 	if (fastpath) {
++
++#ifdef CONFIG_NET_SKB_RECYCLE
++		/* Workaround for the cases when recycle callback was not called */
++		if (skb->hw_cookie) {
++			kfree(skb->hw_cookie);
++			skb->hw_cookie = NULL;
++		}
++		skb->skb_recycle = NULL;
++#endif /* CONFIG_NET_SKB_RECYCLE */
++
+ 		kfree(skb->head);
+ 	} else {
+ 		/* copy this zero copy skb frags */
+-- 
+1.7.9.5
+

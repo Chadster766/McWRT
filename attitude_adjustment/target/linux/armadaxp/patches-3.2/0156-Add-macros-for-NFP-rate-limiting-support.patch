@@ -1,0 +1,27 @@
+From e17590e7fd703faa3ea0c3cb7d17d1b871dd5527 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Mon, 9 Jul 2012 09:05:44 -0400
+Subject: [PATCH 156/609] Add macros for NFP rate limiting support
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/linux_oss/mvOs.h |    3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/plat-armada/linux_oss/mvOs.h b/arch/arm/plat-armada/linux_oss/mvOs.h
+index f61b516..bbd3e07 100755
+--- a/arch/arm/plat-armada/linux_oss/mvOs.h
++++ b/arch/arm/plat-armada/linux_oss/mvOs.h
+@@ -86,7 +86,8 @@ extern void mv_early_printk(char *fmt, ...);
+ #define mvCopyFromOs        copy_from_user
+ #define mvCopyToOs          copy_to_user
+ #define mvOsWarning()       WARN_ON(1)
+-
++#define mvOsGetTicks()      jiffies
++#define mvOsGetTicksFreq()  HZ
+ 
+ #include "mvTypes.h"
+ #include "mvCommon.h"
+-- 
+1.7.9.5
+

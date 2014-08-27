@@ -1,0 +1,52 @@
+--- a/hping2.h
++++ b/hping2.h
+@@ -13,6 +13,7 @@
+ #ifndef _HPING2_H
+ #define _HPING2_H
+ 
++#include <endian.h>
+ #include <sys/types.h>
+ #include <sys/socket.h>
+ #include <netinet/in.h>
+@@ -248,10 +249,10 @@
+  * IP header
+  */
+ struct myiphdr {
+-#if defined(__LITTLE_ENDIAN_BITFIELD)
++#if __BYTE_ORDER == __LITTLE_ENDIAN
+         __u8    ihl:4,
+                 version:4;
+-#elif defined (__BIG_ENDIAN_BITFIELD)
++#elif __BYTE_ORDER == __BIG_ENDIAN
+         __u8    version:4,
+                 ihl:4;
+ #else
+@@ -287,10 +288,10 @@ struct mytcphdr {
+ 	__u16	th_dport;               /* destination port */
+ 	__u32	th_seq;                 /* sequence number */
+ 	__u32	th_ack;                 /* acknowledgement number */
+-#if defined (__LITTLE_ENDIAN_BITFIELD)
++#if __BYTE_ORDER == __LITTLE_ENDIAN
+ 	__u8    th_x2:4,                /* (unused) */
+ 		th_off:4;               /* data offset */
+-#elif defined (__BIG_ENDIAN_BITFIELD)
++#elif __BYTE_ORDER == __BIG_ENDIAN
+ 	__u8    th_off:4,               /* data offset */
+ 		th_x2:4;                /* (unused) */
+ #else
+--- a/bytesex.h
++++ b/bytesex.h
+@@ -9,9 +9,12 @@
+ 
+ #if 	defined(__i386__) \
+ 	|| defined(__alpha__) \
++	|| (defined(__arm__) && (defined(ARMEL) || defined(__ARMEL__)))  \
+ 	|| (defined(__mips__) && (defined(MIPSEL) || defined (__MIPSEL__)))
+ #define BYTE_ORDER_LITTLE_ENDIAN
+-#elif 	defined(__mc68000__) \
++#elif defined(__mc68000__) \
++	|| (defined(__arm__) && (defined(ARMEB) || defined(__ARMEB__))) \
++	|| defined (__avr32__) \
+ 	|| defined (__sparc__) \
+ 	|| defined (__sparc) \
+ 	|| defined (__PPC__) \

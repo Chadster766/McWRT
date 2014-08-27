@@ -1,0 +1,1569 @@
+From 8fbb8d301b87e0878871c98f49243f11937bbd37 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Wed, 22 Feb 2012 13:06:36 +0200
+Subject: [PATCH 007/609] DMSP Splice & NetDMA support (by Lior A. )
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/core.c |    4 +-
+ drivers/dma/Kconfig           |   12 +-
+ drivers/dma/dmaengine.c       |   75 ++++++
+ drivers/dma/iovlock.c         |   67 +++++
+ drivers/dma/mv_xor.c          |    3 +
+ fs/ext4/file.c                |    1 +
+ fs/read_write.c               |  170 +------------
+ fs/read_write.h               |   40 ---
+ fs/splice.c                   |  546 +++++++++++++++++++++++++++++++++++------
+ fs/xfs/xfs_file.c             |   56 +++++
+ include/linux/dmaengine.h     |    5 +
+ include/linux/fs.h            |    7 +
+ include/linux/skbuff.h        |    3 +
+ include/linux/socket.h        |    3 +
+ include/linux/splice.h        |    8 +
+ net/core/datagram.c           |   59 +++++
+ net/core/iovec.c              |   20 ++
+ net/ipv4/tcp.c                |   47 +++-
+ net/socket.c                  |    1 +
+ 19 files changed, 840 insertions(+), 287 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index 91e188b..6366de1 100644
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -1117,13 +1117,13 @@ static void __init armadaxp_xor1_init(void)
+ 	 * two engines can't do memset simultaneously, this limitation
+ 	 * satisfied by removing memset support from one of the engines.
+ 	 */
+-	dma_cap_set(DMA_MEMCPY, armadaxp_xor10_data.cap_mask);
++	//dma_cap_set(DMA_MEMCPY, armadaxp_xor10_data.cap_mask);
+ 	dma_cap_set(DMA_XOR, armadaxp_xor10_data.cap_mask);
+ 	platform_device_register(&armadaxp_xor10_channel);
+ 
+ 	dma_cap_set(DMA_MEMCPY, armadaxp_xor11_data.cap_mask);
+ 	dma_cap_set(DMA_MEMSET, armadaxp_xor11_data.cap_mask);
+-	dma_cap_set(DMA_XOR, armadaxp_xor11_data.cap_mask);
++	//dma_cap_set(DMA_XOR, armadaxp_xor11_data.cap_mask);
+ 	platform_device_register(&armadaxp_xor11_channel);
+ }
+ 
+diff --git a/drivers/dma/Kconfig b/drivers/dma/Kconfig
+index f43b0c7..ddb8df3 100644
+--- a/drivers/dma/Kconfig
++++ b/drivers/dma/Kconfig
+@@ -261,9 +261,19 @@ config NET_DMA
+ 	  Say Y here if you enabled INTEL_IOATDMA or FSL_DMA, otherwise
+ 	  say N.
+ 
++config SPLICE_NET_DMA_SUPPORT
++        bool "Net DMA support for splice"
++	depends on NET_DMA && !HIGHMEM
++	default n
++	help
++	  This enables the use of DMA engines in the network stack to
++	  offload splice operations, freeing CPU cycles.
++
++	  If unsure, say N.
++
+ config ASYNC_TX_DMA
+ 	bool "Async_tx: Offload support for the async_tx api"
+-	depends on DMA_ENGINE
++	depends on DMA_ENGINE && (!DMA_CACHE_RWFO || AURORA_IO_CACHE_COHERENCY)
+ 	help
+ 	  This allows the async_tx api to take advantage of offload engines for
+ 	  memcpy, memset, xor, and raid6 p+q operations.  If your platform has
+diff --git a/drivers/dma/dmaengine.c b/drivers/dma/dmaengine.c
+index 5991114..9d81974 100644
+--- a/drivers/dma/dmaengine.c
++++ b/drivers/dma/dmaengine.c
+@@ -60,11 +60,13 @@
+ #include <linux/rculist.h>
+ #include <linux/idr.h>
+ #include <linux/slab.h>
++#include <linux/pagemap.h>
+ 
+ static DEFINE_MUTEX(dma_list_mutex);
+ static DEFINE_IDR(dma_idr);
+ static LIST_HEAD(dma_device_list);
+ static long dmaengine_ref_count;
++static struct page *temp_page = NULL;
+ 
+ /* --- sysfs implementation --- */
+ 
+@@ -882,6 +884,8 @@ dma_async_memcpy_buf_to_buf(struct dma_chan *chan, void *dest,
+ }
+ EXPORT_SYMBOL(dma_async_memcpy_buf_to_buf);
+ 
++#define DMA_ENGINE_MIN_OP_SIZE 128
++
+ /**
+  * dma_async_memcpy_buf_to_pg - offloaded copy from address to page
+  * @chan: DMA channel to offload copy to
+@@ -905,6 +909,40 @@ dma_async_memcpy_buf_to_pg(struct dma_chan *chan, struct page *page,
+ 	dma_cookie_t cookie;
+ 	unsigned long flags;
+ 
++	if (!page) {
++		printk(KERN_ERR "%s page %x\n", __FUNCTION__, (void*)page);
++		return -EFAULT;
++	}
++	/*
++	  This code snippet is for Marvell XOR engine that supports operation on len < 128
++	  So if we get a copy operation smaller than 128, we use memcpy
++	  Also, we're creating a dummy dma operation in order to satisfy upper layers waiting
++	  for a valid cookie return code.
++	*/
++	if (len < DMA_ENGINE_MIN_OP_SIZE)
++	{
++		void * dst = kmap_atomic(page, KM_USER0) + offset;
++		memcpy(dst, kdata, len);
++		kunmap_atomic(dst, KM_USER0);
++
++		dma_src = dma_map_page(dev->dev, temp_page, 0, PAGE_SIZE, DMA_TO_DEVICE);
++		dma_dest = dma_map_page(dev->dev, temp_page, 0, PAGE_SIZE, DMA_FROM_DEVICE);
++
++		flags = DMA_CTRL_ACK;
++		tx = dev->device_prep_dma_memcpy(chan, dma_dest, dma_src, DMA_ENGINE_MIN_OP_SIZE, flags);
++
++		if (!tx) {
++			dma_unmap_page(dev->dev, dma_src, PAGE_SIZE, DMA_TO_DEVICE);
++			dma_unmap_page(dev->dev, dma_dest, PAGE_SIZE, DMA_FROM_DEVICE);
++			return -ENOMEM;
++		}
++
++		tx->callback = NULL;
++		cookie = tx->tx_submit(tx);
++
++		return cookie;
++	}
++
+ 	dma_src = dma_map_single(dev->dev, kdata, len, DMA_TO_DEVICE);
+ 	dma_dest = dma_map_page(dev->dev, page, offset, len, DMA_FROM_DEVICE);
+ 	flags = DMA_CTRL_ACK | DMA_COMPL_SRC_UNMAP_SINGLE;
+@@ -953,6 +991,40 @@ dma_async_memcpy_pg_to_pg(struct dma_chan *chan, struct page *dest_pg,
+ 	dma_cookie_t cookie;
+ 	unsigned long flags;
+ 
++	if (!dest_pg || !src_pg) {
++		printk(KERN_ERR "%s dest_pg %x src_pg %x\n", __FUNCTION__, (void*)dest_pg, (void*)src_pg);
++		return -EFAULT;
++	}
++
++	/*
++	  This code snippet is for Marvell XOR engine that doesn't support operations on len < 128
++	  So if we get a copy operation smaller than 128, we use memcpy
++	  Also, we're creating a dummy dma operation in order to satisfy upper layers waiting
++	  for a valid cookie return code.
++	*/
++	if (len < DMA_ENGINE_MIN_OP_SIZE)
++	{
++		void * dst = kmap_atomic(dest_pg, KM_USER0) + dest_off;
++		memcpy(dst, src_pg+src_off, len);
++		kunmap_atomic(dst, KM_USER0);
++
++		dma_src = dma_map_page(dev->dev, temp_page, 0, PAGE_SIZE, DMA_TO_DEVICE);
++		dma_dest = dma_map_page(dev->dev, temp_page, 0, PAGE_SIZE, DMA_FROM_DEVICE);
++		flags = DMA_CTRL_ACK;
++		tx = dev->device_prep_dma_memcpy(chan, dma_dest, dma_src, DMA_ENGINE_MIN_OP_SIZE, flags);
++
++		if (!tx) {
++			dma_unmap_page(dev->dev, dma_src, PAGE_SIZE, DMA_TO_DEVICE);
++			dma_unmap_page(dev->dev, dma_dest, PAGE_SIZE, DMA_FROM_DEVICE);
++			return -ENOMEM;
++		}
++
++		tx->callback = NULL;
++		cookie = tx->tx_submit(tx);
++
++		return cookie;
++	}
++
+ 	dma_src = dma_map_page(dev->dev, src_pg, src_off, len, DMA_TO_DEVICE);
+ 	dma_dest = dma_map_page(dev->dev, dest_pg, dest_off, len,
+ 				DMA_FROM_DEVICE);
+@@ -1050,6 +1122,9 @@ EXPORT_SYMBOL_GPL(dma_run_dependencies);
+ 
+ static int __init dma_bus_init(void)
+ {
++	temp_page = alloc_pages(GFP_KERNEL, 0);
++	if (!temp_page)
++                BUG();
+ 	return class_register(&dma_devclass);
+ }
+ arch_initcall(dma_bus_init);
+diff --git a/drivers/dma/iovlock.c b/drivers/dma/iovlock.c
+index bb48a57..a04a995 100644
+--- a/drivers/dma/iovlock.c
++++ b/drivers/dma/iovlock.c
+@@ -121,6 +121,73 @@ out:
+ 	return NULL;
+ }
+ 
++#ifdef CONFIG_SPLICE_NET_DMA_SUPPORT
++struct dma_pinned_list *dma_pin_kernel_iovec_pages(struct iovec *iov, size_t len)
++{
++	struct dma_pinned_list *local_list;
++	struct page **pages;
++	int i, j;
++	int nr_iovecs = 0;
++	int iovec_len_used = 0;
++	int iovec_pages_used = 0;
++
++	/* determine how many iovecs/pages there are, up front */
++	do {
++		iovec_len_used += iov[nr_iovecs].iov_len;
++		iovec_pages_used += num_pages_spanned(&iov[nr_iovecs]);
++		nr_iovecs++;
++	} while (iovec_len_used < len);
++
++	/* single kmalloc for pinned list, page_list[], and the page arrays */
++	local_list = kmalloc(sizeof(*local_list)
++		+ (nr_iovecs * sizeof (struct dma_page_list))
++		+ (iovec_pages_used * sizeof (struct page*)), GFP_KERNEL);
++	if (!local_list)
++		goto out;
++
++	/* list of pages starts right after the page list array */
++	pages = (struct page **) &local_list->page_list[nr_iovecs];
++
++	local_list->nr_iovecs = 0;
++
++	for (i = 0; i < nr_iovecs; i++) {
++		struct dma_page_list *page_list = &local_list->page_list[i];
++		int offset;
++
++		len -= iov[i].iov_len;
++
++		if (!access_ok(VERIFY_WRITE, iov[i].iov_base, iov[i].iov_len))
++			goto unpin;
++
++		page_list->nr_pages = num_pages_spanned(&iov[i]);
++		page_list->base_address = iov[i].iov_base;
++
++		page_list->pages = pages;
++		pages += page_list->nr_pages;
++
++		for (offset=0, j=0; j < page_list->nr_pages; j++, offset+=PAGE_SIZE) {
++			page_list->pages[j] = phys_to_page(__pa((unsigned int)page_list->base_address) + offset);
++		}
++		local_list->nr_iovecs = i + 1;
++	}
++
++	return local_list;
++
++unpin:
++	kfree(local_list);
++out:
++	return NULL;
++}
++
++void dma_unpin_kernel_iovec_pages(struct dma_pinned_list *pinned_list)
++{
++	if (!pinned_list)
++		return;
++
++	kfree(pinned_list);
++}
++#endif
++
+ void dma_unpin_iovec_pages(struct dma_pinned_list *pinned_list)
+ {
+ 	int i, j;
+diff --git a/drivers/dma/mv_xor.c b/drivers/dma/mv_xor.c
+index 6c80977..3343b7a 100644
+--- a/drivers/dma/mv_xor.c
++++ b/drivers/dma/mv_xor.c
+@@ -801,14 +801,17 @@ static enum dma_status mv_xor_status(struct dma_chan *chan,
+ 
+ 	last_used = chan->cookie;
+ 	last_complete = mv_chan->completed_cookie;
++	spin_lock_bh(&mv_chan->lock);
+ 	mv_chan->is_complete_cookie = cookie;
+ 	dma_set_tx_state(txstate, last_complete, last_used, 0);
+ 
+ 	ret = dma_async_is_complete(cookie, last_complete, last_used);
+ 	if (ret == DMA_SUCCESS) {
+ 		mv_xor_clean_completed_slots(mv_chan);
++		spin_unlock_bh(&mv_chan->lock);
+ 		return ret;
+ 	}
++	spin_unlock_bh(&mv_chan->lock);
+ 	mv_xor_slot_cleanup(mv_chan);
+ 
+ 	last_used = chan->cookie;
+diff --git a/fs/ext4/file.c b/fs/ext4/file.c
+index cb70f18..b25a096 100644
+--- a/fs/ext4/file.c
++++ b/fs/ext4/file.c
+@@ -244,6 +244,7 @@ const struct file_operations ext4_file_operations = {
+ 	.fsync		= ext4_sync_file,
+ 	.splice_read	= generic_file_splice_read,
+ 	.splice_write	= generic_file_splice_write,
++	.splice_from_socket = generic_splice_from_socket,
+ 	.fallocate	= ext4_fallocate,
+ };
+ 
+diff --git a/fs/read_write.c b/fs/read_write.c
+index 7c70e76..3115535 100644
+--- a/fs/read_write.c
++++ b/fs/read_write.c
+@@ -16,15 +16,10 @@
+ #include <linux/pagemap.h>
+ #include <linux/splice.h>
+ #include "read_write.h"
+-#include <linux/writeback.h> 
++
+ #include <asm/uaccess.h>
+ #include <asm/unistd.h>
+ 
+-#define WRITE_ARRAY_SIZE (WRITE_RECEIVE_SIZE/PAGE_SIZE +1)
+-
+-#ifdef COLLECT_WRITE_SOCK_TO_FILE_STAT
+-struct write_sock_to_file_stat write_from_sock = {0};
+-#endif /* COLLECT_WRITE_SOCK_TO_FILE_STAT */
+ const struct file_operations generic_ro_fops = {
+ 	.llseek		= generic_file_llseek,
+ 	.read		= do_sync_read,
+@@ -927,6 +922,8 @@ static ssize_t do_sendfile(int out_fd, int in_fd, loff_t *ppos,
+ 	if (!(out_file->f_mode & FMODE_WRITE))
+ 		goto fput_out;
+ 	retval = -EINVAL;
++	if (!out_file->f_op || !out_file->f_op->sendpage)
++		goto fput_out;
+ 	in_inode = in_file->f_path.dentry->d_inode;
+ 	out_inode = out_file->f_path.dentry->d_inode;
+ 	retval = rw_verify_area(WRITE, out_file, &out_file->f_pos, count);
+@@ -1015,164 +1012,3 @@ SYSCALL_DEFINE4(sendfile64, int, out_fd, int, in_fd, loff_t __user *, offset, si
+ 	return do_sendfile(out_fd, in_fd, NULL, count, 0);
+ }
+ 
+-static int start_write_procces(struct file *file, loff_t position, size_t buf_size)
+-{
+-	/*code from /fs/btrfs/file.c line 938 - 949 */
+-	int ret_val = 0;
+-	struct inode *inode=file->f_mapping->host;
+-
+-	/* lock mutex for inode */
+-    	mutex_lock(&inode->i_mutex);
+-
+-	/* will not let the freeze-related IO syncing through inode->i_sb */
+-	vfs_check_frozen(inode->i_sb, SB_FREEZE_WRITE);
+-
+-	/* set backing_dev_info of inode to current process */
+-	current->backing_dev_info = file->f_mapping->backing_dev_info;
+-
+-	/* performs necessary checks before doing a write */
+-	ret_val = generic_write_checks(file, &position, &buf_size, S_ISBLK(inode->i_mode));
+-	if (ret_val) {
+-		dprintk("Failed in call to generic_write_checks(), ret_val=%d\n", ret_val);
+-		return -EFAULT;
+-	}
+-	if (buf_size == 0) {
+-		dprintk("Zero buffer returned by generic_write_checks()\n");
+-		return -EFAULT;
+-	}
+-
+-	/* sets the TTR_FORCE flag and we are therefore able to
+-	   remove the suid bits and continue */
+-	ret_val = file_remove_suid(file);
+-	if (ret_val) {
+-		dprintk("Failed in call to file_remove_suid(), ret_val=%d\n", ret_val);
+-		return -EFAULT;
+-	}
+-	/* update mtime and ctime time*/
+-	file_update_time(file);
+-
+- 	return 0;
+-}
+-
+-static inline int release_resources(struct file *file, ssize_t err)
+-{
+-	mutex_unlock(&file->f_mapping->host->i_mutex);
+-	current->backing_dev_info = NULL;
+-	return err;
+-}
+-
+-ssize_t write_from_socket_to_file(struct socket *sock,struct file *file, loff_t __user *ppos, size_t len)
+-{
+-	loff_t position;
+-	long j, pages, err = 0;
+-	struct msghdr message;
+-	size_t ret, buf_size = len;
+-	unsigned long shift;
+-
+-	struct curr_pages {
+-		struct page *pagep;
+-		loff_t pos;
+-		size_t  size;
+-		void *fsdata;
+-	} curr_page[WRITE_ARRAY_SIZE];
+-	struct kvec io_vector[WRITE_ARRAY_SIZE];
+-
+-	/* copy ppos to kernel space */
+-	ret = copy_from_user(&position, ppos, sizeof(loff_t));
+-    	if(ret) {
+-			dprintk("Failed to copy position from user space, ret=%d\n", ret);
+-			INC_WRITE_FROM_SOCK_ERR_CNT;
+-        	return -EFAULT;
+-	}
+-
+-	/* init write process */
+-	ret = start_write_procces(file, position, len);
+-	if(ret < 0) {
+-		dprintk("Failed in call to start_write_procces(), ret=%d\n", ret);
+-		INC_WRITE_FROM_SOCK_ERR_CNT;
+-		return release_resources(file, ret);
+-	}
+-
+-	/* Initialization all pages and IOV (input/output vector) */
+-	for(pages = 0, j = buf_size; j > 0; pages++, j -= buf_size) {
+-		shift = position & (PAGE_CACHE_SIZE - 1);
+-		buf_size = PAGE_CACHE_SIZE - shift;
+-		buf_size = ((long)buf_size > j) ? j : buf_size;
+-
+-		curr_page[pages].pos = position;
+-		curr_page[pages].size = buf_size;
+-		io_vector[pages].iov_len = buf_size;
+-		/* code write_begin/write_end from /fs/ext4/move_extent.c line 858, 910 */
+-		/* uses write_begin/write_end  to write data into the address_space structure (file->f_mapping) */
+-        ret =  file->f_mapping->a_ops->write_begin(file, file->f_mapping,
+-				 position, buf_size, AOP_FLAG_UNINTERRUPTIBLE,
+-				 &curr_page[pages].pagep, &curr_page[pages].fsdata);
+-        if (unlikely(ret)) {
+-			dprintk("Failed in call to write_begin() on page %d, ret=%d\n", pages, ret);
+-			err = ret;
+-			goto unmup_pages;
+-		}
+-
+-		/* set kernel virtual addresses + offset for the page */
+-		io_vector[pages].iov_base = kmap(curr_page[pages].pagep) + shift;
+-		position = position + curr_page[pages].size;
+-    }
+-
+- 	/* code from drivers/staging/dst/state.c line 89 - 98 */
+-   	message.msg_iov = (struct iovec *)&io_vector;
+-	message.msg_iovlen = pages;
+-	message.msg_name = NULL;
+-	message.msg_namelen = 0;
+-	message.msg_control = NULL;
+-	message.msg_controllen = 0;
+-  
+-	/* recive packet from soket to IOV */
+-	ret = kernel_recvmsg(sock, &message, &io_vector[0], pages, len, MSG_WAITALL);
+-	if(ret != len){
+-		dprintk("Failed receive packet from socket to IOV, ret=%d\n", ret);
+-		err = ret;
+-	}
+-
+-#ifdef COLLECT_WRITE_SOCK_TO_FILE_STAT
+-	if (len <= (1 << 12))
+-		INC_WRITE_FROM_SOCK_4K_BUF_CNT;
+-	else if (len <= (1 << 13))
+-		INC_WRITE_FROM_SOCK_8K_BUF_CNT;
+-	else if (len <= (1 << 14))
+-		INC_WRITE_FROM_SOCK_16K_BUF_CNT;
+-	else if (len <= (1 << 15))
+-		INC_WRITE_FROM_SOCK_32K_BUF_CNT;
+-	else if (len <= (1 << 16))
+-		INC_WRITE_FROM_SOCK_64K_BUF_CNT;
+-	else
+-		INC_WRITE_FROM_SOCK_128K_BUF_CNT;
+-#endif /* COLLECT_WRITE_SOCK_TO_FILE_STAT */
+-
+-unmup_pages:
+-	/* free mappings created  with kmap previously and finish writing */
+-	for(j = 0, buf_size = 0; j < pages;buf_size += curr_page[j].size, j++) {
+-		kunmap(curr_page[j].pagep);
+-		/* code write_begin/write_end from /fs/ext4/move_extent.c line 858, 910 */
+-		ret = file->f_mapping->a_ops->write_end(file, file->f_mapping,
+-					 curr_page[j].pos, curr_page[j].size, curr_page[j].size,
+-					 curr_page[j].pagep, curr_page[j].fsdata);
+-
+-		if (unlikely(ret < 0)) {
+-			dprintk("Failed in call to write_end() on page %d, ret=%d\n", j, ret);
+-			INC_WRITE_FROM_SOCK_ERR_CNT;
+-			err = ret;
+-		}
+-	}
+-
+-	if(!err) {
+-		/* example balance_dirty_pages_ratelimited_nr from /fs/btrfs/relocation.c  line 2624 from mainline */
+-		/* check the system's dirty state and will initiate writeback if needed */
+-		balance_dirty_pages_ratelimited_nr(file->f_mapping, pages);
+-
+-		/* copy ppos to user space */
+-		copy_to_user(ppos, &position, sizeof(loff_t));
+-		err = buf_size;
+-	}
+-
+-	return release_resources(file, err);
+-}
+diff --git a/fs/read_write.h b/fs/read_write.h
+index 3cd1b1e..d07b954 100644
+--- a/fs/read_write.h
++++ b/fs/read_write.h
+@@ -3,41 +3,6 @@
+  * Don't use anywhere else.
+  */
+ 
+-#ifndef _READ_WRITE_H_
+-#define _READ_WRITE_H_
+-
+-#include <net/sock.h>
+-
+-#define WRITE_RECEIVE_SIZE 131072
+-
+-#ifdef COLLECT_WRITE_SOCK_TO_FILE_STAT
+-struct write_sock_to_file_stat {
+-	unsigned long errors;
+-	unsigned long buf_4k;
+-	unsigned long buf_8k;
+-	unsigned long buf_16k;
+-	unsigned long buf_32k;
+-	unsigned long buf_64k;
+-	unsigned long buf_128k;
+-};
+-#define INC_WRITE_FROM_SOCK_ERR_CNT	(write_from_sock.errors++)
+-#define INC_WRITE_FROM_SOCK_4K_BUF_CNT	(write_from_sock.buf_4k++)
+-#define INC_WRITE_FROM_SOCK_8K_BUF_CNT	(write_from_sock.buf_8k++)
+-#define INC_WRITE_FROM_SOCK_16K_BUF_CNT	(write_from_sock.buf_16k++)
+-#define INC_WRITE_FROM_SOCK_32K_BUF_CNT	(write_from_sock.buf_32k++)
+-#define INC_WRITE_FROM_SOCK_64K_BUF_CNT	(write_from_sock.buf_64k++)
+-#define INC_WRITE_FROM_SOCK_128K_BUF_CNT	(write_from_sock.buf_128k++)
+-#else /* COLLECT_WRITE_SOCK_TO_FILE_STAT */
+-#define INC_WRITE_FROM_SOCK_ERR_CNT
+-#endif /* COLLECT_WRITE_SOCK_TO_FILE_STAT */
+-
+-
+-#ifdef DEBUG
+-#define dprintk(fmt, args...) printk(KERN_ERR "%s: " fmt, __func__, ##args)
+-#else
+-#define dprintk(fmt, args...)
+-#endif
+-
+ 
+ typedef ssize_t (*io_fn_t)(struct file *, char __user *, size_t, loff_t *);
+ typedef ssize_t (*iov_fn_t)(struct kiocb *, const struct iovec *,
+@@ -47,8 +12,3 @@ ssize_t do_sync_readv_writev(struct file *filp, const struct iovec *iov,
+ 		unsigned long nr_segs, size_t len, loff_t *ppos, iov_fn_t fn);
+ ssize_t do_loop_readv_writev(struct file *filp, struct iovec *iov,
+ 		unsigned long nr_segs, loff_t *ppos, io_fn_t fn);
+-ssize_t write_from_socket_to_file(struct socket *sock, struct file *file,
+-		loff_t __user *ppos, size_t len);
+-
+-#endif /* _READ_WRITE_H_ */
+-
+diff --git a/fs/splice.c b/fs/splice.c
+index 66e8153..3c39eff 100644
+--- a/fs/splice.c
++++ b/fs/splice.c
+@@ -33,14 +33,14 @@
+ #include <linux/gfp.h>
+ #include <linux/socket.h>
+ #include <net/sock.h>
+-#include "read_write.h"
++#include <linux/net.h>
++#include <linux/socket.h>
++#include <linux/genalloc.h>
+ 
+-#define WRITE_SKT_TO_FILE
+-#define WRITE_FROM_SOCK_TIMEOUT  8000
++struct common_mempool;
++static struct common_mempool/*struct gen_pool*/ * rcv_pool = NULL;
++static struct common_mempool/*struct gen_pool*/ * kvec_pool = NULL;
+ 
+-#ifdef COLLECT_WRITE_SOCK_TO_FILE_STAT
+-extern struct write_sock_to_file_stat write_from_sock;
+-#endif /* COLLECT_WRITE_SOCK_TO_FILE_STAT */
+ 
+ /*
+  * Attempt to steal a page from a pipe buffer. This should perhaps go into
+@@ -544,10 +544,8 @@ ssize_t generic_file_splice_read(struct file *in, loff_t *ppos,
+ 		len = left;
+ 
+ 	ret = __generic_file_splice_read(in, ppos, pipe, len, flags);
+-	if (ret > 0) {
++	if (ret > 0)
+ 		*ppos += ret;
+-		file_accessed(in);
+-	}
+ 
+ 	return ret;
+ }
+@@ -700,17 +698,19 @@ static int pipe_to_sendpage(struct pipe_inode_info *pipe,
+ {
+ 	struct file *file = sd->u.file;
+ 	loff_t pos = sd->pos;
+-	int more;
++	int ret, more;
+ 
+-	if (!likely(file->f_op && file->f_op->sendpage))
+-		return -EINVAL;
++	ret = buf->ops->confirm(pipe, buf);
++	if (!ret) {
++		more = (sd->flags & SPLICE_F_MORE) ? MSG_MORE : 0;
++		if (sd->len < sd->total_len)
++			more |= MSG_SENDPAGE_NOTLAST;
+ 
+-	more = (sd->flags & SPLICE_F_MORE) ? MSG_MORE : 0;
+-	if (sd->len < sd->total_len)
+-		more |= MSG_SENDPAGE_NOTLAST;
++		ret = file->f_op->sendpage(file, buf->page, buf->offset,
++					   sd->len, &pos, more);
++	}
+ 
+-	return file->f_op->sendpage(file, buf->page, buf->offset,
+-				    sd->len, &pos, more);
++	return ret;
+ }
+ 
+ /*
+@@ -1020,10 +1020,8 @@ generic_file_splice_write(struct pipe_inode_info *pipe, struct file *out,
+ 
+ 		mutex_lock_nested(&inode->i_mutex, I_MUTEX_CHILD);
+ 		ret = file_remove_suid(out);
+-		if (!ret) {
+-			file_update_time(out);
++		if (!ret)
+ 			ret = splice_from_pipe_feed(pipe, &sd, pipe_to_file);
+-		}
+ 		mutex_unlock(&inode->i_mutex);
+ 	} while (ret > 0);
+ 	splice_from_pipe_end(pipe, &sd);
+@@ -1119,9 +1117,8 @@ static long do_splice_from(struct pipe_inode_info *pipe, struct file *out,
+ 	if (unlikely(ret < 0))
+ 		return ret;
+ 
+-	if (out->f_op && out->f_op->splice_write)
+-		splice_write = out->f_op->splice_write;
+-	else
++	splice_write = out->f_op->splice_write;
++	if (!splice_write)
+ 		splice_write = default_file_splice_write;
+ 
+ 	return splice_write(pipe, out, ppos, len, flags);
+@@ -1145,9 +1142,8 @@ static long do_splice_to(struct file *in, loff_t *ppos,
+ 	if (unlikely(ret < 0))
+ 		return ret;
+ 
+-	if (in->f_op && in->f_op->splice_read)
+-		splice_read = in->f_op->splice_read;
+-	else
++	splice_read = in->f_op->splice_read;
++	if (!splice_read)
+ 		splice_read = default_file_splice_read;
+ 
+ 	return splice_read(in, ppos, pipe, len, flags);
+@@ -1398,6 +1394,402 @@ static long do_splice(struct file *in, loff_t __user *off_in,
+ 	return -EINVAL;
+ }
+ 
++/****************************** POOL MANAGER *************************************/
++/* Forward declarations */
++typedef struct common_mempool common_mempool_t;
++void* common_mempool_alloc(common_mempool_t* pool);
++void common_mempool_free(common_mempool_t* pool, void* mem);
++common_mempool_t* common_mempool_get(void* mem);
++common_mempool_t*  common_mempool_create(uint32_t number_of_entries, uint32_t entry_size);
++void  common_mempool_destroy(common_mempool_t* pool);
++int32_t common_mempool_get_number_of_free_entries(common_mempool_t* pool);
++int32_t common_mempool_get_number_of_entries(common_mempool_t* pool);
++int32_t common_mempool_get_entry_size(common_mempool_t* pool);
++
++/* Implementation */
++#define COMMON_MPOOL_HDR_FLAGS_ALLOCATED 0x00000001
++#define COMMON_MPOOL_HDR_MAGIC           0xa5a5a508
++#define COMMON_MPOOL_FTR_MAGIC           0xa5a5a509
++#define COMMON_MPOOL_ALIGN4(size) ((size)+4) & 0xFFFFFFFC;
++#define COMMON_MPOOL_CHECK_ALIGNED4(ptr) ((((uint32_t)(ptr)) & 0x00000003) == 0)
++
++typedef struct common_mpool_hdr
++{
++  struct common_mpool_hdr* next;
++  common_mempool_t*        pool;
++  uint32_t flags;
++  uint32_t magic;
++} common_mpool_hdr_t;
++
++typedef struct
++{
++	uint32_t magic;
++	common_mempool_t* pool;
++} common_mpool_ftr_t;
++
++struct common_mempool
++{
++	common_mpool_hdr_t*  head;
++	common_mpool_hdr_t*  tail;
++	uint32_t		number_of_free_entries;
++	spinlock_t		lock;
++	uint32_t                 data_size; /* size of data section in pool entry */
++	uint32_t                 pool_entry_size; /* size of pool entry */
++	/* parameters passed on init */
++	uint32_t                 number_of_entries;
++	uint32_t                 entry_size;
++	uint8_t*                 mem;
++};
++
++bool common_mempool_check_internal(common_mempool_t * pool,
++                                          void * ptr,
++                                          common_mpool_hdr_t * hdr,
++                                          common_mpool_ftr_t * ftr)
++{
++	if (!ptr) {
++		printk(KERN_ERR "illegal ptr NULL");
++		return false;
++	}
++
++	if (!COMMON_MPOOL_CHECK_ALIGNED4(ptr)) {
++		printk(KERN_ERR "ptr not aligned %p",ptr);
++		return false;
++	}
++
++	if (hdr->magic != COMMON_MPOOL_HDR_MAGIC) {
++		printk(KERN_ERR "illegal hdr magic %x for ptr %p",hdr->magic,ptr);
++		return false;
++	}
++
++	if (ftr->magic != COMMON_MPOOL_FTR_MAGIC) {
++		printk(KERN_ERR "illegal ftr magic %x for ptr %p",ftr->magic,ptr);
++		return false;
++	}
++
++	if (hdr->pool != pool || ftr->pool != pool) {
++		printk(KERN_ERR "inconsistent size hdr->pool: %p ftr->pool: %p for ptr %p",hdr->pool,ftr->pool,ptr);
++		return false;
++	}
++
++	if (!(hdr->flags & COMMON_MPOOL_HDR_FLAGS_ALLOCATED)) {
++		printk(KERN_ERR "ptr %p was not allocated",ptr);
++		return false;
++	}
++	return true;
++}
++
++void* common_mempool_alloc(common_mempool_t* pool)
++{
++	common_mpool_hdr_t* hdr;
++
++	if (!pool || !pool->head || pool->number_of_free_entries == 0) {
++		return NULL;
++	}
++	spin_lock_bh(&pool->lock);
++	hdr = pool->head;
++	pool->head = pool->head->next;
++
++	if (!pool->head) {
++		pool->tail = NULL;
++	}
++
++	hdr->flags = COMMON_MPOOL_HDR_FLAGS_ALLOCATED;
++	pool->number_of_free_entries--;
++	spin_unlock_bh(&pool->lock);
++	return ((uint8_t*)hdr+sizeof(common_mpool_hdr_t));
++}
++
++void common_mempool_free(common_mempool_t* pool, void* ptr)
++{
++	common_mpool_hdr_t* hdr;
++	common_mpool_ftr_t* ftr;
++
++	if (!pool || !ptr) {
++		return;
++	}
++	if (!COMMON_MPOOL_CHECK_ALIGNED4(ptr)) {
++		printk(KERN_ERR "ptr not aligned %p",ptr);
++		return;
++	}
++	spin_lock_bh(&pool->lock);
++	hdr = (common_mpool_hdr_t*)((uint8_t*)ptr-sizeof(common_mpool_hdr_t));
++	ftr = (common_mpool_ftr_t*)((uint8_t*)ptr+pool->data_size);
++
++	if (!common_mempool_check_internal(pool,ptr,hdr,ftr)) {
++		printk(KERN_ERR "invalid ptr %p",ptr);
++		spin_unlock_bh(&pool->lock);
++		return;
++	}
++
++	hdr->flags ^= COMMON_MPOOL_HDR_FLAGS_ALLOCATED;
++	hdr->next = NULL;
++
++	if (!pool->head) {
++		pool->head = pool->tail = hdr;
++	} else {
++		pool->tail->next = hdr;
++		pool->tail = hdr;
++	}
++
++	pool->number_of_free_entries++;
++	spin_unlock_bh(&pool->lock);
++}
++
++common_mempool_t*  common_mempool_create(uint32_t number_of_entries,
++						uint32_t entry_size)
++{
++	uint32_t i;
++	uint32_t aligned_entry_size = COMMON_MPOOL_ALIGN4(entry_size);
++	uint32_t pool_entry_size = COMMON_MPOOL_ALIGN4(sizeof(common_mpool_hdr_t)+aligned_entry_size+sizeof(common_mpool_ftr_t));
++	common_mpool_hdr_t* hdr;
++	common_mpool_hdr_t* next_hdr;
++	common_mpool_ftr_t* ftr;
++	common_mempool_t* pool;
++
++	pool = kmalloc((sizeof(common_mempool_t) + pool_entry_size*number_of_entries), GFP_ATOMIC);
++
++	if (!pool) {
++		return NULL;
++	}
++
++	pool->entry_size = entry_size;
++	pool->number_of_entries = number_of_entries;
++	pool->data_size  = aligned_entry_size;
++	pool->pool_entry_size = pool_entry_size;
++	pool->number_of_free_entries = number_of_entries;
++	pool->mem = (uint8_t*)(pool+1);
++	pool->head = (common_mpool_hdr_t*)pool->mem;
++	spin_lock_init(&pool->lock);
++
++	for (i=0;i<number_of_entries;i++) {
++		hdr = (common_mpool_hdr_t*)&pool->mem[pool_entry_size*i];
++		ftr = (common_mpool_ftr_t*)((uint8_t*)hdr+sizeof(common_mpool_hdr_t)+aligned_entry_size);
++		hdr->magic = COMMON_MPOOL_HDR_MAGIC;
++		hdr->pool = pool;
++		hdr->flags = 0;
++		ftr->magic = COMMON_MPOOL_FTR_MAGIC;
++		ftr->pool = pool;
++
++		if (i < (number_of_entries-1)) {
++			next_hdr = (common_mpool_hdr_t*)&pool->mem[pool_entry_size*(i+1)];
++		} else {
++			pool->tail = hdr;
++			next_hdr = NULL;
++		}
++
++		hdr->next = next_hdr;
++	}
++	return pool;
++}
++
++void  common_mempool_destroy(common_mempool_t* pool)
++{
++	if (!pool) {
++		return;
++	}
++
++	kfree(pool);
++}
++
++int32_t common_mempool_get_number_of_free_entries(common_mempool_t* pool)
++{
++	if (!pool) {
++		return -1;
++	}
++
++	return (int32_t)pool->number_of_free_entries;
++}
++
++int32_t common_mempool_get_number_of_entries(common_mempool_t* pool)
++{
++	if (!pool) {
++		return -1;
++	}
++	return (int32_t)pool->number_of_entries;
++}
++
++int32_t common_mempool_get_entry_size(common_mempool_t* pool)
++{
++	if (!pool) {
++		return -1;
++	}
++	return (int32_t)pool->entry_size;
++}
++
++common_mempool_t* common_mempool_get(void* ptr)
++{
++	common_mpool_hdr_t* hdr;
++	common_mpool_ftr_t* ftr;
++
++	if (!ptr) {
++		return NULL;
++	}
++	if (!COMMON_MPOOL_CHECK_ALIGNED4(ptr)) {
++		return NULL;
++	}
++	hdr = (common_mpool_hdr_t*)((uint8_t*)ptr-sizeof(common_mpool_hdr_t));
++	ftr = (common_mpool_ftr_t*)((uint8_t*)ptr + hdr->pool->data_size);
++
++	if (hdr->magic != COMMON_MPOOL_HDR_MAGIC) {
++		printk(KERN_ERR "illegal hdr magic %x for ptr %p",hdr->magic,ptr);
++		return NULL;
++	}
++	if (ftr->magic != COMMON_MPOOL_FTR_MAGIC) {
++		printk(KERN_ERR "illegal ftr magic %x for ptr %p",ftr->magic,ptr);
++		return NULL;
++	}
++	if (hdr->pool != ftr->pool || !hdr->pool) {
++		printk(KERN_ERR "inconsistent size hdr->pool: %p ftr->pool: %p for ptr %p",hdr->pool,ftr->pool,ptr);
++		return false;
++	}
++	return hdr->pool;
++}
++/****************************** POOL MANAGER *************************************/
++
++ssize_t generic_splice_from_socket(struct file *file, struct socket *sock,
++				     loff_t __user *ppos, size_t count)
++{
++	struct address_space *mapping = file->f_mapping;
++	struct inode *inode = mapping->host;
++	loff_t pos;
++	int count_tmp;
++	int err = 0;
++	int i = 0;
++	int nr_pages = 0;
++	int page_cnt_est= count/PAGE_SIZE + 1;
++	struct recvfile_ctl_blk *rv_cb;
++	struct kvec *iov;
++	struct msghdr msg;
++	long rcvtimeo;
++	int ret;
++
++	if (copy_from_user(&pos, ppos, sizeof(loff_t)))
++		return -EFAULT;
++
++	if (count > MAX_PAGES_PER_RECVFILE * PAGE_SIZE) {
++		printk("%s: count(%u) exceeds maxinum\n", __func__, count);
++		return -EINVAL;
++	}
++	mutex_lock(&inode->i_mutex);
++
++	vfs_check_frozen(inode->i_sb, SB_FREEZE_WRITE);
++
++	/* We can write back this queue in page reclaim */
++	current->backing_dev_info = mapping->backing_dev_info;
++
++	err = generic_write_checks(file, &pos, &count, S_ISBLK(inode->i_mode));
++	if (err != 0 || count == 0)
++		goto done;
++
++	file_remove_suid(file);
++	file_update_time(file);
++
++	if (unlikely(!rcv_pool || !kvec_pool))
++	{
++		printk(KERN_ERR "rcv_pool %p kvec_pool %p uninitialized %d\n", rcv_pool, kvec_pool);
++		return -ENOMEM;
++	}
++
++	rv_cb = (struct recvfile_ctl_blk *)common_mempool_alloc(rcv_pool);
++	iov = (struct kvec *)common_mempool_alloc(kvec_pool);
++
++	if (!rv_cb || !iov)
++	{
++		printk(KERN_ERR "Failed to get pool mem for %d pages (rv_cb %p iov %p)\n", page_cnt_est, rv_cb, iov);
++		return -ENOMEM;
++	}
++
++	count_tmp = count;
++	do {
++		unsigned long bytes;	/* Bytes to write to page */
++		unsigned long offset;	/* Offset into pagecache page */
++		struct page *pageP;
++		void *fsdata;
++
++		offset = (pos & (PAGE_CACHE_SIZE - 1));
++		bytes = PAGE_CACHE_SIZE - offset;
++		if (bytes > count_tmp)
++			bytes = count_tmp;
++		ret = mapping->a_ops->write_begin(file, mapping, pos, bytes,
++						  AOP_FLAG_UNINTERRUPTIBLE,
++						  &pageP, &fsdata);
++
++		if (unlikely(ret)) {
++			err = ret;
++			goto cleanup;
++		}
++
++		rv_cb[nr_pages].rv_page = pageP;
++		rv_cb[nr_pages].rv_pos = pos;
++		rv_cb[nr_pages].rv_count = bytes;
++		rv_cb[nr_pages].rv_fsdata = fsdata;
++		iov[nr_pages].iov_base = kmap(pageP) + offset;
++		iov[nr_pages].iov_len = bytes;
++		nr_pages++;
++		count_tmp -= bytes;
++		pos += bytes;
++	} while (count_tmp);
++
++	/* IOV is ready, receive the date from socket now */
++	msg.msg_name = NULL;
++	msg.msg_namelen = 0;
++	msg.msg_iov = (struct iovec *)&iov[0];
++	msg.msg_iovlen = nr_pages ;
++	msg.msg_control = NULL;
++	msg.msg_controllen = 0;
++	msg.msg_flags = MSG_KERNSPACE;
++	rcvtimeo = sock->sk->sk_rcvtimeo;
++	sock->sk->sk_rcvtimeo = 8 * HZ;
++
++	ret = kernel_recvmsg(sock, &msg, &iov[0], nr_pages, count,
++			     MSG_WAITALL | MSG_NOCATCHSIG);
++
++	sock->sk->sk_rcvtimeo = rcvtimeo;
++	if(ret != count)
++		err = -EPIPE;
++	else
++		err = 0;
++
++	if (unlikely(err < 0)) {
++		goto cleanup;
++	}
++
++	for(i=0,count=0;i < nr_pages;i++) {
++		kunmap(rv_cb[i].rv_page);
++		ret = mapping->a_ops->write_end(file, mapping,
++						rv_cb[i].rv_pos,
++						rv_cb[i].rv_count,
++						rv_cb[i].rv_count,
++						rv_cb[i].rv_page,
++						rv_cb[i].rv_fsdata);
++		if (unlikely(ret < 0))
++			printk("%s: write_end fail,ret = %d\n", __func__, ret);
++		count += rv_cb[i].rv_count;
++	}
++	balance_dirty_pages_ratelimited_nr(mapping, nr_pages);
++	if (copy_to_user(ppos, &pos, sizeof(loff_t)))
++		err = -EFAULT;
++done:
++	current->backing_dev_info = NULL;
++	common_mempool_free(rcv_pool, (void*)rv_cb);
++	common_mempool_free(kvec_pool, (void*)iov);
++
++	mutex_unlock(&inode->i_mutex);
++	return err ? err : count;
++cleanup:
++	for(i = 0; i < nr_pages; i++) {
++		kunmap(rv_cb[i].rv_page);
++		ret = mapping->a_ops->write_end(file, mapping,
++						rv_cb[i].rv_pos,
++						rv_cb[i].rv_count,
++						rv_cb[i].rv_count,
++						rv_cb[i].rv_page,
++						rv_cb[i].rv_fsdata);
++	}
++
++	goto done;
++}
++
+ /*
+  * Map an iov into an array of pages and offset/length tupples. With the
+  * partial_page structure, we can map several non-contiguous ranges into
+@@ -1703,66 +2095,54 @@ SYSCALL_DEFINE6(splice, int, fd_in, loff_t __user *, off_in,
+ 		int, fd_out, loff_t __user *, off_out,
+ 		size_t, len, unsigned int, flags)
+ {
+-	
+-	long error, timeout;
+-	struct file *in, *out = NULL;
+-	struct socket *socket_struct = NULL;
++	long error;
++	struct file *in, *out;
+ 	int fput_in, fput_out;
++	struct socket *sock = NULL;
++
+ 	if (unlikely(!len))
+ 		return 0;
+ 
+ 	error = -EBADF;
+ 
+-	/* get file structure of "out" and check return result */
+-	out = fget_light(fd_out, &fput_out);
+-	if (out) {
+-		if (!(out->f_mode & FMODE_WRITE)) {
+-			fput_light(out, fput_out);
+-			dprintk("FMODE_WRITE flag is not set in out->f_mode\n");
+-			INC_WRITE_FROM_SOCK_ERR_CNT;
+-			return error;
++	/* check if fd_in is a socket */
++	sock = sockfd_lookup(fd_in, &error);
++	if (sock) {
++		out = NULL;
++		if (!sock->sk)
++			goto done;
++		out = fget_light(fd_out, &fput_out);
++
++		if (out) {
++			if (!(out->f_mode & FMODE_WRITE))
++				goto done;
++			if (!out->f_op->splice_from_socket)
++				goto done;
++			error = out->f_op->splice_from_socket(out, sock, off_out, len);
+ 		}
+-	} else {
+-		dprintk("Failed to get \"out\" file structire\n");
+-		INC_WRITE_FROM_SOCK_ERR_CNT;
++done:
++		if(out)
++			fput_light(out, fput_out);
++		fput(sock->file);
+ 		return error;
+ 	}
+ 
+-#ifdef WRITE_SKT_TO_FILE
+-    /* check fd_in is socket fd */
+-
+-	socket_struct = sockfd_lookup(fd_in, (int*)&error);
+-	/* if fd_in is socket do do_splice_from_socket_to_file else do_splice */
+-	if (socket_struct) {
+-		/* check size of len argument and socket */
+-		if(len > WRITE_RECEIVE_SIZE || !socket_struct->sk) {
+-			if (socket_struct->sk != 0)
+-				dprintk("Bad length (%d)\n", len);
+-			else
+-				dprintk("Bad socket (socket_struct->sk == 0)\n");
+-			INC_WRITE_FROM_SOCK_ERR_CNT;
+-        	error = -EINVAL;
+-		} else {
+-			timeout = socket_struct->sk->sk_rcvtimeo;
+-			/* code from /net/tipc/socket.c line 61, 241 */
+-			socket_struct->sk->sk_rcvtimeo = msecs_to_jiffies(WRITE_FROM_SOCK_TIMEOUT);
+-			error = write_from_socket_to_file(socket_struct, out, off_out, len);
+-			socket_struct->sk->sk_rcvtimeo = timeout;
+-		} 
+-		fput(socket_struct->file);
+-	} else {
+-#endif
+-		in = fget_light(fd_in, &fput_in);
+-		if (in) {
+-			if (in->f_mode & FMODE_READ) {
+-				error = do_splice(in, off_in, out, off_out, len, flags);
++	in = fget_light(fd_in, &fput_in);
++	if (in) {
++		if (in->f_mode & FMODE_READ) {
++			out = fget_light(fd_out, &fput_out);
++			if (out) {
++				if (out->f_mode & FMODE_WRITE)
++					error = do_splice(in, off_in,
++							  out, off_out,
++							  len, flags);
++				fput_light(out, fput_out);
+ 			}
+-			fput_light(in, fput_in);
+ 		}
+-#ifdef WRITE_SKT_TO_FILE
++
++		fput_light(in, fput_in);
+ 	}
+-#endif
+-	fput_light(out, fput_out);
++
+ 	return error;
+ 	
+ 	}
+@@ -2098,3 +2478,23 @@ SYSCALL_DEFINE4(tee, int, fdin, int, fdout, size_t, len, unsigned int, flags)
+ 
+ 	return error;
+ }
++
++static int __init init_splice_pools(void)
++{
++	unsigned int rcv_pool_size= sizeof(struct recvfile_ctl_blk) * MAX_PAGES_PER_RECVFILE;
++	unsigned int kve_pool_size= sizeof(struct kvec) * MAX_PAGES_PER_RECVFILE;
++
++	rcv_pool =  common_mempool_create(4 * num_possible_cpus(), rcv_pool_size);
++	kvec_pool = common_mempool_create(4 * num_possible_cpus(), kve_pool_size);
++
++	if (!rcv_pool || !kvec_pool)
++	{
++		return -ENOMEM;
++	}
++/*
++	printk(KERN_ERR "%s rcv %p (sz:%d) kvec %p (sz:%d) per %d core\n",
++		__FUNCTION__, rcv_pool, rcv_pool_size, kvec_pool, kve_pool_size, num_possible_cpus());
++*/
++}
++
++fs_initcall(init_splice_pools);
+diff --git a/fs/xfs/xfs_file.c b/fs/xfs/xfs_file.c
+index 753ed9b..e97c22d 100644
+--- a/fs/xfs/xfs_file.c
++++ b/fs/xfs/xfs_file.c
+@@ -506,6 +506,61 @@ xfs_file_splice_write(
+ 	return ret;
+ }
+ 
++STATIC ssize_t
++xfs_file_splice_from_socket(
++       struct file     *file,
++       struct socket   *sock,
++       loff_t __user   *ppos,
++       size_t count)
++{
++       struct inode            *inode = file->f_mapping->host;
++       struct xfs_inode        *ip = XFS_I(inode);
++       ssize_t                 ret;
++       xfs_fsize_t             isize, new_size;
++
++       XFS_STATS_INC(xs_write_calls);
++       if (XFS_FORCED_SHUTDOWN(ip->i_mount))
++               return -EIO;
++
++       xfs_ilock(ip, XFS_IOLOCK_EXCL);
++
++       new_size = *ppos + count;
++
++       xfs_ilock(ip, XFS_ILOCK_EXCL);
++       if (new_size > ip->i_size)
++               ip->i_new_size = new_size;
++       xfs_iunlock(ip, XFS_ILOCK_EXCL);
++//     xfs_rw_enter_trace(XFS_SPLICE_WRITE_ENTER, ip,
++//                        pipe, count, *ppos, ioflags);
++       ret = generic_splice_from_socket(file, sock, ppos, count);
++
++       if (ret > 0)
++               XFS_STATS_ADD(xs_write_bytes, ret);
++
++       isize = i_size_read(inode);
++       if (unlikely(ret < 0 && ret != -EFAULT && *ppos > isize))
++               *ppos = isize;
++
++       if (*ppos > ip->i_size) {
++               xfs_ilock(ip, XFS_ILOCK_EXCL);
++               if (*ppos > ip->i_size)
++                       ip->i_size = *ppos;
++               xfs_iunlock(ip, XFS_ILOCK_EXCL);
++       }
++
++       if (ip->i_new_size) {
++               xfs_ilock(ip, XFS_ILOCK_EXCL);
++               ip->i_new_size = 0;
++               if (ip->i_d.di_size > ip->i_size)
++                       ip->i_d.di_size = ip->i_size;
++               xfs_iunlock(ip, XFS_ILOCK_EXCL);
++       }
++       xfs_iunlock(ip, XFS_IOLOCK_EXCL);
++       return ret;
++}
++
++
++
+ /*
+  * This routine is called to handle zeroing any space in the last
+  * block of the file that is beyond the EOF.  We do this since the
+@@ -1149,6 +1204,7 @@ const struct file_operations xfs_file_operations = {
+ 	.aio_write	= xfs_file_aio_write,
+ 	.splice_read	= xfs_file_splice_read,
+ 	.splice_write	= xfs_file_splice_write,
++	.splice_from_socket = xfs_file_splice_from_socket,
+ 	.unlocked_ioctl	= xfs_file_ioctl,
+ #ifdef CONFIG_COMPAT
+ 	.compat_ioctl	= xfs_file_compat_ioctl,
+diff --git a/include/linux/dmaengine.h b/include/linux/dmaengine.h
+index 75f53f8..437f1a2 100644
+--- a/include/linux/dmaengine.h
++++ b/include/linux/dmaengine.h
+@@ -881,6 +881,11 @@ struct dma_pinned_list {
+ struct dma_pinned_list *dma_pin_iovec_pages(struct iovec *iov, size_t len);
+ void dma_unpin_iovec_pages(struct dma_pinned_list* pinned_list);
+ 
++#ifdef CONFIG_SPLICE_NET_DMA_SUPPORT
++struct dma_pinned_list *dma_pin_kernel_iovec_pages(struct iovec *iov, size_t len);
++void dma_unpin_kernel_iovec_pages(struct dma_pinned_list* pinned_list);
++#endif
++
+ dma_cookie_t dma_memcpy_to_iovec(struct dma_chan *chan, struct iovec *iov,
+ 	struct dma_pinned_list *pinned_list, unsigned char *kdata, size_t len);
+ dma_cookie_t dma_memcpy_pg_to_iovec(struct dma_chan *chan, struct iovec *iov,
+diff --git a/include/linux/fs.h b/include/linux/fs.h
+index 03e2f2b..03c64fa 100644
+--- a/include/linux/fs.h
++++ b/include/linux/fs.h
+@@ -374,6 +374,8 @@ struct inodes_stat_t {
+ #define SYNC_FILE_RANGE_WRITE		2
+ #define SYNC_FILE_RANGE_WAIT_AFTER	4
+ 
++#define MAX_PAGES_PER_RECVFILE		64
++
+ #ifdef __KERNEL__
+ 
+ #include <linux/linkage.h>
+@@ -410,6 +412,7 @@ struct kstatfs;
+ struct vm_area_struct;
+ struct vfsmount;
+ struct cred;
++struct socket;
+ 
+ extern void __init inode_init(void);
+ extern void __init inode_init_early(void);
+@@ -1626,6 +1629,8 @@ struct file_operations {
+ 	int (*flock) (struct file *, int, struct file_lock *);
+ 	ssize_t (*splice_write)(struct pipe_inode_info *, struct file *, loff_t *, size_t, unsigned int);
+ 	ssize_t (*splice_read)(struct file *, loff_t *, struct pipe_inode_info *, size_t, unsigned int);
++	ssize_t (*splice_from_socket)(struct file *file, struct socket *sock,
++				     loff_t __user *ppos, size_t count);
+ 	int (*setlease)(struct file *, long, struct file_lock **);
+ 	long (*fallocate)(struct file *file, int mode, loff_t offset,
+ 			  loff_t len);
+@@ -2451,6 +2456,8 @@ extern ssize_t generic_splice_sendpage(struct pipe_inode_info *pipe,
+ 		struct file *out, loff_t *, size_t len, unsigned int flags);
+ extern long do_splice_direct(struct file *in, loff_t *ppos, struct file *out,
+ 		size_t len, unsigned int flags);
++extern ssize_t generic_splice_from_socket(struct file *file, struct socket *sock,
++				     loff_t __user *ppos, size_t count);
+ 
+ extern void
+ file_ra_state_init(struct file_ra_state *ra, struct address_space *mapping);
+diff --git a/include/linux/skbuff.h b/include/linux/skbuff.h
+index 982019c..4733d12 100644
+--- a/include/linux/skbuff.h
++++ b/include/linux/skbuff.h
+@@ -2093,6 +2093,9 @@ extern unsigned int    datagram_poll(struct file *file, struct socket *sock,
+ extern int	       skb_copy_datagram_iovec(const struct sk_buff *from,
+ 					       int offset, struct iovec *to,
+ 					       int size);
++extern int	       skb_copy_datagram_to_kernel_iovec(const struct sk_buff *from,
++					       int offset, struct iovec *to,
++					       int size);
+ extern int	       skb_copy_and_csum_datagram_iovec(struct sk_buff *skb,
+ 							int hlen,
+ 							struct iovec *iov);
+diff --git a/include/linux/socket.h b/include/linux/socket.h
+index ad919e0..6ca591f 100644
+--- a/include/linux/socket.h
++++ b/include/linux/socket.h
+@@ -266,6 +266,8 @@ struct ucred {
+ #define MSG_MORE	0x8000	/* Sender will send more */
+ #define MSG_WAITFORONE	0x10000	/* recvmmsg(): block until 1+ packets avail */
+ #define MSG_SENDPAGE_NOTLAST 0x20000 /* sendpage() internal : not the last page */
++#define MSG_KERNSPACE   0x40000
++#define MSG_NOCATCHSIG	0x80000
+ #define MSG_EOF         MSG_FIN
+ 
+ #define MSG_CMSG_CLOEXEC 0x40000000	/* Set close_on_exit for file
+@@ -332,6 +334,7 @@ extern int memcpy_toiovecend(const struct iovec *v, unsigned char *kdata,
+ 			     int offset, int len);
+ extern int move_addr_to_kernel(void __user *uaddr, int ulen, struct sockaddr *kaddr);
+ extern int put_cmsg(struct msghdr*, int level, int type, int len, void *data);
++extern void memcpy_tokerneliovec(struct iovec *iov, unsigned char *kdata, int len);
+ 
+ struct timespec;
+ 
+diff --git a/include/linux/splice.h b/include/linux/splice.h
+index 09a545a..da53d13 100644
+--- a/include/linux/splice.h
++++ b/include/linux/splice.h
+@@ -58,6 +58,14 @@ struct splice_pipe_desc {
+ 	void (*spd_release)(struct splice_pipe_desc *, unsigned int);
+ };
+ 
++struct recvfile_ctl_blk
++{
++	struct page *rv_page;
++	loff_t rv_pos;
++	size_t rv_count;
++	void *rv_fsdata;
++};
++
+ typedef int (splice_actor)(struct pipe_inode_info *, struct pipe_buffer *,
+ 			   struct splice_desc *);
+ typedef int (splice_direct_actor)(struct pipe_inode_info *,
+diff --git a/net/core/datagram.c b/net/core/datagram.c
+index 68bbf9f..e54d89c 100644
+--- a/net/core/datagram.c
++++ b/net/core/datagram.c
+@@ -128,6 +128,65 @@ out_noerr:
+ 	goto out;
+ }
+ 
++/*
++ *	skb_copy_datagram_to_kernel_iovec - Copy a datagram to a kernel iovec structure.
++ *	@skb: buffer to copy
++ *	@offset: offset in the buffer to start copying from
++ *	@to: io vector to copy to
++ *	@len: amount of data to copy from buffer to iovec
++ *
++ *	Note: the iovec is modified during the copy.
++ */
++int skb_copy_datagram_to_kernel_iovec(const struct sk_buff *skb, int offset,
++				      struct iovec *to, int len)
++{
++	int i, fraglen, end = 0;
++	struct sk_buff *next = skb_shinfo(skb)->frag_list;
++
++	if (!len)
++		return 0;
++
++next_skb:
++	fraglen = skb_headlen(skb);
++	i = -1;
++
++	while (1) {
++		int start = end;
++
++		if ((end += fraglen) > offset) {
++			int copy = end - offset;
++			int o = offset - start;
++
++			if (copy > len)
++				copy = len;
++			if (i == -1)
++				memcpy_tokerneliovec(to, skb->data + o, copy);
++			else {
++				skb_frag_t *frag = &skb_shinfo(skb)->frags[i];
++				struct page *page = frag->page;
++				void *p = kmap(page) + frag->page_offset + o;
++				memcpy_tokerneliovec(to, p, copy);
++				kunmap(page);
++			}
++
++			if (!(len -= copy))
++				return 0;
++			offset += copy;
++		}
++		if (++i >= skb_shinfo(skb)->nr_frags)
++			break;
++		fraglen = skb_shinfo(skb)->frags[i].size;
++	}
++	if (next) {
++		skb = next;
++		BUG_ON(skb_shinfo(skb)->frag_list);
++		next = skb->next;
++		goto next_skb;
++	}
++
++	return -EFAULT;
++}
++
+ /**
+  *	__skb_recv_datagram - Receive a datagram skbuff
+  *	@sk: socket
+diff --git a/net/core/iovec.c b/net/core/iovec.c
+index c40f27e..b7e0190 100644
+--- a/net/core/iovec.c
++++ b/net/core/iovec.c
+@@ -125,6 +125,26 @@ int memcpy_toiovecend(const struct iovec *iov, unsigned char *kdata,
+ EXPORT_SYMBOL(memcpy_toiovecend);
+ 
+ /*
++ *	In kernel copy to iovec. Returns -EFAULT on error.
++ *
++ *	Note: this modifies the original iovec.
++ */
++void memcpy_tokerneliovec(struct iovec *iov, unsigned char *kdata, int len)
++{
++	while (len > 0) {
++		if (iov->iov_len) {
++			int copy = min_t(unsigned int, iov->iov_len, len);
++			memcpy(iov->iov_base, kdata, copy);
++			len -= copy;
++			kdata += copy;
++			iov->iov_base += copy;
++			iov->iov_len -= copy;
++		}
++		iov++;
++	}
++}
++
++/*
+  *	Copy iovec to kernel. Returns -EFAULT on error.
+  *
+  *	Note: this modifies the original iovec.
+diff --git a/net/ipv4/tcp.c b/net/ipv4/tcp.c
+index 52edbb8..5e63534 100644
+--- a/net/ipv4/tcp.c
++++ b/net/ipv4/tcp.c
+@@ -1443,6 +1443,20 @@ int tcp_recvmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
+ 
+ 		if (skb)
+ 			available = TCP_SKB_CB(skb)->seq + skb->len - (*seq);
++#ifdef CONFIG_SPLICE_NET_DMA_SUPPORT
++		if (msg->msg_flags & MSG_KERNSPACE) {
++			if ((available >= target) &&
++			    (len > sysctl_tcp_dma_copybreak) && !(flags & MSG_PEEK) &&
++			    !sysctl_tcp_low_latency &&
++			    dma_find_channel(DMA_MEMCPY)) {
++				preempt_enable_no_resched();
++				tp->ucopy.pinned_list =
++						dma_pin_kernel_iovec_pages(msg->msg_iov, len);
++			} else {
++				preempt_enable_no_resched();
++			}
++		}
++#else
+ 		if ((available < target) &&
+ 		    (len > sysctl_tcp_dma_copybreak) && !(flags & MSG_PEEK) &&
+ 		    !sysctl_tcp_low_latency &&
+@@ -1453,14 +1467,30 @@ int tcp_recvmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
+ 		} else {
+ 			preempt_enable_no_resched();
+ 		}
++#endif
+ 	}
+ #endif
+ 
+ 	do {
+ 		u32 offset;
+ 
++		if (flags & MSG_NOCATCHSIG) {
++			if (signal_pending(current)) {
++				if (sigismember(&current->pending.signal, SIGQUIT) ||
++				    sigismember(&current->pending.signal, SIGABRT) ||
++				    sigismember(&current->pending.signal, SIGKILL) ||
++				    sigismember(&current->pending.signal, SIGTERM) ||
++				    sigismember(&current->pending.signal, SIGSTOP)) {
++
++					if (copied)
++						break;
++					copied = timeo ? sock_intr_errno(timeo) : -EAGAIN;
++					break;
++				}
++			}
++		}
+ 		/* Are we at urgent data? Stop if we have read anything or have SIGURG pending. */
+-		if (tp->urg_data && tp->urg_seq == *seq) {
++		else if (tp->urg_data && tp->urg_seq == *seq) {
+ 			if (copied)
+ 				break;
+ 			if (signal_pending(current)) {
+@@ -1693,8 +1723,12 @@ do_prequeue:
+ 			} else
+ #endif
+ 			{
+-				err = skb_copy_datagram_iovec(skb, offset,
+-						msg->msg_iov, used);
++				if (msg->msg_flags & MSG_KERNSPACE)
++					err = skb_copy_datagram_to_kernel_iovec(skb,
++							offset, msg->msg_iov, used);
++				else
++					err = skb_copy_datagram_iovec(skb, offset,
++							msg->msg_iov, used);
+ 				if (err) {
+ 					/* Exception. Bailout! */
+ 					if (!copied)
+@@ -1760,7 +1794,12 @@ skip_copy:
+ 	tp->ucopy.dma_chan = NULL;
+ 
+ 	if (tp->ucopy.pinned_list) {
+-		dma_unpin_iovec_pages(tp->ucopy.pinned_list);
++#ifdef CONFIG_SPLICE_NET_DMA_SUPPORT
++		if(msg->msg_flags & MSG_KERNSPACE)
++			dma_unpin_kernel_iovec_pages(tp->ucopy.pinned_list);
++		else
++#endif
++			dma_unpin_iovec_pages(tp->ucopy.pinned_list);
+ 		tp->ucopy.pinned_list = NULL;
+ 	}
+ #endif
+diff --git a/net/socket.c b/net/socket.c
+index 68879db..597d113 100644
+--- a/net/socket.c
++++ b/net/socket.c
+@@ -1750,6 +1750,7 @@ SYSCALL_DEFINE6(recvfrom, int, fd, void __user *, ubuf, size_t, size,
+ 	msg.msg_controllen = 0;
+ 	msg.msg_iovlen = 1;
+ 	msg.msg_iov = &iov;
++	msg.msg_flags = 0;
+ 	iov.iov_len = size;
+ 	iov.iov_base = ubuf;
+ 	msg.msg_name = (struct sockaddr *)&address;
+-- 
+1.7.9.5
+

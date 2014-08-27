@@ -1,0 +1,208 @@
+From 25bdd53505372936dab66ceb646b16345abe542f Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Sun, 15 Jul 2012 17:32:17 +0300
+Subject: [PATCH 092/609] Neta: Merge NFP drop 5
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/Makefile                    |    3 +-
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |    1 +
+ arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c      |   52 ++++++++++++++++++++
+ arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h      |    3 ++
+ arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h   |   12 ++++-
+ include/linux/netfilter/ipt_NFP.h                  |   21 +++++++-
+ 6 files changed, 88 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
+index 8bc925b..f758bf1 100644
+--- a/arch/arm/mach-armadaxp/Makefile
++++ b/arch/arm/mach-armadaxp/Makefile
+@@ -35,7 +35,8 @@ endif
+ endif
+ 
+ ifdef CONFIG_MV_ETH_NFP_CLASSIFY
+-	NFPOBJS += $(LSP_NFP_MGR_DIR)/nfp_classification_sysfs.o
++	NFPOBJS += $(LSP_NFP_MGR_DIR)/nfp_classification_sysfs.o $(LSP_NFP_MGR_DIR)/nfp_exact_classification_sysfs.o \
++		   $(LSP_NFP_MGR_DIR)/nfp_prio_classification_sysfs.o $(LSP_NFP_MGR_DIR)/nfp_mixed_classification_sysfs.o
+ endif
+ 
+ ifdef CONFIG_MV_ETH_NFP_BRIDGE
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 37f71fb..b7da532 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -4289,6 +4289,7 @@ int mv_eth_rxq_vlan_prio_set(int port, int rxq, unsigned char prio)
+ 	else
+ 		mvOsPrintf("%s: PNC control is disabled\n", __func__);
+ #else /* Legacy parser */
++	status = mvNetaVprioToRxqSet(port, prio, rxq);
+ #endif /* CONFIG_MV_ETH_PNC */
+ 
+ 	return status;
+diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
+index 3999412..267cc33 100644
+--- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
++++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
+@@ -2000,6 +2000,58 @@ int     mvNetaTosToRxqGet(int port, int tos)
+ 
+ 	return rxq;
+ }
++
++/*******************************************************************************
++* mvNetaTosToRxqSet - Map packets with special TOS value to special RX queue
++*
++* DESCRIPTION:
++*
++* INPUT:
++*		int     portNo		- Port number.
++*       int     vprio       - Vlan Priority value in packet header
++*       int     rxq         - RX Queue for packets with the configured TOS value
++*                           Negative value (-1) means no special processing for these packets,
++*                           so they will be processed as regular packets.
++*
++* RETURN:   MV_STATUS
++*******************************************************************************/
++MV_STATUS   mvNetaVprioToRxqSet(int port, int vprio, int rxq)
++{
++	MV_U32          regValue;
++
++	if ((rxq < 0) || (rxq >= MV_ETH_MAX_RXQ)) {
++		mvOsPrintf("eth_%d: RX queue #%d is out of range\n", port, rxq);
++		return MV_BAD_PARAM;
++	}
++	if (vprio > 0x7) {
++		mvOsPrintf("eth_%d: vprio=0x%x is out of range\n", port, vprio);
++		return MV_BAD_PARAM;
++	}
++
++	regValue = MV_REG_READ(ETH_VLAN_TAG_TO_PRIO_REG(port));
++	regValue &= ~(0x7 << (vprio * 3));
++	regValue |= (rxq << (vprio * 3));
++
++	MV_REG_WRITE(ETH_VLAN_TAG_TO_PRIO_REG(port), regValue);
++	return MV_OK;
++}
++
++int     mvNetaVprioToRxqGet(int port, int vprio)
++{
++	MV_U32          regValue;
++	int             rxq;
++
++	if (vprio > 0x7) {
++		mvOsPrintf("eth_%d: vprio=0x%x is out of range\n", port, vprio);
++		return -1;
++	}
++
++	regValue = MV_REG_READ(ETH_VLAN_TAG_TO_PRIO_REG(port));
++	rxq = (regValue >> (vprio * 3));
++	rxq &= 0x7;
++
++	return rxq;
++}
+ #endif /* CONFIG_MV_ETH_LEGACY_PARSER */
+ 
+ /******************************************************************************/
+diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
+index d0593d5..2765939 100755
+--- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
++++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
+@@ -654,6 +654,9 @@ MV_STATUS	mvNetaMacAddrGet(int portNo, unsigned char *pAddr);
+ MV_STATUS	mvNetaTosToRxqSet(int port, int rxq, int tos);
+ int			mvNetaTosToRxqGet(int port, int tos);
+ 
++MV_STATUS   mvNetaVprioToRxqSet(int port, int vprio, int rxq);
++int	    	mvNetaVprioToRxqGet(int port, int vprio);
++
+ MV_STATUS	mvNetaTcpRxq(int port, int rxq);
+ MV_STATUS	mvNetaUdpRxq(int port, int rxq);
+ MV_STATUS	mvNetaArpRxq(int port, int rxq);
+diff --git a/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
+index 0a90fbe..b248a79 100644
+--- a/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
++++ b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
+@@ -178,6 +178,17 @@ typedef struct {
+ 	int ct_vlan_prio;
+ 
+ 	MV_U16 mh;
++
++	int iif_prio;
++	int iif_vlan_prio;
++	int iif_dscp_prio;
++
++	int prio_dscp;
++	int prio_vprio;
++	MV_U8 prio_txp;
++	MV_U8 prio_txq;
++	MV_U16 prio_mh;
++
+ } NFP_CLASSIFY_INFO;
+ 
+ typedef struct {
+@@ -191,7 +202,6 @@ typedef struct {
+ 	MV_U8  txp;
+ 	MV_U8  txq;
+ 	MV_IP_HEADER_INFO ipInfo;
+-	NFP_CLASSIFY_INFO classifyInfo;
+ } MV_NFP_RESULT;
+ 
+ #define MV_NFP_RES_TXP_VALID       0x0001
+diff --git a/include/linux/netfilter/ipt_NFP.h b/include/linux/netfilter/ipt_NFP.h
+index d4c7ab6..6e0e11d 100644
+--- a/include/linux/netfilter/ipt_NFP.h
++++ b/include/linux/netfilter/ipt_NFP.h
+@@ -28,6 +28,7 @@
+ #define IPT_NFP_F_SET_MH             0x40
+ #define IPT_NFP_F_SET_LIMIT          0x80
+ #define IPT_NFP_F_SET_BURST          0x100
++#define IPT_NFP_F_SET_TXQ_DEF        0x200
+ 
+ enum ipt_nfp_mode {
+ 	IPT_NFP_INIT   = -1,
+@@ -54,6 +55,10 @@ typedef struct {
+ 	unsigned char valid;
+ } IPT_NFP_DSCP_MAP_INFO;
+ 
++typedef struct {
++	unsigned char txq;
++	unsigned char valid;
++} IPT_NFP_TXQ_MAP_INFO;
+ 
+ struct ipt_nfp_info {
+ 	unsigned int		mode;
+@@ -65,10 +70,15 @@ struct ipt_nfp_info {
+ 	int			dscp;
+ 	int			new_dscp;
+ 	IPT_NFP_DSCP_MAP_INFO	dscp_map[IPT_NFP_DSCP_MAP_SIZE];
++
+ 	int			vlanprio;
+ 	int			new_vlanprio;
+ 	IPT_NFP_VPRI_MAP_INFO	vpri_map[IPT_NFP_VPRI_MAP_SIZE];
++
++	int			dscp_txq; /* map DSCP to TXQ */
+ 	int			txq;
++	IPT_NFP_TXQ_MAP_INFO	txq_map[IPT_NFP_DSCP_MAP_SIZE];
++
+ 	int			txp;
+ 	int			mh;
+ 
+@@ -110,8 +120,15 @@ static inline void nfp_update_tuple_info(struct ipt_nfp_info *dst, struct ipt_nf
+ 		dst->vpri_map[IPT_NFP_VPRI_MAP_GLOBAL].valid = 1;
+ 	}
+ 
+-	if (src->flags & IPT_NFP_F_SET_TXQ)
+-		dst->txq = src->txq;
++	if (src->flags & IPT_NFP_F_SET_TXQ) {
++		dst->txq_map[src->dscp].txq = src->txq;
++		dst->txq_map[src->dscp].valid = 1;
++	}
++
++	if (src->flags & IPT_NFP_F_SET_TXQ_DEF) {
++		dst->txq_map[IPT_NFP_DSCP_MAP_GLOBAL].txq = src->txq;
++		dst->txq_map[IPT_NFP_DSCP_MAP_GLOBAL].valid = 1;
++	}
+ 
+ 	if (src->flags & IPT_NFP_F_SET_TXP)
+ 		dst->txp = src->txp;
+-- 
+1.7.9.5
+

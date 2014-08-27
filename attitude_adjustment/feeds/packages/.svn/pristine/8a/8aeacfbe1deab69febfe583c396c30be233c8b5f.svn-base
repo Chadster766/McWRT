@@ -1,0 +1,23 @@
+--- a/kernel/zaptel-base.c
++++ b/kernel/zaptel-base.c
+@@ -5182,14 +5182,20 @@ static int zt_ioctl(struct inode *inode,
+ }
+ 
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
++#ifdef CONFIG_BKL
+ #include <linux/smp_lock.h>
++#endif
+ static long zt_ioctl_unlocked(struct file *file, unsigned int cmd, unsigned long data)
+ {
+ 	int ret;
+ 
++#ifdef CONFIG_BKL
+ 	lock_kernel();
++#endif
+ 	ret = zt_ioctl(file->f_path.dentry->d_inode, file, cmd, data);
++#ifdef CONFIG_BKL
+ 	unlock_kernel();
++#endif
+ 
+ 	return ret;
+ }

@@ -1,0 +1,142 @@
+From bccdf0e94feaa62ea4d67eab5415963bebdbf8f7 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Wed, 25 Jul 2012 18:57:35 +0300
+Subject: [PATCH 239/609] AXP: update hwmon threshold interrupt handling
+
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/hwmon.c             |   47 +++++++++++++++++++++++++---
+ arch/arm/mach-armadaxp/include/mach/irqs.h |    2 +-
+ 2 files changed, 43 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/hwmon.c b/arch/arm/mach-armadaxp/hwmon.c
+index e326718..eb87175 100644
+--- a/arch/arm/mach-armadaxp/hwmon.c
++++ b/arch/arm/mach-armadaxp/hwmon.c
+@@ -30,6 +30,7 @@
+ #include <linux/cpu.h>
+ #include <asm/io.h>
+ #include <linux/slab.h>
++#include <linux/interrupt.h>
+ 
+ /* Termal Sensor Registers */
+ #define TSEN_STATUS_REG				0x184C4
+@@ -51,6 +52,7 @@
+ #define ARMADAXP_OVERCOOL_MIN	0
+ #define ARMADAXP_OVERCOOL_MAX	110000
+ #define PMU_THERMAL_MNGR_REG	0x184c4
++#define	PMU_INT_MASK_REG        0x1C124
+ #define	PMU_INT_CAUSE_REG	0x1c120
+ #define PMU_INT_OVRHEAT_MASK	0x1
+ #define PMU_INT_COOLING_MASK	0x2
+@@ -99,7 +101,7 @@ static void axptemp_set_thresholds(unsigned int max, unsigned int min)
+ 	reg |= (temp << PMU_TM_OVRHEAT_THRSH_OFFS);
+ 	writel(reg, (INTER_REGS_BASE | PMU_THERMAL_MNGR_REG));
+ 
+-	/* Set the overcool threshole & delay */
++	/* Set the cool threshole & delay */
+ 	temp = ARMADAXP_TSEN_TEMP2RAW(min);
+ 	reg = readl(INTER_REGS_BASE | PMU_THERMAL_MNGR_REG);
+ 	reg &= ~PMU_TM_COOL_THRSH_MASK;
+@@ -150,6 +152,9 @@ static int axptemp_init_sensor(void)
+ 	writel(ARMADAXP_OVERHEAT_DELAY, (INTER_REGS_BASE | PMU_TM_OVRHEAT_DLY_REG));
+ 	writel(ARMADAXP_OVERCOOL_DELAY, (INTER_REGS_BASE | PMU_TM_COOLING_DLY_REG));
+ 
++	/* Clear & unmask cooling/overheat interrupts */
++	writel(0, (INTER_REGS_BASE | PMU_INT_CAUSE_REG));
++	writel((PMU_INT_OVRHEAT_MASK | PMU_INT_COOLING_MASK), (INTER_REGS_BASE | PMU_INT_MASK_REG));
+ 
+ 	return 0;
+ }
+@@ -192,7 +197,7 @@ static ssize_t show_alarm(struct device *dev, struct device_attribute
+ 		writel ((reg & ~PMU_INT_COOLING_MASK), (INTER_REGS_BASE | PMU_INT_CAUSE_REG));
+ 	}
+ 
+-	return sprintf(buf, "%d\n", 0);
++	return sprintf(buf, "%d\n", alarm);
+ }
+ 
+ static ssize_t show_info(struct device *dev,
+@@ -256,11 +261,38 @@ static ssize_t set_temp(struct device *dev, struct device_attribute *devattr,
+ 	else
+ 		printk(KERN_ERR "axp-temp: Invalid sensor attribute!");
+ 
+-	printk(KERN_INFO "set_temp got string: %d\n", temp);
++	/* Clear & unmask cooling/overheat interrupts */
++	writel (0, (INTER_REGS_BASE | PMU_INT_CAUSE_REG));
++	writel((PMU_INT_OVRHEAT_MASK | PMU_INT_COOLING_MASK), (INTER_REGS_BASE | PMU_INT_MASK_REG));
+ 
++	printk(KERN_INFO "set_temp got string: %d\n", temp);
+ 	return count;
+ }
+ 
++static irqreturn_t axptemp_irq_handler(int irq, void *data)
++{
++	u32 val, mask;
++	mask = readl(INTER_REGS_BASE | PMU_INT_MASK_REG);
++	val = (readl(INTER_REGS_BASE | PMU_INT_CAUSE_REG) & mask);
++	/* Mask cooling/overheat interrupt */
++	writel((mask & ~val), (INTER_REGS_BASE | PMU_INT_MASK_REG));
++
++	printk(KERN_WARNING "WARNING: %s threshold was triggered\n",
++			((val & PMU_INT_OVRHEAT_MASK) ? "overheat" : "cooling"));
++
++	if (val & PMU_INT_OVRHEAT_MASK)
++		val &= ~PMU_INT_OVRHEAT_MASK;
++	else if (val & PMU_INT_COOLING_MASK)
++		val &= ~PMU_INT_COOLING_MASK;
++
++	/* Clear cooling/overheat interrupt */
++	writel(val, (INTER_REGS_BASE | PMU_INT_CAUSE_REG));
++
++	return IRQ_HANDLED;
++}
++
++
++
+ /* TODO - Add read/write support in order to support setting max/min */
+ static SENSOR_DEVICE_ATTR(temp1_type, S_IRUGO, show_info, NULL,
+ 			  SHOW_TYPE);
+@@ -292,7 +324,7 @@ static const struct attribute_group axptemp_group = {
+ 
+ static int __devinit axptemp_probe(struct platform_device *pdev)
+ {
+-	int err;
++	int err, irq;
+ 
+ 	err = axptemp_init_sensor();
+ 	if (err)
+@@ -309,10 +341,15 @@ static int __devinit axptemp_probe(struct platform_device *pdev)
+ 		goto exit;
+ 	}
+ 
++	/* Register cooling/overheat interrupt */
++	irq = IRQ_AURORA_PMU;
++	err = request_irq(irq, axptemp_irq_handler, IRQF_DISABLED ,
++				"axp-temp", NULL);
++	if (err)
++		printk(KERN_INFO "unable to request IRQ%d for axp-temp\n", irq);
+ 	printk(KERN_INFO "Armada XP hwmon thermal sensor initialized.\n");
+ 
+ 	return 0;
+-
+ exit:
+ 	sysfs_remove_group(&pdev->dev.kobj, &axptemp_group);
+ 	return err;
+diff --git a/arch/arm/mach-armadaxp/include/mach/irqs.h b/arch/arm/mach-armadaxp/include/mach/irqs.h
+index 7f805a7..3968cf9 100644
+--- a/arch/arm/mach-armadaxp/include/mach/irqs.h
++++ b/arch/arm/mach-armadaxp/include/mach/irqs.h
+@@ -120,7 +120,7 @@
+ #define IRQ_AURORA_PCIE8	99
+ #define IRQ_AURORA_PCIE9	103
+ 
+-#define IRQ_AURORA_OVRHT	107
++#define IRQ_AURORA_PMU		107
+ 
+ #define IRQ_AURORA_DRAM		108
+ 
+-- 
+1.7.9.5
+

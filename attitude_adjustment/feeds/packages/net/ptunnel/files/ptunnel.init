@@ -1,0 +1,30 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2007-2012 OpenWrt.org
+
+START=70
+
+start_instance() {
+	local section="$1"
+
+	config_get interface "$section" interface
+	network_get_device ifname "$interface" || {
+		echo "${initscript}: Error: Interface '$interface' not found" 1>&2
+		return 1
+	}
+
+	SERVICE_PID_FILE="/var/run/ptunnel.$ifname.pid"
+	service_start /usr/sbin/ptunnel -c "$ifname" -daemon $SERVICE_PID_FILE
+}
+
+start() {
+	. /lib/functions/network.sh
+
+	config_load 'ptunnel'
+	config_foreach start_instance 'ptunnel'
+	iptables -I OUTPUT 1 -p icmp -j ACCEPT 2>/dev/null
+}
+
+stop() {
+	service_stop /usr/sbin/ptunnel
+	iptables -D OUTPUT -p icmp -j ACCEPT 2>/dev/null
+}

@@ -1,0 +1,12 @@
+diff -urN wrt-radauth/Makefile wrt-radauth.new/Makefile
+--- wrt-radauth/Makefile	2007-01-07 20:05:21.000000000 +0100
++++ wrt-radauth.new/Makefile	2008-04-01 22:50:09.000000000 +0200
+@@ -7,7 +7,7 @@
+ all: wrt-radauth radius-client
+ 
+ wrt-radauth: wrt-radauth.o md5.o wireless.o radius.o
+-	$(CC) $(LDFLAGS) -L$(WRT_BUILDROOT)/build_mipsel/root/usr/lib -lshared -lnvram $^ -o $@
++	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@ -L$(STAGING_DIR)/usr/lib -lnvram $(STAGING_DIR)/usr/lib/libshared.a
+ 
+ 
+ radius-client: radius-client.o md5.o radius.o

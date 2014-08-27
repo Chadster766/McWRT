@@ -1,0 +1,23 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2011 OpenWrt.org
+
+START=99
+
+SERVICE_PID_FILE=/var/run/dovecot/master.pid
+
+start() {
+	user_exists dovecot 59 || user_add dovecot 59
+	group_exists dovecot 59 || group_add dovecot 59
+	mkdir -p -m 0755 /var/lib/dovecot
+	mkdir -p -m 0755 /var/run/dovecot
+	chmod 0750 /var/lib/dovecot
+	service_start /usr/sbin/dovecot
+}
+
+stop() {
+	service_stop /usr/sbin/dovecot
+}
+
+reload() {
+	service_reload /usr/sbin/dovecot
+}

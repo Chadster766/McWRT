@@ -1,0 +1,1005 @@
+[general]
+static=yes
+writeprotect=no
+
+[globals]
+CONSOLE => Console/dsp
+IAXINFO => guest
+DYNAMIC_FEATURES=>automon
+TOUCH_MONITOR_FORMAT=gsm
+
+;+----------------------------------------------------------------+
+;
+;
+;
+;+----------------------------------------------------------------+
+
+
+[features]
+
+; Used with originate to read NVRAM config at startup
+exten => #15,1,Set(NVRAM_READ=FALSE)
+exten => #15,n,NoCDR();
+exten => #15,n,Macro(refresh-nvram)
+;exten => #15,n,Macro(test-nvram)
+;exten => #15,n,NoCDR();
+exten => #15,n,Hangup()
+
+exten => #16,1,Set(NVRAM_READ=FALSE)
+exten => #16,n,NoCDR();
+exten => #16,n,Macro(get-config-file)
+exten => #16,n,Hangup()
+
+; TMP TEST
+exten => #17,1,Set(NVRAM_READ=FALSE)
+
+; Call Forward Unconditional (Disable)
+exten => *70,1,Macro(answer-set-lang)
+exten => *70,n,dbDel(CFU/${CALLERID(number)})
+exten => *70,n,Playback(call-fwd-unconditional&for&extension)
+exten => *70,n,SayDigits(${CALLERID(number)})
+exten => *70,n,Playback(cancelled)
+exten => *70,n,Hangup()
+
+; Call Forward Unconditional (Enable)
+exten => *71,1,Macro(answer-set-lang)
+exten => *71,n,Playback(call-fwd-unconditional)
+exten => *71,n,Wait(1)
+exten => *71,n,Read(toext,ent-target-attendant,,,,)
+exten => *71,n,GotoIf($["foo${toext}"="foo"]?*71,done)
+exten => *71,n,Wait(1)
+exten => *71,n,Set(DB(CFU/${CALLERID(number)})=${toext})
+exten => *71,n,Playback(call-fwd-unconditional)
+exten => *71,n,Playback(is-set-to)
+exten => *71,n,SayDigits(${toext})
+exten => *71,n(done),Hangup()
+
+; Call Forward On Busy (Disable)
+exten => *72,1,Macro(answer-set-lang)
+exten => *72,n,dbDel(CFB/${CALLERID(number)})
+exten => *72,n,Playback(call-fwd-on-busy&for&extension)
+exten => *72,n,SayDigits(${CALLERID(number)})
+exten => *72,n,Playback(cancelled)
+exten => *72,n,Hangup()
+
+; Call Forward On Busy (Enable)
+exten => *73,1,Macro(answer-set-lang)
+exten => *73,n,Playback(call-fwd-on-busy)
+exten => *73,n,Wait(1)
+exten => *73,n,Read(toext,ent-target-attendant,,,,)
+exten => *73,n,GotoIf($["foo${toext}"="foo"]?*73,done)
+exten => *73,n,Wait(1)
+exten => *73,n,Set(DB(CFB/${CALLERID(number)})=${toext})
+exten => *73,n,Playback(call-fwd-on-busy&for&extension)
+exten => *73,n,SayDigits(${CALLERID(number)})
+exten => *73,n,Playback(is-set-to)
+exten => *73,n,SayDigits(${toext})
+exten => *73,n(done),Hangup()
+
+; Do Not Disturb (Disable)
+exten => *74,1,Macro(answer-set-lang)
+exten => *74,n,dbDel(DND/${CALLERID(number)})
+exten => *74,n,Playback(do-not-disturb&de-activated)
+exten => *74,n,Hangup()
+
+; Do Not Disturb (Enable)
+exten => *75,1,Macro(answer-set-lang)
+exten => *75,n,Set(DB(DND/${CALLERID(number)})=YES)
+exten => *75,n,Playback(do-not-disturb&activated)
+exten => *75,n,Hangup()
+
+; Talking Clock
+exten => *76,1,Macro(answer-set-lang)
+exten => *76,n,Set(NumLoops=0)
+exten => *76,n(start),Set(FutureTime=$[${EPOCH} + 11])
+exten => *76,n,Plf($["${AST_ServiceLanguage}" = "E"]?say_en)
+exten => *76,n,SayUnixTime(${FutureTime}|EST5EDT|kM \'and\' S)
+exten => *76,n,Goto(waitloop)
+exten => *76,n(say_en),SayUnixTime(${FutureTime}|| k M \'and\' S \'seconds\');
+;  exten => *76,n(say_en),SayUnixTime(${FutureTime}|EST5EDT| k M \'and\' S \'seconds\');
+exten => *76,n(waitloop),Set(TimeLeft=$[${FutureTime} - ${EPOCH}])
+exten => *76,n,GotoIf($[${TimeLeft} < 1]?playbeep)
+exten => *76,n,Wait(1)
+exten => *76,n,Goto(waitloop)
+exten => *76,n(playbeep),Playback(beep)
+exten => *76,n,Wait(5)
+exten => *76,n,Set(NumLoops=$[${NumLoops} + 1])
+exten => *76,n,GotoIf($[${NumLoops} < 5]?start)
+exten => *76,n,Playback(goodbye)
+exten => *76,n,Hangup()
+
+; Say current Extension
+exten => *77,1,Macro(answer-set-lang)
+exten => *77,n,Playback(extension)
+exten => *77,n,SayDigits(${CALLERID(number)})
+exten => *77,n,Wait(2)
+exten => *77,n,Hangup()
+
+; Echo Test
+exten => *78,1,Macro(answer-set-lang)
+exten => *78,n,Playback(demo-echotest)
+exten => *78,n,Echo()
+exten => *78,n,Playback(demo-echodone)
+exten => *78,n,Hangup()
+
+; Auto-Attendant Activate
+exten => *80,1,Macro(answer-set-lang)
+exten => *80,n,dbDel(MARS/AA)
+exten => *80,n,Playback(reception&activated)
+exten => *80,n,Hangup()
+
+; Auto-Attendant DeActivate
+exten => *81,1,Macro(answer-set-lang)
+exten => *81,n,Set(DB(MARS/AA)=Disabled)
+exten => *81,n,Playback(reception&de-activated)
+exten => *81,n,Hangup()
+
+; WebCall Activate
+exten => *82,1,Macro(answer-set-lang)
+exten => *82,n,dbDel(MARS/WebCall)
+exten => *82,n,Playback(webcall&activated)
+exten => *82,n,Hangup()
+
+; WebCall Deactivate
+exten => *83,1,Macro(answer-set-lang)
+exten => *83,n,Set(DB(MARS/WebCall)=Disabled)
+exten => *83,n,Playback(webcall&de-activated)
+exten => *83,n,Hangup()
+
+; Temporarily unavaillable (all to mailbox) Enable
+exten => *84,1,Macro(answer-set-lang)
+exten => *84,n,dbDel(MARS/VoicemailDirect)
+exten => *84,n,Playback(temp-out&de-activated)
+exten => *84,n,Hangup()
+
+; Temporarily unavaillable Disable
+exten => *85,1,Macro(answer-set-lang)
+exten => *85,n,Set(DB(MARS/VoicemailDirect)=Activated)
+exten => *85,n,Playback(temp-out&activated)
+exten => *85,n,Hangup()
+
+; Say AA WC & TU statuses
+exten => *89,1,Macro(answer-set-lang)
+exten => *89,n,GotoIf($["${DB(MARS/AA)}" != ""]?aa_deact)
+exten => *89,n,Playback(reception&activated)
+exten => *89,n,Goto(test_wc)
+exten => *89,n(aa_deact),Playback(reception&de-activated)
+exten => *89,n(test_wc),GotoIf($["${DB(MARS/WebCall)}" != ""]?wc_deact)
+exten => *89,n,Playback(webcall&activated)
+exten => *89,n,Goto(test_to)
+exten => *89,n(wc_deact),Playback(webcall&de-activated)
+exten => *89,n(test_to),GotoIf($["${DB(MARS/VoicemailDirect)}" = ""]?to_deact)
+exten => *89,n,Playback(temp-out&activated)
+exten => *89,n,Goto(end)
+exten => *89,n(to_deact),Playback(temp-out&de-activated)
+exten => *89,n(end),Wait(2)
+exten => *89,n,Hangup()
+
+; Voice mail for extension mailbox
+exten => *98,1,Macro(answer-set-lang)
+exten => *98,n,VoiceMailMain(${CALLERID(number)})
+exten => *98,n,Hangup()
+
+; Voice mail for any mailbox
+exten => *99,1,Macro(answer-set-lang)
+exten => *99,n,VoiceMailMain()
+exten => *99,n,Hangup()
+
+;+----------------------------------------------------------------+
+
+[record-language]
+exten => *90,1,Macro(answer-set-lang)
+exten => *90,n,GotoIf($["${AST_ServiceLanguage}" = "E"]?set_en)
+exten => *90,n,Set(PMT_NAME="fr/welcome")
+exten => *90,n,Goto(record-menu,*91,start)
+exten => *90,n(set_en),Set(PMT_NAME="welcome")
+exten => *90,n,Goto(record-menu,*91,start)
+
+[record-menu]
+exten => *91,1,Macro(answer-set-lang)
+exten => *91,n,Set(PMT_NAME="mainmenu")
+exten => *91,n(start),Playback(rec-menu)
+exten => *91,n,Record(/tmp/tempmenu.ulaw)
+exten => *91,n(menu),Background(vm-review)
+exten => *91,n,WaitExten(5)
+exten => *91,n,Goto(*91,menu)
+
+exten => 1,1,System(rm /usr/lib/asterisk/sounds/${PMT_NAME}.ulaw)
+exten => 1,2,System(mv /tmp/tempmenu.ulaw /usr/lib/asterisk/sounds/${PMT_NAME}.ulaw)
+exten => 1,3,Goto(4,end)
+exten => 2,1,Playback(/tmp/tempmenu)
+exten => 2,2,Goto(record-menu,*91,menu)
+exten => 3,1,Goto(record-menu,*91,start)
+exten => 4,1(end),Playback(goodbye)
+exten => 4,2,Hangup
+
+;+----------------------------------------------------------------+
+
+[record-menu-fr]
+exten => *92,1,Macro(answer-set-lang)
+exten => *92,n,Set(PMT_NAME="fr/mainmenu")
+exten => *92,n,Goto(record-menu,*91,start)
+
+;+----------------------------------------------------------------+
+
+[web-audio]
+exten => *88,1,Macro(answer-set-lang)
+exten => *88,n(start),UserEvent(WebAudio|Channel: ${CHANNEL}|Status: Get program No.)
+exten => *88,n,Read(USER_SELECT,pls-ent-msg-no,3,,3,3)
+exten => *88,n,GotoIf($["-${USER_SELECT}"="-"]?*88,end)
+exten => *88,n,GotoIf($["${USER_SELECT}"="000"]?send_dir)
+exten => *88,n,AGI(web_audio.sh|${USER_SELECT})
+exten => *88,n,Noop(URL=${URL:9})
+exten => *88,n,GotoIf($["-${URL}"="-"]?start)
+exten => *88,n,GotoIf($["${URL:9:4}"="http"]?get_it)
+exten => *88,n,System(cp ${URL:9}  /tmp/sel${CALLERID(number)}.${URL:-3})
+exten => *88,n,Goto(play_it)
+exten => *88,n(get_it),UserEvent(WebAudio|Channel: ${CHANNEL}|ProgNo: ${USER_SELECT}|Status: Fetching Audio)
+exten => *88,n,Playback(wait-moment)
+exten => *88,n,System(rm /tmp/sel${CALLERID(number)}.*)
+exten => *88,n,System(wget -O /tmp/sel${CALLERID(number)}.gsm ${URL:9})
+exten => *88,n(play_it),UserEvent(WebAudio|Channel: ${CHANNEL}|ProgNo: ${USER_SELECT}|Status: Playback)
+exten => *88,n,ControlPlayback(/tmp/sel${CALLERID(number)},60000,6,4,#,5,0) 
+exten => *88,n,System(rm /tmp/sel${CALLERID(number)}.*)
+exten => *88,n,Goto(start)
+exten => *88,n(send_dir),AGI(send_wa_dir.sh)
+exten => *88,n,Goto(start)
+exten => *88,n(end),Hangup()
+
+exten => t,1,Hangup
+exten => h,1,System(rm /tmp/sel${CALLERID(number)}.*)
+
+;+----------------------------------------------------------------+
+
+[incoming]
+include => ext-local
+include => inbound-all
+; TMP TEST
+include => web-audio
+; include => tts-news
+; Mailbox for Phone-In dictation to email
+; include => PID_Mailboxes
+; include => dial-in_dictation
+
+;+----------------------------------------------------------------+
+
+[inbound-all]
+
+
+exten => _X.,1,NoOp(CONTEXT: incoming)
+exten => _X.,n,Noop(CALLERID(number)=${CALLERID(number)})
+exten => _X.,n,Noop(CALLERID(name)=${CALLERID(name)})
+exten => _X.,n,Goto(s,1)
+exten => s,1,NoOp(CONTEXT: incoming)
+exten => s,n,NoOp(CALLERID(num)=${CALLERID(num)})
+exten => s,n,NoOp(CALLERID(name)=${CALLERID(name)})
+exten => s,n,NoOp(IS_DIALER_CALL=${IS_DIALER_CALL})
+exten => s,n,Set(NumLoops=0)
+exten => s,n,GotoIf($["${NVRAM_READ}" = "TRUE"]?do_answer)
+exten => s,n,Macro(test-nvram)
+exten => s,n(wait),Wait(1)
+exten => s,n(do_answer),Answer()
+
+exten => s,n,Set(TIMEOUT(digit)=2)
+exten => s,n,Set(TIMEOUT(response)=3)
+exten => s,n,GotoIf($["${AST_ServiceLanguage}" = "E"]?start)
+exten => s,n,Set(LANGUAGE()=fr)
+
+; Test Time Condition
+exten => s,n(start),GotoIf($["${AST_TimeEnabled}"!="1"]?time_cnd_ok)
+exten => s,n,GotoIfTime(${AST_TimeFrom}-${AST_TimeTo},${AST_TimeDays},*,*?time_cnd_ok)
+exten => s,n,Playback(vm-nobodyavail)
+exten => s,n,Voicemail(200)
+exten => s,n,Playback(goodbye)
+exten => s,n,Hangup()
+
+; Test if temporarily unavailable activated
+exten => s,n(time_cnd_ok),GotoIf($["${DB(MARS/VoicemailDirect)}" = ""]?test_queue)
+exten => s,n,Playback(vm-nobodyavail)
+exten => s,n,Voicemail(200)
+exten => s,n,Playback(goodbye)
+exten => s,n,Hangup()
+
+; Test if Queue always 
+exten => s,n(test_queue),GotoIf($["${AST_QueueUsage}"!="1"]?not_q_always)
+exten => s,n,Goto(queue,s,1) ; Call Queue
+; Test if Auto-attendant OFF
+exten => s,n(not_q_always),Set(AUTO_ATT_OFF=${DB(MARS/AA)}) 
+exten => s,n,GotoIf($["foo${AUTO_ATT_OFF}"="foo"]?auto_att)
+; Test if Queue when AA Off
+exten => s,n,GotoIf($["${AST_QueueUsage}"!="0"]?dial_default_ext)
+exten => s,n,Goto(queue,s,1)
+; Dial default ext. (200)
+exten => s,n(dial_default_ext),Goto(1,2) ; dial ext 200
+
+; AUTO-Attendant
+exten => s,n(auto_att),Wait(1)
+exten => s,n,BackGround(welcome)
+exten => s,n(mainmenu),BackGround(mainmenu)
+exten => s,n,WaitExten(5)
+
+exten => 0,1,Playback(pls-hold-while-try)
+exten => 0,2,Macro(stdexten,${AST_ServerId},${AST_Ext0Dial})
+exten => 0,3,Hangup
+
+exten => 1,1,Playback(pls-hold-while-try)
+exten => 1,2,Macro(stdexten,${AST_ServerId},${AST_Ext0Dial})
+exten => 1,3,Hangup
+
+exten => 2,1,Playback(pls-hold-while-try)
+exten => 2,2,Macro(stdexten,$[${AST_ServerId} + 1],${AST_Ext1Dial})
+exten => 2,3,Hangup
+
+exten => 3,1,Playback(pls-hold-while-try)
+exten => 3,2,Macro(stdexten,$[${AST_ServerId} + 2],${AST_Ext2Dial})
+exten => 3,3,Hangup
+
+exten => 4,1,Playback(pls-hold-while-try)
+exten => 4,2,Macro(stdexten,$[${AST_ServerId} + 3],${AST_Ext3Dial})
+exten => 4,3,Hangup
+
+exten => 5,1,Playback(pls-hold-while-try)
+exten => 5,2,Macro(stdexten,$[${AST_ServerId} + 4],SIP/$[${AST_ServerId} + 4])
+exten => 5,3,Hangup
+
+exten => 6,1,Playback(pls-hold-while-try)
+exten => 6,2,Macro(stdexten,$[${AST_ServerId} + 5],SIP/$[${AST_ServerId} + 5])
+exten => 6,3,Hangup
+
+exten => 7,1,Playback(pls-hold-while-try)
+exten => 7,2,Macro(stdexten,$[${AST_ServerId} + 6],SIP/$[${AST_ServerId} + 6])
+exten => 7,3,Hangup
+
+exten => 8,1,Playback(pls-hold-while-try)
+exten => 8,2,Macro(stdexten,$[${AST_ServerId} + 7],SIP/$[${AST_ServerId} + 7])
+exten => 8,3,Hangup
+
+exten => 9,1,GotoIf($["${AST_ServiceLanguage}" = "F"]?set_en)
+exten => 9,2, Set(LANGUAGE()=fr)
+exten => 9,3,Goto(s,mainmenu)
+exten => 9,4(set_en),Set(LANGUAGE()=en)
+exten => 9,5,Goto(s,mainmenu)
+
+; TEST SECURITY ???
+exten => *99,1,Macro(answer-set-lang)
+exten => *99,n,VoiceMailMain()
+exten => *99,n,Hangup()
+
+exten => i,1,Playback(invalid)
+exten => i,2,Goto(mainmenu)
+exten => #,1,Playback(goodbye)
+exten => #,2,Hangup
+exten => t,1,Set(NumLoops=$[${NumLoops} + 1])
+exten => t,2,GotoIf($[${NumLoops} < 2]?s,mainmenu)
+exten => t,3,Goto(1,1)
+exten => h,1,System(rm /tmp/sel${CALLERID(number)}.*)
+exten => h,2,Noop(Hungup !)
+
+
+;+----------------------------------------------------------------+
+
+[queue]
+; QUEUE
+exten => s,1,Macro(answer-set-lang)
+exten => s,n(queue),Background(welcome)
+exten => s,n(in_queue),Playback(queue-periodic-announce)
+exten => s,n,Queue(Queue1,t)
+exten => s,n,Hangup
+exten  => 9,1,GotoIf($["${AST_ServiceLanguage}" = "F"]?set_en)
+exten => 9,2, Set(LANGUAGE()=fr)
+exten => 9,3,Goto(s,mainmenu)
+exten => 9,4(set_en),Set(LANGUAGE()=en)
+exten => 9,5,Goto(s,in_queue)
+
+;+----------------------------------------------------------------+
+
+[incoming-direct]
+exten => s,1, Set(LANGUAGE()=fr)
+exten => s,n,NoOp(CALLERID(all)=${CALLERID(all)})
+exten => s,n,Macro(stdexten,201,SIP/201)
+; exten => s,n,Queue(Queue1,t)
+exten => s,n,Hangup
+
+;[parkedcalls]
+exten => 700,1,Park(701)
+
+;+----------------------------------------------------------------+
+
+[ext-local]
+exten => 0,1,Macro(stdexten,${AST_ServerId},${AST_EXT0Dial}) ; Dial "main" extension
+exten => _2XX,1,Macro(answer-set-lang)
+exten => _2XX,n,GotoIf($["${AST_ServerId}" != "200"]?not_local200)
+exten => _2XX,n,Set(DialVar=AST_EXT$[${EXTEN} - ${AST_ServerId}]Dial)
+exten => _2XX,n,GotoIf($["${${DialVar}}" = ""]?not_def200)
+exten => _2XX,n,Macro(stdexten,${EXTEN},${${DialVar}})
+exten => _2XX,n(not_def200),Macro(stdexten,${EXTEN},SIP/${EXTEN}) ; Not in AST_EXT_xxx
+
+exten => _2XX,n(not_local200),GotoIf($["${AST_Server1Host}" != ""]?dial_server1)
+exten => _2XX,n,GotoIf($["${AST_Server1Host}" = ""]?not_set200)
+exten => _2XX,n(dial_server1),Dial(IAX2/${AST_ThisServerName}:${AST_ThisServerPwd}@${AST_Server1Host}/${EXTEN},,TWK)
+exten => _2XX,n(not_set200),Congestion()
+exten => _2XX,n,Hangup()
+
+exten => _3XX,1,Macro(answer-set-lang)
+exten => _3XX,n,GotoIf($["${AST_ServerId}" != "300"]?not_local300)
+exten => _3XX,n,Set(DialVar=AST_EXT$[${EXTEN} - ${AST_ServerId}]Dial)
+exten => _3XX,n,GotoIf($["${${DialVar}}" = ""]?not_def300)
+exten => _3XX,n,Macro(stdexten,${EXTEN},${${DialVar}})
+exten => _3XX,n(not_def300),Macro(stdexten,${EXTEN},SIP/${EXTEN}) ; Not in AST_EXT_xxx
+
+exten => _3XX,n(not_local300),GotoIf($["${AST_Server2Host}" != ""]?dial_server2)
+exten => _3XX,n,GotoIf($["${AST_Server2Host}" = ""]?not_set300)
+exten => _3XX,n(dial_server2),Dial(IAX2/${AST_ThisServerName}:${AST_ThisServerPwd}@${AST_Server2Host}/${EXTEN},,TWK)
+exten => _3XX,n(not_set300),Congestion()
+exten => _3XX,n,Hangup()
+
+exten => _4XX,1,Macro(answer-set-lang)
+exten => _4XX,n,GotoIf($["${AST_ServerId}" != "400"]?not_local400)
+exten => _4XX,n,Set(DialVar=AST_EXT$[${EXTEN} - ${AST_ServerId}]Dial)
+exten => _4XX,n,GotoIf($["${${DialVar}}" = ""]?not_def400)
+exten => _4XX,n,Macro(stdexten,${EXTEN},${${DialVar}})
+exten => _4XX,n(not_def400),Macro(stdexten,${EXTEN},SIP/${EXTEN}) ; Not in AST_EXT_xxx
+
+exten => _4XX,n(not_local400),GotoIf($["${AST_Server3Host}" != ""]?dial_server3)
+exten => _4XX,n,GotoIf($["${AST_Server3Host}" = ""]?not_set400)
+exten => _4XX,n(dial_server3),Dial(IAX2/${AST_ThisServerName}:${AST_ThisServerPwd}@${AST_Server3Host}/${EXTEN},,TWK)
+exten => _4XX,n(not_set400),Congestion()
+exten => _4XX,n,Hangup()
+
+exten => _5XX,1,Macro(answer-set-lang)
+exten => _5XX,n,GotoIf($["${AST_ServerId}" != "500"]?not_local500)
+exten => _5XX,n,Set(DialVar=AST_EXT$[${EXTEN} - ${AST_ServerId}]Dial)
+exten => _5XX,n,GotoIf($["${${DialVar}}" = ""]?not_def500)
+exten => _5XX,n,Macro(stdexten,${EXTEN},${${DialVar}})
+exten => _5XX,n(not_def500),Macro(stdexten,${EXTEN},SIP/${EXTEN}) ; Not in AST_EXT_xxx
+
+exten => _5XX,n(not_local500),GotoIf($["${AST_Server4Host}" != ""]?dial_server4)
+exten => _5XX,n,GotoIf($["${AST_Server4Host}" = ""]?not_set500)
+exten => _5XX,n(dial_server4),Dial(IAX2/${AST_ThisServerName}:${AST_ThisServerPwd}@${AST_Server4Host}/${EXTEN},,TWK)
+exten => _5XX,n(not_set500),Congestion()
+exten => _5XX,n,Hangup()
+
+; Digium IAX 
+exten => 600,1,Playback(demo-abouttotry)
+exten => 600,2,Dial(IAX2/guest@misery.digium.com/s@default)
+exten => 600,3,Playback(demo-nogo)
+exten => 600,4,Hangup()
+
+; Tel Me SIP
+exten => 601,1,Dial(SIP/18005558355@proxy01.sipphone.com,,W)
+exten => 601,2,Hangup()
+
+; Mouselike.org U.K.
+exten => 602,1,Dial(SIP/904@mouselike.org)
+exten => 602,2,Hangup()
+
+;+---------------------------------------------------------------------------------------------+
+
+exten => 5555,1,Macro(answer-set-lang)
+exten => 5555,n,Read(PWD,vm-password,0,,3,5)
+exten => 5555,n,GotoIf($["${PWD}" != "${AST_CGPassword}"]?5555,cancel)
+exten => 5555,n,Read(TELNO,enter-phone-number10,16,,3,3)
+exten => 5555,n,GotoIf($[${LEN(${TELNO})}<10]?cancel)
+exten => 5555,n,Playback(pls-hold-while-try)
+exten => 5555,n,Macro(dial-out,${TELNO},${TELNO:0:6},FALSE)
+exten => 5555,n(cancel),Hangup()
+
+;+----------------------------------------------------------------+
+exten => 666,1,Answer()
+exten => 666,2,MusicOnHold()
+exten => 666,3,Hangup()
+;+----------------------------------------------------------------+
+
+; Simulate incoming call (on local server)
+exten => 7777,1,Goto(incoming,s,1)
+; Simulate incoming call (on remote server)
+exten => 7771,1,GotoIf($["${AST_Server1Host}" != ""]?7771,dial_server1)
+exten => 7771,n,GotoIf($["${AST_Server1Host}" = ""]?not_set1)
+exten => 7771,n(dial_server1),Dial(IAX2/${AST_ThisServerName}:${AST_ThisServerPwd}@${AST_Server1Host}/7777)
+exten => 7771,n(not_set1),Playtones(480+620/250,0/250)
+exten => 7771,n,Wait(5)
+
+exten => 7772,1,GotoIf($["${AST_Server2Host}" != ""]?7772,dial_server2)
+exten => 7772,n,GotoIf($["${AST_Server2Host}" = ""]?not_set2)
+exten => 7772,n(dial_server2),Dial(IAX2/${AST_ThisServerName}:${AST_ThisServerPwd}@${AST_Server2Host}/7777)
+exten => 7772,n(not_set2),Playtones(480+620/250,0/250)
+exten => 7772,n,Wait(5)
+
+exten => 7773,1,GotoIf($["${AST_Server3Host}" != ""]?7773,dial_server3)
+exten => 7773,n,GotoIf($["${AST_Server3Host}" = ""]?not_set3)
+exten => 7773,n(dial_server3),Dial(IAX2/${AST_ThisServerName}:${AST_ThisServerPwd}@${AST_Server3Host}/7777)
+exten => 7773,n(not_set3),Playtones(480+620/250,0/250)
+exten => 7773,n,Wait(5)
+
+exten => 7774,1,GotoIf($["${AST_Server4Host}" != ""]?7774,dial_server4)
+exten => 7774,n,GotoIf($["${AST_Server4Host}" = ""]?not_set4)
+exten => 7774,n(dial_server4),Dial(IAX2/${AST_ThisServerName}:${AST_ThisServerPwd}@${AST_Server4Host}/7777)
+exten => 7774,n(not_set4),Playtones(480+620/250,0/250)
+exten => 7774,n,Wait(5)
+
+; Queue test
+exten=> 800,1,Goto(queue,s,in_queue)
+
+; TEMP REDIRECT To Dial-in_dictation context
+exten => _1XX,1,Set(DID_MAILBOX=${EXTEN})
+exten => _1XX,n,Goto(dial-in_dictation,s,1)
+
+; Invalid Extension
+exten => i,1,Playback(invalid)
+exten => i,2,Hangup()
+;+---------------------------------------------------------------------------------------------+
+
+[default]
+
+ignorepat => 9
+include => ext-local
+include => features
+include => record-menu
+include => record-menu-fr
+include => record-language
+;include => record-autodial
+;include => autodial-start
+;include => autodial
+include => web-audio
+;include => tts-news ; TEST
+include => local
+;;include => longdistance
+;;include => international
+;+---------------------------------------------------------------------------------------------+
+
+[local]
+;ignorepat => 9
+; include => default
+include => parkedcalls
+include => trunktollfree
+include => trunklocal
+include => trunk_remotes
+include => trunklocal7digits
+include => longdistance
+include => international
+
+;include => iaxtel700
+;+---------------------------------------------------------------------------------------------+
+
+[longdistance]
+;ignorepat => 9
+include => local
+include => trunkld
+;+---------------------------------------------------------------------------------------------+
+
+[international]
+;ignorepat => 9
+include => longdistance
+include => trunkint
+;+---------------------------------------------------------------------------------------------+
+
+[trunktollfree]
+ignorepat => 9
+exten => _91800NXXXXXX,1,Noop(CONTEXT: trunktollfree)
+exten => _91800NXXXXXX,n,Macro(dial-out,${EXTEN:1},${EXTEN:2:6},FALSE)
+
+exten => _9800NXXXXXX,1,Noop(CONTEXT: trunktollfree)
+exten => _9800NXXXXXX,n,Macro(dial-out,${EXTEN:1},${EXTEN:1:6},FALSE)
+
+exten => _91866NXXXXXX,1,Noop(CONTEXT: trunktollfree)
+exten => _91866NXXXXXX,n,Macro(dial-out,${EXTEN:1},${EXTEN:2:6},FALSE)
+
+exten => _9866NXXXXXX,1,Noop(CONTEXT: trunktollfree)
+exten => _9866NXXXXXX,n,Macro(dial-out,${EXTEN:1},${EXTEN:1:6},FALSE)
+
+exten => _91877NXXXXXX,1,Noop(CONTEXT: trunktollfree)
+exten => _91877NXXXXXX,n,Macro(dial-out,${EXTEN:1},${EXTEN:2:6},FALSE)
+
+exten => _9877NXXXXXX,1,Noop(CONTEXT: trunktollfree)
+exten => _9877NXXXXXX,n,Macro(dial-out,${EXTEN:1},${EXTEN:1:6},FALSE)
+
+exten => _91888NXXXXXX,1,Noop(CONTEXT: trunktollfree)
+exten => _91888NXXXXXX,n,Macro(dial-out,${EXTEN:1},${EXTEN:2:6},FALSE)
+
+exten => _9888NXXXXXX,1,Noop(CONTEXT: trunktollfree)
+exten => _9888NXXXXXX,n,Macro(dial-out,${EXTEN:1},${EXTEN:1:6},FALSE)
+
+;+---------------------------------------------------------------------------------------------+
+
+[trunklocal]
+;ignorepat => 9
+;ignorepat => 8
+
+; Force using PSTN (long distance)
+exten => _81NXXXXXXXXX,1,Noop(CONTEXT: trunklocal:_81)
+exten => _81NXXXXXXXXX,n,Macro(dial-out,${EXTEN:1},${EXTEN:1:6},FALSE)
+exten => _81NXXXXXXXXX,n,Goto(s-${DIALSTATUS},1)
+
+; Force using PSTN (local)
+exten => _8NXXXXXXXXX,1,Noop(CONTEXT: trunklocal:_8)
+exten => _8NXXXXXXXXX,n(dial),Dial(${AST_PSTN_TRUNK}/${EXTEN:1},,TWK)
+exten => _8NXXXXXXXXX,n,Goto(s-${DIALSTATUS},1)
+
+; Number dialed without the "1" Ex 9514 or 9418 Do Lookup in Local.txt
+exten => _9NXXXXXXXXX,1,Noop(CONTEXT: trunklocal)
+exten => _9NXXXXXXXXX,n,Macro(dial-out,${EXTEN:1},${EXTEN:1:6},FALSE)
+
+exten => _9N11,1,Noop(CONTEXT: trunk411)
+exten => _9N11,n,Macro(dial-out,${EXTEN:1},${EXTEN:1},FALSE)
+
+exten => s-CONGESTION,1,Playtones(480+620/250,0/250)
+exten => s-CONGESTION,2,Wait(5)
+exten => s-CONGESTION,3,Hangup()
+
+exten => s-CHANUNAVAIL,1,Playtones(480+620/250,0/250)
+exten => s-CHANUNAVAIL,2,Wait(5)
+exten => s-CHANUNAVAIL,3,Hangup()
+
+exten => s-BUSY,1,Playtones(busy)
+exten => s-BUSY,n,Busy()
+;+---------------------------------------------------------------------------------------------+
+
+[trunklocal7digits]
+;ignorepat => 9
+exten => _9NXXXXXX,1,Noop(CONTEXT: trunklocal7digits)
+exten => _9NXXXXXX,n,Macro(dial-out,${AST_LocalAreaCode}${EXTEN:1},${AST_LocalAreaCode}${EXTEN:1:3},FALSE)
+
+;+---------------------------------------------------------------------------------------------+
+
+[trunkld]
+;ignorepat => 9
+; Force VoIP call
+exten => _71NXXXXXXXXX,1,Noop(CONTEXT: trunklocal:_71)
+exten => _71NXXXXXXXXX,n,Macro(dial-out,${EXTEN:1},${EXTEN:1:6},TRUE)
+
+exten => _7NXXXXXXXXX,1,Noop(CONTEXT: trunklocal:_7)
+exten => _7NXXXXXXXXX,n,Macro(dial-out,${EXTEN:1},${EXTEN:1:6},TRUE)
+
+exten => _91NXXNXXXXXX,1,Noop(CONTEXT: trunkld)
+exten => _91NXXNXXXXXX,n,Macro(dial-out,${EXTEN:1},${EXTEN:2:6},FALSE)
+
+;+---------------------------------------------------------------------------------------------+
+
+[trunkint]
+;ignorepat => 9
+exten => _9011.,1,Noop(CONTEXT: trunkint)
+exten => _9011.,n,Macro(dial-out,${EXTEN:1},${EXTEN:1},FALSE)
+exten => _9011.,n,GotoIf( $["${DIALSTATUS}"="CONGESTION"]?dial_voip2)
+exten => _9011.,n,Goto(s-${DIALSTATUS},1)
+
+exten => _9011.,n(dial_voip2),Macro(dial-voip,${AST_TrunksProto},${EXTEN:1})
+exten => _9011.,n,Goto(s-${DIALSTATUS},1)
+
+exten => s-CONGESTION,1,Playtones(480+620/250,0/250)
+exten => s-CONGESTION,2,Wait(5);
+exten => s-CONGESTION,3,Hangup()
+
+exten => s-BUSY,1,Playtones(busy)
+exten => s-BUSY,n,Busy()
+
+;+---------------------------------------------------------------------------------------------+
+
+[iaxtel700]
+;ignorepat => 9
+exten => _91700XXXXXXX,1,Noop(CONTEXT: iaxtel700)
+exten => _91700XXXXXXX,n,Dial(IAX2/${IAXINFO}@iaxtel.com/${EXTEN:1}@iaxtel,,TWK)
+
+[trunk_remotes]
+
+exten => _*1NXXXXXXXXX,1,Noop(CONTEXT: remote_trunk_1)
+exten => _*1NXXXXXXXXX,n,Dial(IAX2/${AST_ThisServerName}:${AST_ThisServerPwd}@${AST_Server1Host}/9${EXTEN:2},,TWK)
+exten => _*1NXXXXXXXXX,n,Goto(s-${DIALSTATUS},1)
+
+exten => _*2NXXXXXXXXX,1,Noop(CONTEXT: remote_trunk_2)
+exten => _*2NXXXXXXXXX,n,Dial(IAX2/${AST_ThisServerName}:${AST_ThisServerPwd}@${AST_Server2Host}/9${EXTEN:2},,TWK)
+exten => _*2NXXXXXXXXX,n,Goto(s-${DIALSTATUS},1)
+
+exten => _*3NXXXXXXXXX,1,Noop(CONTEXT: remote_trunk_3)
+exten => _*3NXXXXXXXXX,n,Dial(IAX2/${AST_ThisServerName}:${AST_ThisServerPwd}@${AST_Server3Host}/9${EXTEN:2},,TWK)
+exten => _*3NXXXXXXXXX,n,Goto(s-${DIALSTATUS},1)
+
+exten => _*4NXXXXXXXXX,1,Noop(CONTEXT: remote_trunk_4)
+exten => _*4NXXXXXXXXX,n,Dial(IAX2/${AST_ThisServerName}:${AST_ThisServerPwd}@${AST_Server4Host}/9${EXTEN:2},,TWK)
+exten => _*4NXXXXXXXXX,n,Goto(s-${DIALSTATUS},1)
+
+exten => s-CONGESTION,1,Playtones(480+620/250,0/250)
+exten => s-CONGESTION,2,Wait(5);
+exten => s-CONGESTION,3,Hangup()
+
+exten => s-BUSY,1,Playtones(busy)
+exten => s-BUSY,n,Busy()
+
+;+----------------------------------------------------------------+
+; MACROS
+;+----------------------------------------------------------------+
+
+[macro-stdexten]
+
+exten => s,1,Set(EXTTOCALL=${ARG1})
+exten => s,2,Set(CFUEXT=${DB(CFU/${EXTTOCALL})}) 
+exten => s,3,Set(DNDSET=${DB(DND/${EXTTOCALL})})
+exten => s,4,GotoIf($["foo${DNDSET}"!="foo"]]?s-NOANSWER,1)
+exten => s,5,GotoIf($["foo${CFUEXT}"!="foo"]]?s,test_cfu)
+exten => s,6,Ringing
+exten => s,7,Dial(${ARG2},20,TtWwKk)
+exten => s,8,Goto(s-${DIALSTATUS},1)
+
+exten => s,9(test_cfu),GotoIf($[${LEN(${CFUEXT})}>4]?s,dial_out)
+exten => s,10,Dial(SIP/${CFUEXT},20,TtWwKk)
+exten => s,11,Goto(s-${DIALSTATUS},1)
+exten => s,12(dial_out),Macro(dial-out,${CFUEXT}|${CFUEXT},FALSE)
+
+exten => s-BUSY,1,Set(CFUEXT=${DB(CFB/${EXTTOCALL})})
+exten => s-BUSY,2,GotoIf($["foo${CFUEXT}"="foo"]]?s-BUSY,4)
+exten => s-BUSY,3,Dial(SIP/${CFUEXT},20,TtWwKk)
+exten => s-BUSY,4,Voicemail(${ARG1}|b)
+exten => s-BUSY,5,Playback(goodbye)
+exten => s-BUSY,6,Hangup()
+
+exten => s-CHANUNAVAIL,1,Goto(s-NOANSWER,1)
+
+exten => s-NOANSWER,1,Voicemail(${ARG1}|u)
+exten => s-NOANSWER,n,Playback(goodbye)
+exten => s-NOANSWER,n,Hangup()
+
+;exten => s-CONGESTION,1,GotoIf($[${LEN(${CFUEXT})}>4]?s,dial_voip) 
+exten => s-CONGESTION,1,Dial(${AST_TrunksProto}/${CFUEXT},20,TtWwKk)
+;exten => s-CONGESTION,2,Playtones(congestion)
+;exten => s-CONGESTION,3,Congestion()
+exten => s-CONGESTION,2,Playtones(480+620/250,0/250)
+exten => s-CONGESTION,3,Wait(5);
+exten => s-CONGESTION,4,Hangup()
+
+exten => h,1,Noop(HungUp !)
+
+exten => a,1,VoicemailMain(${ARG1})
+exten => _s-.,1,Goto(s-NOANSWER,1)
+
+;+----------------------------------------------------------------+
+
+[macro-dial-voip]
+exten => s,1,Macro(test-nvram)
+exten => s,n,Set(TRUNK_PROTO=${ARG1})
+exten => s,n,Noop(TRUNK_PROTO=${TRUNK_PROTO})
+exten => s,n,GotoIf($["${TRUNK_PROTO}"!="IAX"]?dial_sip)
+; exten => s,n,Dial(${AST_VOIP_TRUNK}/${ARG2},,TWK)
+exten => s,n,Dial(IAX2/${AST_IAX_RegUser1}/${ARG2},,TWK)
+exten => s,n,Goto(s,get_status)
+exten => s,n(dial_sip),Dial(SIP/${ARG2}@${AST_SIP_RegUser1},,TWK)
+exten => s,n(get_status),GotoIf( $["${DIALSTATUS}"="CONGESTION"]?dial_voip2)
+exten => s,n,Goto(s-${DIALSTATUS},1)
+exten => s,n,Goto(s,end)
+; If VoIP2 exists try it
+exten => s,n(dial_voip2),GotoIf( $["${AST_TrunksProto}"=""]?s-${DIALSTATUS},1)
+exten => s,n,GotoIf($["${TRUNK_PROTO}"!="IAX"]?dial_sip2)
+exten => s,n,Dial(IAX2/${AST_IAX_RegUser2}/${ARG2},,TWK)
+exten => s,n,Goto(s,get_status2)
+exten => s,n(dial_sip2),Dial(SIP/${ARG2}@${AST_SIP_RegUser2},,TWK)
+exten => s,n(get_status2),Goto(s-${DIALSTATUS},1)
+
+exten => s-CHANUNAVAIL,1,Goto(s-CONGESTION,1)
+
+exten => s-CONGESTION,1,Playtones(480+620/250,0/250)
+exten => s-CONGESTION,2,Wait(5);
+exten => s-CONGESTION,3,Hangup()
+
+exten => s-BUSY,1,Playtones(busy)
+exten => s-BUSY,n,Busy()
+
+exten => s-NOANSWER,1,NoOp(NOANSWER)
+
+;+----------------------------------------------------------------+
+; dial-out[TelNo][prefix][VoIpOnly]
+;
+;
+;+----------------------------------------------------------------+
+
+
+[macro-dial-out]
+exten => s,1,Macro(test-nvram)
+exten => s,n,Set(DIALNO=${ARG1})
+exten => s,n,Set(PREFIX=${ARG2})
+exten => s,n,Set(VOIP_ONLY=${ARG3})
+
+exten => s,n,GotoIf($["${VOIP_ONLY}" = "TRUE"]?dial_voip)
+
+exten => s,n,GotoIf($["${AST_LocalPrefixesDisabled}" != ""]?dial_pstn)
+exten => s,n,GotoIf($[${LEN(${DIALNO})}<7]?s,dial_pstn)
+exten => s,n(test_local),NooP(Lookup: ${PREFIX})
+exten => s,n,AGI(islocalprefix.sh|${PREFIX})
+exten => s,n,Noop(IS_LOCAL=${IS_LOCAL})
+exten => s,n,GotoIf($["${IS_LOCAL}"="FALSE"]?dial_voip)
+
+; LOCAL Call Test PSTN
+exten => s,n(dial_pstn),GotoIf($["${AST_PSTN_TRUNK}" = ""]?dial_pstn2)
+exten => s,n,Dial(${AST_PSTN_TRUNK}/${DIALNO},,TWK)
+exten => s,n,Noop(DIALSTATUS=${DIALSTATUS}")
+exten => s,n,GotoIf($["${DIALSTATUS}"="CONGESTION"]?dial_pstn2)
+exten => s,n,Goto(s-${DIALSTATUS},1)
+
+; LOCAL Call Test PSTN2
+exten => s,n(dial_pstn2),GotoIf($["${AST_PSTN_TRUNK2}" = ""]?dial_pstn3)
+exten => s,n,Dial(${AST_PSTN_TRUNK2}/${DIALNO},,TWK)
+exten => s,n,Noop(DIALSTATUS=${DIALSTATUS}")
+exten => s,n,GotoIf($["${DIALSTATUS}"="CONGESTION"]?dial_pstn3)
+exten => s,n,Goto(s-${DIALSTATUS},1)
+
+; LOCAL Call Test PSTN3
+exten => s,n(dial_pstn3),GotoIf($["${AST_PSTN_TRUNK3}" = ""]?dial_pstn4)
+exten => s,n,Dial(${AST_PSTN_TRUNK3}/${DIALNO},,TWK)
+exten => s,n,Noop(DIALSTATUS=${DIALSTATUS}")
+exten => s,n,GotoIf($["${DIALSTATUS}"="CONGESTION"]?dial_pstn4)
+exten => s,n,Goto(s-${DIALSTATUS},1)
+
+; LOCAL Call Test PSTN4
+exten => s,n(dial_pstn4),GotoIf($["${AST_PSTN_TRUNK4}" = ""]?dial_voip)
+exten => s,n,Dial(${AST_PSTN_TRUNK4}/${DIALNO},,TWK)
+exten => s,n,Noop(DIALSTATUS=${DIALSTATUS}")
+exten => s,n,GotoIf($["${DIALSTATUS}"="CONGESTION"]?test_dial_voip)
+exten => s,n,Goto(s-${DIALSTATUS},1)
+
+; If Local call and and AST_VoIP_NoLocal is set -> Congestion
+exten => s,n(test_dial_voip),GotoIf($["${IS_LOCAL}" = "FALSE"]?dial_voip)
+exten => s,n,GotoIf($["$AST_VoIP_NoLocal" != "1"]?dial_voip)
+exten => s,n,Goto(s-${DIALSTATUS},1)
+
+; Test the first SIP VoIP trunk
+exten => s,n(dial_voip),GotoIf($["${AST_SIP_RegUser1}"=""]?dial_sip_voip2)
+exten => s,n,Set(CALLERID(num)=${AST_SIP_RegUser1})
+exten => s,n,GotoIf($["${AST_CallerName}" = ""]?sip1_noname)
+exten => s,n,Set(CALLERID(name)=${AST_CallerName})
+exten => s,n(sip1_noname),Dial(SIP/${DIALNO}@${AST_SIP_RegUser1},,TWK)
+exten => s,n(get_status),Noop(DIALSTATUS=${DIALSTATUS}")
+exten => s,n,GotoIf($["${DIALSTATUS}" = "CONGESTION"]?dial_sip_voip2)
+exten => s,n,Goto(s-${DIALSTATUS},1)
+
+exten => s,n(dial_sip_voip2),GotoIf($["${AST_SIP_RegUser2}"=""]?dial_sip_voip3)
+exten => s,n,Set(CALLERID(num)=${AST_SIP_RegUser2})
+exten => s,n,GotoIf($["${AST_CallerName}" = ""]?sip2_noname)
+exten => s,n,Set(CALLERID(name)=${AST_CallerName})
+exten => s,n(sip2_noname),Dial(SIP/${DIALNO}@${AST_SIP_RegUser2},,TWK)
+exten => s,n,GotoIf($["${DIALSTATUS}" = "CONGESTION"]?dial_sip_voip3)
+exten => s,n,Goto(s-${DIALSTATUS},1)
+
+exten => s,n(dial_sip_voip3),GotoIf($["${AST_SIP_RegUser3}"=""]?dial_sip_voip4)
+exten => s,n,Set(CALLERID(num)=${AST_SIP_RegUser3})
+exten => s,n,GotoIf($["${AST_CallerName}" = ""]?sip3_noname)
+exten => s,n,Set(CALLERID(name)=${AST_CallerName})
+exten => s,n(sip3_noname),Dial(SIP/${DIALNO}@${AST_SIP_RegUser3},,TWK)
+exten => s,n,GotoIf($["${DIALSTATUS}" = "CONGESTION"]?dial_sip_voip4)
+exten => s,n,Goto(s-${DIALSTATUS},1)
+
+exten => s,n(dial_sip_voip4),GotoIf($["${AST_SIP_RegUser4}"=""]?dial_iax_voip1)
+exten => s,n,Set(CALLERID(num)=${AST_SIP_RegUser4})
+exten => s,n,GotoIf($["${AST_CallerName}" = ""]?sip4_noname)
+exten => s,n,Set(CALLERID(name)=${AST_CallerName})
+exten => s,n(sip4_noname),Dial(SIP/${DIALNO}@${AST_SIP_RegUser4},,TWK)
+exten => s,n,GotoIf($["${DIALSTATUS}" = "CONGESTION"]?dial_iax_voip1)
+exten => s,n,Goto(s-${DIALSTATUS},1)
+
+exten => s,n(dial_iax_voip1),GotoIf($["${AST_IAX_RegUser1}"=""]?dial_iax_voip2)
+exten => s,n,Set(CALLERID(num)=${AST_IAX_RegUser1})
+exten => s,n,GotoIf($["${AST_CallerName}" = ""]?iax1_noname)
+exten => s,n,Set(CALLERID(name)='"${AST_CallerName}"')
+exten => s,n(iax1_noname),Dial(IAX2/${AST_IAX_RegUser1}:${AST_IAX_RegPwd1}@${AST_IAX_RegHost1}/${DIALNO},,TWK)
+exten => s,n,GotoIf($["${DIALSTATUS}" = "CONGESTION"]?dial_iax_voip2)
+exten => s,n,Goto(s-${DIALSTATUS},1)
+
+exten => s,n(dial_iax_voip2),GotoIf($["${AST_IAX_RegUser2}"=""]?dial_iax_voip3)
+exten => s,n,Set(CALLERID(num)=${AST_IAX_RegUser2})
+exten => s,n,GotoIf($["${AST_CallerName}" = ""]?iax2_noname)
+exten => s,n,Set(CALLERID(name)=${AST_CallerName})
+exten => s,n(iax2_noname),Dial(IAX2/${AST_IAX_RegUser2}:${AST_IAX_RegPwd2}@${AST_IAX_RegHost2}/${DIALNO},,TWK)
+exten => s,n,GotoIf($["${DIALSTATUS}" = "CONGESTION"]?dial_iax_voip3)
+exten => s,n,Goto(s-${DIALSTATUS},1)
+
+exten => s,n(dial_iax_voip3),GotoIf($["${AST_IAX_RegUser3}"=""]?dial_iax_voip4)
+exten => s,n,Set(CALLERID(num)=${AST_IAX_RegUser3})
+exten => s,n,GotoIf($["${AST_CallerName}" = ""]?iax3_noname)
+exten => s,n,Set(CALLERID(name)=${AST_CallerName})
+exten => s,n(iax3_noname),Dial(IAX2/${AST_IAX_RegUser3}:${AST_IAX_RegPwd3}@${AST_IAX_RegHost3}/${DIALNO},,TWK)
+exten => s,n,GotoIf($["${DIALSTATUS}" = "CONGESTION"]?dial_iax_voip4)
+exten => s,n,Goto(s-${DIALSTATUS},1)
+
+exten => s,n(dial_iax_voip4),GotoIf($["${AST_IAX_RegUser4}"=""]?s-CONGESTION,1)
+exten => s,n,Set(CALLERID(num)=${AST_IAX_RegUser4})
+exten => s,n,GotoIf($["${AST_CallerName}" = ""]?iax4_noname)
+exten => s,n,Set(CALLERID(name)=${AST_CallerName})
+exten => s,n(iax4_noname),Dial(IAX2/${AST_IAX_RegUser4}:${AST_IAX_RegPwd4}@${AST_IAX_RegHost4}/${DIALNO},,TWK)
+exten => s,n,Goto(s-${DIALSTATUS},1)
+
+;exten => s-CONGESTION,1,Playtones(congestion)
+;exten => s-CONGESTION,2,Congestion()
+exten => s-CONGESTION,1,Playtones(480+620/250,0/250)
+exten => s-CONGESTION,2,Wait(5);
+exten => s-CONGESTION,3,Hangup()
+
+exten => s-BUSY,1,Playtones(busy)
+exten => s-BUSY,n,Busy()
+
+exten => s-NOANSWER,1,NoOp(NOANSWER)
+
+;+----------------------------------------------------------------+
+[macro-refresh-nvram]
+exten => s,1,Goto(macro-test-nvram,s,no_test)
+
+[macro-test-nvram]
+
+exten => s,1,GotoIf($["${NVRAM_READ}" = "TRUE"]?end)
+
+exten => s,n(no_test),AGI(getnvramvars.sh)
+exten => s,n,SetGlobalVar(NVRAM_READ=TRUE)
+exten => s,n,Goto(end)
+
+exten => s,n,SetGlobalVar(NVRAM_READ=TRUE)
+exten => s,n(end),Noop(test-nvram done)
+
+;+----------------------------------------------------------------+
+[macro-get-config-file]
+exten => s,1,AGI(get_config_file.sh)
+exten => s,n,SetGlobalVar(NVRAM_READ=TRUE)
+exten => s,n(end),Noop(+- - - - read-config-from-file done - - - - +)
+
+;+----------------------------------------------------------------+
+[macro-answer-set-lang]
+exten => s,1,Macro(test-nvram)
+exten => s,n,GotoIf($["${AST_ServiceLanguage}"="E"]]?s,set_en)
+exten => s,n,Set(LANGUAGE()=fr)
+exten => s,n,Goto(s,answer)
+exten => s,n(set_en),Set(LANGUAGE()=en)
+exten => s,n(answer),Answer()
+; +-------------------------------------------------------------------------------------------------+
+
+; ===== AutoDialer Application =======================
+; By No?l Bouchard
+; Tele Data Inc. 2008-2009
+
+
+;+----------------------------------------------------------------+
+
+; ===== WebCall  =======================
+; By No?l Bouchard
+; Tele Data Inc. 2007-2009
+; ================================================================
+
+
+[webcall]
+exten => s,1,Wait(1)
+
+exten => s,n,GotoIf($["${WC_Language}"="E"]]?s,set_en)
+exten => s,n,Set(LANGUAGE()=fr)
+exten => s,n,Goto(s,send_ue)
+exten => s,n(set_en),Set(LANGUAGE()=en)
+
+; exten => s,n,Macro(answer-set-lang)
+exten => s,n(send_ue),UserEvent(WebCall|Channel: ${CHANNEL}|OutNum: ${OutNum}|Language: ${WC_Language}|FirstName: ${FirstName}|Lastname: ${LastName}|Company: ${Company})
+exten => s,n,Playback(webcall-rcvd)
+exten => s,n,Read(USER_SELECT,webcall-menu,1,,1,0)
+exten => s,n,GotoIf($["${USER_SELECT}"="1"]?do_call)
+exten => s,n,UserEvent(WebCall|Channel: ${CHANNEL}|OutNum: ${OutNum}|Status: Canceled)
+exten => s,n,Goto(cancel)
+exten => s,n(do_call),UserEvent(WebCall|Channel: ${CHANNEL}|OutNum: ${OutNum}|Status: Calling)
+exten => s,n,Playback(pls-hold-while-try)
+exten => s,n,Noop(OutNum=${OutNum})
+exten => s,n,GotoIf($[${LEN(${OutNum})}<10]?cancel)
+exten => s,n,Goto(default,${OutNum},1)
+exten => s,n(cancel),Playback(cancelled)
+exten => h,1,Noop(HUNGUP !)
+
+;+----------------------------------------------------------------+
+
+
+; ===== Phone-In Dictation Mailboxes =======================
+; By No?l Bouchard
+; Tele Data Inc. 2009
+; ================================================================
+
+[hints]
+exten => FXO1,hint,SIP/FXO1
+exten => FXO2,hint,SIP/FXO2
+exten => FXO3,hint,SIP/FXO3
+exten => FXO4,hint,SIP/FXO4
+exten => 300,hint,SIP/300
+exten => 301,hint,SIP/301
+exten => 302,hint,SIP/302
+exten => 303,hint,IAX2/303
+exten => 304,hint,SIP/304
+exten => 305,hint,SIP/305
+exten => 306,hint,SIP/306
+exten => 307,hint,IAX2/307
+

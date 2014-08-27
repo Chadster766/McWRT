@@ -1,0 +1,183 @@
+--- a/mercurial/archival.py
++++ b/mercurial/archival.py
+@@ -37,7 +37,6 @@ def tidyprefix(dest, kind, prefix):
+ 
+ exts = {
+     'tar': ['.tar'],
+-    'tbz2': ['.tbz2', '.tar.bz2'],
+     'tgz': ['.tgz', '.tar.gz'],
+     'zip': ['.zip'],
+     }
+@@ -51,7 +50,7 @@ def guesskind(dest):
+ 
+ class tarit(object):
+     '''write archive to tar file or stream.  can write uncompressed,
+-    or compress with gzip or bzip2.'''
++    or compress with gzip.'''
+ 
+     class GzipFileWithTime(gzip.GzipFile):
+ 
+@@ -205,7 +204,6 @@ class fileit(object):
+ archivers = {
+     'files': fileit,
+     'tar': tarit,
+-    'tbz2': lambda name, mtime: tarit(name, mtime, 'bz2'),
+     'tgz': lambda name, mtime: tarit(name, mtime, 'gz'),
+     'uzip': lambda name, mtime: zipit(name, mtime, False),
+     'zip': zipit,
+--- a/mercurial/bundlerepo.py
++++ b/mercurial/bundlerepo.py
+@@ -307,7 +307,7 @@ def getremotechanges(ui, repo, other, re
+             cg = other.changegroup(incoming, "incoming")
+         else:
+             cg = other.changegroupsubset(incoming, revs, 'incoming')
+-        bundletype = other.local() and "HG10BZ" or "HG10UN"
++        bundletype = other.local() and "HG10GZ" or "HG10UN"
+         fname = bundle = changegroup.writebundle(cg, bundlename, bundletype)
+         # keep written bundle?
+         if bundlename:
+--- a/mercurial/changegroup.py
++++ b/mercurial/changegroup.py
+@@ -7,7 +7,7 @@
+ 
+ from i18n import _
+ import util
+-import struct, os, bz2, zlib, tempfile
++import struct, os, zlib, tempfile
+ 
+ def readexactly(stream, n):
+     '''read n bytes from stream.read and abort if less was available'''
+@@ -45,7 +45,6 @@ class nocompress(object):
+ bundletypes = {
+     "": ("", nocompress),
+     "HG10UN": ("HG10UN", nocompress),
+-    "HG10BZ": ("HG10", lambda: bz2.BZ2Compressor()),
+     "HG10GZ": ("HG10GZ", lambda: zlib.compressobj()),
+ }
+ 
+@@ -59,14 +58,13 @@ def collector(cl, mmfs, files):
+     return collect
+ 
+ # hgweb uses this list to communicate its preferred type
+-bundlepriority = ['HG10GZ', 'HG10BZ', 'HG10UN']
++bundlepriority = ['HG10GZ', 'HG10UN']
+ 
+ def writebundle(cg, filename, bundletype):
+     """Write a bundle file and return its filename.
+ 
+     Existing files will not be overwritten.
+     If no filename is specified, a temporary file is created.
+-    bz2 compression can be turned off.
+     The bundle file will be deleted in case of errors.
+     """
+ 
+@@ -124,12 +122,6 @@ def decompressor(fh, alg):
+             zd = zlib.decompressobj()
+             for chunk in f:
+                 yield zd.decompress(chunk)
+-    elif alg == 'BZ':
+-        def generator(f):
+-            zd = bz2.BZ2Decompressor()
+-            zd.decompress("BZ")
+-            for chunk in util.filechunkiter(f, 4096):
+-                yield zd.decompress(chunk)
+     else:
+         raise util.Abort("unknown bundle compression '%s'" % alg)
+     return util.chunkbuffer(generator(fh))
+--- a/mercurial/hgweb/hgwebdir_mod.py
++++ b/mercurial/hgweb/hgwebdir_mod.py
+@@ -204,7 +204,7 @@ class hgwebdir(object):
+         def archivelist(ui, nodeid, url):
+             allowed = ui.configlist("web", "allow_archive", untrusted=True)
+             archives = []
+-            for i in [('zip', '.zip'), ('gz', '.tar.gz'), ('bz2', '.tar.bz2')]:
++            for i in [('zip', '.zip'), ('gz', '.tar.gz')]:
+                 if i[0] in allowed or ui.configbool("web", "allow" + i[0],
+                                                     untrusted=True):
+                     archives.append({"type" : i[0], "extension": i[1],
+--- a/mercurial/hgweb/hgweb_mod.py
++++ b/mercurial/hgweb/hgweb_mod.py
+@@ -40,7 +40,7 @@ class hgweb(object):
+         self.mtime = -1
+         self.size = -1
+         self.reponame = name
+-        self.archives = 'zip', 'gz', 'bz2'
++        self.archives = 'zip', 'gz'
+         self.stripecount = 1
+         # a repo owner may set web.templates in .hg/hgrc to get any file
+         # readable by the user running the CGI script
+@@ -284,7 +284,6 @@ class hgweb(object):
+                 yield {"type" : i, "extension" : spec[2], "node" : nodeid}
+ 
+     archive_specs = {
+-        'bz2': ('application/x-bzip2', 'tbz2', '.tar.bz2', None),
+         'gz': ('application/x-gzip', 'tgz', '.tar.gz', None),
+         'zip': ('application/zip', 'zip', '.zip', None),
+         }
+--- a/mercurial/repair.py
++++ b/mercurial/repair.py
+@@ -19,7 +19,7 @@ def _bundle(repo, bases, heads, node, su
+         os.mkdir(backupdir)
+     name = os.path.join(backupdir, "%s-%s.hg" % (short(node), suffix))
+     if compress:
+-        bundletype = "HG10BZ"
++        bundletype = "HG10GZ"
+     else:
+         bundletype = "HG10UN"
+     return changegroup.writebundle(cg, name, bundletype)
+--- a/mercurial/commands.py
++++ b/mercurial/commands.py
+@@ -162,7 +162,6 @@ def archive(ui, repo, dest, **opts):
+ 
+     :``files``: a directory full of files (default)
+     :``tar``:   tar archive, uncompressed
+-    :``tbz2``:  tar archive, compressed using bzip2
+     :``tgz``:   tar archive, compressed using gzip
+     :``uzip``:  zip archive, uncompressed
+     :``zip``:   zip archive, compressed using deflate
+@@ -644,8 +643,8 @@ def bundle(ui, repo, fname, dest=None, *
+     -a/--all (or --base null).
+ 
+     You can change compression method with the -t/--type option.
+-    The available compression methods are: none, bzip2, and
+-    gzip (by default, bundles are compressed using bzip2).
++    The available compression methods are: none, and
++    gzip (by default, bundles are compressed using gzip).
+ 
+     The bundle file can then be transferred using conventional means
+     and applied to another repository with the unbundle or pull
+@@ -712,8 +711,8 @@ def bundle(ui, repo, fname, dest=None, *
+     else:
+         cg = repo.changegroup(o, 'bundle')
+ 
+-    bundletype = opts.get('type', 'bzip2').lower()
+-    btypes = {'none': 'HG10UN', 'bzip2': 'HG10BZ', 'gzip': 'HG10GZ'}
++    bundletype = opts.get('type', 'gzip').lower()
++    btypes = {'none': 'HG10UN', 'gzip': 'HG10GZ'}
+     bundletype = btypes.get(bundletype)
+     if bundletype not in changegroup.bundletypes:
+         raise util.Abort(_('unknown bundle type specified with --type'))
+@@ -4316,7 +4315,7 @@ table = {
+            _('a base changeset assumed to be available at the destination'),
+            _('REV')),
+           ('a', 'all', None, _('bundle all changesets in the repository')),
+-          ('t', 'type', 'bzip2',
++          ('t', 'type', 'gzip',
+            _('bundle compression type to use'), _('TYPE')),
+          ] + remoteopts,
+          _('[-f] [-t TYPE] [-a] [-r REV]... [--base REV]... FILE [DEST]')),
+--- a/setup.py
++++ b/setup.py
+@@ -36,12 +36,6 @@ except:
+     raise SystemExit(
+         "Couldn't import standard zlib (incomplete Python install).")
+ 
+-try:
+-    import bz2
+-except:
+-    raise SystemExit(
+-        "Couldn't import standard bz2 (incomplete Python install).")
+-
+ import os, subprocess, time
+ import shutil
+ import tempfile

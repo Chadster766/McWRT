@@ -1,0 +1,109 @@
+From 43b0c123eafbf553dd22a0fc00bdd6365527d040 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Wed, 16 May 2012 13:59:59 +0300
+Subject: [PATCH 186/609] DSMP - enabling the temp sensor thresholds ( heating
+ and cooling). set default threshold to 105 for
+ overheatingm, and 10 for cooling
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/hwmon.c |   34 ++++++++++++++++++++++++++--------
+ 1 file changed, 26 insertions(+), 8 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/hwmon.c b/arch/arm/mach-armadaxp/hwmon.c
+index 4e66dfe..e326718 100644
+--- a/arch/arm/mach-armadaxp/hwmon.c
++++ b/arch/arm/mach-armadaxp/hwmon.c
+@@ -42,14 +42,30 @@
+ #define	TSEN_CONF_REF_CAL_MASK			(0x1FF << 11)
+ #define	TSEN_CONF_SOFT_RESET_MASK		(0x1 << 1)
+ 
+-#define ARMADAXP_OVERHEAT_TEMP	105000		/* milidegree Celsius */
++#define ARMADAXP_OVERHEAT_TEMP	105		/* milidegree Celsius */
+ #define ARMADAXP_OVERHEAT_DELAY	0x700
+-#define ARMADAXP_OVERCOOL_TEMP	10000		/* milidegree Celsius */
++#define ARMADAXP_OVERCOOL_TEMP	10		/* milidegree Celsius */
+ #define	ARMADAXP_OVERCOOL_DELAY	0x700
+ #define ARMADAXP_OVERHEAT_MIN	0
+ #define ARMADAXP_OVERHEAT_MAX	110000
+ #define ARMADAXP_OVERCOOL_MIN	0
+ #define ARMADAXP_OVERCOOL_MAX	110000
++#define PMU_THERMAL_MNGR_REG	0x184c4
++#define	PMU_INT_CAUSE_REG	0x1c120
++#define PMU_INT_OVRHEAT_MASK	0x1
++#define PMU_INT_COOLING_MASK	0x2
++
++#define PMU_TM_COOL_THRSH_OFFS          10
++#define PMU_TM_COOL_THRSH_MASK          (0x1FF << PMU_TM_COOL_THRSH_OFFS)
++#define PMU_TM_OVRHEAT_THRSH_OFFS       19
++#define PMU_TM_OVRHEAT_THRSH_MASK       (0x1FF << PMU_TM_OVRHEAT_THRSH_OFFS)
++
++#define PMU_TM_DISABLE_OFFS             0
++#define PMU_TM_DISABLE_MASK             (0x1 << PMU_TM_DISABLE_OFFS)
++
++
++#define	PMU_TM_OVRHEAT_DLY_REG  0x184cc
++#define	PMU_TM_COOLING_DLY_REG	0x184c8
+ 
+ /* Junction Temperature */
+ #define ARMADAXP_TSEN_TEMP2RAW(x) ((3153000 - (13825 * x)) / 10000)
+@@ -70,9 +86,12 @@ typedef enum {
+ 
+ static void axptemp_set_thresholds(unsigned int max, unsigned int min)
+ {
+-#if 0
+ 	u32 temp, reg;
+ 
++	reg = readl(INTER_REGS_BASE | PMU_THERMAL_MNGR_REG);
++        reg &= ~PMU_TM_DISABLE_MASK;
++        writel(reg, (INTER_REGS_BASE | PMU_THERMAL_MNGR_REG));
++
+ 	/* Set the overheat threashold & delay */
+ 	temp = ARMADAXP_TSEN_TEMP2RAW(max);
+ 	reg = readl(INTER_REGS_BASE | PMU_THERMAL_MNGR_REG);
+@@ -86,7 +105,6 @@ static void axptemp_set_thresholds(unsigned int max, unsigned int min)
+ 	reg &= ~PMU_TM_COOL_THRSH_MASK;
+ 	reg |= (temp << PMU_TM_COOL_THRSH_OFFS);
+ 	writel(reg, (INTER_REGS_BASE | PMU_THERMAL_MNGR_REG));
+-#endif
+ }
+ 
+ static int axptemp_init_sensor(void)
+@@ -124,14 +142,14 @@ static int axptemp_init_sensor(void)
+ 	*/
+ 	//udelay(10000);
+ 
+-#if 0
++
+ 	/* Set thresholds */
+ 	axptemp_set_thresholds(temp_max, temp_min);
+ 
+ 	/* Set delays */
+ 	writel(ARMADAXP_OVERHEAT_DELAY, (INTER_REGS_BASE | PMU_TM_OVRHEAT_DLY_REG));
+ 	writel(ARMADAXP_OVERCOOL_DELAY, (INTER_REGS_BASE | PMU_TM_COOLING_DLY_REG));
+-#endif
++
+ 
+ 	return 0;
+ }
+@@ -158,7 +176,7 @@ static ssize_t show_name(struct device *dev, struct device_attribute
+ static ssize_t show_alarm(struct device *dev, struct device_attribute
+ 			  *devattr, char *buf)
+ {
+-#if 0
++
+ 	int alarm = 0;
+ 	u32 reg;
+ 
+@@ -173,7 +191,7 @@ static ssize_t show_alarm(struct device *dev, struct device_attribute
+ 		alarm = 2;
+ 		writel ((reg & ~PMU_INT_COOLING_MASK), (INTER_REGS_BASE | PMU_INT_CAUSE_REG));
+ 	}
+-#endif
++
+ 	return sprintf(buf, "%d\n", 0);
+ }
+ 
+-- 
+1.7.9.5
+

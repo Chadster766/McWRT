@@ -1,0 +1,27 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2007 OpenWrt.org
+START=70
+BIN=hts
+
+start_httptunnel() {
+    local section="$1"    
+    
+    config_get destination "$section" destination
+    config_get sourceport "$section" sourceport 
+    
+    echo start httptunnel: dest: "$destination", src: "$sourceport"
+    
+    $BIN --forward-port "$destination" "$sourceport"
+}
+
+
+start() {
+    config_load httptunnel
+    config_foreach start_httptunnel httptunnel
+}
+
+stop() {
+        ps aux | grep hts |  awk '{print }' | \
+            xargs kill 2> /dev/null
+}
+									

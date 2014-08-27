@@ -1,0 +1,22 @@
+#!/bin/sh
+
+case "$ACTION" in
+        add) 
+                [ -n ${PRODUCT} ] &&
+                [ -n ${INTERFACE} ] &&
+                [ "${PRODUCT}" = "4e8/6761/1" ] &&
+                [ "${INTERFACE}" = "255/0/0" ] && {
+                        /usr/sbin/madwimax -qofd
+                }
+                ;;
+        remove)
+                [ -n ${PRODUCT} ] &&
+                [ -n ${INTERFACE} ] &&
+                [ "${PRODUCT}" = "4e8/6761/1" ] &&
+                [ "${INTERFACE}" = "255/0/0" ] && {
+                        /usr/bin/killall madwimax
+                        return 0
+                }
+                ;;
+esac
+

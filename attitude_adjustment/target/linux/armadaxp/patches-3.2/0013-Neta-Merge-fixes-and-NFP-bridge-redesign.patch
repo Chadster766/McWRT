@@ -1,0 +1,598 @@
+From 933d3d7a7343428f4cd5de4c5139b1dc4a75c923 Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Sun, 15 Jul 2012 14:57:34 +0300
+Subject: [PATCH 013/609] Neta: Merge fixes and NFP bridge redesign
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/Makefile                    |    2 +-
+ .../arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig |   59 ++++++++++++--------
+ .../mv_drivers_lsp/mv_neta/net_dev/Makefile        |    4 ++
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |   22 +++++---
+ .../mv_drivers_lsp/mv_neta/nfp_mgr/mv_nfp_mgr_if.h |    4 +-
+ arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c      |    2 +-
+ arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h      |    5 +-
+ arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h   |   10 +++-
+ arch/arm/plat-armada/mv_hal/neta/pnc/mvPncAging.c  |    3 +
+ net/bridge/br_fdb.c                                |   24 ++++----
+ net/bridge/br_if.c                                 |   16 +++---
+ net/bridge/br_private.h                            |    4 +-
+ net/core/neighbour.c                               |   42 ++++++++------
+ net/ipv6/ip6_fib.c                                 |    2 +-
+ net/netfilter/nf_conntrack_standalone.c            |    2 +-
+ 15 files changed, 119 insertions(+), 82 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
+index 1c18d71..7a5d0d2 100644
+--- a/arch/arm/mach-armadaxp/Makefile
++++ b/arch/arm/mach-armadaxp/Makefile
+@@ -62,7 +62,7 @@ ifdef CONFIG_MV_ETH_NFP_CT
+ endif
+ 
+ ifdef CONFIG_MV_ETH_NFP_BRIDGE
+-ifdef CONFIG_MV_ETH_NFP_BRIDGE_LEARN
++ifdef CONFIG_MV_ETH_NFP_FDB_MODE
+ 	NFPOBJS += $(HAL_ETH_NFP_DIR)/mvNfpFdb.o
+ else
+ 	NFPOBJS    += $(HAL_ETH_NFP_DIR)/mvNfpBridge.o
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
+index c140f89..177258f 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
+@@ -692,11 +692,18 @@ config MV_ETH_NFP_LIB
+ 
+ config MV_ETH_NFP_DEF
+         depends on MV_ETH_NFP
+-        int "Default value for NFP:  0 - Disable, 1 - Enable in 2 tuple mode, 2 - Enable in 5 tuple mode"
++        int "Default value for NFP:  0 - OFF, 1 - ON"
+         default 0
+ 	range 0 0 if MV_ETH_NFP_LIB
+         ---help---
+ 
++config MV_ETH_NFP_MODE_DEF
++        depends on MV_ETH_NFP
++        int "Default value for NFP:  1 - 2 tuple mode, 2 - 5 tuple mode"
++        default 1
++	range 1 1 if MV_ETH_NFP_LIB
++        ---help---
++
+ config  MV_ETH_NFP_EXT
+         bool "Support NFP for External (non GBE) network interfaces"
+         depends on MV_ETH_NFP && !MV_ETH_NFP_LIB
+@@ -721,27 +728,33 @@ config MV_ETH_NFP_BRIDGE
+ choice
+         prompt "NFP Bridging Mode"
+         depends on MV_ETH_NFP_BRIDGE
+-        default MV_ETH_NFP_BRIDGE_LEARN
++        default MV_ETH_NFP_FDB_MODE
+ 
+-config	MV_ETH_NFP_BRIDGE_LEARN
+-	bool "FDB"
++config	MV_ETH_NFP_FDB_MODE
++	bool "NFP FDB"
+ 	---help---
+-	  enable NFP bridging dynamic learning via NFP hooks
+-
+-config MV_ETH_NFP_BRIDGE_LEARN_DEF
+-        depends on MV_ETH_NFP_BRIDGE_LEARN
+-        int "Default value for NFP BRIDGE Dynamic Learning:  0 - disable, 1 - enable"
+-        default 0
+-	range 0 0 if MV_ETH_NFP_LIB
+-        ---help---
++	  enable NFP FDB mode
+ 
+-config  MV_ETH_NFP_BRIDGE_STATIC
+-	bool "BRIDGE"
++config  MV_ETH_NFP_BRIDGE_MODE
++	bool "NFP Bridge"
+ 	---help---
+-	  enable NFP bridging in static mode
++	  enable NFP Bridge Mode
+ 
+ endchoice
+ 
++config	MV_ETH_NFP_FDB_LEARN
++	depends on MV_ETH_NFP_BRIDGE && MV_ETH_NFP_FDB_MODE
++	bool "Support NFP FDB Dynamic Learning"
++	---help---
++	  enable NFP bridging dynamic learning via NFP hooks
++
++config MV_ETH_NFP_FDB_LEARN_DEF
++        depends on MV_ETH_NFP_FDB_LEARN
++        int "Default value for NFP FDB Dynamic Learning:  0 - disable, 1 - enable"
++        default 1
++	range 1 1 if MV_ETH_NFP_LIB
++        ---help---
++
+ config MV_ETH_NFP_VLAN
+         bool "Support NFP VLANs processing"
+         default y
+@@ -760,8 +773,8 @@ config MV_ETH_NFP_VLAN_LEARN
+ config MV_ETH_NFP_VLAN_LEARN_DEF
+         depends on MV_ETH_NFP_VLAN_LEARN
+         int "Default value for NFP VLAN Dynamic Learning:  0 - disable, 1 - enable"
+-        default 0
+-	range 0 0 if MV_ETH_NFP_LIB
++        default 1
++	range 1 1 if MV_ETH_NFP_LIB
+         ---help---
+ 
+ config MV_ETH_NFP_FIB
+@@ -782,8 +795,8 @@ config MV_ETH_NFP_FIB_LEARN
+ config MV_ETH_NFP_FIB_LEARN_DEF
+         depends on MV_ETH_NFP_FIB_LEARN
+         int "Default value for NFP Routing Dynamic Learning:  0 - disable, 1 - enable"
+-        default 0
+-	range 0 0 if MV_ETH_NFP_LIB
++        default 1
++	range 1 1 if MV_ETH_NFP_LIB
+         ---help---
+ 
+ config MV_ETH_NFP_CT
+@@ -804,8 +817,8 @@ config MV_ETH_NFP_CT_LEARN
+ config MV_ETH_NFP_CT_LEARN_DEF
+         depends on MV_ETH_NFP_CT_LEARN
+         int "Default value for NFP 5 Tuple Dynamic Learning:  0 - disable, 1 - enable"
+-        default 0
+-	range 0 0 if MV_ETH_NFP_LIB
++        default 1
++	range 1 1 if MV_ETH_NFP_LIB
+         ---help---
+ 
+ config MV_ETH_NFP_NAT
+@@ -847,8 +860,8 @@ config MV_ETH_NFP_PPP_LEARN
+ config MV_ETH_NFP_PPP_LEARN_DEF
+         depends on MV_ETH_NFP_PPP_LEARN
+         int "Default value for NFP PPPoE Dynamic Learning:  0 - disable, 1 - enable"
+-        default 0
+-	range 0 0 if MV_ETH_NFP_LIB
++        default 1
++	range 1 1 if MV_ETH_NFP_LIB
+         ---help---
+ 
+ 
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile
+index 61f3db8..600889f 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile
+@@ -5,6 +5,10 @@ ifeq ($(CONFIG_ARCH_FEROCEON),y)
+ 	include $(srctree)/$(MACHINE)/config/mvRules.mk
+ endif
+ 
++ifeq ($(CONFIG_ARCH_ARMADA370),y)
++	include $(srctree)/$(MACHINE)/config/mvRules.mk
++endif
++
+ ifeq ($(CONFIG_ARCH_ARMADA_XP),y)
+ 	include $(srctree)/arch/arm/mach-armadaxp/config/mvRules.mk
+ endif
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index c27914e..5c78468 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -133,7 +133,7 @@ extern u8 mvMacAddr[CONFIG_MV_ETH_PORTS_NUM][MV_MAC_ADDR_SIZE];
+ extern u16 mvMtu[CONFIG_MV_ETH_PORTS_NUM];
+ 
+ extern unsigned int switch_enabled_ports;
+-extern int mv_ctrl_nfp_mode;
++extern int mv_ctrl_nfp_state;
+ 
+ struct bm_pool mv_eth_pool[MV_ETH_BM_POOLS];
+ struct eth_port **mv_eth_ports;
+@@ -1950,7 +1950,7 @@ int mv_eth_nfp_ext(struct net_device *dev, struct sk_buff *skb, MV_EXT_PKT_INFO
+ #define NEEDED_HEADROOM (MV_PPPOE_HDR_SIZE + MV_VLAN_HLEN)
+ 
+ 	/* Check that NFP is eanbled */
+-	if (mv_ctrl_nfp_mode == 0)
++	if (mv_ctrl_nfp_state == 0)
+ 		return 1;
+ 
+ 	/* Check if external interface is mapped to NFP */
+@@ -4922,6 +4922,7 @@ int mv_eth_change_mtu_internals(struct net_device *dev, int mtu)
+ {
+ 	struct bm_pool	*new_pool = NULL;
+ 	struct eth_port *pp = MV_ETH_PRIV(dev);
++	int             config_pkt_size;
+ 	unsigned long	rwflags;
+ 
+ 	if ((mtu != dev->mtu) && (pp->pool_long)) {
+@@ -4929,29 +4930,32 @@ int mv_eth_change_mtu_internals(struct net_device *dev, int mtu)
+ 		write_lock_irqsave(&pp->rwlock, rwflags);
+ 
+ #ifdef CONFIG_MV_ETH_BM_CPU
++		config_pkt_size = mv_eth_bm_config_pkt_size_get(new_pool->pool);
+ 		new_pool = mv_eth_long_pool_get(pp, RX_PKT_SIZE(mtu));
+ #else
+ 		/* If BM is not used always free buffers */
++		config_pkt_size = 0;
+ 		new_pool = NULL;
+ #endif /* CONFIG_MV_ETH_BM_CPU */
+ 
+ 		/* Free all buffers from long pool */
+ 		if ((new_pool == NULL) || (new_pool->pkt_size < RX_PKT_SIZE(mtu)) || (pp->pool_long != new_pool) ||
+-			((new_pool->pkt_size > RX_PKT_SIZE(mtu)) && (mv_eth_bm_config_pkt_size_get(new_pool->pool) == 0))) {
++			((new_pool->pkt_size > RX_PKT_SIZE(mtu)) && (config_pkt_size == 0))) {
+ 			mv_eth_rx_reset(pp->port);
+ 			mv_eth_pool_free(pp->pool_long->pool, pp->pool_long_num);
+ 
+ #ifdef CONFIG_MV_ETH_BM_CPU
+ 			/* redefine pool pkt_size */
+ 			if (pp->pool_long->buf_num == 0) {
+-				pp->pool_long->pkt_size = mv_eth_bm_config_pkt_size_get(pp->pool_long->pool);
+-			if (pp->pool_long->pkt_size == 0)
+-				mvBmPoolBufSizeSet(pp->pool_long->pool, 0);
+-			else
+-				mvBmPoolBufSizeSet(pp->pool_long->pool, RX_BUF_SIZE(pp->pool_long->pkt_size));
++				pp->pool_long->pkt_size = config_pkt_size;
++
++				if (pp->pool_long->pkt_size == 0)
++					mvBmPoolBufSizeSet(pp->pool_long->pool, 0);
++				else
++					mvBmPoolBufSizeSet(pp->pool_long->pool, RX_BUF_SIZE(pp->pool_long->pkt_size));
+ 			}
+ #else
+-			pp->pool_long->pkt_size = 0;
++			pp->pool_long->pkt_size = config_pkt_size;
+ #endif /* CONFIG_MV_ETH_BM_CPU */
+ 
+ 			pp->pool_long->port_map &= ~(1 << pp->port);
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/nfp_mgr/mv_nfp_mgr_if.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/nfp_mgr/mv_nfp_mgr_if.h
+index dad1ef1..63e1305 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/nfp_mgr/mv_nfp_mgr_if.h
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/nfp_mgr/mv_nfp_mgr_if.h
+@@ -10,7 +10,7 @@
+ /*        2 - NFP enabled in 5 tuple mode		*/
+ int  nfp_mgr_enable(int mode);
+ 
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN) || defined(CONFIG_MV_ETH_NFP_VLAN_LEARN) || defined(CONFIG_MV_ETH_NFP_BRIDGE_LEARN)||\
++#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN) || defined(CONFIG_MV_ETH_NFP_VLAN_LEARN) || defined(CONFIG_MV_ETH_NFP_FDB_LEARN)||\
+ 		defined(CONFIG_MV_ETH_NFP_PPP_LEARN) || defined(CONFIG_MV_ETH_NFP_CT_LEARN)
+ void nfp_learn_enable(int en);
+ #endif
+@@ -23,7 +23,7 @@ void nfp_fib_learn_enable(int en);
+ void nfp_ct_learn_enable(int en);
+ #endif
+ 
+-#ifdef CONFIG_MV_ETH_NFP_BRIDGE_LEARN
++#ifdef CONFIG_MV_ETH_NFP_FDB_LEARN
+ void nfp_bridge_learn_enable(int en);
+ #endif
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
+index fc8eb75..3e85584 100644
+--- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
++++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
+@@ -513,7 +513,7 @@ MV_STATUS	mvNetaRxqCpuMaskSet(int port, int rxq, int cpu_mask)
+ 
+ #ifdef MV_ETH_GMAC_NEW
+ 
+-static MV_STATUS       mvEthGmacRgmiiSet(int port, int enable)
++MV_STATUS       mvEthGmacRgmiiSet(int port, int enable)
+ {
+ 	MV_U32  regVal;
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
+index dd3407f..5653e4c 100644
+--- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
++++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
+@@ -232,6 +232,8 @@ typedef struct {
+ 	MV_U32 tClk;
+ 	int	maxCPUs;
+ 	MV_BOOL	iocc;
++	MV_U16 ctrlModel;       /* Controller Model     */
++	MV_U8  ctrlRev;         /* Controller Revision  */
+ 
+ #ifdef CONFIG_MV_ETH_BM
+ 	MV_ULONG bmPhysBase;
+@@ -704,8 +706,9 @@ MV_STATUS mvNetaFlowCtrlSet(int port, MV_ETH_PORT_FC flowControl);
+ MV_STATUS mvNetaFlowCtrlGet(int port, MV_ETH_PORT_FC *flowControl);
+ 
+ #ifdef MV_ETH_GMAC_NEW
++MV_STATUS   mvEthGmacRgmiiSet(int port, int enable);
+ MV_STATUS	mvNetaGmacLpiSet(int port, int mode);
+-void	mvNetaGmacRegs(int port);
++void	    mvNetaGmacRegs(int port);
+ #endif /* MV_ETH_GMAC_NEW */
+ 
+ #ifdef CONFIG_MV_PON
+diff --git a/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
+index 7d7f1b0..0a90fbe 100644
+--- a/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
++++ b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
+@@ -92,7 +92,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+ #define NFP_MAX_PORTS   (MV_ETH_MAX_PORTS + NFP_EXT_NUM)
+ 
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN) || defined(CONFIG_MV_ETH_NFP_VLAN_LEARN) || defined(CONFIG_MV_ETH_NFP_BRIDGE_LEARN)||\
++#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN) || defined(CONFIG_MV_ETH_NFP_VLAN_LEARN) || defined(CONFIG_MV_ETH_NFP_FDB_LEARN)||\
+ 		defined(CONFIG_MV_ETH_NFP_PPP_LEARN) || defined(CONFIG_MV_ETH_NFP_CT_LEARN)
+ #define NFP_LEARN
+ #endif
+@@ -149,8 +149,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define NFP_BRIDGE
+ #endif
+ 
+-#ifdef CONFIG_MV_ETH_NFP_BRIDGE_LEARN
+-#define NFP_BRIDGE_LEARN
++#ifdef CONFIG_MV_ETH_NFP_FDB_MODE
++#define NFP_FDB_MODE
++#endif
++
++#ifdef CONFIG_MV_ETH_NFP_FDB_LEARN
++#define NFP_FDB_LEARN
+ #endif
+ 
+ #ifdef CONFIG_MV_ETH_SWITCH
+diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncAging.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncAging.c
+index 6ef6ea0..2602828 100644
+--- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncAging.c
++++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncAging.c
+@@ -26,6 +26,8 @@ DISCLAIMED.  The GPL License provides additional details about this warranty
+ disclaimer.
+ *******************************************************************************/
+ 
++#ifdef MV_ETH_PNC_AGING
++
+ #include "mvOs.h"
+ #include "mvCommon.h"
+ 
+@@ -277,3 +279,4 @@ void    mvPncAgingReset(void)
+ 	for (gr = 0; gr < MV_PNC_AGING_MAX_GROUP; gr++)
+ 		mvPncAgingGroupCntrClear(gr);
+ }
++#endif /* MV_ETH_PNC_AGING */
+diff --git a/net/bridge/br_fdb.c b/net/bridge/br_fdb.c
+index 7548984..ec08eb0 100644
+--- a/net/bridge/br_fdb.c
++++ b/net/bridge/br_fdb.c
+@@ -32,11 +32,11 @@ static void fdb_notify(const struct net_bridge_fdb_entry *, int);
+ 
+ static u32 fdb_salt __read_mostly;
+ 
+-#if defined(CONFIG_MV_ETH_NFP_BRIDGE_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_FDB_LEARN)
+ int nfp_hook_fdb_rule_add(int br_index, int if_index, const u8 *mac, int is_local);
+ int nfp_hook_fdb_rule_age(int br_index, int if_index, const u8 *mac);
+ int nfp_hook_fdb_rule_del(int br_index, int if_index, const u8 *mac);
+-#endif /* CONFIG_MV_ETH_NFP_BRIDGE_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_FDB_LEARN */
+ 
+ int __init br_fdb_init(void)
+ {
+@@ -71,13 +71,13 @@ static inline int has_expired(const struct net_bridge *br,
+ 	if (fdb->is_static)
+ 		return 0;
+ 
+-#if defined(CONFIG_MV_ETH_NFP_BRIDGE_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_FDB_LEARN)
+ 	if (fdb->nfp) {
+ 		if (nfp_hook_fdb_rule_age(fdb->dst->br->dev->ifindex,
+ 					fdb->dst->dev->ifindex, fdb->addr.addr) > 0)
+ 			fdb->updated = jiffies + fdb->dst->br->forward_delay;
+ 	}
+-#endif /* CONFIG_MV_ETH_NFP_BRIDGE_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_FDB_LEARN */
+ 
+ 	return time_before_eq(fdb->updated + hold_time(br), jiffies);
+ }
+@@ -98,12 +98,12 @@ static void fdb_rcu_free(struct rcu_head *head)
+ 
+ static inline void fdb_delete(struct net_bridge_fdb_entry *f)
+ {
+-#if defined(CONFIG_MV_ETH_NFP_BRIDGE_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_FDB_LEARN)
+ 	if (f->nfp) {
+ 		nfp_hook_fdb_rule_del(f->dst->br->dev->ifindex,
+ 				f->dst->dev->ifindex, f->addr.addr);
+ 	}
+-#endif /* CONFIG_MV_ETH_NFP_BRIDGE_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_FDB_LEARN */
+ 
+ 	fdb_notify(f, RTM_DELNEIGH);
+ 	hlist_del_rcu(&f->hlist);
+@@ -166,13 +166,13 @@ void br_fdb_cleanup(unsigned long _data)
+ 			if (f->is_static)
+ 				continue;
+ 
+-#if defined(CONFIG_MV_ETH_NFP_BRIDGE_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_FDB_LEARN)
+ 			if (f->nfp) {
+ 				if (nfp_hook_fdb_rule_age(f->dst->br->dev->ifindex,
+ 							f->dst->dev->ifindex, f->addr.addr) > 0)
+ 					f->updated = jiffies + f->dst->br->forward_delay;
+ 			}
+-#endif /* CONFIG_MV_ETH_NFP_BRIDGE_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_FDB_LEARN */
+ 
+ 			this_timer = f->updated + delay;
+ 			if (time_before_eq(this_timer, jiffies))
+@@ -380,11 +380,11 @@ static struct net_bridge_fdb_entry *fdb_create(struct hlist_head *head,
+ 		fdb->updated = fdb->used = jiffies;
+ 		hlist_add_head_rcu(&fdb->hlist, head);
+ 
+-#if defined(CONFIG_MV_ETH_NFP_BRIDGE_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_FDB_LEARN)
+ 		fdb->nfp = false;
+ 		if (!nfp_hook_fdb_rule_add(fdb->dst->br->dev->ifindex, fdb->dst->dev->ifindex, addr, is_local))
+ 			fdb->nfp = true;
+-#endif /* CONFIG_MV_ETH_NFP_BRIDGE_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_FDB_LEARN */
+ 	}
+ 	return fdb;
+ }
+@@ -741,7 +741,7 @@ int br_fdb_delete(struct sk_buff *skb, struct nlmsghdr *nlh, void *arg)
+ 	return err;
+ }
+ 
+-#if defined(CONFIG_MV_ETH_NFP_BRIDGE_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_FDB_LEARN)
+ void fdb_sync(void)
+ {
+ 	struct net_device *dev;
+@@ -773,4 +773,4 @@ void fdb_sync(void)
+ 	}
+ 	rtnl_unlock();
+ }
+-#endif /* CONFIG_MV_ETH_NFP_BRIDGE_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_FDB_LEARN */
+diff --git a/net/bridge/br_if.c b/net/bridge/br_if.c
+index 668f6f2..cbbd03a 100644
+--- a/net/bridge/br_if.c
++++ b/net/bridge/br_if.c
+@@ -26,10 +26,10 @@
+ 
+ #include "br_private.h"
+ 
+-#if defined(CONFIG_MV_ETH_NFP_BRIDGE_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_FDB_LEARN)
+ int nfp_hook_del_br(int ifindex);
+ int nfp_hook_del_port_from_br(int bridge_if, int port_if);
+-#endif /* CONFIG_MV_ETH_NFP_BRIDGE_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_FDB_LEARN */
+ 
+ /*
+  * Determine initial path cost based on speed.
+@@ -173,18 +173,18 @@ void br_dev_delete(struct net_device *dev, struct list_head *head)
+ 
+ 	list_for_each_entry_safe(p, n, &br->port_list, list) {
+ 
+-#if defined(CONFIG_MV_ETH_NFP_BRIDGE_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_FDB_LEARN)
+ 	nfp_hook_del_port_from_br(br->dev->ifindex, p->dev->ifindex);
+-#endif /* CONFIG_MV_ETH_NFP_BRIDGE_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_FDB_LEARN */
+ 
+ 		del_nbp(p);
+ 	}
+ 
+ 	del_timer_sync(&br->gc_timer);
+ 
+-#if defined(CONFIG_MV_ETH_NFP_BRIDGE_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_FDB_LEARN)
+ 	nfp_hook_del_br(br->dev->ifindex);
+-#endif /* CONFIG_MV_ETH_NFP_BRIDGE_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_FDB_LEARN */
+ 
+ 	br_sysfs_delbr(br->dev);
+ 	unregister_netdevice_queue(br->dev, head);
+@@ -440,9 +440,9 @@ int br_del_if(struct net_bridge *br, struct net_device *dev)
+ 	if (!p || p->br != br)
+ 		return -EINVAL;
+ 
+-#if defined(CONFIG_MV_ETH_NFP_BRIDGE_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_FDB_LEARN)
+ 	nfp_hook_del_port_from_br(br->dev->ifindex, p->dev->ifindex);
+-#endif /* CONFIG_MV_ETH_NFP_BRIDGE_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_FDB_LEARN */
+ 
+ 	del_nbp(p);
+ 
+diff --git a/net/bridge/br_private.h b/net/bridge/br_private.h
+index 03bc1e9..f47bfa7 100644
+--- a/net/bridge/br_private.h
++++ b/net/bridge/br_private.h
+@@ -75,9 +75,9 @@ struct net_bridge_fdb_entry
+ 	unsigned char			is_local;
+ 	unsigned char			is_static;
+ 
+-#if defined(CONFIG_MV_ETH_NFP_BRIDGE_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_FDB_LEARN)
+ 	bool 			nfp;
+-#endif /* CONFIG_MV_ETH_NFP_BRIDGE_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_FDB_LEARN */
+ };
+ 
+ struct net_bridge_port_group {
+diff --git a/net/core/neighbour.c b/net/core/neighbour.c
+index d8b199e..c1d808c 100644
+--- a/net/core/neighbour.c
++++ b/net/core/neighbour.c
+@@ -2903,35 +2903,41 @@ void neigh_sync(int family)
+ {
+ 	struct neigh_table *tbl;
+ 	struct neighbour *n;
+-	int t, h, idx;
++	int h;
+ 	struct neigh_hash_table *nht;
+ 
+ 	read_lock(&neigh_tbl_lock);
+-	for (tbl = neigh_tables, t = 0; tbl; tbl = tbl->next, t++) {
+-		if (tbl->family == family) {
+-			nht = rcu_dereference_protected(tbl->nht,
+-					lockdep_is_held(&tbl->lock));
++	rcu_read_lock_bh();
++
++	for (tbl = neigh_tables; tbl; tbl = tbl->next) {
++	if (tbl->family != family)
++		continue;
++	nht = rcu_dereference_bh(tbl->nht);
+ 
+-			for (h = 0; h < (1 << nht->hash_mask); h++) {
+-				for (n = nht->hash_buckets[h], idx = 0; n; n = n->next) {
+-					if (!(n->nfp)) {
+-						if (n->dev == NULL) {
+-							continue;
+-						}
+-						n->nfp = false;
+-						if (!nfp_hook_arp_add(n->tbl->family,
+-								n->primary_key,
+-								n->ha,
+-								n->dev->ifindex)) {
+-							n->nfp = true;
+-						}
++	for (h = 0; h <= nht->hash_mask; h++) {
++		for (n = rcu_dereference_bh(nht->hash_buckets[h]); n != NULL;
++		     n = rcu_dereference_bh(n->next)) {
++				if (!(n->nfp)) {
++					if (n->dev == NULL)
++						continue;
++
++					if (!nfp_hook_arp_add(n->tbl->family,
++							n->primary_key,
++							n->ha,
++							n->dev->ifindex)) {
++						n->nfp = true;
+ 					}
+ 				}
+ 			}
+ 		}
+ 	}
++	rcu_read_unlock_bh();
+ 	read_unlock(&neigh_tbl_lock);
++
+ }
++
++
++
+ #endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
+ 
+ static int __init neigh_init(void)
+diff --git a/net/ipv6/ip6_fib.c b/net/ipv6/ip6_fib.c
+index b9b2fea..33563dc 100644
+--- a/net/ipv6/ip6_fib.c
++++ b/net/ipv6/ip6_fib.c
+@@ -467,7 +467,7 @@ void nfp_fib6_sync(void)
+ 	rcu_read_unlock();
+ 
+ }
+-#endif
++#endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
+ 
+ /*
+  *	Routing Table
+diff --git a/net/netfilter/nf_conntrack_standalone.c b/net/netfilter/nf_conntrack_standalone.c
+index b12092c..1107465 100644
+--- a/net/netfilter/nf_conntrack_standalone.c
++++ b/net/netfilter/nf_conntrack_standalone.c
+@@ -248,7 +248,7 @@ static int ct_seq_show(struct seq_file *s, void *v)
+ #if defined(CONFIG_NETFILTER_XT_MATCH_LAYER7) || defined(CONFIG_NETFILTER_XT_MATCH_LAYER7_MODULE)
+ 	if(ct->layer7.app_proto &&
+            seq_printf(s, "l7proto=%s ", ct->layer7.app_proto))
+-		return -ENOSPC;
++		goto release;
+ #endif
+ 
+ #if defined(CONFIG_MV_ETH_NFP_CT_LEARN)
+-- 
+1.7.9.5
+

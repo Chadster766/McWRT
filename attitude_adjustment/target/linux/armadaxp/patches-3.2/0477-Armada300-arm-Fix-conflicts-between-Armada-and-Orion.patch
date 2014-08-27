@@ -1,0 +1,196 @@
+From 09a38a679ed8e4cf74134947b16fc04af62ad7b3 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Fri, 6 Sep 2013 18:13:07 -0700
+Subject: [PATCH 1/1] temp2
+
+---
+ .../arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig |   16 +++-
+ arch/arm/plat-armada/mv_drivers_lsp/mv_tsu/Kconfig |   48 ++++++++--
+ drivers/mtd/Makefile                               |    5 +-
+ drivers/mtd/maps/Makefile                          |    2 +
+ drivers/net/Makefile                               |    2 +
+ sound/soc/Makefile                                 |    3 +
+ 9 files changed, 182 insertions(+), 38 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig
+index 5cf29c9..a204254 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig
+@@ -50,17 +50,19 @@ endchoice
+ choice 
+ 	prompt "CESA Mode"
+ 	depends on MV_CESA
+-	default MV_CESA_OCF
++	default MV_CESA_OCF_ARMADA
+ 
+-config	MV_CESA_OCF
++config	MV_CESA_OCF_ARMADA
+ 	tristate "Support for Marvell CESA OCF driver"
++	select MV_CESA_OCF
+ 	depends on OCF_OCF
+ 	---help---
+ 	Choosing this option will enable you to use the Marvell Cryptographic Engine and
+ 	Security Accelerator, under the OCF package.
+ 
+-config  MV_CESA_TEST
++config  MV_CESA_TEST_ARMADA
+ 	bool "Support for Marvell CESA test driver"
++	select MV_CESA_OCF
+ 	depends on MV_CESA_TOOL 
+ 	---help---
+ 	Choosing this option will enable you to use the Marvell Cryptographic Engine and
+@@ -68,6 +70,14 @@ config  MV_CESA_TEST
+ 
+ endchoice
+ 
++config	MV_CESA_OCF
++	depends on MV_CESA_OCF_ARMADA
++	tristate
++
++config  MV_CESA_TEST
++	depends on MV_CESA_TEST_ARMADA
++	bool
++
+ endmenu
+ 
+ 
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_tsu/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_tsu/Kconfig
+index 1656f68..1114788 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_tsu/Kconfig
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_tsu/Kconfig
+@@ -8,38 +8,70 @@ config  MV_TSU
+ choice
+ 	prompt "TSU interface type"
+ 	depends on MV_TSU
+-	default TSU_PARALLEL_IF
++	default TSU_PARALLEL_IF_ARMADA
+ 
+-config TSU_SERIAL_IF
++config TSU_SERIAL_IF_ARMADA
+ 	bool "Serial Interface"
++	select TSU_SERIAL_IF
+ 	---help---
+ 	The TSU will work in serial mode (2 ports).
+ 
+-config TSU_PARALLEL_IF
++config TSU_PARALLEL_IF_ARMADA
+ 	bool "Parallel Interface"
++	select TSU_PARALLEL_IF
+ 	---help---
+ 	The TSU will work in parallel mode (1 port).
+ endchoice
+ 
++config TSU_SERIAL_IF
++	depends on TSU_SERIAL_IF_ARMADA
++	bool
++
++config TSU_PARALLEL_IF
++	depends on TSU_PARALLEL_IF_ARMADA
++	bool
++
+ 
+ choice
+ 	prompt "TSU Core-Clock"
+ 	depends on MV_TSU
+-	default TSU_CORE_CLK_83MHZ
++	default TSU_CORE_CLK_83MHZ_ARMADA
+ 
+-config TSU_CORE_CLK_71MHZ
++config TSU_CORE_CLK_71MHZ_ARMADA
+ 	bool "71 MHz TSU Core Clock"
++	select TSU_CORE_CLK_71MHZ
+ 
+-config TSU_CORE_CLK_83MHZ
++config TSU_CORE_CLK_83MHZ_ARMADA
+ 	bool "83 MHz TSU Core Clock"
++	select TSU_CORE_CLK_83MHZ
+ 
+-config TSU_CORE_CLK_91MHZ
++config TSU_CORE_CLK_91MHZ_ARMADA
+ 	bool "91 MHz TSU Core Clock"
+-config TSU_CORE_CLK_100MHZ
++	select TSU_CORE_CLK_91MHZ
++
++config TSU_CORE_CLK_100MHZ_ARMADA
+ 	bool "100 MHz TSU Core Clock"
++	select TSU_CORE_CLK_100MHZ
+ 
+ endchoice
+ 
++config TSU_CORE_CLK_71MHZ
++	depends on TSU_CORE_CLK_71MHZ_ARMADA
++	bool
++
++config TSU_CORE_CLK_83MHZ
++	depends on TSU_CORE_CLK_83MHZ_ARMADA
++	bool
++
++config TSU_CORE_CLK_91MHZ
++	depends on TSU_CORE_CLK_91MHZ_ARMADA
++	bool
++
++config TSU_CORE_CLK_100MHZ
++	depends on TSU_CORE_CLK_100MHZ_ARMADA
++	bool
++
++
+ config  MV_TSU_PKT_SIZE
+         int "TSU packet size"
+         depends on MV_TSU
+diff --git a/drivers/mtd/Makefile b/drivers/mtd/Makefile
+index 96b8df9..c108a94 100644
+--- a/drivers/mtd/Makefile
++++ b/drivers/mtd/Makefile
+@@ -33,4 +33,7 @@ inftl-objs		:= inftlcore.o inftlmount.o
+ obj-y		+= chips/ lpddr/ maps/ devices/ nand/ onenand/ tests/
+ 
+ obj-$(CONFIG_MTD_UBI)		+= ubi/
+-obj-$(CONFIG_MTD)		+= ../../arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/
++
++ifeq ($(CONFIG_PLAT_ARMADA),y)
++obj-$(CONFIG_MTD)              += ../../arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/
++endif
+diff --git a/drivers/mtd/maps/Makefile b/drivers/mtd/maps/Makefile
+index 4ac7fed..c24ab8e 100644
+--- a/drivers/mtd/maps/Makefile
++++ b/drivers/mtd/maps/Makefile
+@@ -59,7 +59,9 @@ obj-$(CONFIG_MTD_BCM963XX)	+= bcm963xx-flash.o
+ obj-$(CONFIG_MTD_LATCH_ADDR)	+= latch-addr-flash.o
+ obj-$(CONFIG_MTD_LANTIQ)	+= lantiq-flash.o
+ 
++ifeq ($(CONFIG_PLAT_ARMADA),y)
+ ifeq ($(CONFIG_MV_INCLUDE_SPI),y)
+ 	include $(srctree)/$(MACHINE)/config/mvRules.mk
+ 	obj-$(CONFIG_MV_INCLUDE_SPI) += ../../../$(MACHINE)/flashmap.o
+ endif
++endif
+diff --git a/drivers/net/Makefile b/drivers/net/Makefile
+index 9a459db..a22f77b 100644
+--- a/drivers/net/Makefile
++++ b/drivers/net/Makefile
+@@ -1,8 +1,10 @@
+ #
+ # Makefile for the Linux network device drivers.
+ #
++ifeq ($(CONFIG_PLAT_ARMADA),y)
+ obj-$(CONFIG_MV_ETH_LEGACY) += ../../arch/arm/plat-armada/mv_drivers_lsp/mv_network/mv_ethernet/
+ obj-$(CONFIG_MV_ETH_NETA) += ../../arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/
++endif
+ 
+ #
+ # Networking Core Drivers
+diff --git a/sound/soc/Makefile b/sound/soc/Makefile
+index c84c62d..71cd008 100644
+--- a/sound/soc/Makefile
++++ b/sound/soc/Makefile
+@@ -22,4 +22,7 @@ obj-$(CONFIG_SND_SOC)	+= s6000/
+ obj-$(CONFIG_SND_SOC)	+= sh/
+ obj-$(CONFIG_SND_SOC)	+= tegra/
+ obj-$(CONFIG_SND_SOC)	+= txx9/
++
++ifeq ($(CONFIG_PLAT_ARMADA),y)
+ obj-$(CONFIG_SND_MRVL_AUDIO)  += ../../arch/arm/plat-armada/mv_drivers_lsp/mv_audio_soc/
++endif
+-- 
+1.7.9.5
+

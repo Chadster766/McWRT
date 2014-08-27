@@ -1,0 +1,35 @@
+From 0b44636a6dd7d61ec1ea2e051e346be7a5bda7d6 Mon Sep 17 00:00:00 2001
+From: Yehuda Y <yehuday@marvell.com>
+Date: Sun, 26 Feb 2012 09:30:34 +0200
+Subject: [PATCH 118/609] DSMP: AMP: Resolved BTS #87 - Cesa appears on both
+ Systems
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../plat-armada/mv_drivers_lsp/mv_cesa/cesa_dev.c  |    3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_dev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_dev.c
+index 81502f8..fc983f4 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_dev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_dev.c
+@@ -27,6 +27,7 @@
+ #include "mvOs.h"
+ #include "mvCommon.h"
+ #include "ctrlEnv/mvCtrlEnvLib.h"
++#include "ctrlEnv/mvUnitMap.h"
+ #include "cesa/mvCesa.h" 
+ #include "mvSysCesaApi.h"
+ 
+@@ -244,6 +245,8 @@ cesadev_init(void)
+ 		return -ENODEV;
+ 	}		
+ #endif
++	if(mvUnitMapIsMine(CESA) == MV_FALSE)
++		return -ENODEV;
+ 
+ #ifdef CONFIG_MV_CESA_TEST
+     cesaTestStart(buf_num, buf_size);
+-- 
+1.7.9.5
+

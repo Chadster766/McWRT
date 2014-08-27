@@ -1,0 +1,338 @@
+From d0dfad89c4880ceaec06a95d90e66f679acafd6d Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Sun, 26 Feb 2012 11:20:50 +0200
+Subject: [PATCH 025/609] DSMP first cut of working linux 3.2 on A0, this
+ patch include the needed fixed to adapt to the new
+ kernel
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/Makefile.boot               |    2 +-
+ arch/arm/mach-armadaxp/clcd.c                      |    2 +
+ arch/arm/mach-armadaxp/core.c                      |    8 +--
+ arch/arm/mach-armadaxp/include/mach/debug-macro.S  |    2 +-
+ arch/arm/mach-armadaxp/include/mach/hardware.h     |    2 +-
+ arch/arm/mm/proc-sheeva_pj4bv7.S                   |   72 +++++++++++++-------
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |   10 +--
+ arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c      |    8 +--
+ net/bridge/br_fdb.c                                |    2 +-
+ net/core/datagram.c                                |    2 +-
+ 10 files changed, 66 insertions(+), 44 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/Makefile.boot b/arch/arm/mach-armadaxp/Makefile.boot
+index c7e75ac..ff0a4b5 100644
+--- a/arch/arm/mach-armadaxp/Makefile.boot
++++ b/arch/arm/mach-armadaxp/Makefile.boot
+@@ -1,4 +1,4 @@
+-   zreladdr-y	:= 0x00008000
++   zreladdr-y	+= 0x00008000
+ params_phys-y	:= 0x00000100
+ initrd_phys-y	:= 0x00800000
+ 
+diff --git a/arch/arm/mach-armadaxp/clcd.c b/arch/arm/mach-armadaxp/clcd.c
+index dd0277c..dac86ce 100644
+--- a/arch/arm/mach-armadaxp/clcd.c
++++ b/arch/arm/mach-armadaxp/clcd.c
+@@ -37,6 +37,8 @@
+ #include "gpp/mvGppRegs.h"
+ #include <ctrlEnv/mvCtrlEnvRegs.h>
+ 
++#include <linux/module.h>
++
+ int lcd_panel;
+ module_param(lcd_panel, uint, 0);
+ MODULE_PARM_DESC(lcd_panel, "set to 1 to enable LCD panel.");
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index 6366de1..5bd1785 100644
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -439,12 +439,12 @@ static struct plat_serial8250_port aurora_uart0_data[] = {
+ 		.mapbase	= (INTER_REGS_PHYS_BASE | MV_UART_REGS_OFFSET(0)),
+ 		.membase	= (char *)(INTER_REGS_BASE | MV_UART_REGS_OFFSET(0)),
+ 		.irq		= IRQ_AURORA_UART0,
+-#if 0
+ 		.flags		= UPF_SKIP_TEST | UPF_BOOT_AUTOCONF,
+ 		.iotype		= UPIO_MEM,
+-#else
++#if 0
+ 		.flags		= UPF_FIXED_TYPE | UPF_SKIP_TEST | UPF_BOOT_AUTOCONF,
+ 		.iotype		= UPIO_DWAPB,
++#else
+ 		.private_data	= (void *) (INTER_REGS_BASE | MV_UART_REGS_OFFSET(0) | 0x7C),
+ 		.type		= PORT_16550A,
+ #endif
+@@ -1342,7 +1342,7 @@ MACHINE_START(ARMADA_XP_DB, "Marvell Armada XP Development Board")
+ 	/* MAINTAINER("MARVELL") */
+ 	//.phys_io	= INTER_REGS_PHYS_BASE,
+ 	//.io_pg_offst	= ((INTER_REGS_BASE) >> 18) & 0xfffc,
+-	.boot_params	= 0x00000100,
++	.atag_offset	= 0x00000100,
+ 	.map_io		= axp_map_io,
+ 	.init_irq	= axp_init_irq,
+ 	.timer		= &axp_timer,
+@@ -1518,7 +1518,7 @@ static void __init axp_fpga_init(void)
+ }
+ 
+ MACHINE_START(ARMADA_XP_FPGA, "Marvell Armada XP FPGA Board")
+-	.boot_params	= 0x00000100,
++	.atag_offset	= 0x00000100,
+ 	.map_io		= axp_map_io,
+ 	.init_irq	= axp_init_irq,
+ 	.timer		= &axp_timer,
+diff --git a/arch/arm/mach-armadaxp/include/mach/debug-macro.S b/arch/arm/mach-armadaxp/include/mach/debug-macro.S
+index ee535f2..2db307c 100644
+--- a/arch/arm/mach-armadaxp/include/mach/debug-macro.S
++++ b/arch/arm/mach-armadaxp/include/mach/debug-macro.S
+@@ -9,7 +9,7 @@
+ #include <mach/armadaxp.h>
+ 
+ 	
+-	.macro  addruart, rp, rv
++	.macro  addruart, rp, rv, tmp
+ 	ldr     \rp, =INTER_REGS_PHYS_BASE
+ 	ldr	\rv, =INTER_REGS_BASE
+ 	orr     \rp, \rp, #0x00012000
+diff --git a/arch/arm/mach-armadaxp/include/mach/hardware.h b/arch/arm/mach-armadaxp/include/mach/hardware.h
+index e937269..f7c66e4 100644
+--- a/arch/arm/mach-armadaxp/include/mach/hardware.h
++++ b/arch/arm/mach-armadaxp/include/mach/hardware.h
+@@ -11,7 +11,7 @@
+ 
+ #include "armadaxp.h"
+ 
+-#define pcibios_assign_all_busses()	1
++//#define pcibios_assign_all_busses()	1
+ 
+ #define PCIBIOS_MIN_IO			0x1000
+ #define PCIBIOS_MIN_MEM			0x01000000
+diff --git a/arch/arm/mm/proc-sheeva_pj4bv7.S b/arch/arm/mm/proc-sheeva_pj4bv7.S
+index 23ff635..51e6f91 100644
+--- a/arch/arm/mm/proc-sheeva_pj4bv7.S
++++ b/arch/arm/mm/proc-sheeva_pj4bv7.S
+@@ -109,7 +109,12 @@ ENDPROC(cpu_pj4bv7_do_idle)
+ ENTRY(cpu_pj4bv7_dcache_clean_area)
+ #ifndef TLB_CAN_READ_FROM_L1_CACHE
+ 	dcache_line_size r2, r3
+-1:	mcr	p15, 0, r0, c7, c10, 1		@ clean D entry
++1:
++#if defined SHEEVA_ERRATA_ARM_CPU_6043 || defined SHEEVA_ERRATA_ARM_CPU_6076
++	mcr     p15, 0, r0, c7, c14, 1          @ clean & invalidate D entry
++#else
++	mcr	p15, 0, r0, c7, c10, 1		@ clean D entry
++#endif
+ 	add	r0, r0, r2
+ 	subs	r1, r1, r2
+ 	bhi	1b
+@@ -225,7 +230,11 @@ str	r1, [r0]			@ linux version
+ 	str     r3, [r0, #20]
+ 	str     r3, [r0, #24]
+ 	str     r3, [r0, #28]
++#if defined SHEEVA_ERRATA_ARM_CPU_6043 || defined SHEEVA_ERRATA_ARM_CPU_6076
++        mcr     p15, 0, r0, c7, c14, 1          @ clean & invalidate D entry
++#else
+ 	mcr	p15, 0, r0, c7, c10, 1		@ flush_pte
++#endif
+ 	add	r0, r0, #32
+ 	str     r3, [r0]
+ 	str     r3, [r0, #4]
+@@ -235,16 +244,24 @@ str	r1, [r0]			@ linux version
+ 	str     r3, [r0, #20]
+ 	str     r3, [r0, #24]
+ 	str     r3, [r0, #28]
++#if defined SHEEVA_ERRATA_ARM_CPU_6043 || defined SHEEVA_ERRATA_ARM_CPU_6076
++        mcr     p15, 0, r0, c7, c14, 1          @ clean & invalidate D entry
++#else
+ 	mcr	p15, 0, r0, c7, c10, 1		@ flush_pte
++#endif
++#else
++#if defined SHEEVA_ERRATA_ARM_CPU_6043 || defined SHEEVA_ERRATA_ARM_CPU_6076
++        mcr     p15, 0, r0, c7, c14, 1          @ clean & invalidate D entry
+ #else
+ 	mcr	p15, 0, r0, c7, c10, 1		@ flush_pte
++#endif
+ #endif /* CONFIG_MV_SUPPORT_64KB_PAGE_SIZE */
+ #endif
+ 	mov	pc, lr
+ ENDPROC(cpu_pj4bv7_set_pte_ext)
+ 
+ cpu_pj4bv7_name:
+-	.ascii	"Marvell PJ4Bv7 Processor"
++	.ascii	"Marvell - PJ4Bv7 Processor"
+ 	.align
+ 
+ /*
+@@ -276,7 +293,11 @@ cpu_pj4bv7_name:
+ 	 *   NOS = PRRR[24+n] = 1	- not outer shareable
+ 	 */
+ .equ	PRRR,	0xff0a81a8
+-.equ	NMRR,	0x40e040e0
++#ifdef CONFIG_AURORA_L2_OUTER_WA
++.equ	NMRR,	0x40e040e0		/* Inner and outer WBWA */
++#else
++.equ	NMRR,	0xc0e040e0		/* Inner WBWA, outer WBnoWA*/
++#endif
+ 
+ /* Suspend/resume support: derived from arch/arm/mach-s5pv210/sleep.S */
+ .globl	cpu_v7_suspend_size
+@@ -368,32 +389,37 @@ defined(CONFIG_SMP)
+ 
+ #ifdef CONFIG_ARMADA_XP_REV_A0
+ /* DSMP A0 */
++	/* Auxiliary Debug Modes Control 1 Register */
++	mrc        p15, 1, r0, c15, c1, 1                         /* Read */
++	orr        r0, r0, #0x00020                                /* BIT5 STREX backoff_disable--> '1' enable the back off of STREX instr */
++	orr	   r0, r0, #0x00100                                /* BIT8 Internal Parity Handling Disable--> '1' Disable Internal Parity Handling */
++	mcr        p15, 1, r0, c15, c1, 1                         /* Write */
++
+ /* Auxiliary Functional Modes Control Register 0 */
+-	mrc        p15, 1, r1, c15, c2, 0                         /* Read */
++	mrc        p15, 1, r0, c15, c2, 0                         /* Read */
+ #ifdef CONFIG_SMP
+-	orr          r1, r1, #0x00002                                /* BIT1 SMP/nAMP --> '1' taking part in coherency */
++	orr          r0, r0, #0x00002                                /* BIT1 SMP/nAMP --> '1' taking part in coherency */
+ #endif
+-	/*orr     r1, r1, #0x00004                                /* BIT2 L1 parity --> '1' Enabled */
+-	/*orr     r1, r1, #0x00100                                /* BIT8 FW --> '1' enable Cache and TLB maintenance broadcast */
+-	mcr        p15, 1, r1, c15, c2, 0                         /* Write */
++	orr     r0, r0, #0x00004                                /* BIT2 L1 parity --> '1' Enabled */
++	orr     r0, r0, #0x00100                                /* BIT8 FW --> '1' enable Cache and TLB maintenance broadcast */
++	mcr        p15, 1, r0, c15, c2, 0                         /* Write */
+ 
+ 	/* Auxiliary Debug Modes Control 0 Register */
+-	mrc        p15, 1, r1, c15, c1, 0                         /* Read */
+-	orr          r1, r1, #0x001000                              /* BIT12 ldstm_first Two_sgl --> '1' Force first issue to be single */
+-	orr          r1, r1, #0x400000                              /* BIT22 dvm_wakeup_dis --> '1' WFI/WFE will serve the DVM and back to idle */
+-	mcr        p15, 1, r1, c15, c1, 0                         /* Write */
+-	/* Auxiliary Debug Modes Control 1 Register */
+-	mrc        p15, 1, r1, c15, c1, 1                         /* Read */
+-	orr          r1, r1, #0x00020                                /* BIT5 STREX backoff_disable--> '1' enable the back off of STREX instr */
+-	bic          r1, r1, #0x00100                                /* BIT8 Internal Parity Handling Disable--> '0' Disable Internal Parity Handling */
+-	mcr        p15, 1, r1, c15, c1, 1                         /* Write */
++	mrc        p15, 1, r0, c15, c1, 0                         /* Read */
++#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6136
++	orr          r0, r0, #0x001000                              /* BIT12 ldstm_first Two_sgl --> '1' Force first issue to be single */
++#endif
++	orr          r0, r0, #0x400000                              /* BIT22 dvm_wakeup_dis --> '1' WFI/WFE will serve the DVM and back to idle */
++	mcr        p15, 1, r0, c15, c1, 0                         /* Write */
+ 	/* Auxiliary Debug Modes Control 2 Register */
+-	mrc        p15, 1, r1, c15, c1, 2                         /* Read */
+-	orr          r1, r1, #0x02000000                         /* BIT25 Intervention Interleave Disable--> '1'  Disable Interleaving with Intervention Data */
+-	orr          r1, r1, #0x08000000                         /* BIT27 CWF Disable--> '1' Disable critical word first sequencing */
+-	orr          r1, r1, #0x20000000                         /* BIT29 DEV Stream Disable--> '1' Disable MO device read / write */
+-	orr          r1, r1, #0x40000000                         /* BIT30 L1 Replacement Policy Config--> '1' Strict Round-Robin Replacement Policy  */
+-	mcr        p15, 1, r1, c15, c1, 2                         /* Write */
++	mrc        p15, 1, r0, c15, c1, 2                         /* Read */
++	orr          r0, r0, #0x02000000                         /* BIT25 Intervention Interleave Disable--> '1'  Disable Interleaving with Intervention Data */
++	orr          r0, r0, #0x08000000                         /* BIT27 CWF Disable--> '1' Disable critical word first sequencing */
++#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_5980
++	orr          r0, r0, #0x20000000                         /* BIT29 DEV Stream Disable--> '1' Disable MO device read / write */
++#endif
++	orr          r0, r0, #0x40000000                         /* BIT30 L1 Replacement Policy Config--> '1' Strict Round-Robin Replacement Policy  */
++	mcr        p15, 1, r0, c15, c1, 2                         /* Write */
+ 
+ #else
+ #ifdef CONFIG_SMP
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 5c78468..7e6303f 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -35,7 +35,7 @@ disclaimer.
+ #include <linux/inetdevice.h>
+ #include <net/ip.h>
+ #include <net/ipv6.h>
+-
++#include <linux/module.h>
+ #include "mvOs.h"
+ #include "mvDebug.h"
+ #include "dbg-trace.h"
+@@ -787,7 +787,7 @@ static const struct net_device_ops mv_eth_netdev_ops = {
+ 	.ndo_open = mv_eth_open,
+ 	.ndo_stop = mv_eth_stop,
+ 	.ndo_start_xmit = mv_eth_tx,
+-	.ndo_set_multicast_list = mv_eth_set_multicast_list,
++	.ndo_set_rx_mode = mv_eth_set_multicast_list,
+ 	.ndo_set_mac_address = mv_eth_set_mac_addr,
+ 	.ndo_change_mtu = mv_eth_change_mtu,
+ 	.ndo_tx_timeout = mv_eth_tx_timeout,
+@@ -2800,7 +2800,7 @@ int mv_eth_tx_tso(struct sk_buff *skb, struct net_device *dev,
+ 
+ 		/* Move to next segment */
+ 		frag_size = skb_frag_ptr->size;
+-		frag_ptr = page_address(skb_frag_ptr->page) + skb_frag_ptr->page_offset;
++		frag_ptr = page_address(skb_frag_ptr->page.p) + skb_frag_ptr->page_offset;
+ 		frag++;
+ 	}
+ 	totalDescNum = 0;
+@@ -2862,7 +2862,7 @@ int mv_eth_tx_tso(struct sk_buff *skb, struct net_device *dev,
+ 
+ 				/* Move to next segment */
+ 				frag_size = skb_frag_ptr->size;
+-				frag_ptr = page_address(skb_frag_ptr->page) + skb_frag_ptr->page_offset;
++				frag_ptr = page_address(skb_frag_ptr->page.p) + skb_frag_ptr->page_offset;
+ 				frag++;
+ 			}
+ 		}		/* of while data_left > 0 */
+@@ -3086,7 +3086,7 @@ static void mv_eth_tx_frag_process(struct eth_port *pp, struct sk_buff *skb, str
+ 		/* NETA_TX_BM_ENABLE_MASK = 0 */
+ 		/* NETA_TX_PKT_OFFSET_MASK = 0 */
+ 		tx_desc->dataSize = frag->size;
+-		tx_desc->bufPhysAddr = mvOsCacheFlush(NULL, page_address(frag->page) + frag->page_offset,
++		tx_desc->bufPhysAddr = mvOsCacheFlush(NULL, page_address(frag->page.p) + frag->page_offset,
+ 						      tx_desc->dataSize);
+ 
+ 		if (i == (skb_shinfo(skb)->nr_frags - 1)) {
+diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
+index 3e85584..612ddcb 100644
+--- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
++++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
+@@ -407,12 +407,6 @@ MV_STATUS mvNetaDefaultsSet(int port)
+         regVal |= ETH_TX_BURST_SIZE_MASK(ETH_BURST_SIZE_2_64BIT_VALUE);
+         regVal |= ETH_RX_BURST_SIZE_MASK(ETH_BURST_SIZE_2_64BIT_VALUE);
+ #else
+-
+-#ifdef CONFIG_MV_ETH_REDUCE_BURST_SIZE_WA
+-        /* This is a WA for the IOCC HW BUG involve in using 128B burst size */
+-        regVal |= ETH_TX_BURST_SIZE_MASK(ETH_BURST_SIZE_2_64BIT_VALUE);
+-        regVal |= ETH_RX_BURST_SIZE_MASK(ETH_BURST_SIZE_2_64BIT_VALUE);
+-#else
+         /* Default burst size */
+         regVal |= ETH_TX_BURST_SIZE_MASK(ETH_BURST_SIZE_16_64BIT_VALUE);
+         regVal |= ETH_RX_BURST_SIZE_MASK(ETH_BURST_SIZE_16_64BIT_VALUE);
+@@ -420,7 +414,7 @@ MV_STATUS mvNetaDefaultsSet(int port)
+ 
+ #if defined(MV_CPU_BE) && !defined(CONFIG_MV_ETH_BE_WA)
+     /* big endian */
+-    regVal |= (ETH_RX_NO_DATA_SWAP_MASK | ETH_TX_NO_DATA_SWAP_MASK | ETH_DESC_SWAP_MASK);
++	regVal |= (ETH_RX_NO_DATA_SWAP_MASK | ETH_TX_NO_DATA_SWAP_MASK | ETH_DESC_SWAP_MASK);
+ #else /* MV_CPU_LE */
+     /* little endian */
+         regVal |= (ETH_RX_NO_DATA_SWAP_MASK | ETH_TX_NO_DATA_SWAP_MASK | ETH_NO_DESC_SWAP_MASK);
+diff --git a/net/bridge/br_fdb.c b/net/bridge/br_fdb.c
+index ec08eb0..7e63781 100644
+--- a/net/bridge/br_fdb.c
++++ b/net/bridge/br_fdb.c
+@@ -606,7 +606,7 @@ static int fdb_add_entry(struct net_bridge_port *source, const __u8 *addr,
+ 		if (!(flags & NLM_F_CREATE))
+ 			return -ENOENT;
+ 
+-		fdb = fdb_create(head, source, addr);
++		fdb = fdb_create(head, source, addr,0);
+ 		if (!fdb)
+ 			return -ENOMEM;
+ 	} else {
+diff --git a/net/core/datagram.c b/net/core/datagram.c
+index e54d89c..6e56581 100644
+--- a/net/core/datagram.c
++++ b/net/core/datagram.c
+@@ -163,7 +163,7 @@ next_skb:
+ 				memcpy_tokerneliovec(to, skb->data + o, copy);
+ 			else {
+ 				skb_frag_t *frag = &skb_shinfo(skb)->frags[i];
+-				struct page *page = frag->page;
++				struct page *page = frag->page.p;
+ 				void *p = kmap(page) + frag->page_offset + o;
+ 				memcpy_tokerneliovec(to, p, copy);
+ 				kunmap(page);
+-- 
+1.7.9.5
+

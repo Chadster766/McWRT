@@ -1,0 +1,26 @@
+serial=0,115200n8
+disk=/dev/discs/disc0/disc
+bios=0x80
+lba32
+compact
+install =/boot/boot.b
+map     =/boot/map
+backup  =/dev/null
+prompt
+delay   =1
+timeout =100
+message =/etc/boot.msg
+
+image   =/vmlinuz
+  label   =openwrt
+  append  =" rootfs=/dev/discs/disc0/disc console=ttyS0,115200n81 "
+  
+image   =/vmlinuz
+  label   =ramdisk
+  append  =" console=ttyS0,115200n81"
+
+image   =/vmlinuz
+  label   =failsafe
+  append  =" FAILSAFE=MenuRequest console=ttyS0,115200n81"
+
+    

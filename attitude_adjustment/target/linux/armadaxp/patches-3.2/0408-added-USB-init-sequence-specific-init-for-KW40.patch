@@ -1,0 +1,37 @@
+From eaf683b767ec6fc363b3c7959eb6885b999d19fe Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Wed, 17 Oct 2012 14:10:58 +0200
+Subject: [PATCH 408/609] - added USB init sequence - specific init for KW40
+
+Change-Id: Ied94b5c97677f1bb3df6b94a625cfe49add19192
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/usb/mvUsb.c |    8 ++++++++
+ 1 file changed, 8 insertions(+)
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/usb/mvUsb.c
+
+diff --git a/arch/arm/plat-armada/mv_hal/usb/mvUsb.c b/arch/arm/plat-armada/mv_hal/usb/mvUsb.c
+old mode 100644
+new mode 100755
+index 5c9b516..6b12a71
+--- a/arch/arm/plat-armada/mv_hal/usb/mvUsb.c
++++ b/arch/arm/plat-armada/mv_hal/usb/mvUsb.c
+@@ -206,6 +206,14 @@ static int mvUsbPhy40nmInit(int dev)
+ 	MV_REG_WRITE(MV_USB_PHY_CHANNEL_REG(dev, 1), regVal);
+ 	/*-------------------------------------------------*/
+ 
++/* BTS #231 - for KW40 only */
++	if ((usbHalData.ctrlModel == MV_6710_DEV_ID) ||
++	    (usbHalData.ctrlModel == MV_6W11_DEV_ID) ||
++		(usbHalData.ctrlModel == MV_6707_DEV_ID)) {
++		MV_REG_WRITE(0x50850, 0x20000131);
++		MV_REG_WRITE(0x50890, 0x20000131);
++	}
++
+ 	return 0;
+ } /* End of mvUsbPhy40nmInit() */
+ 
+-- 
+1.7.9.5
+

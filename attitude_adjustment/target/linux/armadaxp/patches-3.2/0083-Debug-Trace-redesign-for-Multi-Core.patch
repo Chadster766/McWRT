@@ -1,0 +1,637 @@
+From 2a0bdb8f9081e7966e77c61aa3cfae4d25054c89 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Thu, 12 Jan 2012 10:41:15 -0500
+Subject: [PATCH 083/609] Debug Trace redesign for Multi-Core
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/Makefile                    |    4 +-
+ arch/arm/mach-armadaxp/config/mvRules.mk           |    5 +-
+ arch/arm/mach-armadaxp/dbg-trace.c                 |  112 -------
+ arch/arm/mach-armadaxp/dbg-trace.h                 |   24 --
+ .../plat-armada/mv_drivers_lsp/mv_trace/Makefile   |   12 +
+ .../mv_drivers_lsp/mv_trace/dbg-trace.c            |  336 ++++++++++++++++++++
+ .../mv_drivers_lsp/mv_trace/dbg-trace.h            |   53 +++
+ 7 files changed, 407 insertions(+), 139 deletions(-)
+ delete mode 100644 arch/arm/mach-armadaxp/dbg-trace.c
+ delete mode 100644 arch/arm/mach-armadaxp/dbg-trace.h
+ create mode 100755 arch/arm/plat-armada/mv_drivers_lsp/mv_trace/Makefile
+ create mode 100755 arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.c
+ create mode 100755 arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.h
+
+diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
+index 6903a4a..1118481 100644
+--- a/arch/arm/mach-armadaxp/Makefile
++++ b/arch/arm/mach-armadaxp/Makefile
+@@ -198,8 +198,9 @@ obj-$(CONFIG_MV_USE_XOR_ENGINE) 	+= $(PLAT_DRIVERS)/mv_xor/
+ obj-$(CONFIG_MV_CESA) 			+= $(PLAT_DRIVERS)/mv_cesa/
+ #obj-y					+= $(PLAT_DRIVERS)/mv_btns/
+ obj-y					+= $(PLAT_DRIVERS)/mv_gpio/
++obj-$(CONFIG_MV_DBG_TRACE)              += $(PLAT_DRIVERS)/mv_trace/
+ obj-$(CONFIG_MV_INCLUDE_SWITCH)         += $(LSP_SWITCH_DIR)/
+-obj-$(CONFIG_SENSORS_ARMADA_XP)	+= hwmon.o
++obj-$(CONFIG_SENSORS_ARMADA_XP)		+= hwmon.o
+ # The rest of the drivers are compiled through the driver dir directly.
+ 
+ 
+@@ -208,7 +209,6 @@ armadaxp-$(CONFIG_MV_INCLUDE_USB)    	+= usb.o
+ armadaxp-$(CONFIG_MV_INCLUDE_PCI)	+= pci.o
+ armadaxp-$(CONFIG_MV_INCLUDE_PEX)	+= pex.o
+ armadaxp-$(CONFIG_FEROCEON_PROC) 	+= $(PLAT_DRIVERS)/mv_proc/proc.o
+-armadaxp-$(CONFIG_MV_DBG_TRACE) 	+= dbg-trace.o
+ armadaxp-$(CONFIG_SMP)			+= platsmp.o headsmp.o
+ armadaxp-$(CONFIG_MV_AMP_ENABLE)	+= $(SOC_ENV_DIR)/mvUnitMap.o
+ armadaxp-$(CONFIG_MV_AMP_ENABLE)	+= $(SOC_ENV_DIR)/mvSemaphore.o
+diff --git a/arch/arm/mach-armadaxp/config/mvRules.mk b/arch/arm/mach-armadaxp/config/mvRules.mk
+index 7d0d6ed..16852a3 100644
+--- a/arch/arm/mach-armadaxp/config/mvRules.mk
++++ b/arch/arm/mach-armadaxp/config/mvRules.mk
+@@ -98,6 +98,8 @@ ifeq ($(CONFIG_MV_INCLUDE_NFC),y)
+ HAL_NFC_DIR     = $(HAL_DIR)/nfc
+ endif
+ 
++LSP_TRACE_DIR   = $(PLAT_DRIVERS)/mv_trace
++
+ # Environment components
+ AXP_FAM_DIR	= armada_xp_family
+ SOC_DEVICE_DIR	= $(AXP_FAM_DIR)/device
+@@ -125,7 +127,8 @@ OSSERV_PATH     = -I$(PLAT_PATH_I)/$(OSSERV_DIR)
+ LSP_PATH        = -I$(LSP_PATH_I)
+ CONFIG_PATH     = -I$(LSP_PATH_I)/$(CONFIG_DIR)
+ HAL_IF_PATH	= -I$(LSP_PATH_I)/$(HAL_IF)
+-DRIVERS_LSP_PATH = -I$(PLAT_PATH_I)/$(PLAT_DRIVERS) -I$(PLAT_PATH_I)/$(LSP_NETWORK_DIR) -I$(PLAT_PATH_I)/$(LSP_SWITCH_DIR)
++DRIVERS_LSP_PATH = -I$(PLAT_PATH_I)/$(PLAT_DRIVERS) -I$(PLAT_PATH_I)/$(LSP_NETWORK_DIR) -I$(PLAT_PATH_I)/$(LSP_SWITCH_DIR) \
++		 -I$(PLAT_PATH_I)/$(LSP_TRACE_DIR)
+ 
+ EXTRA_INCLUDE  	= $(OSSERV_PATH) $(COMMON_PATH) $(HAL_PATH)  $(AXP_FAM_PATH) \
+                   $(LSP_PATH) $(CONFIG_PATH) $(DRIVERS_LSP_PATH) $(HAL_IF_PATH)
+diff --git a/arch/arm/mach-armadaxp/dbg-trace.c b/arch/arm/mach-armadaxp/dbg-trace.c
+deleted file mode 100644
+index 43cabbd..0000000
+--- a/arch/arm/mach-armadaxp/dbg-trace.c
++++ /dev/null
+@@ -1,112 +0,0 @@
+-#include <linux/kernel.h>
+-#include <linux/slab.h>
+-#include <linux/time.h>
+-#include "dbg-trace.h"
+-
+-#define TRACE_ARR_LEN   800
+-#define STR_LEN         128
+-struct trace {
+-	struct timeval tv;
+-	char str[STR_LEN];
+-	unsigned int callback_val1;
+-	unsigned int callback_val2;
+-	char valid;
+-};
+-
+-static unsigned int (*trc_callback1) (unsigned char) = NULL;
+-static unsigned int (*trc_callback2) (unsigned char) = NULL;
+-static unsigned char trc_param1 = 0;
+-static unsigned char trc_param2 = 0;
+-struct trace *trc_arr;
+-static int trc_index;
+-static int trc_active = 0;
+-
+-void TRC_START()
+-{
+-	trc_active = 1;
+-}
+-
+-void TRC_STOP()
+-{
+-	trc_active = 0;
+-}
+-
+-void TRC_INIT(void *callback1, void *callback2, unsigned char callback1_param, unsigned char callback2_param)
+-{
+-	printk("Marvell debug tracing is on\n");
+-	trc_arr = (struct trace *)kmalloc(TRACE_ARR_LEN*sizeof(struct trace),GFP_KERNEL);
+-	if(trc_arr == NULL)
+-	{
+-		printk("Can't allocate Debug Trace buffer\n");
+-		return;
+-	}
+-	memset(trc_arr,0,TRACE_ARR_LEN*sizeof(struct trace));
+-	trc_index = 0;
+-	trc_callback1 = callback1;
+-	trc_callback2 = callback2;
+-	trc_param1 = callback1_param;
+-	trc_param2 = callback2_param;
+-}
+-
+-void TRC_REC(char *fmt,...)
+-{
+-	va_list args;
+-	struct trace *trc = &trc_arr[trc_index];
+-
+-	if(trc_active == 0)
+-		return;
+-
+-	do_gettimeofday(&trc->tv);
+-	if(trc_callback1)
+-		trc->callback_val1 = trc_callback1(trc_param1);
+-	if(trc_callback2)
+-		trc->callback_val2 = trc_callback2(trc_param2);
+-	va_start(args, fmt);
+-	vsprintf(trc->str,fmt,args);
+-	va_end(args);
+-	trc->valid = 1;
+-	if((++trc_index) == TRACE_ARR_LEN)
+-		trc_index = 0;
+-}
+-
+-void TRC_OUTPUT(void)
+-{
+-	int i,j;
+-	struct trace *p;
+-	printk("\n\nTrace %d items\n",TRACE_ARR_LEN);
+-	for(i=0,j=trc_index; i<TRACE_ARR_LEN; i++,j++) {
+-		if(j == TRACE_ARR_LEN)
+-			j = 0;
+-		p = &trc_arr[j];
+-		if(p->valid) {
+-			unsigned long uoffs;
+-			struct trace *plast;
+-			if(p == &trc_arr[0])
+-				plast = &trc_arr[TRACE_ARR_LEN-1];
+-			else
+-				plast = p-1;
+-			if(p->tv.tv_sec == ((plast)->tv.tv_sec))
+-				uoffs = (p->tv.tv_usec - ((plast)->tv.tv_usec));
+-			else
+-				uoffs = (1000000 - ((plast)->tv.tv_usec)) +
+-					((p->tv.tv_sec - ((plast)->tv.tv_sec) - 1) * 1000000) + 
+-					p->tv.tv_usec;
+-			printk("%03d: [+%ld usec]", j, (unsigned long)uoffs);
+-			if(trc_callback1)
+-				printk("[%u]",p->callback_val1);
+-			if(trc_callback2)
+-				printk("[%u]",p->callback_val2);
+-			printk(": %s",p->str);
+-		}
+-		p->valid = 0;
+-	}
+-	memset(trc_arr,0,TRACE_ARR_LEN*sizeof(struct trace));
+-	trc_index = 0;
+-}
+-
+-void TRC_RELEASE(void)
+-{
+-	kfree(trc_arr);
+-	trc_index = 0;
+-}
+-
+diff --git a/arch/arm/mach-armadaxp/dbg-trace.h b/arch/arm/mach-armadaxp/dbg-trace.h
+deleted file mode 100644
+index c1ad60b..0000000
+--- a/arch/arm/mach-armadaxp/dbg-trace.h
++++ /dev/null
+@@ -1,24 +0,0 @@
+-
+-#ifndef _MV_DBG_TRCE_H_
+-#define _MV_DBG_TRCE_H_
+-
+-#ifdef CONFIG_MV_DBG_TRACE
+-void TRC_INIT(void *callback1, void *callback2,
+-		unsigned char callback1_param, unsigned char callback2_param);
+-void TRC_REC(char *fmt,...);
+-void TRC_OUTPUT(void);
+-void TRC_RELEASE(void);
+-void TRC_START(void);
+-void TRC_STOP(void);
+-
+-#else
+-#define TRC_INIT(x1,x2,x3,x4)
+-#define TRC_REC(X...)
+-#define TRC_OUTPUT()
+-#define TRC_RELEASE()
+-#define TRC_START()
+-#define TRC_STOP()
+-#endif
+-
+-
+-#endif
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/Makefile b/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/Makefile
+new file mode 100755
+index 0000000..0264247
+--- /dev/null
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/Makefile
+@@ -0,0 +1,12 @@
++#
++# Makefile for the Marvell XOR/DMA Driver
++#
++ifeq ($(CONFIG_ARCH_FEROCEON),y)
++	include $(srctree)/$(MACHINE)/config/mvRules.mk
++endif
++
++ifeq ($(CONFIG_ARCH_ARMADA_XP),y)
++	include $(srctree)/arch/arm/mach-armadaxp/config/mvRules.mk
++endif
++
++obj-$(CONFIG_MV_DBG_TRACE) += dbg-trace.o
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.c
+new file mode 100755
+index 0000000..c70121a
+--- /dev/null
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.c
+@@ -0,0 +1,336 @@
++/*******************************************************************************
++Copyright (C) Marvell International Ltd. and its affiliates
++
++This software file (the "File") is owned and distributed by Marvell
++International Ltd. and/or its affiliates ("Marvell") under the following
++alternative licensing terms.  Once you have made an election to distribute the
++File under one of the following license alternatives, please (i) delete this
++introductory statement regarding license alternatives, (ii) delete the two
++license alternatives that you have not elected to use and (iii) preserve the
++Marvell copyright notice above.
++
++
++********************************************************************************
++Marvell GPL License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File in accordance with the terms and conditions of the General
++Public License Version 2, June 1991 (the "GPL License"), a copy of which is
++available along with the File in the license.txt file or by writing to the Free
++Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
++on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++
++THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
++DISCLAIMED.  The GPL License provides additional details about this warranty
++disclaimer.
++*******************************************************************************/
++#include <linux/module.h>
++#include <linux/kernel.h>
++#include <linux/capability.h>
++#include <linux/slab.h>
++#include <linux/time.h>
++#include <linux/platform_device.h>
++#include "mvCommon.h"
++#include "dbg-trace.h"
++
++#define TRACE_ARR_LEN   800
++#define STR_LEN         128
++
++static inline int mv_trace_next_idx(int idx)
++{
++	idx++;
++	if (idx == TRACE_ARR_LEN)
++		idx = 0;
++
++	return idx;
++}
++
++static inline int mv_trace_prev_idx(int idx)
++{
++	if (idx == 0)
++		idx = TRACE_ARR_LEN;
++
++	idx--;
++	return idx;
++}
++
++struct trace {
++	struct timeval tv;
++	char str[STR_LEN];
++	char valid;
++};
++
++struct trace *trc_arr[CONFIG_NR_CPUS];
++static int trc_index[CONFIG_NR_CPUS];
++static int trc_active;
++static int trc_mode;
++
++void TRC_START(void)
++{
++	trc_active = 1;
++}
++
++void TRC_STOP(void)
++{
++	trc_active = 0;
++}
++
++void TRC_MODE(int mode)
++{
++	trc_mode = mode;
++}
++
++int TRC_INIT(void)
++{
++	struct trace *trc;
++	int cpu;
++
++	printk(KERN_INFO "Marvell debug tracing is supported\n");
++
++	for_each_possible_cpu(cpu) {
++
++		trc = kmalloc(TRACE_ARR_LEN * sizeof(struct trace), GFP_KERNEL);
++		if (trc == NULL) {
++			printk(KERN_ERR "Can't allocate Debug Trace buffer\n");
++			return 1;
++		}
++		memset(trc, 0, TRACE_ARR_LEN * sizeof(struct trace));
++		trc_arr[cpu] = trc;
++		trc_index[cpu] = 0;
++		trc_active = 0;
++		trc_mode = 0;
++	}
++	return 0;
++}
++
++void TRC_REC(char *fmt, ...)
++{
++	va_list args;
++	int idx = trc_index[smp_processor_id()];
++	struct trace *trc = &trc_arr[smp_processor_id()][idx];
++
++	if (trc_active == 0)
++		return;
++
++	if (trc_mode == 1) {
++		/* Stop when trace buffer is full */
++		if (trc->valid) {
++			printk(KERN_ERR "Trace stopped - buffer is full\n");
++			TRC_STOP();
++			return;
++		}
++	}
++	do_gettimeofday(&trc->tv);
++	va_start(args, fmt);
++	vsprintf(trc->str, fmt, args);
++	va_end(args);
++	trc->valid = 1;
++
++	trc_index[smp_processor_id()] = mv_trace_next_idx(idx);
++}
++
++/* cpu_mask:  0 - from running CPU only, -1 from all CPUs, 1..(1 << CONFIG_NR_CPUS) - 1 */
++/* time_mode: 0 - time stamp normalized to oldest message, 1 - difference from previous message */
++void TRC_OUTPUT(int cpu_mask, int time_mode)
++{
++	int i, last, first, cpu, active;
++	struct trace *p;
++	struct timeval *tv_base;
++
++	active = trc_active;
++	trc_active = 0;
++	if (cpu_mask == 0)
++		cpu = smp_processor_id();
++	else {
++		for_each_possible_cpu(cpu) {
++			if (MV_BIT_CHECK(cpu_mask, cpu))
++				break;
++		}
++	}
++
++	first = trc_index[cpu];
++	last = mv_trace_prev_idx(first);
++	p = &trc_arr[cpu][last];
++	if (p->valid == 0) {
++		printk(KERN_INFO "\nTrace: cpu=%d - No valid entries\n", cpu);
++		return;
++	}
++
++	/* Find first valid entry */
++	while (first != last) {
++		p = &trc_arr[cpu][first];
++		if (p->valid)
++			break;
++		first = mv_trace_next_idx(first);
++	}
++
++	i = first;
++	tv_base = &trc_arr[cpu][i].tv;
++
++	printk(KERN_INFO "\nTrace: cpu=%d, first=%d, last=%d, base time: %lu sec, %lu usec\n",
++				cpu, first, last, tv_base->tv_sec, tv_base->tv_usec);
++	printk(KERN_INFO "\n No CPU [s : ms : us]  message\n");
++	do {
++		unsigned int sec, msec, usec;
++
++		p = &trc_arr[cpu][i];
++		sec = p->tv.tv_sec - tv_base->tv_sec;
++		if (p->tv.tv_usec >= tv_base->tv_usec)
++			usec = (p->tv.tv_usec - tv_base->tv_usec);
++		else {
++			sec--;
++			usec = 1000000 - (tv_base->tv_usec - p->tv.tv_usec);
++		}
++		msec = usec / 1000;
++		usec = usec % 1000;
++		printk(KERN_INFO "%03d: %d: [%02u:%03u:%03u]: ", i, cpu, sec, msec, usec);
++		printk(KERN_INFO "%s", p->str);
++		i = mv_trace_next_idx(i);
++		if (time_mode == 1)
++			tv_base = &p->tv;
++	} while (i != last);
++
++	memset(trc_arr[cpu], 0, TRACE_ARR_LEN * sizeof(struct trace));
++	trc_index[cpu] = 0;
++	trc_active = active;
++
++}
++
++void TRC_RELEASE(void)
++{
++	int cpu;
++
++	for_each_possible_cpu(cpu) {
++
++		kfree(trc_arr[smp_processor_id()]);
++		trc_index[smp_processor_id()] = 0;
++	}
++}
++
++void mv_trace_status(void)
++{
++	int cpu;
++
++	printk(KERN_INFO "TRACE: strlen=%d, entries=%d, mode=%d, active=%d\n",
++			STR_LEN, TRACE_ARR_LEN, trc_mode, trc_active);
++	for_each_possible_cpu(cpu) {
++		printk(KERN_INFO "cpu=%d, trc_index=%4d, trc_buffer=%p\n", cpu, trc_index[cpu], trc_arr[cpu]);
++	}
++}
++
++static ssize_t mv_trace_help(char *buf)
++{
++	int off = 0;
++
++	off += sprintf(buf+off, "cat           help   	- show this help\n");
++	off += sprintf(buf+off, "cat           status 	- show trace buffer status\n");
++	off += sprintf(buf+off, "echo [0|1]  > start	- start/stop trace record\n");
++	off += sprintf(buf+off, "echo m      > mode     - set record mode: 0-overwrite, 1-stop on full \n");
++	off += sprintf(buf+off, "echo c t    > dump     - dump trace buffer: <c>-cpu_mask, <t>-time mode\n");
++
++	return off;
++}
++
++static ssize_t mv_trace_show(struct device *dev, struct device_attribute *attr, char *buf)
++{
++	const char      *name = attr->attr.name;
++	int             off = 0;
++
++	if (!capable(CAP_NET_ADMIN))
++		return -EPERM;
++
++	if (!strcmp(name, "status"))
++		mv_trace_status();
++	else
++		off = mv_trace_help(buf);
++
++	return off;
++}
++
++static ssize_t mv_trace_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t len)
++{
++	const char      *name = attr->attr.name;
++	int             err = 0;
++	unsigned int    a, b;
++
++	if (!capable(CAP_NET_ADMIN))
++		return -EPERM;
++
++	/* Read arguments */
++	sscanf(buf, "%x %x", &a, &b);
++
++	if (!strcmp(name, "start")) {
++		if (a)
++			TRC_START();
++		else
++			TRC_STOP();
++	} else if (!strcmp(name, "mode"))
++			TRC_MODE(a);
++	else if (!strcmp(name, "dump"))
++		TRC_OUTPUT(a, b);
++	else {
++		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
++		err = -EINVAL;
++	}
++	return err ? -EINVAL : len;
++}
++
++static DEVICE_ATTR(help,        S_IRUSR, mv_trace_show, NULL);
++static DEVICE_ATTR(status,      S_IRUSR, mv_trace_show, NULL);
++static DEVICE_ATTR(start,       S_IWUSR, mv_trace_show, mv_trace_store);
++static DEVICE_ATTR(mode,        S_IWUSR, mv_trace_show, mv_trace_store);
++static DEVICE_ATTR(dump,        S_IWUSR, mv_trace_show, mv_trace_store);
++
++static struct attribute *mv_trace_attrs[] = {
++
++	&dev_attr_help.attr,
++	&dev_attr_status.attr,
++	&dev_attr_start.attr,
++	&dev_attr_mode.attr,
++	&dev_attr_dump.attr,
++	NULL
++};
++
++static struct attribute_group mv_trace_group = {
++	.name = "trace",
++	.attrs = mv_trace_attrs,
++};
++
++int __devinit mv_trace_init(void)
++{
++	int err;
++	struct device *pd;
++
++	err = TRC_INIT();
++	if (err) {
++		printk(KERN_INFO "sysfs group failed %d\n", err);
++		goto out;
++	}
++
++	pd = bus_find_device_by_name(&platform_bus_type, NULL, "neta");
++	if (!pd) {
++		platform_device_register_simple("neta", -1, NULL, 0);
++		pd = bus_find_device_by_name(&platform_bus_type, NULL, "neta");
++	}
++
++	if (!pd) {
++		printk(KERN_ERR"%s: cannot find neta device\n", __func__);
++		pd = &platform_bus;
++	}
++
++	err = sysfs_create_group(&pd->kobj, &mv_trace_group);
++	if (err) {
++		printk(KERN_INFO "sysfs group failed %d\n", err);
++		goto out;
++	}
++out:
++
++	return err;
++}
++
++module_init(mv_trace_init);
++
++MODULE_AUTHOR("Dima Epshtein");
++MODULE_DESCRIPTION("Trace message support");
++MODULE_LICENSE("GPL");
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.h
+new file mode 100755
+index 0000000..a411195
+--- /dev/null
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.h
+@@ -0,0 +1,53 @@
++/*******************************************************************************
++Copyright (C) Marvell International Ltd. and its affiliates
++
++This software file (the "File") is owned and distributed by Marvell
++International Ltd. and/or its affiliates ("Marvell") under the following
++alternative licensing terms.  Once you have made an election to distribute the
++File under one of the following license alternatives, please (i) delete this
++introductory statement regarding license alternatives, (ii) delete the two
++license alternatives that you have not elected to use and (iii) preserve the
++Marvell copyright notice above.
++
++
++********************************************************************************
++Marvell GPL License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File in accordance with the terms and conditions of the General
++Public License Version 2, June 1991 (the "GPL License"), a copy of which is
++available along with the File in the license.txt file or by writing to the Free
++Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
++on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++
++THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
++DISCLAIMED.  The GPL License provides additional details about this warranty
++disclaimer.
++*******************************************************************************/
++#ifndef _MV_DBG_TRCE_H_
++#define _MV_DBG_TRCE_H_
++
++#ifdef CONFIG_MV_DBG_TRACE
++
++int  TRC_INIT(void);
++void TRC_REC(char *fmt, ...);
++void TRC_OUTPUT(int cpu_mask, int time_mode);
++void TRC_RELEASE(void);
++void TRC_START(void);
++void TRC_STOP(void);
++void TRC_MODE(int mode);
++
++#else
++
++#define TRC_INIT(mode)
++#define TRC_REC(X...)
++#define TRC_OUTPUT(cpu_mask, time_mode)
++#define TRC_RELEASE()
++#define TRC_START()
++#define TRC_STOP()
++#define TRC_MODE(mode)
++
++#endif /* CONFIG_MV_DBG_TRACE */
++
++#endif /* _MV_DBG_TRCE_H_ */
+-- 
+1.7.9.5
+

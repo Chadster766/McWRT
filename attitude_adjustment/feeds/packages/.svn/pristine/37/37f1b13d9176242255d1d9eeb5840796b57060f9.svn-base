@@ -1,0 +1,41 @@
+--- a/vpnc-script.in
++++ b/vpnc-script.in
+@@ -97,7 +97,7 @@ do_ifconfig() {
+ 	fi
+ 
+ 	# Point to point interface require a netmask of 255.255.255.255 on some systems
+-	ifconfig "$TUNDEV" inet "$INTERNAL_IP4_ADDRESS" $ifconfig_syntax_ptp "$INTERNAL_IP4_ADDRESS" netmask 255.255.255.255 mtu ${MTU} up
++	ifconfig "$TUNDEV" "$INTERNAL_IP4_ADDRESS" $ifconfig_syntax_ptp "$INTERNAL_IP4_ADDRESS" netmask 255.255.255.255 mtu ${MTU} up
+ 
+ 	if [ -n "$INTERNAL_IP4_NETMASK" ]; then
+ 		set_network_route $INTERNAL_IP4_NETADDR $INTERNAL_IP4_NETMASK $INTERNAL_IP4_NETMASKLEN
+@@ -503,6 +503,18 @@ do_disconnect() {
+ 	destroy_tun_device
+ }
+ 
++start_vpn_nat() {
++	iptables -A forwarding_rule -o $TUNDEV -j ACCEPT
++	iptables -A forwarding_rule -i $TUNDEV -j ACCEPT
++	iptables -t nat -A postrouting_rule -o $TUNDEV -j MASQUERADE
++}
++
++stop_vpn_nat() {
++	iptables -t nat -D postrouting_rule -o $TUNDEV -j MASQUERADE
++	iptables -D forwarding_rule -i $TUNDEV -j ACCEPT
++	iptables -D forwarding_rule -o $TUNDEV -j ACCEPT
++}
++
+ #### Main
+ 
+ if [ -z "$reason" ]; then
+@@ -516,8 +528,10 @@ case "$reason" in
+ 		;;
+ 	connect)
+ 		do_connect
++		start_vpn_nat
+ 		;;
+ 	disconnect)
++		stop_vpn_nat
+ 		do_disconnect
+ 		;;
+ 	*)

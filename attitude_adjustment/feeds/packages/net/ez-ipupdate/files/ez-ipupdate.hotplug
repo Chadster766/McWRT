@@ -1,0 +1,81 @@
+NAME=ez-ipupdate
+COMMAND=/usr/sbin/$NAME
+
+case "$ACTION" in
+    ifup|ifdown)
+    	cleanup() {
+	    [ -e $1 ] && {
+		kill -9 $(cat $1)
+		rm $1
+	    }
+	}
+
+	ddns() {
+	    local cfg="$1"
+	    config_get program $cfg program
+	    [ "$program" = "$NAME" ] && {
+		config_get interface $cfg interface
+		[ "$interface" = "$INTERFACE" ] && {
+		    network_get_device dev "$INTERFACE" || return
+
+		    config_get enabled $cfg enabled
+		    enabled=${enabled:-1}
+
+		    config_get service  $cfg service
+
+		    config_get pidfile $cfg pidfile
+		    pidfile=${pidfile:-/var/run/$NAME-$service-$dev.pid}
+
+		    case "$ACTION" in
+			ifdown)
+			    cleanup $pidfile
+			    ;;
+			*)
+			    case "$enabled" in
+				1|yes|true)
+				    [ ! -e $pidfile ] && {
+					config_get cache $cfg cache
+					[ -z "$cache" ] && cache=/tmp/$NAME-$service-$dev.cache
+
+					config_get config $cfg config
+					[ -z "$config" ] && {
+					    config=/var/run/$NAME-$service-$dev.conf
+					    config_get username $cfg username
+					    config_get password $cfg password
+					    config_get hostname $cfg hostname
+					    service=${service:-"dyndns"}
+					    config_get server	$cfg server
+					    server_line=""
+					    [ -n "$server" ] && {
+						server_line="server=$server"
+					    }
+					    cat > $config <<EOF
+service-type=$service
+$server_line
+user=$username:$password
+host=$hostname
+cache-file=$cache
+pid-file=$pidfile
+interface=$dev
+quiet
+EOF
+					}
+
+					$COMMAND -c $config 2>&1 | logger -t $NAME &
+				    }
+				    ;;
+				*)
+				    cleanup $pidfile
+				    ;;
+			    esac
+		    esac
+		}
+	    }
+	}
+
+	. /lib/functions/network.sh
+
+	config_load ddns
+	config_foreach ddns ddns
+	;;
+esac

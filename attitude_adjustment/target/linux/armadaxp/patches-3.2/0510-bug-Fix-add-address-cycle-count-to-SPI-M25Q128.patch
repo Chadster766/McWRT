@@ -1,0 +1,69 @@
+From d7ee2103298b3c21da61c8ded15d3613f7727d83 Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Wed, 6 Feb 2013 14:47:09 +0200
+Subject: [PATCH 510/609] bug Fix - add address cycle count to SPI M25Q128
+
+Change-Id: Idb70cc829933cfd75ece1af43cfe1d126fcb4299
+Signed-off-by: Neta Zur <neta@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c |   43 +++++++++++++------------
+ 1 file changed, 22 insertions(+), 21 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c b/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c
+index 51f4c6f..3be5237 100644
+--- a/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c
++++ b/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c
+@@ -182,27 +182,28 @@ static MV_SFLASH_DEVICE_PARAMS sflash[] = {
+     },
+ /* ST M25Q128 SPI flash, 16MB, 256 sectors of 64K each */
+     {
+-     MV_M25P_WREN_CMND_OPCD,
+-     MV_M25P_WRDI_CMND_OPCD,
+-     MV_M25P_RDID_CMND_OPCD,
+-     MV_M25P_RDSR_CMND_OPCD,
+-     MV_M25P_WRSR_CMND_OPCD,
+-     MV_M25P_READ_CMND_OPCD,
+-     MV_M25P_FAST_RD_CMND_OPCD,
+-     MV_M25P_PP_CMND_OPCD,
+-     MV_M25P_SE_CMND_OPCD,
+-     MV_M25P_BE_CMND_OPCD,
+-     MV_M25P_RES_CMND_OPCD,
+-     MV_SFLASH_NO_SPECIFIC_OPCD,    /* power save not supported */
+-     MV_M25Q128_SECTOR_SIZE,
+-     MV_M25Q128_SECTOR_NUMBER,
+-     MV_M25Q_PAGE_SIZE,
+-     "ST M25Q128",
+-     MV_M25PXXX_ST_MANF_ID,
+-     MV_M25Q128_DEVICE_ID,
+-     MV_M25Q128_MAX_SPI_FREQ,
+-     MV_M25Q128_MAX_FAST_SPI_FREQ,
+-     MV_M25Q128_FAST_READ_DUMMY_BYTES
++	MV_M25P_WREN_CMND_OPCD,
++	MV_M25P_WRDI_CMND_OPCD,
++	MV_M25P_RDID_CMND_OPCD,
++	MV_M25P_RDSR_CMND_OPCD,
++	MV_M25P_WRSR_CMND_OPCD,
++	MV_M25P_READ_CMND_OPCD,
++	MV_M25P_FAST_RD_CMND_OPCD,
++	MV_M25P_PP_CMND_OPCD,
++	MV_M25P_SE_CMND_OPCD,
++	MV_M25P_BE_CMND_OPCD,
++	MV_M25P_RES_CMND_OPCD,
++	MV_SFLASH_NO_SPECIFIC_OPCD,    /* power save not supported */
++	MV_M25Q128_SECTOR_SIZE,
++	MV_M25Q128_SECTOR_NUMBER,
++	MV_M25Q_PAGE_SIZE,
++	"ST M25Q128",
++	MV_M25PXXX_ST_MANF_ID,
++	MV_M25Q128_DEVICE_ID,
++	MV_M25Q128_MAX_SPI_FREQ,
++	MV_M25Q128_MAX_FAST_SPI_FREQ,
++	MV_M25Q128_FAST_READ_DUMMY_BYTES,
++	MV_M25P128_ADDR_CYC_CNT
+     },
+     /* Macronix MXIC MX25L6405 SPI flash, 8MB, 128 sectors of 64K each */
+     {
+-- 
+1.7.9.5
+

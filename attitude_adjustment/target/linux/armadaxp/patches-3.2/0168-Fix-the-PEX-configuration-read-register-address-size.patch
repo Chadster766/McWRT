@@ -1,0 +1,37 @@
+From 707a246809bd32aa38275e7bd63bc679b955d8aa Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Wed, 11 Apr 2012 15:10:56 +0300
+Subject: [PATCH 168/609] Fix the PEX configuration read register address size
+ limitation. Add the new 4bit extended field into
+ consideration.
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/pex.c |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/pex.c b/arch/arm/mach-armadaxp/pex.c
+index 6dee482..ab2f3bd 100644
+--- a/arch/arm/mach-armadaxp/pex.c
++++ b/arch/arm/mach-armadaxp/pex.c
+@@ -162,7 +162,7 @@ static int mv_pci_read_config(struct pci_bus *bus,
+ 	}
+ 
+ 	func = PCI_FUNC(devfn); 
+-	regOff = (MV_U32)where & PXCAR_REG_NUM_MASK;
++	regOff = (MV_U32)where & (PXCAR_REG_NUM_MASK | PXCAR_REAL_EXT_REG_NUM_MASK); /* total of 12 bits: 8 legacy + 4 extended */
+ 
+ 	DB(printk("PCI %d read: bus = %x dev = %x func = %x regOff = %x ",pciIf, bus_num,dev_no,func,regOff));
+ 	
+@@ -199,7 +199,7 @@ static int mv_pci_write_config(struct pci_bus *bus, unsigned int devfn, int wher
+ 	bus_num = bus->number;
+ 	dev_no = PCI_SLOT(devfn);
+ 	func = PCI_FUNC(devfn);
+-	regOff = (MV_U32)where & PXCAR_REG_NUM_MASK;
++	regOff = (MV_U32)where & (PXCAR_REG_NUM_MASK | PXCAR_REAL_EXT_REG_NUM_MASK); /* total of 12 bits: 8 legacy + 4 extended */
+ 
+ 	DB(printk("PCI %d: writing data %x size %x to bus %x dev %x func %x offs %x \n",
+ 			  pciIf, val,size,bus_num,dev_no,func,regOff));
+-- 
+1.7.9.5
+

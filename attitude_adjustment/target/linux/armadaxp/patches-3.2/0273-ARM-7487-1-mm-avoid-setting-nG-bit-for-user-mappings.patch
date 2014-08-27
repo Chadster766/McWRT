@@ -1,0 +1,60 @@
+From 81dfc3ceeeac681f8ef0dcf4dec0434174da4a26 Mon Sep 17 00:00:00 2001
+From: Will Deacon <will.deacon@arm.com>
+Date: Fri, 10 Aug 2012 17:51:18 +0100
+Subject: [PATCH 273/609] ARM: 7487/1: mm: avoid setting nG bit for user
+ mappings that aren't present
+
+Swap entries are encoding in ptes such that !pte_present(pte) and
+pte_file(pte). The remaining bits of the descriptor are used to identify
+the swapfile and offset within it to the swap entry.
+
+When writing such a pte for a user virtual address, set_pte_at
+unconditionally sets the nG bit, which (in the case of LPAE) will
+corrupt the swapfile offset and lead to a BUG:
+
+[  140.494067] swap_free: Unused swap offset entry 000763b4
+[  140.509989] BUG: Bad page map in process rs:main Q:Reg  pte:0ec76800 pmd:8f92e003
+
+This patch fixes the problem by only setting the nG bit for user
+mappings that are actually present.
+
+Cc: <stable@vger.kernel.org>
+Reviewed-by: Catalin Marinas <catalin.marinas@arm.com>
+Signed-off-by: Will Deacon <will.deacon@arm.com>
+Signed-off-by: Russell King <rmk+kernel@arm.linux.org.uk>
+
+Conflicts:
+
+	arch/arm/include/asm/pgtable.h
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/include/asm/pgtable.h |   12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/arch/arm/include/asm/pgtable.h b/arch/arm/include/asm/pgtable.h
+index 449b1bb..3b8249f 100644
+--- a/arch/arm/include/asm/pgtable.h
++++ b/arch/arm/include/asm/pgtable.h
+@@ -307,6 +307,18 @@ static inline pte_t *pmd_page_vaddr(pmd_t pmd)
+ #define set_pte_ext(ptep,pte,ext) cpu_set_pte_ext(ptep,pte,ext)
+ #endif
+ 
++#define pte_none(pte)		(!pte_val(pte))
++#define pte_present(pte)	(pte_val(pte) & L_PTE_PRESENT)
++#define pte_write(pte)		(!(pte_val(pte) & L_PTE_RDONLY))
++#define pte_dirty(pte)		(pte_val(pte) & L_PTE_DIRTY)
++#define pte_young(pte)		(pte_val(pte) & L_PTE_YOUNG)
++#define pte_exec(pte)		(!(pte_val(pte) & L_PTE_XN))
++#define pte_special(pte)	(0)
++
++#define pte_present_user(pte) \
++	((pte_val(pte) & (L_PTE_PRESENT | L_PTE_USER)) == \
++	 (L_PTE_PRESENT | L_PTE_USER))
++
+ #if __LINUX_ARM_ARCH__ < 6
+ static inline void __sync_icache_dcache(pte_t pteval)
+ {
+-- 
+1.7.9.5
+

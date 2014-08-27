@@ -1,0 +1,44 @@
+From 5c9d53c5ca2d31476686ec040b3dacaa28c97757 Mon Sep 17 00:00:00 2001
+From: Catalin Marinas <catalin.marinas@arm.com>
+Date: Sat, 7 May 2011 23:22:48 +0100
+Subject: [PATCH 213/609] ARM: LPAE: Use unsigned long for __phys_to_virt and
+ __virt_to_phys
+
+The !CONFIG_ARM_PATCH_PHYS_VIRT case uses macros for __phys_to_virt and
+__virt_to_phys but does not use any type casting. This causes compiler
+warnings with LPAE where the phys_addr_t and dma_addr_t are 64-bit:
+
+  CC      arch/arm/mm/dma-mapping.o
+In file included from /work/Linux/linux-marc/include/linux/dma-mapping.h:93:0,
+                 from /work/Linux/linux-marc/arch/arm/mm/dma-mapping.c:19:
+/work/Linux/linux-marc/arch/arm/include/asm/dma-mapping.h: In function 'dma_to_virt':
+/work/Linux/linux-marc/arch/arm/include/asm/dma-mapping.h:35:9: warning:
+        cast to pointer from integer of different size
+
+Note that these macros are only valid for lowmem physical addresses
+where the range is within 32-bit address range.
+
+Signed-off-by: Catalin Marinas <catalin.marinas@arm.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/include/asm/memory.h |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/include/asm/memory.h b/arch/arm/include/asm/memory.h
+index c0185bb..601af22 100644
+--- a/arch/arm/include/asm/memory.h
++++ b/arch/arm/include/asm/memory.h
+@@ -185,8 +185,8 @@ static inline unsigned long __phys_to_virt(unsigned long x)
+ 	return t;
+ }
+ #else
+-#define __virt_to_phys(x)	((x) - PAGE_OFFSET + PHYS_OFFSET)
+-#define __phys_to_virt(x)	((x) - PHYS_OFFSET + PAGE_OFFSET)
++#define __virt_to_phys(x)	((unsigned long)(x) - PAGE_OFFSET + PHYS_OFFSET)
++#define __phys_to_virt(x)	((unsigned long)(x) - PHYS_OFFSET + PAGE_OFFSET)
+ #endif
+ #endif
+ 
+-- 
+1.7.9.5
+

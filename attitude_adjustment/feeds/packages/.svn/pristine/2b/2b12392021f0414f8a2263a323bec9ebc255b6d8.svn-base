@@ -1,0 +1,71 @@
+Index: bemused-mpd-r062/Makefile
+===================================================================
+--- bemused-mpd-r062.orig/Makefile	2008-03-31 09:43:54.000000000 +0200
++++ bemused-mpd-r062/Makefile	2011-03-06 14:19:07.933096517 +0100
+@@ -1,8 +1,15 @@
+-SHELL = /bin/sh
++LDLIBS = -lbluetooth -lglib -liconv
++CPPFLAGS = -I/usr/include -I/usr/include/glib-1.2 -I/usr/lib/glib/include -I./
++CFLAGS = -Os
++CXXFLAGS = -Os
+ 
+-#optimized for openwrt use! mylibs should be -lbluetooth, liconv and -lglib
+-MYLIBS = -lbluetooth -lglib -liconv
+-INCL = -I/usr/include -I/usr/include/glib-1.2 -I/usr/lib/glib/include -I./
++%.o: %.c
++	$(CC) -c $(CFLAGS) $(CPPFLAGS) $^ -o $@
+ 
+-bemusedlinuxserver: 	main.cpp BemusedServerDlg.cpp mpdctrl.c
+-			$(CXX) -Os -o bemusedlinuxserver $(INCL) $(LDFLAGS) $(MYLIBS) main.cpp BemusedServerDlg.cpp mpdctrl.c libmpdclient.c
++%.o: %.cpp
++	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $^ -o $@
++
++bemusedlinuxserver: main.o BemusedServerDlg.o mpdctrl.o libmpdclient.o
++	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
++
++all: bemusedlinuxserver
+Index: bemused-mpd-r062/libmpdclient.h
+===================================================================
+--- bemused-mpd-r062.orig/libmpdclient.h	2008-04-28 23:03:52.000000000 +0200
++++ bemused-mpd-r062/libmpdclient.h	2011-03-06 14:15:34.821307043 +0100
+@@ -68,11 +68,10 @@
+ #define MPD_ACK_ERROR_EXIST			56
+ 
+ #include <stdlib.h>
+-#include <iostream>
+ 
+-//#ifdef __cplusplus
+-//extern "C" {
+-//#endif
++#ifdef __cplusplus
++extern "C" {
++#endif
+ 
+ typedef enum mpd_TagItems {
+     MPD_TAG_ITEM_ARTIST,
+@@ -654,8 +653,8 @@ void mpd_sendPlaylistAddCommand(mpd_Conn
+ void mpd_sendPlaylistMoveCommand(mpd_Connection * connection, char *playlist, int from, int to);
+ 
+ void mpd_sendPlaylistDeleteCommand(mpd_Connection * connection, char *playlist, int pos);
+-//#ifdef __cplusplus
+-//}
+-//#endif
++#ifdef __cplusplus
++}
++#endif
+ 
+ #endif
+Index: bemused-mpd-r062/mpdctrl.c
+===================================================================
+--- bemused-mpd-r062.orig/mpdctrl.c	2008-04-28 23:03:52.000000000 +0200
++++ bemused-mpd-r062/mpdctrl.c	2011-03-06 14:15:34.821307043 +0100
+@@ -59,6 +59,9 @@
+ 
+ #define ERROR_DISPLAY 5
+ 
++#define false	0
++#define true	(!false)
++
+ static int l_totalTimeSec;
+ static int l_elapsedTimeSec;
+ static int l_bitRate;

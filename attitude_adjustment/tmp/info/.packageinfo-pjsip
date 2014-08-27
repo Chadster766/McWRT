@@ -1,0 +1,38 @@
+Source-Makefile: package/pjsip/Makefile
+Package: pjsip-oss
+Version: 1.14.2-1
+Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +libuuid BROKEN
+Menu-Depends: 
+Provides: 
+Build-Variant: oss
+Build-Depends: TARGET_lantiq_danube:kmod-ltq-tapi TARGET_lantiq_danube:kmod-ltq-vmmc TARGET_lantiq_falcon:kmod-ltq-tapi TARGET_lantiq_falcon:kmod-ltq-vmmc
+Section: lib
+Category: Libraries
+Title: pjsip-oss
+Maintainer: John Crispin <blogic@openwrt.org>
+Source: pjproject-1.14.2.tar.bz2
+Type: ipkg
+Description: pjsip-oss
+http://www.pjsip.org/
+John Crispin <blogic@openwrt.org>
+@@
+
+Package: pjsip-ltq-tapi
+Version: 1.14.2-1
+Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +libuuid @(TARGET_lantiq_falcon||TARGET_lantiq_danube) +TARGET_lantiq_danube:kmod-ltq-tapi +TARGET_lantiq_danube:kmod-ltq-vmmc +TARGET_lantiq_falcon:kmod-ltq-tapi +TARGET_lantiq_falcon:kmod-ltq-vmmc
+Menu-Depends: 
+Provides: 
+Build-Variant: ltq-tapi
+Build-Depends: TARGET_lantiq_danube:kmod-ltq-tapi TARGET_lantiq_danube:kmod-ltq-vmmc TARGET_lantiq_falcon:kmod-ltq-tapi TARGET_lantiq_falcon:kmod-ltq-vmmc
+Section: lib
+Category: Libraries
+Title: pjsip-ltq-tapi
+Maintainer: John Crispin <blogic@openwrt.org>
+Source: pjproject-1.14.2.tar.bz2
+Type: ipkg
+Description: pjsip-ltq-tapi
+http://www.pjsip.org/
+John Crispin <blogic@openwrt.org>
+@@
+
+

@@ -1,0 +1,70 @@
+From 81ac4eec2314762a5ac7c167d598d218502191db Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Tue, 6 Mar 2012 21:36:56 +0200
+Subject: [PATCH 111/609] DSMP -trace fix show by Rami R.
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_trace/dbg-trace.c            |   18 +++++++++---------
+ 1 file changed, 9 insertions(+), 9 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.c
+index fc72bb6..1ad4cf1 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.c
+@@ -134,7 +134,7 @@ void TRC_REC(char *fmt, ...)
+ /* time_mode: 0 - time stamp normalized to oldest message, 1 - difference from previous message */
+ void TRC_OUTPUT(int cpu_mask, int time_mode)
+ {
+-	int i, last, first, cpu, active;
++	int i, last, next, cpu, active;
+ 	struct trace *p;
+ 	struct timeval *tv_base;
+ 
+@@ -149,8 +149,8 @@ void TRC_OUTPUT(int cpu_mask, int time_mode)
+ 		}
+ 	}
+ 
+-	first = trc_index[cpu];
+-	last = mv_trace_prev_idx(first);
++	next = trc_index[cpu];
++	last = mv_trace_prev_idx(next);
+ 	p = &trc_arr[cpu][last];
+ 	if (p->valid == 0) {
+ 		printk(KERN_INFO "\nTrace: cpu=%d - No valid entries\n", cpu);
+@@ -158,18 +158,18 @@ void TRC_OUTPUT(int cpu_mask, int time_mode)
+ 	}
+ 
+ 	/* Find first valid entry */
+-	while (first != last) {
+-		p = &trc_arr[cpu][first];
++	i = next;
++	while (i != last) {
++		p = &trc_arr[cpu][i];
+ 		if (p->valid)
+ 			break;
+-		first = mv_trace_next_idx(first);
++		i = mv_trace_next_idx(i);
+ 	}
+ 
+-	i = first;
+ 	tv_base = &trc_arr[cpu][i].tv;
+ 
+ 	printk(KERN_INFO "\nTrace: cpu=%d, first=%d, last=%d, base time: %lu sec, %lu usec\n",
+-				cpu, first, last, tv_base->tv_sec, tv_base->tv_usec);
++				cpu, i, last, tv_base->tv_sec, tv_base->tv_usec);
+ 	printk(KERN_INFO "\n No CPU [s : ms : us]  message\n");
+ 	do {
+ 		unsigned int sec, msec, usec;
+@@ -189,7 +189,7 @@ void TRC_OUTPUT(int cpu_mask, int time_mode)
+ 		i = mv_trace_next_idx(i);
+ 		if (time_mode == 1)
+ 			tv_base = &p->tv;
+-	} while (i != last);
++	} while (i != next);
+ 
+ 	memset(trc_arr[cpu], 0, TRACE_ARR_LEN * sizeof(struct trace));
+ 	trc_index[cpu] = 0;
+-- 
+1.7.9.5
+

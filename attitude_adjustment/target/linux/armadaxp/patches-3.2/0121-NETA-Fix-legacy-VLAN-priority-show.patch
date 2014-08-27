@@ -1,0 +1,129 @@
+From 78006170552a72ff44ebf90261621c81931adc6d Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Mon, 5 Mar 2012 06:39:08 -0500
+Subject: [PATCH 121/609] NETA: Fix legacy VLAN priority show
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |   53 ++++++++++++++++++--
+ 1 file changed, 50 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 789cd98..7bd9a68 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -469,6 +469,11 @@ int mv_eth_ctrl_port_buf_num_set(int port, int long_num, int short_num)
+ {
+ 	struct eth_port *pp = mv_eth_port_by_id(port);
+ 
++	if (pp == NULL) {
++		printk(KERN_INFO "port doens not exist (%d) in %s\n" , port, __func__);
++		return -EINVAL;
++	}
++
+ 	if (pp->flags & MV_ETH_F_STARTED) {
+ 		printk(KERN_ERR "Port %d must be stopped before\n", port);
+ 		return -EINVAL;
+@@ -586,6 +591,11 @@ int mv_eth_ctrl_rxq_size_set(int port, int rxq, int value)
+ 	struct eth_port *pp = mv_eth_port_by_id(port);
+ 	struct rx_queue	*rxq_ctrl;
+ 
++	if (pp == NULL) {
++		printk(KERN_INFO "port doens not exist (%d) in %s\n" , port, __func__);
++		return -EINVAL;
++	}
++
+ 	if (pp->flags & MV_ETH_F_STARTED) {
+ 		printk(KERN_ERR "Port %d must be stopped before\n", port);
+ 		return -EINVAL;
+@@ -609,6 +619,11 @@ int mv_eth_ctrl_txq_size_set(int port, int txp, int txq, int value)
+ 	struct tx_queue *txq_ctrl;
+ 	struct eth_port *pp = mv_eth_port_by_id(port);
+ 
++	if (pp == NULL) {
++		printk(KERN_INFO "port doens not exist (%d) in %s\n" , port, __func__);
++		return -EINVAL;
++	}
++
+ 	if (pp->flags & MV_ETH_F_STARTED) {
+ 		printk(KERN_ERR "Port %d must be stopped before\n", port);
+ 		return -EINVAL;
+@@ -4236,6 +4251,13 @@ static void mv_eth_cleanup_timer_callback(unsigned long data)
+ 
+ void mv_eth_mac_show(int port)
+ {
++	struct eth_port *pp = mv_eth_port_by_id(port);
++
++	if (pp == NULL) {
++		printk(KERN_ERR "%s: port %d entry is null \n", __func__, port);
++		return;
++	}
++
+ #ifdef CONFIG_MV_ETH_PNC
+ 	if (mv_eth_pnc_ctrl_en) {
+ 		mvOsPrintf("PnC MAC Rules - port #%d:\n", port);
+@@ -4250,6 +4272,13 @@ void mv_eth_mac_show(int port)
+ 
+ void mv_eth_vlan_prio_show(int port)
+ {
++	struct eth_port *pp = mv_eth_port_by_id(port);
++
++	if (pp == NULL) {
++		printk(KERN_ERR "%s: port %d entry is null \n", __func__, port);
++		return;
++	}
++
+ #ifdef CONFIG_MV_ETH_PNC
+ 	if (mv_eth_pnc_ctrl_en) {
+ 		mvOsPrintf("PnC VLAN Priority Rules - port #%d:\n", port);
+@@ -4257,7 +4286,17 @@ void mv_eth_vlan_prio_show(int port)
+ 	} else
+ 		mvOsPrintf("%s: PNC control is disabled\n", __func__);
+ #else /* Legacy parser */
+-	mvEthVlanPriorityShow(port);
++	{
++		int prio, rxq;
++
++		mvOsPrintf("Legacy VLAN Priority Rules - port #%d:\n", port);
++		for (prio = 0; prio <= 0x7 ; prio++) {
++
++			rxq = mvNetaVprioToRxqGet(port, prio);
++			if (rxq > 0)
++				printk(KERN_INFO "prio=%d: rxq=%d\n", prio, rxq);
++		}
++	}
+ #endif /* CONFIG_MV_ETH_PNC */
+ }
+ 
+@@ -4272,11 +4311,13 @@ void mv_eth_tos_map_show(int port)
+ 	}
+ 
+ #ifdef CONFIG_MV_ETH_PNC
+-	if (mv_eth_pnc_ctrl_en)
++	if (mv_eth_pnc_ctrl_en) {
++		mvOsPrintf("PnC TOS to RXQs Mapping Rules - port #%d:\n", port);
+ 		pnc_ipv4_dscp_show(port);
+-	else
++	} else
+ 		mvOsPrintf("%s: PNC control is disabled\n", __func__);
+ #else
++	mvOsPrintf("Legacy TOS to RXQs Mapping Rules - port #%d:\n", port);
+ 	for (tos = 0; tos < 0xFF; tos += 0x4) {
+ 		int rxq;
+ 
+@@ -4300,6 +4341,12 @@ void mv_eth_tos_map_show(int port)
+ int mv_eth_rxq_tos_map_set(int port, int rxq, unsigned char tos)
+ {
+ 	int status = -1;
++	struct eth_port *pp = mv_eth_port_by_id(port);
++
++	if (pp == NULL) {
++		printk(KERN_ERR "%s: port %d entry is null \n", __func__, port);
++		return 1;
++	}
+ 
+ #ifdef CONFIG_MV_ETH_PNC
+ 	if (mv_eth_pnc_ctrl_en)
+-- 
+1.7.9.5
+

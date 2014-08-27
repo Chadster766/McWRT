@@ -1,0 +1,25 @@
+#!/bin/sh /etc/rc.common
+START=46
+
+start() {
+	[ $(uci get mesh.general.enable) ] || exit
+	# TODO: set wireless vars needed in mesh mode (frag, rts, mtu)
+	insmod ipt_mac.o
+	insmod ipt_LOG.o
+	iptables -N ipfilter
+	iptables -N mesh_nodes
+	iptables -N mesh_clients
+	iptables -N mesh_maintenance
+	/etc/firewall.mesh
+}
+
+stop() {
+	iptables -F ipfilter
+	iptables -F mesh_nodes
+	iptables -F mesh_clients
+	iptables -F mesh_maintenance
+	iptables -X ipfilter
+	iptables -X mesh_nodes
+	iptables -X mesh_clients
+	iptables -X mesh_maintenance
+}

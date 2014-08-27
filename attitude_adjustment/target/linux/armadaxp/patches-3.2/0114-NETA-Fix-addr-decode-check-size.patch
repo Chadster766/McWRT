@@ -1,0 +1,67 @@
+From 8d9f3aa0920aa42717311076ba95a8235c84f6a9 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Wed, 15 Feb 2012 08:59:40 -0500
+Subject: [PATCH 114/609] NETA: Fix addr decode check size
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../plat-armada/mv_hal/neta/gbe/mvNetaAddrDec.c    |   28 ++++++++++----------
+ 1 file changed, 14 insertions(+), 14 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaAddrDec.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaAddrDec.c
+index 03edf46..8421d75 100755
+--- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaAddrDec.c
++++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaAddrDec.c
+@@ -170,19 +170,28 @@ MV_STATUS mvNetaWinWrite(MV_U32 port, MV_U32 winNum, MV_UNIT_WIN_INFO *pAddrDecW
+ 	MV_U32 size, alignment;
+ 	MV_U32 baseReg, sizeReg;
+ 
+-	if (!MV_IS_POWER_OF_2(pAddrDecWin->addrWin.size)) {
+-		/* try to get a good size */
+-		pAddrDecWin->addrWin.size = 1 << (mvLog2(pAddrDecWin->addrWin.size) + 1);
+-	}
+ 	/* Parameter checking   */
+ 	if (winNum >= ETH_MAX_DECODE_WIN) {
+ 		mvOsPrintf("mvNetaWinSet: ERR. Invalid win num %d\n", winNum);
+ 		return MV_BAD_PARAM;
+ 	}
+ 
++	size = pAddrDecWin->addrWin.size;
++	if (size == 0) {
++		mvOsPrintf("%s: ERR. Invalid window size %d\n",	__func__, size);
++		return MV_BAD_PARAM;
++	}
++	if (!MV_IS_POWER_OF_2(size)) {
++		/* try to get a good size */
++		pAddrDecWin->addrWin.size = 1 << (mvLog2(size) + 1);
++		mvOsPrintf("%s: WARN. Wrong window size %d, rounding to %d\n",
++			__func__, size, pAddrDecWin->addrWin.size);
++		size = pAddrDecWin->addrWin.size;
++	}
++
+ 	/* Check if the requested window overlapps with current windows     */
+ 	if (MV_TRUE == ethWinOverlapDetect(port, winNum, &pAddrDecWin->addrWin)) {
+-		mvOsPrintf("mvNetaWinWrite: ERR. Window %d overlap\n", winNum);
++		mvOsPrintf("%s: ERR. Window %d overlap\n", __func__, winNum);
+ 		return MV_ERROR;
+ 	}
+ 
+@@ -194,15 +203,6 @@ MV_STATUS mvNetaWinWrite(MV_U32 port, MV_U32 winNum, MV_UNIT_WIN_INFO *pAddrDecW
+ 		return MV_ERROR;
+ 	}
+ 
+-	if (pAddrDecWin->addrWin.size != 0) {
+-		size = pAddrDecWin->addrWin.size;
+-		if (!MV_IS_POWER_OF_2(size)) {
+-			mvOsPrintf("mvNetaWinWrite: Error setting AUDIO window %d. "
+-				"Window size is not a power to 2.", winNum);
+-			return MV_BAD_PARAM;
+-		}
+-	}
+-
+ 	baseReg = (pAddrDecWin->addrWin.baseLow & ETH_WIN_BASE_MASK);
+ 	sizeReg = MV_REG_READ(ETH_WIN_SIZE_REG(port, winNum));
+ 
+-- 
+1.7.9.5
+

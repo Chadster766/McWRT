@@ -1,0 +1,144 @@
+--- a/src/upnp.c
++++ b/src/upnp.c
+@@ -36,6 +36,7 @@
+ #include <uuid/uuid.h>
+ #include "intutil.h"
+ #include "gmediaserver.h"
++#include "webserver.h"
+ #include "schemas/MediaServer.h"
+ 
+ #define GMEDIASERVER_SSDP_PAUSE 100
+@@ -265,7 +266,7 @@ handle_get_var_request(struct Upnp_State
+     say(3, _("Event device UDN: %s\n"), quotearg(request->DevUDN));
+     say(3, _("Event service ID: %s\n"), quotearg(request->ServiceID));
+     say(3, _("Event variable name: %s\n"), quotearg(request->StateVarName));
+-    say(3, _("Event source: %s\n"), inet_ntoa(request->CtrlPtIPAddr));
++    say(3, _("Event source: %s\n"), inet_ntoa((*(struct sockaddr_in *)&request->CtrlPtIPAddr).sin_addr));
+ 
+     if (strcmp(request->DevUDN, device_udn) != 0) {
+         say(1, _("Discarding event - event device UDN (%s) not recognized\n"), quotearg(request->DevUDN));
+@@ -306,7 +307,7 @@ handle_action_request(struct Upnp_Action
+     say(3, _("Event device UDN: %s\n"), quotearg(request->DevUDN));
+     say(3, _("Event service ID: %s\n"), quotearg(request->ServiceID));
+     say(3, _("Event action name: %s\n"), quotearg(request->ActionName));
+-    say(3, _("Event source: %s\n"), inet_ntoa(request->CtrlPtIPAddr));
++    say(3, _("Event source: %s\n"), inet_ntoa((*(struct sockaddr_in *)&request->CtrlPtIPAddr).sin_addr));
+     say_document(4, _("Event action request:\n"), request->ActionRequest);
+ 
+     if (strcmp(request->DevUDN, device_udn) != 0) {
+@@ -502,9 +503,24 @@ init_upnp(const char *listenip, uint16_t
+     res = UpnpEnableWebserver(TRUE);
+     if (res != UPNP_E_SUCCESS)
+         die(_("cannot enable UPnP web server - %s\n"), upnp_errmsg(res));
+-    res = UpnpSetVirtualDirCallbacks(&virtual_dir_callbacks);
+-    if (res != UPNP_E_SUCCESS)
+-        die(_("cannot set virtual directory callbacks - %s\n"), upnp_errmsg(res));
++
++#define upnp_set_callback(cb, func) \
++	do {															\
++		res = UpnpVirtualDir_set_##cb##Callback(func);				\
++		if (res != UPNP_E_SUCCESS)									\
++		{															\
++			die(_("cannot set virtual directory callbacks - %s\n"), \
++				upnp_errmsg(res));									\
++		}															\
++	} while(0)
++
++	upnp_set_callback(GetInfo, webserver_get_info);
++	upnp_set_callback(Open,    webserver_open);
++	upnp_set_callback(Read,    webserver_read);
++	upnp_set_callback(Seek,    webserver_seek);
++	upnp_set_callback(Write,   webserver_write);
++	upnp_set_callback(Close,   webserver_close);
++
+     res = UpnpAddVirtualDir("/files");
+     if (res != UPNP_E_SUCCESS)
+         die(_("cannot add virtual directory for web server - %s\n"), upnp_errmsg(res));
+--- a/src/webserver.c
++++ b/src/webserver.c
+@@ -83,7 +83,7 @@ get_entry_from_url(const char *filename)
+     return get_entry_by_id(id);
+ }
+ 
+-static int
++int
+ webserver_get_info(const char *filename, struct File_Info *info)
+ {
+     Entry *entry;
+@@ -180,7 +180,7 @@ webserver_get_info(const char *filename,
+     return -1;
+ }
+ 
+-static UpnpWebFileHandle
++UpnpWebFileHandle
+ webserver_open(const char *filename, enum UpnpOpenFileMode mode)
+ {
+     Entry *entry;
+@@ -277,7 +277,7 @@ webserver_open(const char *filename, enu
+     return NULL;
+ }
+ 
+-static int
++int
+ webserver_read(UpnpWebFileHandle fh, char *buf, size_t buflen)
+ {
+     WebServerFile *file = (WebServerFile *) fh;
+@@ -307,7 +307,7 @@ webserver_read(UpnpWebFileHandle fh, cha
+     return len;
+ }
+ 
+-static int
++int
+ webserver_write(UpnpWebFileHandle fh, char *buf, size_t buflen)
+ {
+     WebServerFile *file = (WebServerFile *) fh;
+@@ -317,7 +317,7 @@ webserver_write(UpnpWebFileHandle fh, ch
+     return -1;
+ }
+ 
+-static int
++int
+ webserver_seek(UpnpWebFileHandle fh, off_t offset, int origin)
+ {
+     WebServerFile *file = (WebServerFile *) fh;
+@@ -396,7 +396,7 @@ webserver_seek(UpnpWebFileHandle fh, off
+     return 0;
+ }
+ 
+-static int
++int
+ webserver_close(UpnpWebFileHandle fh)
+ {
+     WebServerFile *file = (WebServerFile *) fh;
+@@ -419,12 +419,3 @@ webserver_close(UpnpWebFileHandle fh)
+ 
+     return 0;
+ }
+-
+-struct UpnpVirtualDirCallbacks virtual_dir_callbacks = {
+-    webserver_get_info,
+-    webserver_open,
+-    webserver_read,
+-    webserver_write,
+-    webserver_seek,
+-    webserver_close
+-};
+--- /dev/null
++++ b/src/webserver.h
+@@ -0,0 +1,6 @@
++int webserver_get_info(const char *filename, struct File_Info *info);
++UpnpWebFileHandle webserver_open(const char *filename, enum UpnpOpenFileMode mode);
++int webserver_read(UpnpWebFileHandle fh, char *buf, size_t buflen);
++int webserver_write(UpnpWebFileHandle fh, char *buf, size_t buflen);
++int webserver_seek(UpnpWebFileHandle fh, off_t offset, int origin);
++int webserver_close(UpnpWebFileHandle fh);
+--- a/src/contentdir.c
++++ b/src/contentdir.c
+@@ -22,6 +22,7 @@
+ #include <stdint.h>		/* Gnulib/C99 */
+ #include <inttypes.h>		/* ? */
+ #include <sys/stat.h>		/* POSIX */
++#include <assert.h>
+ #include "gettext.h"		/* Gnulib/gettext */
+ #define _(s) gettext(s)
+ #define N_(s) gettext_noop(s)

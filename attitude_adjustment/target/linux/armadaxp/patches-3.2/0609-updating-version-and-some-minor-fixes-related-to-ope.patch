@@ -1,0 +1,59 @@
+From d707ac252dfe219d1916cdec7ed94548aa4be75c Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Wed, 19 Jun 2013 12:18:58 -0700
+Subject: [PATCH 609/609] updating version and some minor fixes related to
+ openwrt
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/boardEnv/mvBoardEnvSpec.c     |    4 +++-
+ arch/arm/mach-armadaxp/include/mach/system.h       |    2 +-
+ arch/arm/tools/mach-types                          |    2 +-
+ drivers/char/random.c                              |    2 +-
+ 4 files changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+index 68408ab..a51443c 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+@@ -1313,8 +1313,10 @@ MV_BOARD_INFO rd78460gpInfo = {
+ #define RD_78460_WIFI_BOARD_NAND_READ_PARAMS              0x000C0282
+ #define RD_78460_WIFI_BOARD_NAND_WRITE_PARAMS             0x00010305
+ 
+-#define RD_78460_WIFI_BOARD_NAND_CONTROL                  0x01c00543
++#define RD_78460_WIFI_BOARD_NOR_READ_PARAMS		 0x403E07CF
++#define RD_78460_WIFI_BOARD_NOR_WRITE_PARAMS       	 0x000F0F0F
+ 
++#define RD_78460_WIFI_BOARD_NAND_CONTROL                  0x01c00543
+ 
+ MV_BOARD_TWSI_INFO   rd78460wifiInfoBoardTwsiDev[] = {
+         /* {{MV_BOARD_DEV_CLASS devClass, MV_U8 twsiDevAddr, MV_U8 twsiDevAddrType}} */
+diff --git a/arch/arm/tools/mach-types b/arch/arm/tools/mach-types
+index 60b7b0d..a6cce59 100755
+--- a/arch/arm/tools/mach-types
++++ b/arch/arm/tools/mach-types
+@@ -541,7 +541,7 @@ akcpmxl			MACH_AKCPMXL		AKCPMXL			524
+ av3xx			MACH_AV3XX		AV3XX			525
+ avila			MACH_AVILA		AVILA			526
+ pxa_mpm10		MACH_PXA_MPM10		PXA_MPM10		527
+-pxa_kyanite		MACH_PXA_KYANITE	PXA_KYANITE		528
++armada_xp_fpga          MACH_ARMADA_XP_FPGA     ARMADA_XP_FPGA          528
+ sgold			MACH_SGOLD		SGOLD			529
+ oscar			MACH_OSCAR		OSCAR			530
+ epxa4usb2		MACH_EPXA4USB2		EPXA4USB2		531
+diff --git a/drivers/char/random.c b/drivers/char/random.c
+index 739a641..438d2a1 100644
+--- a/drivers/char/random.c
++++ b/drivers/char/random.c
+@@ -843,7 +843,7 @@ void add_disk_randomness(struct gendisk *disk)
+  */
+ void random_input_words(__u32 *buf, size_t wordcount, int ent_count)
+ {
+-	mix_pool_bytes(&input_pool, buf, wordcount*4);
++	mix_pool_bytes(&input_pool, buf, wordcount*4, NULL);
+ 
+ 	credit_entropy_bits(&input_pool, ent_count);
+ 
+-- 
+1.7.9.5
+

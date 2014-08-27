@@ -1,0 +1,19 @@
+--- a/Makefile
++++ b/Makefile
+@@ -37,13 +37,13 @@
+ 			 $(addprefix stund/, $(TARS))
+ 
+ server: server.o stun.o udp.o 
+-	$(CXX) $(LDFLAGS) -o $@  $^
++	$(CXX) -o $@ $^ $(LDFLAGS)
+ 
+ tlsServer: tlsServer.o stun.o udp.o
+-	$(CXX) $(LDFLAGS) -o $@  $^
++	$(CXX) -o $@  $^ $(LDFLAGS)
+ 
+ client: client.o stun.o udp.o 
+-	$(CXX) $(LDFLAGS) -o $@  $^
++	$(CXX) -o $@  $^ $(LDFLAGS)
+ 
+ %.o:%.cxx
+ 	$(CXX)  -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@

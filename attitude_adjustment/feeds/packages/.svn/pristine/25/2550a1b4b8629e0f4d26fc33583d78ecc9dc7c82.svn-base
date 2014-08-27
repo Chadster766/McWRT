@@ -1,0 +1,27 @@
+--- a/src/include/timerfd_wrap.h
++++ b/src/include/timerfd_wrap.h
+@@ -55,20 +55,12 @@ SWITCH_BEGIN_EXTERN_C
+ 
+ 
+ #ifndef __NR_timerfd
+-#if defined(__x86_64__)
+-#define __NR_timerfd_create 283
+-#define __NR_timerfd_settime 286
+-#define __NR_timerfd_gettime 287
+-#elif defined(__i386__)
+-#define __NR_timerfd_create 322
+-#define __NR_timerfd_settime 325
+-#define __NR_timerfd_gettime 326
+-#else
+-#error invalid system
+-#endif
++#include <linux/unistd.h>
+ #endif
+ 
+-#define TFD_TIMER_ABSTIME (1 << 0)
++#ifndef TFD_TIMER_ABSTIME
++#include <sys/timerfd.h>
++#endif
+ 
+ int timerfd_create(int clockid, int flags) 
+ {

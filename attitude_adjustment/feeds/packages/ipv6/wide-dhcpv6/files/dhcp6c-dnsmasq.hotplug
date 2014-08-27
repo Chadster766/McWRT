@@ -1,0 +1,53 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+getoption() {
+	local cfg=$1
+	config_get resolvfile "$cfg" resolvfile
+}
+
+config_load dhcp6c
+
+local dns 
+config_get dns basic dns none
+[ $dns != "dnsmasq" ] && return 0
+
+if [ "$ACTION" = "start" ]; then
+
+	local domain_name_servers
+	config_get domain_name_servers state domain_name_servers
+
+	if [ -n "$domain_name_servers" ]; then
+
+		config_load dhcp
+	
+		local resolvfile
+		config_foreach getoption dnsmasq
+
+		if [ -n "$resolvfile" ]; then
+
+			cp -pf $resolvfile "$resolvfile.dhcp6c_backup"
+	
+			for nameserver in $domain_name_servers; do
+				echo nameserver $nameserver >> $resolvfile
+			done
+
+		fi
+	
+	fi
+
+fi
+
+if [ "$ACTION" = "stop" ]; then
+
+	config_load dhcp
+
+	local resolvfile
+	config_foreach getoption dnsmasq
+	if [ -f "$resolvfile.dhcp6c_backup" ]; then
+		mv -f "$resolvfile.dhcp6c_backup" $resolvfile
+	fi 
+
+fi
+

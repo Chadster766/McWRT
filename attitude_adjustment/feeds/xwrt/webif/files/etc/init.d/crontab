@@ -1,0 +1,36 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2008 x-wrt.org
+START=49
+
+config_cb() {
+	local cfg_type="$1"
+	local cfg_name="$2"
+
+	case "$cfg_type" in
+		crontab)
+			append CRONTABS_cfg "$cfg_name"
+		;;
+		
+	esac
+}
+
+start () {
+	config_load crontabs
+	echo "# WARNING: this is an auto generated file, please use uci to set cron entries" > /etc/crontabs/root
+	echo "# this file is generated from /etc/config/crontabs" >> /etc/crontabs/root
+	echo >> /etc/crontabs/root
+	
+	for crontab in $CRONTABS_cfg; do
+		config_get MINUTES $crontab minutes
+		config_get HOURS $crontab hours
+		config_get DAYS $crontab days
+		config_get MONTHS $crontab months
+		config_get WEEKDAYS $crontab weekdays
+		config_get COMMAND $crontab command
+		config_get ENABLED $crontab enabled
+
+		if [ "$MINUTES" != "" ] && [ "$HOURS" != "" ] && [ "$DAYS" != "" ] && [ "$MONTHS" != "" ] && [ "$WEEKDAYS" != "" ] && [ "$COMMAND" != "" ] && [ "$ENABLED" = "1" ]; then
+			echo $MINUTES" "$HOURS" "$DAYS" "$MONTHS" "$WEEKDAYS" "$COMMAND >> /etc/crontabs/root
+		fi
+	done
+}

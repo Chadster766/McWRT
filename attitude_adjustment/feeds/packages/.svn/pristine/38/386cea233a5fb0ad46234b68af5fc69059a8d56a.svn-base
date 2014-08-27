@@ -1,0 +1,45 @@
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -8,7 +8,7 @@ else
+ EXAMPLES_DIR =
+ endif
+ 
+-SUBDIRS = lib include doc tests m4 $(EXAMPLES_DIR)
++SUBDIRS = lib include m4 $(EXAMPLES_DIR)
+ 
+ 
+ # we include the whole debian/ dir in EXTRA_DIST because there's a problem
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -80,7 +80,7 @@ pkgconfigDATA_INSTALL = $(INSTALL_DATA)
+ DATA = $(pkgconfig_DATA)
+ ETAGS = etags
+ CTAGS = ctags
+-DIST_SUBDIRS = lib include doc tests m4 examples
++DIST_SUBDIRS = lib include m4
+ DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
+ distdir = $(PACKAGE)-$(VERSION)
+ top_distdir = $(distdir)
+@@ -262,7 +262,7 @@ target_vendor = @target_vendor@
+ AUTOMAKE_OPTIONS = foreign 1.6 dist-zip dist-bzip2
+ @THEORA_ENABLE_EXAMPLES_FALSE@EXAMPLES_DIR = 
+ @THEORA_ENABLE_EXAMPLES_TRUE@EXAMPLES_DIR = examples
+-SUBDIRS = lib include doc tests m4 $(EXAMPLES_DIR)
++SUBDIRS = lib include m4 $(EXAMPLES_DIR)
+ 
+ # we include the whole debian/ dir in EXTRA_DIST because there's a problem
+ # with autotools and HFS+ MacOSX file systems that caused debian/Makefile.am
+--- a/configure.ac
++++ b/configure.ac
+@@ -310,11 +310,6 @@ fi
+ dnl check for SDL
+ HAVE_SDL=no
+ 
+-AM_PATH_SDL(,[
+-  HAVE_SDL=yes
+-  SDL_LIBS=`$SDL_CONFIG --libs`
+-],AC_MSG_WARN([*** Unable to find SDL -- Not compiling example players ***]))
+-
+ dnl check for OSS
+ HAVE_OSS=no
+ 

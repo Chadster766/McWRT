@@ -1,0 +1,38 @@
+diff -ubr /tmp/syslog-ng-1.6.12/configure syslog-ng-1.6.12/configure
+--- /tmp/syslog-ng-1.6.12/configure	2007-02-02 02:58:41.000000000 -0600
++++ syslog-ng-1.6.12/configure	2007-03-03 20:39:40.000000000 -0600
+@@ -3695,7 +3695,7 @@
+   echo $ECHO_N "(cached) $ECHO_C" >&6
+ else
+   ac_check_lib_save_LIBS=$LIBS
+-LIBS="-lfl  $LIBS"
++LIBS="$LIBS"
+ cat >conftest.$ac_ext <<_ACEOF
+ /* confdefs.h.  */
+ _ACEOF
+diff -ubr /tmp/syslog-ng-1.6.12/Makefile.in syslog-ng-1.6.12/Makefile.in
+--- /tmp/syslog-ng-1.6.12/Makefile.in	2007-02-02 02:58:41.000000000 -0600
++++ syslog-ng-1.6.12/Makefile.in	2007-03-03 20:38:56.000000000 -0600
+@@ -65,7 +65,7 @@
+ INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
+ LDFLAGS = @LDFLAGS@
+ LEX = @LEX@
+-LEXLIB = @LEXLIB@
++LEXLIB =
+ LEX_OUTPUT_ROOT = @LEX_OUTPUT_ROOT@
+ LIBOBJS = @LIBOBJS@
+ LIBOL_DIR = @LIBOL_DIR@
+diff -ubr /tmp/syslog-ng-1.6.12/src/cfg-lex.c syslog-ng-1.6.12/src/cfg-lex.c
+--- /tmp/syslog-ng-1.6.12/src/cfg-lex.c	2006-08-22 03:43:36.000000000 -0500
++++ syslog-ng-1.6.12/src/cfg-lex.c	2007-03-03 20:36:52.000000000 -0600
+@@ -668,7 +668,9 @@
+ #ifdef __cplusplus
+ extern "C" int yywrap (void );
+ #else
+-extern int yywrap (void );
++int yywrap (void ) {
++	return 1;
++}
+ #endif
+ #endif
+ 

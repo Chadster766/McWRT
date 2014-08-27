@@ -1,0 +1,47 @@
+From 5ece2a9a5399f9365bf095518ae94f7ae655fb74 Mon Sep 17 00:00:00 2001
+From: Will Deacon <will.deacon@arm.com>
+Date: Tue, 12 Apr 2011 18:13:56 +0100
+Subject: [PATCH 209/609] ARM: mm: allow ASID 0 to be allocated to tasks
+
+Now that ASID 0 is no longer used as a reserved value, allow it to be
+allocated to tasks.
+
+Acked-by: Catalin Marinas <catalin.marinas@arm.com>
+Signed-off-by: Will Deacon <will.deacon@arm.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mm/context.c |    6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/mm/context.c b/arch/arm/mm/context.c
+index 0041f6d..d9e4ded 100644
+--- a/arch/arm/mm/context.c
++++ b/arch/arm/mm/context.c
+@@ -94,7 +94,7 @@ static void reset_context(void *info)
+ 		return;
+ 
+ 	smp_rmb();
+-	asid = cpu_last_asid + cpu + 1;
++	asid = cpu_last_asid + cpu;
+ 
+ 	flush_context();
+ 	set_mm_context(mm, asid);
+@@ -143,13 +143,13 @@ void __new_context(struct mm_struct *mm)
+ 	 * to start a new version and flush the TLB.
+ 	 */
+ 	if (unlikely((asid & ~ASID_MASK) == 0)) {
+-		asid = cpu_last_asid + smp_processor_id() + 1;
++		asid = cpu_last_asid + smp_processor_id();
+ 		flush_context();
+ #ifdef CONFIG_SMP
+ 		smp_wmb();
+ 		smp_call_function(reset_context, NULL, 1);
+ #endif
+-		cpu_last_asid += NR_CPUS;
++		cpu_last_asid += NR_CPUS - 1;
+ 	}
+ 
+ 	set_mm_context(mm, asid);
+-- 
+1.7.9.5
+

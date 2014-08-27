@@ -1,0 +1,84 @@
+From 98f15d2fe319414ec77e3d068414299708c90801 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Wed, 19 Dec 2012 14:21:17 +0200
+Subject: [PATCH 370/609] SMP: Fix failed boot of CPUs 1-3 on BE8 and solves
+ potential coherency bug
+
+        - Added BE8 support to the new boot sequence after the pen removal
+        - Modifed the coherency enable code to be atomic using ldrex/strex
+
+Change-Id: I1db14cfc9c8c29c03063e8d69a204c99ede5a0b0
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/headsmp.S |   50 ++++++++++++++++++++++++--------------
+ 1 file changed, 32 insertions(+), 18 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/headsmp.S b/arch/arm/mach-armadaxp/headsmp.S
+index be486ed..56490e7 100644
+--- a/arch/arm/mach-armadaxp/headsmp.S
++++ b/arch/arm/mach-armadaxp/headsmp.S
+@@ -30,28 +30,42 @@ ENTRY(axp_secondary_startup)
+         setend  be
+ #endif
+ 
++	/*
++	 * Add CPU to coherency fabric
++	 */
+ 	mrc	p15, 0, r0, c0, c0, 5
+ 	and	r0, r0, #15
+-
+-	/* Add CPU to coherency fabric */
+-
+-	/* Create bit by cpu index */
+-	mov     r2,r0
+-	add     r2,r2,#24
+-	MOV     r3, #1
+-	lsl     r3, r3, r2
+-
++	mov	r4, #1
++	add	r5, r0, #24
+ 	/* Add CPU to SMP group - Atomic */
+-	ldr     r0, = AXP_COHERENCY_FABRIC_CTL_REG
+-	ldr     r10, [r0]
+-	orr     r10 , r10, r3
+-	str	r10,[r0]
+-
++	ldr	r2, =AXP_COHERENCY_FABRIC_CTL_REG
++1:
++	ldrex r3, [r2]
++#ifdef CONFIG_BE8_ON_LE
++	rev r3, r3
++#endif
++	orr	r3, r3, r4, lsl r5
++#ifdef CONFIG_BE8_ON_LE
++	rev r3, r3
++#endif
++	strex r1, r3, [r2]
++	cmp	r1, #0
++	bne 1b
+ 	/* Enable coherency on CPU - Atomic*/
+-	ldr     r0, = AXP_COHERENCY_FABRIC_CFG_REG
+-	ldr     r10, [r0]
+-	orr     r10 , r10, r3
+-	str     r10,[r0]
++	ldr	r2, =AXP_COHERENCY_FABRIC_CFG_REG
++1:
++	ldrex r3, [r2]
++#ifdef CONFIG_BE8_ON_LE
++	rev r3, r3
++#endif
++	orr	r3, r3, r4, lsl r5
++#ifdef CONFIG_BE8_ON_LE
++	rev r3, r3
++#endif
++	strex r1, r3, [r2]
++	cmp	r1, #0
++	bne 1b
++
+ 
+ #ifndef CONFIG_SHEEVA_ERRATA_ARM_CPU_4948
+ 	/*
+-- 
+1.7.9.5
+

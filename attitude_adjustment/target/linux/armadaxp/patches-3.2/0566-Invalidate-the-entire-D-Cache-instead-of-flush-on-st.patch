@@ -1,0 +1,146 @@
+From 0da89da2cae6940e20a0da3612a481290685da48 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Thu, 14 Mar 2013 09:46:09 +0200
+Subject: [PATCH 566/609] Invalidate the entire D-Cache instead of flush on
+ startup.
+
+- Function v7_invalidate_dcache_all is based on v7_flush_dcache_all.
+ - Enable I-Cache invalidation like in other setup functions for v7.
+
+ Bug fix - BTS #246 'AMP solution is limited to 1GB of memory'
+
+Change-Id: I9031bb80ca95e2cbc6b8ef895f2037414c908b04
+Signed-off-by: Michal Mazur <arg@semihalf.com>
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1293
+Reviewed-by: Tawfik Bayouk <tawfik@marvell.com>
+Tested-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mm/cache-v7.S               |   72 ++++++++++++++++++++++++++++++++++
+ arch/arm/mm/proc-sheeva_pj4bv7.S     |    4 +-
+ arch/arm/mm/proc-sheeva_pj4bv7lpae.S |    2 +-
+ 3 files changed, 74 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/mm/cache-v7.S b/arch/arm/mm/cache-v7.S
+index bd70e50..8168ed5 100644
+--- a/arch/arm/mm/cache-v7.S
++++ b/arch/arm/mm/cache-v7.S
+@@ -34,6 +34,78 @@ ENTRY(v7_flush_icache_all)
+ ENDPROC(v7_flush_icache_all)
+ 
+ /*
++ *	v7_invalidate_dcache_all()
++ *
++ *	Invalidate the whole D-cache.
++ *
++ *	Corrupted registers: r0-r7, r9-r11 (r6 only in Thumb mode)
++ *
++ *	- mm    - mm_struct describing address space
++ */
++ENTRY(v7_invalidate_dcache_all)
++#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6075
++#ifdef CONFIG_ARMADA_XP_A0_WITH_B0
++	a0_with_b0_errata_6075 r0
++#else
++	dsb
++#endif
++#else
++	dmb					@ ensure ordering with previous memory accesses
++#endif
++	mrc	p15, 1, r0, c0, c0, 1		@ read clidr
++	ands	r3, r0, #0x7000000		@ extract loc from clidr
++	mov	r3, r3, lsr #23			@ left align loc bit field
++	beq	invfinished			@ if loc is 0, then no need to clean
++	mov	r10, #0				@ start clean at cache level 0
++invloop1:
++	add	r2, r10, r10, lsr #1		@ work out 3x current cache level
++	mov	r1, r0, lsr r2			@ extract cache type bits from clidr
++	and	r1, r1, #7			@ mask of the bits for current cache only
++	cmp	r1, #2				@ see what cache we have at this level
++	blt	invskip				@ skip if no cache, or just i-cache
++#ifdef CONFIG_PREEMPT
++	save_and_disable_irqs_notrace r9	@ make cssr&csidr read atomic
++#endif
++	mcr	p15, 2, r10, c0, c0, 0		@ select current cache level in cssr
++	isb					@ isb to sych the new cssr&csidr
++	mrc	p15, 1, r1, c0, c0, 0		@ read the new csidr
++#ifdef CONFIG_PREEMPT
++	restore_irqs_notrace r9
++#endif
++	and	r2, r1, #7			@ extract the length of the cache lines
++	add	r2, r2, #4			@ add 4 (line length offset)
++	ldr	r4, =0x3ff
++	ands	r4, r4, r1, lsr #3		@ find maximum number on the way size
++	clz	r5, r4				@ find bit position of way size increment
++	ldr	r7, =0x7fff
++	ands	r7, r7, r1, lsr #13		@ extract max number of the index size
++invloop2:
++	mov	r9, r4				@ create working copy of max way size
++invloop3:
++ ARM(	orr	r11, r10, r9, lsl r5	)	@ factor way and cache number into r11
++ THUMB(	lsl	r6, r9, r5		)
++ THUMB(	orr	r11, r10, r6		)	@ factor way and cache number into r11
++ ARM(	orr	r11, r11, r7, lsl r2	)	@ factor index number into r11
++ THUMB(	lsl	r6, r7, r2		)
++ THUMB(	orr	r11, r11, r6		)	@ factor index number into r11
++	mcr	p15, 0, r11, c7, c6, 2		@ invalidate by set/way
++	subs	r9, r9, #1			@ decrement the way
++	bge	invloop3
++	subs	r7, r7, #1			@ decrement the index
++	bge	invloop2
++invskip:
++	add	r10, r10, #2			@ increment cache number
++	cmp	r3, r10
++	bgt	invloop1
++invfinished:
++	mov	r10, #0				@ swith back to cache level 0
++	mcr	p15, 2, r10, c0, c0, 0		@ select current cache level in cssr
++	dsb
++	isb
++	mov	pc, lr
++ENDPROC(v7_invalidate_dcache_all)
++
++/*
+  *	v7_flush_dcache_all()
+  *
+  *	Flush the whole D-cache.
+diff --git a/arch/arm/mm/proc-sheeva_pj4bv7.S b/arch/arm/mm/proc-sheeva_pj4bv7.S
+index e98a765..68b822d 100644
+--- a/arch/arm/mm/proc-sheeva_pj4bv7.S
++++ b/arch/arm/mm/proc-sheeva_pj4bv7.S
+@@ -472,7 +472,7 @@ __pj4bv7_setup:
+ #endif /* CONFIG_CPU_SHEEVA_PJ4B_PMC_ACCESS_IN_USERMODE */
+ adr	r12, __pj4bv7_setup_stack		@ the local stack
+ 	stmia	r12, {r0-r5, r7, r9, r11, lr}
+-	bl	v7_flush_dcache_all
++	bl	v7_invalidate_dcache_all
+ 	ldmia	r12, {r0-r5, r7, r9, r11, lr}
+ 
+ 	mrc	p15, 0, r0, c0, c0, 0		@ read main ID register
+@@ -546,9 +546,7 @@ adr	r12, __pj4bv7_setup_stack		@ the local stack
+ #endif
+ 
+ 3:	mov	r10, #0
+-#ifdef HARVARD_CACHE
+ 	mcr	p15, 0, r10, c7, c5, 0		@ I+BTB cache invalidate
+-#endif
+ 	dsb
+ #ifdef CONFIG_MMU
+ 	mcr	p15, 0, r10, c8, c7, 0		@ invalidate I + D TLBs
+diff --git a/arch/arm/mm/proc-sheeva_pj4bv7lpae.S b/arch/arm/mm/proc-sheeva_pj4bv7lpae.S
+index d21b06e..c760d0c 100644
+--- a/arch/arm/mm/proc-sheeva_pj4bv7lpae.S
++++ b/arch/arm/mm/proc-sheeva_pj4bv7lpae.S
+@@ -332,7 +332,7 @@ __pj4bv7_setup:
+ __v7_setup:
+ 	adr	r12, __pj4bv7_setup_stack	@ the local stack
+ 	stmia	r12, {r0-r5, r7, r9, r11, lr}
+-	bl	v7_flush_dcache_all
++	bl	v7_invalidate_dcache_all
+ 	ldmia	r12, {r0-r5, r7, r9, r11, lr}
+ 
+ 	mov	r10, #0
+-- 
+1.7.9.5
+

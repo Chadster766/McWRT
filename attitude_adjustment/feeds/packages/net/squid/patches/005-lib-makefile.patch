@@ -1,0 +1,179 @@
+--- a/lib/Makefile.in
++++ b/lib/Makefile.in
+@@ -60,8 +60,10 @@ am__libmiscutil_a_SOURCES_DIST = Array.c
+ 	rfc1123.c rfc1738.c rfc2617.c safe_inet_addr.c snprintf.c \
+ 	splay.c Stack.c strsep.c stub_memaccount.c util.c uudecode.c \
+ 	win32lib.c
++@NEED_OWN_MD5_TRUE@am__host_objects_1 = md5.$(HOST_OBJEXT)
+ @NEED_OWN_SNPRINTF_TRUE@am__objects_1 = snprintf.$(OBJEXT)
+ @NEED_OWN_STRSEP_TRUE@am__objects_2 = strsep.$(OBJEXT)
++@NEED_OWN_SNPRINTF_TRUE@am__host_objects_2 = snprintf.$(HOST_OBJEXT)
+ @ENABLE_MINGW32SPECIFIC_TRUE@am__objects_3 = win32lib.$(OBJEXT)
+ am_libmiscutil_a_OBJECTS = Array.$(OBJEXT) base64.$(OBJEXT) \
+ 	getfullhostname.$(OBJEXT) hash.$(OBJEXT) heap.$(OBJEXT) \
+@@ -71,7 +73,19 @@ am_libmiscutil_a_OBJECTS = Array.$(OBJEX
+ 	$(am__objects_1) splay.$(OBJEXT) Stack.$(OBJEXT) \
+ 	$(am__objects_2) stub_memaccount.$(OBJEXT) util.$(OBJEXT) \
+ 	uudecode.$(OBJEXT) $(am__objects_3)
++am_libmiscutil_a_HOST_OBJECTS = Array.$(HOST_OBJEXT) \
++	base64.$(HOST_OBJEXT) getfullhostname.$(HOST_OBJEXT) \
++	hash.$(HOST_OBJEXT) heap.$(HOST_OBJEXT) \
++	html_quote.$(HOST_OBJEXT) iso3307.$(HOST_OBJEXT) \
++	$(am__host_objects_1) radix.$(HOST_OBJEXT) \
++	rfc1035.$(HOST_OBJEXT) rfc1123.$(HOST_OBJEXT) \
++	rfc1738.$(HOST_OBJEXT) rfc2617.$(HOST_OBJEXT) \
++	safe_inet_addr.$(HOST_OBJEXT) $(am__host_objects_2) \
++	splay.$(HOST_OBJEXT) Stack.$(HOST_OBJEXT) \
++	stub_memaccount.$(HOST_OBJEXT) util.$(HOST_OBJEXT) \
++	uudecode.$(HOST_OBJEXT)
+ libmiscutil_a_OBJECTS = $(am_libmiscutil_a_OBJECTS)
++libmiscutil_a_HOST_OBJECTS = $(am_libmiscutil_a_HOST_OBJECTS)
+ libntlmauth_a_AR = $(AR) $(ARFLAGS)
+ libntlmauth_a_DEPENDENCIES = @LIBOBJS@
+ am_libntlmauth_a_OBJECTS = ntlmauth.$(OBJEXT)
+@@ -89,15 +103,19 @@ depcomp = $(SHELL) $(top_srcdir)/cfgaux/
+ am__depfiles_maybe = depfiles
+ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
+ 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
++HOST_COMPILE = $(HOST_CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
++	$(AM_CFLAGS)
+ CCLD = $(CC)
++HOST_CCLD = ld
+ LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+-SOURCES = $(libdlmalloc_a_SOURCES) $(libmiscutil_a_SOURCES) \
++HOST_LINK = $(HOST_CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
++SOURCES = $(libdlmalloc_a_SOURCES) $(libmiscutil_a_SOURCES) $(libmiscutil_a_HOST_SOURCES) \
+ 	$(EXTRA_libmiscutil_a_SOURCES) $(libntlmauth_a_SOURCES) \
+ 	$(libregex_a_SOURCES) $(libsspwin32_a_SOURCES)
+ DIST_SOURCES = $(libdlmalloc_a_SOURCES) \
+ 	$(am__libmiscutil_a_SOURCES_DIST) \
+ 	$(EXTRA_libmiscutil_a_SOURCES) $(libntlmauth_a_SOURCES) \
+-	$(libregex_a_SOURCES) $(libsspwin32_a_SOURCES)
++	$(libregex_a_SOURCES) $(libsspwin32_a_SOURCES) $(libmiscutil_a_HOST_SOURCES)
+ ETAGS = etags
+ CTAGS = ctags
+ DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
+@@ -105,6 +123,7 @@ ACLOCAL = @ACLOCAL@
+ ALLOCA = @ALLOCA@
+ AMTAR = @AMTAR@
+ AR = @AR@
++HOST_AR = ar
+ AR_R = @AR_R@
+ AUTH_LIBS = @AUTH_LIBS@
+ AUTH_MODULES = @AUTH_MODULES@
+@@ -117,6 +136,7 @@ BASIC_AUTH_HELPERS = @BASIC_AUTH_HELPERS
+ CACHE_HTTP_PORT = @CACHE_HTTP_PORT@
+ CACHE_ICP_PORT = @CACHE_ICP_PORT@
+ CC = @CC@
++HOST_CC = gcc
+ CCDEPMODE = @CCDEPMODE@
+ CFLAGS = @CFLAGS@
+ CGIEXT = @CGIEXT@
+@@ -164,6 +184,8 @@ NEGOTIATE_AUTH_HELPERS = @NEGOTIATE_AUTH
+ NIS_LIBS = @NIS_LIBS@
+ NTLM_AUTH_HELPERS = @NTLM_AUTH_HELPERS@
+ OBJEXT = @OBJEXT@
++HOST_OBJEXT = @OBJEXT@.$(shell uname -m)
++HOST_DEPEXT = .$(shell uname -m)
+ OPT_DEFAULT_HOSTS = @OPT_DEFAULT_HOSTS@
+ PACKAGE = @PACKAGE@
+ PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
+@@ -261,6 +283,7 @@ EXTRA_LIBRARIES = \
+ noinst_LIBRARIES = \
+ 	@LIBDLMALLOC@ \
+ 	libmiscutil.a \
++	libmiscutil$(shell uname -m).a \
+ 	libntlmauth.a \
+ 	@LIBREGEX@ \
+ 	$(LIBSSPWIN32)
+@@ -300,9 +323,34 @@ libmiscutil_a_SOURCES = \
+ 	uudecode.c \
+ 	$(WIN32SRC)
+ 
++libmiscutil_a_HOST_SOURCES = \
++        Array.c \
++        base64.c \
++        getfullhostname.c \
++        hash.c \
++        heap.c \
++        html_quote.c \
++        iso3307.c \
++        $(MD5SOURCE) \
++        radix.c \
++        rfc1035.c \
++        rfc1123.c \
++        rfc1738.c \
++        rfc2617.c \
++        safe_inet_addr.c \
++        $(SNPRINTFSOURCE) \
++        splay.c \
++        Stack.c \
++        stub_memaccount.c \
++        util.c \
++        uudecode.c
++
+ libmiscutil_a_LIBADD = \
+ 	@LIBOBJS@
+ 
++libmiscutil_a_HOST_LIBADD = \
++	@LIBOBJS@
++
+ # $(top_srcdir)/include/version.h should be a dependency
+ libregex_a_SOURCES = \
+ 	GNUregex.c
+@@ -323,7 +371,7 @@ INCLUDES = -I$(top_builddir)/include -I$
+ all: all-am
+ 
+ .SUFFIXES:
+-.SUFFIXES: .c .o .obj
++.SUFFIXES: .c .o .obj .o.$(shell uname -m)
+ $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__configure_deps)
+ 	@for dep in $?; do \
+ 	  case '$(am__configure_deps)' in \
+@@ -360,10 +408,13 @@ libdlmalloc.a: $(libdlmalloc_a_OBJECTS)
+ 	-rm -f libdlmalloc.a
+ 	$(libdlmalloc_a_AR) libdlmalloc.a $(libdlmalloc_a_OBJECTS) $(libdlmalloc_a_LIBADD)
+ 	$(RANLIB) libdlmalloc.a
+-libmiscutil.a: $(libmiscutil_a_OBJECTS) $(libmiscutil_a_DEPENDENCIES) 
++libmiscutil.a: $(libmiscutil_a_OBJECTS) $(libmiscutil_a_HOST_OBJECTS) $(libmiscutil_a_DEPENDENCIES) 
+ 	-rm -f libmiscutil.a
++	-rm -f libmiscutil$(shell uname -m).a
+ 	$(libmiscutil_a_AR) libmiscutil.a $(libmiscutil_a_OBJECTS) $(libmiscutil_a_LIBADD)
++	ar rcu libmiscutil$(shell uname -m).a $(libmiscutil_a_HOST_OBJECTS) $(libmiscutil_a_HOST_LIBADD)
+ 	$(RANLIB) libmiscutil.a
++	ranlib libmiscutil$(shell uname -m).a
+ libntlmauth.a: $(libntlmauth_a_OBJECTS) $(libntlmauth_a_DEPENDENCIES) 
+ 	-rm -f libntlmauth.a
+ 	$(libntlmauth_a_AR) libntlmauth.a $(libntlmauth_a_OBJECTS) $(libntlmauth_a_LIBADD)
+@@ -417,6 +468,21 @@ distclean-compile:
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/util.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/uudecode.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/win32lib.Po@am__quote@
++@AMDEP_TRUE@DEP_HOST_FILES = $(DEPDIR)/Array.Po.$(HOST_DEPEXT) $(DEPDIR)/GNUregex.Po.$(HOST_DEPEXT) \
++@AMDEP_TRUE@    $(DEPDIR)/Stack.Po.$(HOST_DEPEXT) $(DEPDIR)/base64.Po.$(HOST_DEPEXT) \
++@AMDEP_TRUE@    $(DEPDIR)/dlmalloc.Po.$(HOST_DEPEXT) $(DEPDIR)/drand48.Po.$(HOST_DEPEXT) \
++@AMDEP_TRUE@    $(DEPDIR)/getfullhostname.Po.$(HOST_DEPEXT) $(DEPDIR)/hash.Po.$(HOST_DEPEXT) \
++@AMDEP_TRUE@    $(DEPDIR)/heap.Po.$(HOST_DEPEXT) $(DEPDIR)/html_quote.Po.$(HOST_DEPEXT) \
++@AMDEP_TRUE@    $(DEPDIR)/inet_ntoa.Po.$(HOST_DEPEXT) $(DEPDIR)/initgroups.Po.$(HOST_DEPEXT) \
++@AMDEP_TRUE@    $(DEPDIR)/iso3307.Po.$(HOST_DEPEXT) $(DEPDIR)/md5.Po.$(HOST_DEPEXT) \
++@AMDEP_TRUE@    $(DEPDIR)/ntlmauth.Po.$(HOST_DEPEXT) $(DEPDIR)/radix.Po.$(HOST_DEPEXT) \
++@AMDEP_TRUE@    $(DEPDIR)/rfc1035.Po.$(HOST_DEPEXT) $(DEPDIR)/rfc1123.Po.$(HOST_DEPEXT) \
++@AMDEP_TRUE@    $(DEPDIR)/rfc1738.Po.$(HOST_DEPEXT) $(DEPDIR)/rfc2617.Po.$(HOST_DEPEXT) \
++@AMDEP_TRUE@    $(DEPDIR)/safe_inet_addr.Po.$(HOST_DEPEXT) $(DEPDIR)/snprintf.Po.$(HOST_DEPEXT) \
++@AMDEP_TRUE@    $(DEPDIR)/splay.Po.$(HOST_DEPEXT) $(DEPDIR)/strerror.Po.$(HOST_DEPEXT) \
++@AMDEP_TRUE@    $(DEPDIR)/stub_memaccount.Po.$(HOST_DEPEXT) $(DEPDIR)/tempnam.Po.$(HOST_DEPEXT) \
++@AMDEP_TRUE@    $(DEPDIR)/util.Po.$(HOST_DEPEXT) $(DEPDIR)/uudecode.Po.$(HOST_DEPEXT)
++
+ 
+ .c.o:
+ @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
+@@ -425,6 +491,9 @@ distclean-compile:
+ @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+ @am__fastdepCC_FALSE@	$(COMPILE) -c $<
+ 
++.c.o.$(shell uname -m):
++	$(HOST_COMPILE) -o $(shell basename $< .c).o.$(shell uname -m) -c $<
++
+ .c.obj:
+ @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `$(CYGPATH_W) '$<'`
+ @am__fastdepCC_TRUE@	mv -f $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po

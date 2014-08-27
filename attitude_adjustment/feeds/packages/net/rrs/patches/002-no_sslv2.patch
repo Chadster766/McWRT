@@ -1,0 +1,46 @@
+Index: rrs-1.70/rrs.c
+===================================================================
+--- rrs-1.70.orig/rrs.c	2007-07-30 14:30:24.000000000 +0200
++++ rrs-1.70/rrs.c	2007-07-30 14:30:25.000000000 +0200
+@@ -1826,9 +1826,12 @@
+                 }
+                 rrs_ssl = TLSv1;
+                 if (optarg) {
++#ifndef OPENSSL_NO_SSL2		    
+                     if (!strcasecmp(optarg, "SSLv2")) {
+                         rrs_ssl = SSLv2;
+-                    } else if (!strcasecmp(optarg, "SSLv3")) {
++                    } else
++#endif
++		    if (!strcasecmp(optarg, "SSLv3")) {
+                         rrs_ssl = SSLv3;
+                     } else if (!strcasecmp(optarg, "TLSv1")) {
+                         rrs_ssl = TLSv1;
+@@ -1981,9 +1984,12 @@
+         SSL_load_error_strings();
+ 
+         if (rrs_listen) {
++#ifndef OPENSSL_NO_SSL2
+             if (rrs_ssl == SSLv2) {
+                 sslmethod = SSLv2_server_method();
+-            } else if (rrs_ssl == SSLv3) {
++            } else
++#endif
++	    if (rrs_ssl == SSLv3) {
+                 sslmethod = SSLv3_server_method();
+             } else if (rrs_ssl == TLSv1) {
+                 sslmethod = TLSv1_server_method();
+@@ -1992,9 +1998,12 @@
+                 return err_generic;
+             }
+         } else {
++#ifndef OPENSSL_NO_SSL2
+             if (rrs_ssl == SSLv2) {
+                 sslmethod = SSLv2_client_method();
+-            } else if (rrs_ssl == SSLv3) {
++            } else
++#endif
++	    if (rrs_ssl == SSLv3) {
+                 sslmethod = SSLv3_client_method();
+             } else if (rrs_ssl == TLSv1) {
+                 sslmethod = TLSv1_client_method();

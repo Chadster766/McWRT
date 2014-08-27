@@ -1,0 +1,29 @@
+--- a/configure.in	2012-06-21 21:32:23.707912790 +0000
++++ b/configure.in	2012-06-21 21:33:36.213554564 +0000
+@@ -806,25 +806,8 @@
+ 
+ dnl Check for %qu format (FreeBSD 4.x)
+ dnl FreeBSD 4.x does not support %llu
+-AC_MSG_CHECKING(for long long format)
+-AC_TRY_RUN(
+-[
+-#include <sys/types.h>
+-int main()
+-{
+-        uint64_t i;
+-
+-        sscanf("200000000010020", "%qu", &i);
+-
+-        if (i == 200000000010020) return 0;
+-        else return -1;
+-}
+-],
+-AC_DEFINE(HAVE_LONG_LONG_QU, 1 ,[Define to 1 if format '%qu' exists.])
+-AC_MSG_RESULT(yes),
+-AC_MSG_RESULT(no))
+-
+ dnl option -rdynamic is needed for readable backtraces
++
+ AC_MSG_CHECKING(for -rdynamic linking option)
+ saved_LDFLAGS="$LDFLAGS"
+ LDFLAGS="-rdynamic $LDFLAGS"

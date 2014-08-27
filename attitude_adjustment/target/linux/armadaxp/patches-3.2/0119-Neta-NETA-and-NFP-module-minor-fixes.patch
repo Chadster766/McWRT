@@ -1,0 +1,263 @@
+From f3dab587520c164e33e0f89ee143f89f3596eb6b Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Sun, 15 Jul 2012 17:50:36 +0300
+Subject: [PATCH 119/609] Neta: NETA and NFP module minor fixes
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/export.c                    |    5 +-
+ arch/arm/plat-armada/common/mvList.c               |    1 -
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |   53 +++++++++++---------
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h     |   25 +++++----
+ arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h   |    6 ++-
+ 5 files changed, 49 insertions(+), 41 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/export.c b/arch/arm/mach-armadaxp/export.c
+index 82cad4f..95e9bf0 100644
+--- a/arch/arm/mach-armadaxp/export.c
++++ b/arch/arm/mach-armadaxp/export.c
+@@ -25,8 +25,6 @@
+ #include "cntmr/mvCntmr.h"
+ #include "ctrlEnv/mvCtrlEnvLib.h"
+ #include "mvOs.h"
+-#include "mvList.h"
+-#include "bm/mvBm.h"
+ 
+ 
+ /*************************************************************************************************************
+@@ -208,7 +206,10 @@ EXPORT_SYMBOL(TRC_RELEASE);
+ 
+ #ifdef CONFIG_MV_ETH_NFP_MODULE
+ #ifdef CONFIG_MV_ETH_BM
++#include "bm/mvBm.h"
+ EXPORT_SYMBOL(mvBmVirtBase);
+ #endif
++#include "mvList.h"
+ EXPORT_SYMBOL(mvListCreate);
++EXPORT_SYMBOL(mvListDestroy);
+ #endif
+diff --git a/arch/arm/plat-armada/common/mvList.c b/arch/arm/plat-armada/common/mvList.c
+index 965d23f..5d7928f 100644
+--- a/arch/arm/plat-armada/common/mvList.c
++++ b/arch/arm/plat-armada/common/mvList.c
+@@ -68,7 +68,6 @@ MV_STATUS mvListDestroy(MV_LIST_ELEMENT *head)
+ 
+ 	return MV_OK;
+ }
+-EXPORT_SYMBOL(mvListDestroy);
+ 
+ /* Count the number of elements in the list (not including the head) */
+ MV_LONG mvListElementsCount(MV_LIST_ELEMENT *head)
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index cdd4cba..789cd98 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -60,8 +60,6 @@ disclaimer.
+ 
+ #include "cpu/mvCpuCntrs.h"
+ 
+-struct nfpHookMgr *nfpHookMgr;
+-EXPORT_SYMBOL(nfpHookMgr);
+ 
+ #ifdef CONFIG_MV_CPU_PERF_CNTRS
+ MV_CPU_CNTRS_EVENT	*event0 = NULL;
+@@ -168,7 +166,8 @@ int mv_eth_cmdline_port3_config(char *s);
+ __setup("mv_port3_config=", mv_eth_cmdline_port3_config);
+ 
+ #if defined(CONFIG_MV_ETH_NFP) || defined(CONFIG_MV_ETH_NFP_MODULE)
+-int register_nfp_hook_mgr(mv_eth_nfp_func_t *func)
++struct nfpHookMgr *nfpHookMgr = NULL;
++int nfp_hook_mgr_register(mv_eth_nfp_func_t *func)
+ {
+ 	nfpHookMgr = kmalloc(sizeof(struct nfpHookMgr *), GFP_ATOMIC);
+ 	if (nfpHookMgr == NULL) {
+@@ -178,8 +177,15 @@ int register_nfp_hook_mgr(mv_eth_nfp_func_t *func)
+ 	nfpHookMgr->mv_eth_nfp = func;
+ 	return 0;
+ }
+-EXPORT_SYMBOL(register_nfp_hook_mgr);
+-#endif
++EXPORT_SYMBOL(nfp_hook_mgr_register);
++
++void nfp_hook_mgr_unregister(void)
++{
++	kfree(nfpHookMgr);
++	nfpHookMgr = NULL;
++}
++EXPORT_SYMBOL(nfp_hook_mgr_unregister);
++#endif /* CONFIG_MV_ETH_NFP || CONFIG_MV_ETH_NFP_MODULE */
+ 
+ int mv_eth_cmdline_port0_config(char *s)
+ {
+@@ -1485,7 +1491,7 @@ static inline int mv_eth_rx(struct eth_port *pp, int rx_todo, int rxq)
+ 			}
+ 			/* MV_TERMINATE - packet returned to slow path */
+ 		}
+-#endif /* CONFIG_MV_ETH_NFP */
++#endif /* CONFIG_MV_ETH_NFP || CONFIG_MV_ETH_NFP_MODULE */
+ 
+ 		/* Linux processing */
+ 		skb = (struct sk_buff *)(pkt->osInfo);
+@@ -1707,7 +1713,7 @@ out:
+ 		if (txq_ctrl->txq_count >= mv_ctrl_txdone) {
+ 			STAT_DIST(u32 tx_done = )mv_eth_txq_done(pp, txq_ctrl);
+ 
+-			STAT_DIST((tx_done < pp->dist_stats.tx_done_dist_size) ? pp->dist_stats.tx_done_dist[tx_done]++;);
++			STAT_DIST((tx_done < pp->dist_stats.tx_done_dist_size) ? pp->dist_stats.tx_done_dist[tx_done]++ : 0);
+ 
+ 		}
+ 		/* If after calling mv_eth_txq_done, txq_ctrl->txq_count equals frags, we need to set the timer */
+@@ -2073,7 +2079,7 @@ inline u32 mv_eth_tx_done_pon(struct eth_port *pp, int *tx_todo)
+ 		}
+ 	}
+ 
+-	STAT_DIST((tx_done < pp->dist_stats.tx_done_dist_size) ? pp->dist_stats.tx_done_dist[tx_done]++;);
++	STAT_DIST((tx_done < pp->dist_stats.tx_done_dist_size) ? pp->dist_stats.tx_done_dist[tx_done]++ : 0);
+ 
+ 	return tx_done;
+ }
+@@ -2109,7 +2115,7 @@ inline u32 mv_eth_tx_done_gbe(struct eth_port *pp, u32 cause_tx_done, int *tx_to
+ 		}
+ 	}
+ 
+-	STAT_DIST((tx_done < pp->dist_stats.tx_done_dist_size) ? pp->dist_stats.tx_done_dist[tx_done]++;);
++	STAT_DIST((tx_done < pp->dist_stats.tx_done_dist_size) ? pp->dist_stats.tx_done_dist[tx_done]++ : 0);
+ 
+ 	return tx_done;
+ }
+@@ -2561,7 +2567,7 @@ int mv_eth_poll(struct napi_struct *napi, int budget)
+ 	budget -= rx_done;
+ #endif /* (CONFIG_MV_ETH_RXQ > 1) */
+ 
+-	STAT_DIST((rx_done < pp->dist_stats.rx_dist_size) ? pp->dist_stats.rx_dist[rx_done]++;);
++	STAT_DIST((rx_done < pp->dist_stats.rx_dist_size) ? pp->dist_stats.rx_dist[rx_done]++ : 0);
+ 
+ #ifdef CONFIG_MV_ETH_DEBUG_CODE
+ 	if (pp->flags & MV_ETH_F_DBG_POLL) {
+@@ -2850,7 +2856,7 @@ static int mv_eth_probe(struct platform_device *pdev)
+ 		port_mask = (1 << CONFIG_MV_ETH_PORTS_NUM) - 1;
+ 		cpu_mask = (1 << CONFIG_NR_CPUS) - 1;
+ 	}
+-	printk(KERN_INFO "%s: portMask = %x cpuMask=%x \n", __func__, port_mask, cpu_mask);
++	printk(KERN_INFO "%s: port_mask=0x%x, cpu_mask=0x%x \n", __func__, port_mask, cpu_mask);
+ 
+ #ifdef ETH_SKB_DEBUG
+ 	memset(mv_eth_skb_debug, 0, sizeof(mv_eth_skb_debug));
+@@ -3056,7 +3062,6 @@ struct net_device *mv_eth_netdev_init(struct eth_port *pp, int mtu, u8 *mac)
+ 	struct net_device *dev;
+ 	struct eth_dev_priv *dev_priv;
+ 
+-
+ 	dev = alloc_etherdev_mq(sizeof(struct eth_dev_priv), CONFIG_MV_ETH_TXQ);
+ 	if (!dev)
+ 		return NULL;
+@@ -4246,13 +4251,13 @@ void mv_eth_mac_show(int port)
+ void mv_eth_vlan_prio_show(int port)
+ {
+ #ifdef CONFIG_MV_ETH_PNC
+-        if (mv_eth_pnc_ctrl_en) {
+-                mvOsPrintf("PnC VLAN Priority Rules - port #%d:\n", port);
+-                pnc_vlan_prio_show(port);
+-        } else
+-                mvOsPrintf("%s: PNC control is disabled\n", __func__);
++	if (mv_eth_pnc_ctrl_en) {
++		mvOsPrintf("PnC VLAN Priority Rules - port #%d:\n", port);
++		pnc_vlan_prio_show(port);
++	} else
++		mvOsPrintf("%s: PNC control is disabled\n", __func__);
+ #else /* Legacy parser */
+-        mvEthVlanPriorityShow(port);
++	mvEthVlanPriorityShow(port);
+ #endif /* CONFIG_MV_ETH_PNC */
+ }
+ 
+@@ -4328,12 +4333,12 @@ int mv_eth_rxq_vlan_prio_set(int port, int rxq, unsigned char prio)
+ 	status = mvNetaVprioToRxqSet(port, prio, rxq);
+ #endif /* CONFIG_MV_ETH_PNC */
+ 
+-        if (status == 0)
+-                printk(KERN_ERR "Succeeded\n");
+-        else if (status == -1)
+-                printk(KERN_ERR "Not supported\n");
+-        else
+-                printk(KERN_ERR "Failed\n");
++	if (status == 0)
++		printk(KERN_ERR "Succeeded\n");
++	else if (status == -1)
++		printk(KERN_ERR "Not supported\n");
++	else
++		printk(KERN_ERR "Failed\n");
+ 
+ 	return status;
+ }
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+index d50a62b..bc4e958 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+@@ -622,11 +622,19 @@ int         mv_eth_set_mac_addr(struct net_device *dev, void *mac);
+ void        mv_eth_set_multicast_list(struct net_device *dev);
+ int         mv_eth_open(struct net_device *dev);
+ 
+-#ifdef CONFIG_MV_ETH_NFP
+-int         mv_eth_ctrl_nfp(struct net_device *dev, int en);
+-MV_STATUS	mv_eth_nfp(struct eth_port *pp, int rxq, struct neta_rx_desc *rx_desc,
++#if defined(CONFIG_MV_ETH_NFP) || defined(CONFIG_MV_ETH_NFP_MODULE)
++struct nfpHookMgr {
++	MV_STATUS (*mv_eth_nfp)(struct eth_port *pp, int rxq, struct neta_rx_desc *rx_desc,
++					struct eth_pbuf *pkt, struct bm_pool *pool);
++};
++typedef MV_STATUS mv_eth_nfp_func_t(struct eth_port *pp, int rxq, struct neta_rx_desc *rx_desc,
+ 					struct eth_pbuf *pkt, struct bm_pool *pool);
+-#endif /* CONFIG_MV_ETH_NFP */
++int         nfp_hook_mgr_register(mv_eth_nfp_func_t *func);
++void        nfp_hook_mgr_unregister(void);
++int         mv_eth_ctrl_nfp(struct net_device *dev, int en);
++MV_STATUS   mv_eth_nfp(struct eth_port *pp, int rxq, struct neta_rx_desc *rx_desc,
++			struct eth_pbuf *pkt, struct bm_pool *pool);
++#endif /* CONFIG_MV_ETH_NFP || CONFIG_MV_ETH_NFP_MODULE */
+ 
+ irqreturn_t mv_eth_isr(int irq, void *dev_id);
+ int         mv_eth_start_internals(struct eth_port *pp, int mtu);
+@@ -730,15 +738,6 @@ MV_STATUS mv_eth_hwf_bm_create(int port, int mtuPktSize);
+ void      mv_hwf_bm_dump(void);
+ #endif /* CONFIG_MV_ETH_HWF && !CONFIG_MV_ETH_BM_CPU */
+ 
+-struct nfpHookMgr {
+-	MV_STATUS (*mv_eth_nfp)(struct eth_port *pp, int rxq, struct neta_rx_desc *rx_desc,
+-											    struct eth_pbuf *pkt, struct bm_pool *pool);
+-};
+-typedef MV_STATUS mv_eth_nfp_func_t(struct eth_port *pp, int rxq, struct neta_rx_desc *rx_desc,
+-																		struct eth_pbuf *pkt, struct bm_pool *pool);
+-int register_nfp_hook_mgr(mv_eth_nfp_func_t *func);
+-
+-extern struct nfpHookMgr *nfpHookMgr;
+ 
+ 
+ #endif /* __mv_netdev_h__ */
+diff --git a/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
+index 2fa76fa..a467f0d 100644
+--- a/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
++++ b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
+@@ -79,6 +79,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #include "gbe/mvNetaRegs.h"
+ #include "gbe/mvNeta.h"
+ 
++#ifdef CONFIG_MV_ETH_NFP_MODULE
++#define CONFIG_MV_ETH_NFP
++#endif
++
+ #ifdef CONFIG_MV_ETH_NFP
+ 
+ #define ETH_NFP
+@@ -92,7 +96,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+ #define NFP_MAX_PORTS   (MV_ETH_MAX_PORTS + NFP_EXT_NUM)
+ 
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN) || defined(CONFIG_MV_ETH_NFP_VLAN_LEARN) || defined(CONFIG_MV_ETH_NFP_FDB_LEARN)||\
++#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN) || defined(CONFIG_MV_ETH_NFP_VLAN_LEARN) || defined(CONFIG_MV_ETH_NFP_FDB_LEARN) || \
+ 		defined(CONFIG_MV_ETH_NFP_PPP_LEARN) || defined(CONFIG_MV_ETH_NFP_CT_LEARN)
+ #define NFP_LEARN
+ #endif
+-- 
+1.7.9.5
+

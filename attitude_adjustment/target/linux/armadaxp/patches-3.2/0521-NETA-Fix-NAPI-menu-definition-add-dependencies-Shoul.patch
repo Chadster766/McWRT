@@ -1,0 +1,62 @@
+From 8bdcaa3699169f8892be4fd41d492752ebf55b73 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Wed, 13 Feb 2013 15:36:36 -0500
+Subject: [PATCH 521/609] NETA: Fix NAPI menu definition - add dependencies
+ Should be applied for all stable versions
+
+Change-Id: Ibb40f556b4ba42799735c6ddd4e4bc1c7e3907af
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1134
+Reviewed-by: Tawfik Bayouk <tawfik@marvell.com>
+Tested-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig |    5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
+index 5d90b81..10d8592 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
+@@ -702,6 +702,7 @@ menuconfig MV_ETH_NAPI
+ 
+ config  MV_ETH_NAPI_GROUPS
+         int "Number of NAPI instances can be used per port"
++	depends on MV_ETH_NAPI
+ 	range 1 NR_CPUS if SMP
+ 	range 1 1 if !SMP
+         default 1
+@@ -709,6 +710,7 @@ config  MV_ETH_NAPI_GROUPS
+ 	Different RXQs and TXQs can be processed by different CPU using different NAPI instances
+ 
+ menu "NAPI group #0 configuration"
++	depends on MV_ETH_NAPI
+ 
+ config MV_ETH_GROUP0_CPU
+ 	hex "CPU affinity for group0"
+@@ -725,6 +727,7 @@ config MV_ETH_GROUP0_RXQ
+ endmenu
+ 
+ menu "NAPI group #1 configuration"
++        depends on MV_ETH_NAPI
+ 	depends on (MV_ETH_NAPI_GROUPS != 1)
+ 
+ config MV_ETH_GROUP1_CPU
+@@ -742,6 +745,7 @@ config MV_ETH_GROUP1_RXQ
+ endmenu
+ 
+ menu "NAPI group #2 configuration"
++	depends on MV_ETH_NAPI
+ 	depends on (MV_ETH_NAPI_GROUPS != 1) && (MV_ETH_NAPI_GROUPS != 2)
+ 
+ config MV_ETH_GROUP2_CPU
+@@ -759,6 +763,7 @@ config MV_ETH_GROUP2_RXQ
+ endmenu
+ 
+ menu "NAPI group #3 configuration"
++	depends on MV_ETH_NAPI
+ 	depends on (MV_ETH_NAPI_GROUPS != 1) && (MV_ETH_NAPI_GROUPS != 2) && (MV_ETH_NAPI_GROUPS != 3)
+ 
+ config MV_ETH_GROUP3_CPU
+-- 
+1.7.9.5
+

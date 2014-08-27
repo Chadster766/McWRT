@@ -1,0 +1,48 @@
+--- a/src/wput.c
++++ b/src/wput.c
+@@ -621,8 +621,8 @@ void commandlineoptions(int argc, char *
+ 		{"output-file", 1, 0, 'o'},     
+ 		{"port-mode", 0, 0, 'p'},       
+ 		{"proxy", 1, 0, 'Y'},           
+-		{"proxy-user", 1, 0, 0},
+-		{"proxy-pass", 1, 0, 0},         //20
++		{"proxy_user", 1, 0, 0},
++		{"proxy_pass", 1, 0, 0},         //20
+ 		{"quiet", 0, 0, 'q'},           
+ 		{"random-wait", 0, 0, 0},       
+ 		{"remove-source-files", 0, 0, 'R'},
+@@ -642,7 +642,9 @@ void commandlineoptions(int argc, char *
+ 		{"waitretry", 1, 0, 0},         
+ 		{"chmod", 1, 0, 'm'},
+ 		{"disable-tls", 0, 0, 0},
+-		{0, 0, 0, 0}                    //40
++		{"proxy_host", 1, 0, 0},         //40
++		{"proxy_port", 1, 0, 0},
++		{0, 0, 0, 0}
+       };
+     while (1)
+     {
+@@ -699,6 +701,10 @@ void commandlineoptions(int argc, char *
+                 opt.retry_interval = atoi(optarg);                  break;
+ 	    case 39: //disable-tls
+ 		    opt.tls = 2;                                    break;
++            case 40: //proxy_host
++                set_option("proxy_host", optarg);                   break;
++            case 41: //proxy_port
++                set_option("proxy_port", optarg);                   break;
+             default:
+                 fprintf(stderr, _("Option %s should not appear here :|\n"), long_options[option_index].name);
+             }
+@@ -806,8 +812,10 @@ void commandlineoptions(int argc, char *
+ "  -l,  --limit-rate=RATE       limit upload rate to RATE\n"
+ "  -nd, --no-directories        do not create any directories\n"
+ "  -Y,  --proxy=http/socks/off  set proxy type or turn off\n"
+-"       --proxy-user=NAME       set the proxy-username to NAME\n"
+-"       --proxy-pass=PASS       set the proxy-password to PASS\n"
++"       --proxy_user=NAME       set the proxy-username to NAME\n"
++"       --proxy_pass=PASS       set the proxy-password to PASS\n"
++"       --proxy_port=PORT       set the proxy port to PORT\n"
++"       --proxy_host=HOST       set the proxy host to HOST\n"
+ "\n"));
+ 			fprintf(stderr, _(
+ "FTP-Options:\n"

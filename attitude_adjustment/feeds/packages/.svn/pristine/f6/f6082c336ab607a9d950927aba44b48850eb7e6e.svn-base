@@ -1,0 +1,15 @@
+Index: mutella-0.4.5/mutella/main.cpp
+===================================================================
+--- mutella-0.4.5.orig/mutella/main.cpp	2007-09-22 05:48:22.000000000 +0200
++++ mutella-0.4.5/mutella/main.cpp	2007-09-22 05:48:22.000000000 +0200
+@@ -45,6 +45,10 @@
+ #define HAVE_BACKTRACE
+ #endif
+ 
++#ifdef __UCLIBC__
++#undef HAVE_BACKTRACE
++#endif
++
+ #ifdef HAVE_BACKTRACE
+ #include <execinfo.h>
+ #endif

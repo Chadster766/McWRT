@@ -1,0 +1,111 @@
+From f09e2b3d144fc23d7e928b72bc3fe0765edab33b Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Mon, 9 Jul 2012 08:59:07 -0400
+Subject: [PATCH 153/609] Fix PPPoE compilation for NFP support
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ drivers/net/ppp/ppp_generic.c |    8 ++++----
+ drivers/net/ppp/pppoe.c       |   24 ++++++++++++------------
+ 2 files changed, 16 insertions(+), 16 deletions(-)
+
+diff --git a/drivers/net/ppp/ppp_generic.c b/drivers/net/ppp/ppp_generic.c
+index e039dc1..9c34cb3 100644
+--- a/drivers/net/ppp/ppp_generic.c
++++ b/drivers/net/ppp/ppp_generic.c
+@@ -55,9 +55,9 @@
+ #include <net/netns/generic.h>
+ 
+ #define PPP_VERSION	"2.4.2"
+-#if defined(CONFIG_MV_ETH_NFP_PPP) && defined(CONFIG_MV_ETH_NFP_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_PPP) && defined(CONFIG_MV_ETH_NFP_PPP_LEARN
+ exte int nfp_hook_ppp_compnete(u32 chan, struct net_device *ppp_dev);
+-#endif /* CONFIG_MV_ETH_NFP_PPP && CONFIG_MV_ETH_NFP_LEARN */
++#endif /* defined(CONFIG_MV_ETH_NFP_PPP) && defined(CONFIG_MV_ETH_NFP_PPP_LEARN */
+ 
+ /*
+  * Network protocols we support.
+@@ -2843,9 +2843,9 @@ ppp_connect_channel(struct channel *pch, int unit)
+ 	atomic_inc(&ppp->file.refcnt);
+ 	ppp_unlock(ppp);
+ 	ret = 0;
+-#if defined(CONFIG_MV_ETH_NFP_PPP) && defined(CONFIG_MV_ETH_NFP_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_PPP) && defined(CONFIG_MV_ETH_NFP_PPP_LEARN
+ 	nfp_hook_ppp_complete((u32)pch->chan, ppp->dev);
+-#endif /* CONFIG_MV_ETH_NFP_PPP && CONFIG_MV_ETH_NFP_LEARN */ 
++#endif /* defined(CONFIG_MV_ETH_NFP_PPP) && defined(CONFIG_MV_ETH_NFP_PPP_LEARN */
+ outl:
+ 	write_unlock_bh(&pch->upl);
+  out:
+diff --git a/drivers/net/ppp/pppoe.c b/drivers/net/ppp/pppoe.c
+index 3b250fb..046bd11 100644
+--- a/drivers/net/ppp/pppoe.c
++++ b/drivers/net/ppp/pppoe.c
+@@ -84,12 +84,12 @@
+ #include <net/sock.h>
+ 
+ #include <asm/uaccess.h>
+-#if defined(CONFIG_MV_ETH_NFP_PPP) && defined(CONFIG_MV_ETH_NFP_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_PPP) && defined(CONFIG_MV_ETH_NFP_PPP_LEARN)
+ extern int nfp_ppp_db_init(void);
+-extern int nfp_ppp_info_del(u32 channel);
++extern int nfp_ppp_del(u32 channel);
+ extern int nfp_hook_ppp_half_set(u16 sid, u32 chan, struct net_device *eth_dev, char *remoteMac);
+ extern int nfp_ppp_db_clear(void);
+-#endif /* CONFIG_MV_ETH_NFP_PPP && CONFIG_MV_ETH_NFP_LEARN */
++#endif /* defined(CONFIG_MV_ETH_NFP_PPP) && defined(CONFIG_MV_ETH_NFP_PPP_LEARN) */
+ 
+ #define PPPOE_HASH_BITS 4
+ #define PPPOE_HASH_SIZE (1 << PPPOE_HASH_BITS)
+@@ -599,9 +599,9 @@ static int pppoe_release(struct socket *sock)
+ 	 * protect "po" from concurrent updates
+ 	 * on pppoe_flush_dev
+ 	 */
+-#if defined(CONFIG_MV_ETH_NFP_PPP) && defined(CONFIG_MV_ETH_NFP_LEARN)
+-	nfp_ppp_info_del((u32)&po->chan);
+-#endif /* CONFIG_MV_ETH_NFP_PPP && CONFIG_MV_ETH_NFP_LEARN */
++#if defined(CONFIG_MV_ETH_NFP_PPP) && defined(CONFIG_MV_ETH_NFP_PPP_LEARN)
++	nfp_ppp_del((u32)&po->chan);
++#endif /* defined(CONFIG_MV_ETH_NFP_PPP) && defined(CONFIG_MV_ETH_NFP_PPP_LEARN) */
+ 	delete_item(pn, po->pppoe_pa.sid, po->pppoe_pa.remote,
+ 		    po->pppoe_ifindex);
+ 
+@@ -702,9 +702,9 @@ static int pppoe_connect(struct socket *sock, struct sockaddr *uservaddr,
+ 		}
+ 
+ 		sk->sk_state = PPPOX_CONNECTED;
+-#if defined(CONFIG_MV_ETH_NFP_PPP) && defined(CONFIG_MV_ETH_NFP_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_PPP) && defined(CONFIG_MV_ETH_NFP_PPP_LEARN)
+ 		nfp_hook_ppp_half_set(sp->sa_addr.pppoe.sid, (u32)&po->chan, dev, po->pppoe_pa.remote);
+-#endif /* CONFIG_MV_ETH_NFP_PPP && CONFIG_MV_ETH_NFP_LEARN */
++#endif /* defined(CONFIG_MV_ETH_NFP_PPP) && defined(CONFIG_MV_ETH_NFP_PPP_LEARN) */
+ 	}
+ 
+ 	po->num = sp->sa_addr.pppoe.sid;
+@@ -1190,9 +1190,9 @@ static int __init pppoe_init(void)
+ 	dev_add_pack(&pppoes_ptype);
+ 	dev_add_pack(&pppoed_ptype);
+ 	register_netdevice_notifier(&pppoe_notifier);
+-#if defined(CONFIG_MV_ETH_NFP_PPP) && defined(CONFIG_MV_ETH_NFP_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_PPP) && defined(CONFIG_MV_ETH_NFP_PPP_LEARN)
+ 	nfp_ppp_db_init();
+-#endif /* CONFIG_MV_ETH_NFP_PPP && CONFIG_MV_ETH_NFP_LEARN */
++#endif /* defined(CONFIG_MV_ETH_NFP_PPP) && defined(CONFIG_MV_ETH_NFP_PPP_LEARN) */
+ 
+ 	return 0;
+ 
+@@ -1206,9 +1206,9 @@ out:
+ 
+ static void __exit pppoe_exit(void)
+ {
+-#if defined(CONFIG_MV_ETH_NFP_PPP) && defined(CONFIG_MV_ETH_NFP_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_PPP) && defined(CONFIG_MV_ETH_NFP_PPP_LEARN)
+ 	nfp_ppp_db_clear();
+-#endif /* CONFIG_MV_ETH_NFP_PPP && CONFIG_MV_ETH_NFP_LEARN */
++#endif /*  defined(CONFIG_MV_ETH_NFP_PPP) && defined(CONFIG_MV_ETH_NFP_PPP_LEARN) */
+ 	unregister_netdevice_notifier(&pppoe_notifier);
+ 	dev_remove_pack(&pppoed_ptype);
+ 	dev_remove_pack(&pppoes_ptype);
+-- 
+1.7.9.5
+

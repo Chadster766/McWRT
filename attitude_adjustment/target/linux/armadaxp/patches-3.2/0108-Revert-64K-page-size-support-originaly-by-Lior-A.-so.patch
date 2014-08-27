@@ -1,0 +1,596 @@
+From 8630359f647ca42ff4bb8150ddc7672ab80b016b Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Tue, 6 Mar 2012 03:53:45 +0200
+Subject: [PATCH 108/609] Revert "64K page size support ( originaly by Lior
+ A.) some kernel changes were needed here"
+
+This reverts commit 80921061f85f14258c42fed3cfb40c9961f1458e.
+
+Conflicts:
+
+	arch/arm/mm/Kconfig
+	arch/arm/mm/proc-sheeva_pj4bv7.S
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/include/asm/elf.h                   |    7 +---
+ arch/arm/include/asm/fixmap.h                |    5 ---
+ arch/arm/include/asm/memory.h                |    4 ---
+ arch/arm/include/asm/page.h                  |    4 ---
+ arch/arm/include/asm/pgtable-2level-hwdef.h  |    8 -----
+ arch/arm/include/asm/pgtable-2level.h        |   17 +++-------
+ arch/arm/include/asm/shmparam.h              |    4 ---
+ arch/arm/kernel/entry-common.S               |    6 ++--
+ arch/arm/lib/copy_page.S                     |    4 ---
+ arch/arm/mm/Kconfig                          |    7 ----
+ arch/arm/mm/cache-v6.S                       |    6 ----
+ arch/arm/mm/cache-v7.S                       |    6 ----
+ arch/arm/mm/fault.c                          |   15 ++------
+ arch/arm/mm/init.c                           |   16 ++-------
+ arch/arm/mm/mm.h                             |    4 ---
+ arch/arm/mm/mmu.c                            |   38 +--------------------
+ arch/arm/mm/proc-macros.S                    |   40 ++--------------------
+ arch/arm/mm/proc-sheeva_pj4bv7.S             |   47 ++------------------------
+ mm/mmap.c                                    |    8 -----
+ 20 files changed, 19 insertions(+), 235 deletions(-)
+
+diff --git a/arch/arm/include/asm/elf.h b/arch/arm/include/asm/elf.h
+index ea80957..0e9ce8d 100644
+--- a/arch/arm/include/asm/elf.h
++++ b/arch/arm/include/asm/elf.h
+@@ -109,12 +109,7 @@ int dump_task_regs(struct task_struct *t, elf_gregset_t *elfregs);
+ #define ELF_CORE_COPY_TASK_REGS dump_task_regs
+ 
+ #define CORE_DUMP_USE_REGSET
+-
+-#ifdef CONFIG_MV_SUPPORT_64KB_PAGE_SIZE
+-#define ELF_EXEC_PAGESIZE       PAGE_SIZE
+-#else
+-#define ELF_EXEC_PAGESIZE       4096
+-#endif
++#define ELF_EXEC_PAGESIZE	4096
+ 
+ /* This is the location that an ET_DYN program is loaded if exec'ed.  Typical
+    use of this is to invoke "./ld.so someprog" to test out a new version of
+diff --git a/arch/arm/include/asm/fixmap.h b/arch/arm/include/asm/fixmap.h
+index dc364ca..bbae919 100644
+--- a/arch/arm/include/asm/fixmap.h
++++ b/arch/arm/include/asm/fixmap.h
+@@ -13,13 +13,8 @@
+  * 0xfffe0000 and 0xfffeffff.
+  */
+ 
+-#if defined(CONFIG_MV_SUPPORT_64KB_PAGE_SIZE) && defined(CONFIG_HIGHMEM)
+-#define FIXADDR_START		0xffc00000UL
+-#define FIXADDR_TOP		0xfff00000UL
+-#else
+ #define FIXADDR_START		0xfff00000UL
+ #define FIXADDR_TOP		0xfffe0000UL
+-#endif
+ #define FIXADDR_SIZE		(FIXADDR_TOP - FIXADDR_START)
+ 
+ #define FIX_KMAP_BEGIN		0
+diff --git a/arch/arm/include/asm/memory.h b/arch/arm/include/asm/memory.h
+index c0185bb..a8997d7 100644
+--- a/arch/arm/include/asm/memory.h
++++ b/arch/arm/include/asm/memory.h
+@@ -80,11 +80,7 @@
+  */
+ #define IOREMAP_MAX_ORDER	24
+ 
+-#if defined(CONFIG_MV_SUPPORT_64KB_PAGE_SIZE) && defined(CONFIG_HIGHMEM)
+-#define CONSISTENT_END         (0xffc00000UL)
+-#else
+ #define CONSISTENT_END		(0xffe00000UL)
+-#endif
+ 
+ #else /* CONFIG_MMU */
+ 
+diff --git a/arch/arm/include/asm/page.h b/arch/arm/include/asm/page.h
+index b522337..ca94653 100644
+--- a/arch/arm/include/asm/page.h
++++ b/arch/arm/include/asm/page.h
+@@ -11,11 +11,7 @@
+ #define _ASMARM_PAGE_H
+ 
+ /* PAGE_SHIFT determines the page size */
+-#ifdef CONFIG_MV_SUPPORT_64KB_PAGE_SIZE
+-#define PAGE_SHIFT		16
+-#else
+ #define PAGE_SHIFT		12
+-#endif
+ #define PAGE_SIZE		(_AC(1,UL) << PAGE_SHIFT)
+ #define PAGE_MASK		(~(PAGE_SIZE-1))
+ 
+diff --git a/arch/arm/include/asm/pgtable-2level-hwdef.h b/arch/arm/include/asm/pgtable-2level-hwdef.h
+index b60a9fc..5cfba15 100644
+--- a/arch/arm/include/asm/pgtable-2level-hwdef.h
++++ b/arch/arm/include/asm/pgtable-2level-hwdef.h
+@@ -65,11 +65,7 @@
+ /*
+  *   - extended small page/tiny page
+  */
+-#ifdef CONFIG_MV_SUPPORT_64KB_PAGE_SIZE
+-#define PTE_EXT_XN		(_AT(pteval_t, 1) << 15)        /* v6 */
+-#else
+ #define PTE_EXT_XN		(_AT(pteval_t, 1) << 0)		/* v6 */
+-#endif
+ #define PTE_EXT_AP_MASK		(_AT(pteval_t, 3) << 4)
+ #define PTE_EXT_AP0		(_AT(pteval_t, 1) << 4)
+ #define PTE_EXT_AP1		(_AT(pteval_t, 2) << 4)
+@@ -77,11 +73,7 @@
+ #define PTE_EXT_AP_UNO_SRW	(PTE_EXT_AP0)
+ #define PTE_EXT_AP_URO_SRW	(PTE_EXT_AP1)
+ #define PTE_EXT_AP_URW_SRW	(PTE_EXT_AP1|PTE_EXT_AP0)
+-#ifdef CONFIG_MV_SUPPORT_64KB_PAGE_SIZE
+-#define PTE_EXT_TEX(x)         (_AT(pteval_t, (x)) << 12)     /* Large Page */
+-#else
+ #define PTE_EXT_TEX(x)		(_AT(pteval_t, (x)) << 6)	/* v5 */
+-#endif
+ #define PTE_EXT_APX		(_AT(pteval_t, 1) << 9)		/* v6 */
+ #define PTE_EXT_COHERENT	(_AT(pteval_t, 1) << 9)		/* XScale3 */
+ #define PTE_EXT_SHARED		(_AT(pteval_t, 1) << 10)	/* v6 */
+diff --git a/arch/arm/include/asm/pgtable-2level.h b/arch/arm/include/asm/pgtable-2level.h
+index 35525ca..470457e 100644
+--- a/arch/arm/include/asm/pgtable-2level.h
++++ b/arch/arm/include/asm/pgtable-2level.h
+@@ -68,22 +68,13 @@
+  * until either the TLB entry is evicted under pressure, or a context
+  * switch which changes the user space mapping occurs.
+  */
+-
+-
+-
+-#ifdef CONFIG_MV_SUPPORT_64KB_PAGE_SIZE
+-#define PTRS_PER_PTE           32      /* (512 / (64K / 4K)) */
+-#define PTE_HWTABLE_PTRS       (512)
+-#else
+-#define PTRS_PER_PTE           512
+-#define PTE_HWTABLE_PTRS       (PTRS_PER_PTE)
+-#endif
+-
++#define PTRS_PER_PTE		512
+ #define PTRS_PER_PMD		1
+ #define PTRS_PER_PGD		2048
+ 
+-#define PTE_HWTABLE_OFF                (512 * sizeof(pte_t))
+-#define PTE_HWTABLE_SIZE       (PTE_HWTABLE_PTRS * sizeof(u32))
++#define PTE_HWTABLE_PTRS	(PTRS_PER_PTE)
++#define PTE_HWTABLE_OFF		(PTE_HWTABLE_PTRS * sizeof(pte_t))
++#define PTE_HWTABLE_SIZE	(PTRS_PER_PTE * sizeof(u32))
+ 
+ /*
+  * PMD_SHIFT determines the size of the area a second-level page table can map
+diff --git a/arch/arm/include/asm/shmparam.h b/arch/arm/include/asm/shmparam.h
+index 8e977b6..a5223b3 100644
+--- a/arch/arm/include/asm/shmparam.h
++++ b/arch/arm/include/asm/shmparam.h
+@@ -6,11 +6,7 @@
+  * or page size, whichever is greater since the cache aliases
+  * every size/ways bytes.
+  */
+-#ifdef CONFIG_MV_SUPPORT_64KB_PAGE_SIZE
+-#define	SHMLBA	(16 << 10)		 /* attach addr a multiple of this */
+-#else
+ #define	SHMLBA	(4 * PAGE_SIZE)		 /* attach addr a multiple of this */
+-#endif
+ 
+ /*
+  * Enforce SHMLBA in shmat
+diff --git a/arch/arm/kernel/entry-common.S b/arch/arm/kernel/entry-common.S
+index 6e928f8..b2a27b6 100644
+--- a/arch/arm/kernel/entry-common.S
++++ b/arch/arm/kernel/entry-common.S
+@@ -582,9 +582,9 @@ ENDPROC(sys_fstatfs64_wrapper)
+  * offset, we return EINVAL.
+  */
+ sys_mmap2:
+-#ifdef CONFIG_MV_SUPPORT_64KB_PAGE_SIZE
+-		tst	r5, #0xF
+-		moveq	r5, r5, lsr #4
++#if PAGE_SHIFT > 12
++		tst	r5, #PGOFF_MASK
++		moveq	r5, r5, lsr #PAGE_SHIFT - 12
+ 		streq	r5, [sp, #4]
+ 		beq	sys_mmap_pgoff
+ 		mov	r0, #-EINVAL
+diff --git a/arch/arm/lib/copy_page.S b/arch/arm/lib/copy_page.S
+index 8ab251b..6ee2f67 100644
+--- a/arch/arm/lib/copy_page.S
++++ b/arch/arm/lib/copy_page.S
+@@ -28,11 +28,7 @@ ENTRY(copy_page)
+ 		stmfd	sp!, {r4, lr}			@	2
+ 	PLD(	pld	[r1, #0]		)
+ 	PLD(	pld	[r1, #L1_CACHE_BYTES]		)
+-#ifdef CONFIG_MV_SUPPORT_64KB_PAGE_SIZE
+-		ldr	r2, =COPY_COUNT
+-#else
+ 		mov	r2, #COPY_COUNT			@	1
+-#endif
+ 		ldmia	r1!, {r3, r4, ip, lr}		@	4+1
+ 1:	PLD(	pld	[r1, #2 * L1_CACHE_BYTES])
+ 	PLD(	pld	[r1, #3 * L1_CACHE_BYTES])
+diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
+index dbfaf05..48520a9 100644
+--- a/arch/arm/mm/Kconfig
++++ b/arch/arm/mm/Kconfig
+@@ -1136,13 +1136,6 @@ config CPU_SHEEVA_PJ4B_PMC_ACCESS_IN_USERMODE
+ 	  Say Y if you allow user mode application to access Performance 
+ 	  Monitor Counter of PJ4 in user mode
+ 
+-config MV_SUPPORT_64KB_PAGE_SIZE
+-	bool "Support 64KB page size"
+-	depends on ARCH_ARMADA_XP
+-	default n
+-	help
+-	  This option enables 64KB pages.
+-
+ config MV_SUPPORT_L2_DEPOSIT
+ 	bool "Support L2 Deposit"
+ 	depends on ARCH_ARMADA_XP
+diff --git a/arch/arm/mm/cache-v6.S b/arch/arm/mm/cache-v6.S
+index fc8c2ec..4434a19 100644
+--- a/arch/arm/mm/cache-v6.S
++++ b/arch/arm/mm/cache-v6.S
+@@ -184,15 +184,9 @@ ENTRY(v6_coherent_user_range)
+  * isn't mapped, just try the next page.
+  */
+ 9001:
+-#ifdef CONFIG_MV_SUPPORT_64KB_PAGE_SIZE
+-	mov	r0, r0, lsr #16
+-	mov	r0, r0, lsl #16
+-	add	r0, r0, #0x10000
+-#else
+ 	mov	r0, r0, lsr #12
+ 	mov	r0, r0, lsl #12
+ 	add	r0, r0, #4096
+-#endif
+ 	b	2b
+  UNWIND(.fnend		)
+ ENDPROC(v6_coherent_user_range)
+diff --git a/arch/arm/mm/cache-v7.S b/arch/arm/mm/cache-v7.S
+index 165fed8..9ca170a 100644
+--- a/arch/arm/mm/cache-v7.S
++++ b/arch/arm/mm/cache-v7.S
+@@ -222,15 +222,9 @@ ENTRY(v7_coherent_user_range)
+  * isn't mapped, just try the next page.
+  */
+ 9001:
+-#ifdef CONFIG_MV_SUPPORT_64KB_PAGE_SIZE
+-	mov	r12, r12, lsr #16
+-	mov	r12, r12, lsl #16
+-	add	r12, r12, #0x10000
+-#else
+ 	mov	r12, r12, lsr #12
+ 	mov	r12, r12, lsl #12
+ 	add	r12, r12, #4096
+-#endif
+ 	b	3b
+  UNWIND(.fnend		)
+ ENDPROC(v7_coherent_kern_range)
+diff --git a/arch/arm/mm/fault.c b/arch/arm/mm/fault.c
+index b058782..4b0bc37 100644
+--- a/arch/arm/mm/fault.c
++++ b/arch/arm/mm/fault.c
+@@ -123,19 +123,8 @@ void show_pte(struct mm_struct *mm, unsigned long addr)
+ 
+ 		pte = pte_offset_map(pmd, addr);
+ 		printk(", *pte=%08llx", (long long)pte_val(*pte));
+-#ifdef CONFIG_MV_SUPPORT_64KB_PAGE_SIZE
+-		{
+-			unsigned long pte_ptr = (unsigned long)pte;
+-			unsigned long tmp = pte_ptr;
+-			pte_ptr += (PTE_HWTABLE_PTRS * sizeof(void *));
+-			pte_ptr &= ~0x7FC;
+-			tmp &= 0x7C;
+-			pte_ptr += (tmp << 4);
+-			printk(", *ppte=%08llx", pte_val((pte_t *)pte_ptr));
+-		}
+-#else
+-		printk(", *ppte=%08llx", (long long)pte_val(pte[PTE_HWTABLE_PTRS]));
+-#endif
++		printk(", *ppte=%08llx",
++		       (long long)pte_val(pte[PTE_HWTABLE_PTRS]));
+ 		pte_unmap(pte);
+ 	} while(0);
+ 
+diff --git a/arch/arm/mm/init.c b/arch/arm/mm/init.c
+index f9f87ea..fbdd12e 100644
+--- a/arch/arm/mm/init.c
++++ b/arch/arm/mm/init.c
+@@ -35,14 +35,6 @@
+ 
+ #include "mm.h"
+ 
+-#ifdef CONFIG_MV_SUPPORT_64KB_PAGE_SIZE
+-#define FREEAREA_ROUND_START(addr)	((((unsigned long)addr) + ((PAGE_SIZE) - 1)) & (~((PAGE_SIZE) - 1)))
+-#define FREEAREA_ROUND_END(addr)	(((unsigned long)addr) & (~((PAGE_SIZE) - 1)))
+-#else
+-#define FREEAREA_ROUND_START(addr)	(addr)
+-#define FREEAREA_ROUND_END(addr)	(addr)
+-#endif
+-
+ static unsigned long phys_initrd_start __initdata = 0;
+ static unsigned long phys_initrd_size __initdata = 0;
+ 
+@@ -427,7 +419,7 @@ void __init bootmem_init(void)
+ 
+ static inline int free_area(unsigned long pfn, unsigned long end, char *s)
+ {
+-	unsigned int pages = 0, size = ((end > pfn) ? ((end - pfn) << (PAGE_SHIFT - 10)) : 0);
++	unsigned int pages = 0, size = (end - pfn) << (PAGE_SHIFT - 10);
+ 
+ 	for (; pfn < end; pfn++) {
+ 		struct page *page = pfn_to_page(pfn);
+@@ -742,8 +734,8 @@ void free_initmem(void)
+ 
+ 	poison_init_mem(__init_begin, __init_end - __init_begin);
+ 	if (!machine_is_integrator() && !machine_is_cintegrator())
+-		totalram_pages += free_area(__phys_to_pfn(__pa(FREEAREA_ROUND_START(__init_begin))),
+-					    __phys_to_pfn(__pa(FREEAREA_ROUND_END(__init_end))),
++		totalram_pages += free_area(__phys_to_pfn(__pa(__init_begin)),
++					    __phys_to_pfn(__pa(__init_end)),
+ 					    "init");
+ }
+ 
+@@ -753,8 +745,6 @@ static int keep_initrd;
+ 
+ void free_initrd_mem(unsigned long start, unsigned long end)
+ {
+-	start = FREEAREA_ROUND_START(start);
+-	end = FREEAREA_ROUND_END(end);
+ 	if (!keep_initrd) {
+ 		poison_init_mem((void *)start, PAGE_ALIGN(end) - start);
+ 		totalram_pages += free_area(__phys_to_pfn(__pa(start)),
+diff --git a/arch/arm/mm/mm.h b/arch/arm/mm/mm.h
+index 427a7ab..ad7cce3 100644
+--- a/arch/arm/mm/mm.h
++++ b/arch/arm/mm/mm.h
+@@ -3,11 +3,7 @@
+ /* the upper-most page table pointer */
+ extern pmd_t *top_pmd;
+ 
+-#ifdef CONFIG_MV_SUPPORT_64KB_PAGE_SIZE
+-#define TOP_PTE(x)	pte_offset_kernel(pmd_off_k(x), x)
+-#else
+ #define TOP_PTE(x)	pte_offset_kernel(top_pmd, x)
+-#endif
+ 
+ static inline pmd_t *pmd_off_k(unsigned long virt)
+ {
+diff --git a/arch/arm/mm/mmu.c b/arch/arm/mm/mmu.c
+index 8a8c411..0cd841d 100644
+--- a/arch/arm/mm/mmu.c
++++ b/arch/arm/mm/mmu.c
+@@ -26,10 +26,6 @@
+ #include <asm/highmem.h>
+ #include <asm/traps.h>
+ 
+-#if defined(CONFIG_MV_SUPPORT_64KB_PAGE_SIZE) && defined(CONFIG_HIGHMEM)
+-#include <asm/fixmap.h>
+-#endif
+-
+ #include <asm/mach/arch.h>
+ #include <asm/mach/map.h>
+ 
+@@ -547,11 +543,7 @@ static void __init *early_alloc(unsigned long sz)
+ static pte_t * __init early_pte_alloc(pmd_t *pmd, unsigned long addr, unsigned long prot)
+ {
+ 	if (pmd_none(*pmd)) {
+-#ifdef CONFIG_MV_SUPPORT_64KB_PAGE_SIZE
+-	pte_t *pte = early_alloc(PAGE_SIZE);
+-#else
+-	pte_t *pte = early_alloc(PTE_HWTABLE_OFF + PTE_HWTABLE_SIZE);
+-#endif
++		pte_t *pte = early_alloc(PTE_HWTABLE_OFF + PTE_HWTABLE_SIZE);
+ 		__pmd_populate(pmd, __pa(pte), prot);
+ 	}
+ 	BUG_ON(pmd_bad(*pmd));
+@@ -937,30 +929,6 @@ void __init arm_mm_memblock_reserve(void)
+ #endif
+ }
+ 
+-#if defined(CONFIG_MV_SUPPORT_64KB_PAGE_SIZE) && defined(CONFIG_HIGHMEM)
+-/* Create L1 Mapping for High-Mem pages. */
+-static void __init map_highmem_pages(void)
+-{
+-	struct map_desc map;
+-	unsigned long addr;
+-	pmd_t *pmd;
+-	pte_t *pte;
+-
+-	for (addr = FIXADDR_START; addr < FIXADDR_TOP; addr += SZ_1M) {
+-		map.pfn = __phys_to_pfn(virt_to_phys((void*)addr));
+-		map.virtual = addr;
+-		map.length = PAGE_SIZE;
+-		map.type = MT_DEVICE;
+-		create_mapping(&map);
+-
+-		/* Clear the L2 entry. */
+-		pmd = pmd_offset(pgd_offset_k(addr), addr);
+-		pte = pte_offset_kernel(pmd, addr);
+-		set_pte_ext(pte, __pte(0), 0);
+-	}
+-}
+-#endif
+-
+ /*
+  * Set up device the mappings.  Since we clear out the page tables for all
+  * mappings above VMALLOC_END, we will remove any debug device mappings.
+@@ -1028,10 +996,6 @@ static void __init devicemaps_init(struct machine_desc *mdesc)
+ 		create_mapping(&map);
+ 	}
+ 
+-#if defined(CONFIG_MV_SUPPORT_64KB_PAGE_SIZE) && defined(CONFIG_HIGHMEM)
+-	map_highmem_pages();
+-#endif
+-
+ 	/*
+ 	 * Ask the machine support to map in the statically mapped devices.
+ 	 */
+diff --git a/arch/arm/mm/proc-macros.S b/arch/arm/mm/proc-macros.S
+index 09f09ce..f5da9fc 100644
+--- a/arch/arm/mm/proc-macros.S
++++ b/arch/arm/mm/proc-macros.S
+@@ -137,26 +137,11 @@
+ 	.macro	armv6_set_pte_ext pfx
+ 	str	r1, [r0], #2048			@ linux version
+ 
+-#ifdef CONFIG_MV_SUPPORT_64KB_PAGE_SIZE
+-	mov     r3, #0x7C
+-	and     r3, r3, r0
+-	mov     r3, r3, lsl #4
+-	bic     r0, r0, #0x3FC
+-	bic     r0, r0, #0x400
+-	orr     r0, r0, r3
+-#endif
+-
+ 	bic	r3, r1, #0x000003fc
+-#ifdef CONFIG_MV_SUPPORT_64KB_PAGE_SIZE
+-	bic	r3, r3, #0x00000F000
+-#endif
+ 	bic	r3, r3, #PTE_TYPE_MASK
+ 	orr	r3, r3, r2
+-#ifdef CONFIG_MV_SUPPORT_64KB_PAGE_SIZE
+-	orr	r3, r3, #PTE_EXT_AP0 | 1
+-#else
+ 	orr	r3, r3, #PTE_EXT_AP0 | 2
+-#endif
++
+ 	adr	ip, \pfx\()_mt_table
+ 	and	r2, r1, #L_PTE_MT_MASK
+ 	ldr	r2, [ip, r2]
+@@ -183,24 +168,7 @@
+ 	moveq	r3, #0
+ 
+ 	str	r3, [r0]
+-#ifdef CONFIG_MV_SUPPORT_64KB_PAGE_SIZE
+-	@ Need to duplicate the entry 16 times because of overlapping in PTE index bits.
+-	str     r3, [r0, #4]
+-	str     r3, [r0, #8]
+-	str     r3, [r0, #12]
+-	str     r3, [r0, #16]
+-	str     r3, [r0, #20]
+-	str     r3, [r0, #24]
+-	str     r3, [r0, #28]
+-	str     r3, [r0, #32]
+-	str     r3, [r0, #36]
+-	str     r3, [r0, #40]
+-	str     r3, [r0, #44]
+-	str     r3, [r0, #48]
+-	str     r3, [r0, #52]
+-	str     r3, [r0, #56]
+-	str     r3, [r0, #60]
+-#endif /* CONFIG_MV_SUPPORT_64KB_PAGE_SIZE */
++
+ #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_4611
+         mrs     r2, cpsr
+         orr     r3, r2, #PSR_F_BIT | PSR_I_BIT
+@@ -216,10 +184,6 @@
+ #endif
+ #endif
+ 	mcr	p15, 0, r0, c7, c10, 1		@ flush_pte
+-#ifdef CONFIG_MV_SUPPORT_64KB_PAGE_SIZE
+-	add	r0, r0, #32
+-	mcr	p15, 0, r0, c7, c10, 1		@ flush_pte
+-#endif
+ #if defined (CONFIG_CACHE_AURORA_L2) && defined (CONFIG_AURORA_L2_OUTER) && !defined (CONFIG_AURORA_L2_PT_WALK)
+ #error "armv6_set_pte_ext: calling l2_clean_va corrupts r2. SHOULD BE FIXED"
+ 	bl	l2_clean_va
+diff --git a/arch/arm/mm/proc-sheeva_pj4bv7.S b/arch/arm/mm/proc-sheeva_pj4bv7.S
+index 6368683..dc638a4 100644
+--- a/arch/arm/mm/proc-sheeva_pj4bv7.S
++++ b/arch/arm/mm/proc-sheeva_pj4bv7.S
+@@ -177,25 +177,12 @@ ENTRY(cpu_pj4bv7_set_pte_ext)
+  
+ str	r1, [r0]			@ linux version
+  
+-#ifdef CONFIG_MV_SUPPORT_64KB_PAGE_SIZE
+-	mov     r3, #0x7C
+-	and     r3, r3, r0
+-	mov     r3, r3, lsl #4
+-	bic     r0, r0, #0x3FC
+-	bic     r0, r0, #0x400
+-	orr     r0, r0, r3
+-#endif
++
+ 	bic	r3, r1, #0x000003f0
+-#ifdef CONFIG_MV_SUPPORT_64KB_PAGE_SIZE
+-	bic	r3, r3, #0x00000F000
+-#endif
+ 	bic	r3, r3, #PTE_TYPE_MASK
+ 	orr	r3, r3, r2
+-#ifdef CONFIG_MV_SUPPORT_64KB_PAGE_SIZE
+-	orr	r3, r3, #PTE_EXT_AP0 | 1
+-#else
+ 	orr	r3, r3, #PTE_EXT_AP0 | 2
+-#endif
++
+ 	tst	r1, #1 << 4
+ 	orrne	r3, r3, #PTE_EXT_TEX(1)
+ 
+@@ -221,41 +208,11 @@ str	r1, [r0]			@ linux version
+  ARM(	str	r3, [r0, #2048]! )
+  THUMB(	add	r0, r0, #2048 )
+  THUMB(	str	r3, [r0] )
+-#ifdef CONFIG_MV_SUPPORT_64KB_PAGE_SIZE
+-	@ Need to duplicate the entry 16 times because of overlapping in PTE index bits.
+-	str     r3, [r0, #4]
+-	str     r3, [r0, #8]
+-	str     r3, [r0, #12]
+-	str     r3, [r0, #16]
+-	str     r3, [r0, #20]
+-	str     r3, [r0, #24]
+-	str     r3, [r0, #28]
+-#ifdef SHEEVA_ERRATA_ARM_CPU_6043 || defined SHEEVA_ERRATA_ARM_CPU_6076
+-        mcr     p15, 0, r0, c7, c14, 1          @ clean & invalidate D entry
+-#else
+-	mcr	p15, 0, r0, c7, c10, 1		@ flush_pte
+-#endif
+-	add	r0, r0, #32
+-	str     r3, [r0]
+-	str     r3, [r0, #4]
+-	str     r3, [r0, #8]
+-	str     r3, [r0, #12]
+-	str     r3, [r0, #16]
+-	str     r3, [r0, #20]
+-	str     r3, [r0, #24]
+-	str     r3, [r0, #28]
+-#ifdef SHEEVA_ERRATA_ARM_CPU_6043 || defined SHEEVA_ERRATA_ARM_CPU_6076
+-        mcr     p15, 0, r0, c7, c14, 1          @ clean & invalidate D entry
+-#else
+-	mcr	p15, 0, r0, c7, c10, 1		@ flush_pte
+-#endif
+-#else
+ #ifdef SHEEVA_ERRATA_ARM_CPU_6043 || defined SHEEVA_ERRATA_ARM_CPU_6076
+         mcr     p15, 0, r0, c7, c14, 1          @ clean & invalidate D entry
+ #else
+ 	mcr	p15, 0, r0, c7, c10, 1		@ flush_pte
+ #endif
+-#endif /* CONFIG_MV_SUPPORT_64KB_PAGE_SIZE */
+ #endif
+ 	mov	pc, lr
+ ENDPROC(cpu_pj4bv7_set_pte_ext)
+diff --git a/mm/mmap.c b/mm/mmap.c
+index 4792e76..eae90af 100644
+--- a/mm/mmap.c
++++ b/mm/mmap.c
+@@ -1586,15 +1586,7 @@ struct vm_area_struct *find_vma(struct mm_struct *mm, unsigned long addr)
+ 				vma_tmp = rb_entry(rb_node,
+ 						struct vm_area_struct, vm_rb);
+ 
+-#ifdef CONFIG_MV_SUPPORT_64KB_PAGE_SIZE
+-				/* Take into account a wrap-around of the
+-				** vm_end field to 0x0. e.g. vm_start =
+-				** 0xFFFF0000 size PAGE_SIZE.
+-				*/
+-				if ((vma_tmp->vm_end - 1) >= addr) {
+-#else
+ 				if (vma_tmp->vm_end > addr) {
+-#endif
+ 					vma = vma_tmp;
+ 					if (vma_tmp->vm_start <= addr)
+ 						break;
+-- 
+1.7.9.5
+

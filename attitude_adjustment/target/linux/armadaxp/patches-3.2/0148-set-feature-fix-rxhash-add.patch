@@ -1,0 +1,139 @@
+From 1806c4c713b689fc2e7aaf52b458d9f3f30ad91f Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Wed, 15 Feb 2012 03:53:00 -0500
+Subject: [PATCH 148/609] set feature fix, rxhash add
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c   |   20 ---------
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |   43 +++++++++++++++++---
+ 2 files changed, 38 insertions(+), 25 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c
+index f280d1e..0351f3e 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c
+@@ -730,24 +730,6 @@ int mv_eth_tool_set_tso(struct net_device *netdev, uint32_t data)
+ #endif
+ }
+ /******************************************************************************
+-* mv_eth_tool_set_ufo
+-* Description:
+-*	ethtool enable/disable UDP segmentation offloading
+-* INPUT:
+-*	netdev		Network device structure pointer
+-*	data		Command data
+-* OUTPUT
+-*	None
+-* RETURN:
+-*	0 on success
+-*
+-*******************************************************************************/
+-int mv_eth_tool_set_ufo(struct net_device *netdev, uint32_t data)
+-{
+-/*	printk("in %s \n",__FUNCTION__);*/
+-	return -EOPNOTSUPP;
+-}
+-/******************************************************************************
+ * mv_eth_tool_get_strings
+ * Description:
+ *	ethtool get strings (used for statistics and self-test descriptions)
+@@ -871,8 +853,6 @@ const struct ethtool_ops mv_eth_tool_ops = {
+ 	.set_sg						= ethtool_op_set_sg,
+ 	.get_tso					= ethtool_op_get_tso,
+ 	.set_tso					= mv_eth_tool_set_tso,
+-	.get_ufo					= ethtool_op_get_ufo,
+-	.set_ufo					= mv_eth_tool_set_ufo,
+ 	.get_strings				= mv_eth_tool_get_strings,
+ #if LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 32)
+ 	.get_stats_count			= mv_eth_tool_get_stats_count,
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 7bd9a68..6381a27 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -804,6 +804,28 @@ static inline u16 mv_eth_select_txq(struct net_device *dev,
+ 	return mv_eth_tx_policy(pp, skb);
+ }
+ 
++#if defined(MV_ETH_PNC_LB) && defined(CONFIG_MV_ETH_PNC)
++static int mv_eth_set_features(struct net_device *dev, u32 features)
++{
++	u32 changed = dev->features ^ features;
++
++	if (changed & NETIF_F_RXHASH) {
++		if (features & NETIF_F_RXHASH) {
++			dev->features |= NETIF_F_RXHASH;
++			mvPncLbModeIp4(LB_2_TUPLE_VALUE);
++			mvPncLbModeIp6(LB_2_TUPLE_VALUE);
++			mvPncLbModeL4(LB_4_TUPLE_VALUE);
++		} else {
++			dev->features |= ~NETIF_F_RXHASH;
++			mvPncLbModeIp4(LB_DISABLE_VALUE);
++			mvPncLbModeIp6(LB_DISABLE_VALUE);
++			mvPncLbModeL4(LB_DISABLE_VALUE);
++		}
++	}
++	return 0;
++}
++#endif
++
+ static const struct net_device_ops mv_eth_netdev_ops = {
+ 	.ndo_open = mv_eth_open,
+ 	.ndo_stop = mv_eth_stop,
+@@ -814,6 +836,9 @@ static const struct net_device_ops mv_eth_netdev_ops = {
+ 	.ndo_change_mtu = mv_eth_change_mtu,
+ 	.ndo_tx_timeout = mv_eth_tx_timeout,
+ 	.ndo_select_queue = mv_eth_select_txq,
++#if defined(MV_ETH_PNC_LB) && defined(CONFIG_MV_ETH_PNC)
++	.ndo_set_features = mv_eth_set_features,
++#endif
+ };
+ 
+ #ifdef CONFIG_MV_ETH_SWITCH
+@@ -3144,12 +3169,18 @@ struct net_device *mv_eth_netdev_init(struct eth_port *pp, int mtu, u8 *mac)
+ 	pp->cleanup_timer.data = (unsigned long)dev;
+ 
+ 	if (pp->flags & MV_ETH_F_CONNECT_LINUX) {
++		mv_eth_netdev_set_features(dev);
+ 		if (register_netdev(dev)) {
+ 			printk(KERN_ERR "failed to register %s\n", dev->name);
+ 			free_netdev(dev);
+ 			return NULL;
+ 		} else {
+-			mv_eth_netdev_set_features(dev);
++
++			/* register_netdev() always sets NETIF_F_GRO via NETIF_F_SOFT_FEATURES */
++
++#ifndef CONFIG_MV_ETH_GRO_DEF
++			dev->features &= ~NETIF_F_GRO;
++#endif /* CONFIG_MV_ETH_GRO_DEF */
+ 
+ 			printk(KERN_ERR "    o %s, ifindex = %d, GbE port = %d", dev->name, dev->ifindex, pp->port);
+ #ifdef CONFIG_MV_ETH_SWITCH
+@@ -3417,7 +3448,12 @@ void mv_eth_config_show(void)
+ /* Set network device features on initialization. Take into account default compile time configuration. */
+ static void mv_eth_netdev_set_features(struct net_device *dev)
+ {
+-	dev->features = NETIF_F_SG | NETIF_F_LLTX;
++	dev->features 	 = NETIF_F_SG  | NETIF_F_LLTX;
++	dev->hw_features = NETIF_F_IP_CSUM | NETIF_F_SG;
++
++#if defined(MV_ETH_PNC_LB) && defined(CONFIG_MV_ETH_PNC)
++	dev->hw_features |= NETIF_F_RXHASH;
++#endif
+ 
+ #ifdef CONFIG_MV_ETH_TX_CSUM_OFFLOAD_DEF
+ 	if (dev->mtu <= MV_ETH_TX_CSUM_MAX_SIZE)
+@@ -3429,9 +3465,6 @@ static void mv_eth_netdev_set_features(struct net_device *dev)
+ 		dev->features |= NETIF_F_TSO;
+ #endif /* CONFIG_MV_ETH_TSO_DEF */
+ 
+-#ifdef CONFIG_MV_ETH_GRO_DEF
+-	dev->features |= NETIF_F_GRO;
+-#endif /* CONFIG_MV_ETH_GRO_DEF */
+ }
+ 
+ /* Update network device features after changing MTU.	*/
+-- 
+1.7.9.5
+

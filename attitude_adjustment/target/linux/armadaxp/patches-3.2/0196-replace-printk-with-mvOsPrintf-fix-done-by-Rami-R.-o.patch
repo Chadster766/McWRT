@@ -1,0 +1,29 @@
+From 165818fa1ae0a537bfe534bdaa0ec713895881bd Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Tue, 26 Jun 2012 13:43:11 +0300
+Subject: [PATCH 196/609] replace printk() with mvOsPrintf() - fix done by
+ (Rami R. on 3.0.y kernel)
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c
+index e1a9b14..e2095ae 100755
+--- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c
++++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c
+@@ -770,8 +770,8 @@ void mvNetaCpuDump(int port, int cpu, int rxTx)
+        static const char  *qType[] = {"RXQ", "TXQ"};
+ 
+        if (rxTx > 1 || rxTx < 0) {
+-               printk(KERN_ERR "%s: Error - invalid queue type %d , valid values are 0 for TXQ or 1 for RXQ\n", __func__, rxTx);
+-               return;
++		OsPrintf("Error - invalid queue type %d , valid values are 0 for TXQ or 1 for RXQ\n", rxTx);
++		return;
+        }
+ 
+        if (rxTx == 1)
+-- 
+1.7.9.5
+

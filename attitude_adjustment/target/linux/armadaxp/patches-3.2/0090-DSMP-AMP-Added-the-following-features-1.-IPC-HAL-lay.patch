@@ -1,0 +1,2426 @@
+From 6498e978eaf28749322829d844fb6272f728c3a3 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Mon, 5 Mar 2012 02:53:55 +0200
+Subject: [PATCH 090/609] DSMP: AMP: Added the following features 1. IPC HAL
+ layer 2. IPC basic driver 3. IPC Pseudo Network
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/include/asm/entry-macro-multi.S           |    6 +
+ arch/arm/mach-armadaxp/Makefile                    |    4 +-
+ .../armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h     |    4 +-
+ arch/arm/mach-armadaxp/core.c                      |   74 ++
+ arch/arm/mach-armadaxp/include/mach/entry-macro.S  |   35 +-
+ arch/arm/mach-armadaxp/include/mach/smp.h          |    1 +
+ arch/arm/mach-armadaxp/irq.c                       |    8 +-
+ arch/arm/mach-armadaxp/platsmp.c                   |   15 +-
+ arch/arm/plat-armada/Kconfig                       |   12 +-
+ arch/arm/plat-armada/common/mvIpc.c                |  975 ++++++++++++++++++++
+ arch/arm/plat-armada/common/mvIpc.h                |  136 +++
+ .../arm/plat-armada/mv_drivers_lsp/mv_ipc/Makefile |    7 +
+ .../arm/plat-armada/mv_drivers_lsp/mv_ipc/mv_ipc.c |  238 +++++
+ .../arm/plat-armada/mv_drivers_lsp/mv_ipc/mv_ipc.h |   53 ++
+ .../plat-armada/mv_drivers_lsp/mv_ipc_net/Makefile |    7 +
+ .../mv_drivers_lsp/mv_ipc_net/ipc_net.c            |  601 ++++++++++++
+ 16 files changed, 2156 insertions(+), 20 deletions(-)
+ create mode 100644 arch/arm/plat-armada/common/mvIpc.c
+ create mode 100644 arch/arm/plat-armada/common/mvIpc.h
+ create mode 100644 arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/Makefile
+ create mode 100644 arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/mv_ipc.c
+ create mode 100644 arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/mv_ipc.h
+ create mode 100644 arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/Makefile
+ create mode 100644 arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c
+
+diff --git a/arch/arm/include/asm/entry-macro-multi.S b/arch/arm/include/asm/entry-macro-multi.S
+index 88d6181..1137bc2 100644
+--- a/arch/arm/include/asm/entry-macro-multi.S
++++ b/arch/arm/include/asm/entry-macro-multi.S
+@@ -20,6 +20,12 @@
+ 	 * this macro assumes that irqstat (r2) and base (r6) are
+ 	 * preserved from get_irqnr_and_base above
+ 	 */
++#ifdef CONFIG_MV_IPC_NET
++	test_for_ipc r0, r6, r5, lr
++	movne   r1, sp
++	adrne   lr, BSYM(1b)
++	bne     do_ipc_rx_irq
++#endif
+ 	ALT_SMP(test_for_ipi r0, r2, r6, lr)
+ 	ALT_UP_B(9997f)
+ 	movne	r1, sp
+diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
+index 1118481..8bc925b 100644
+--- a/arch/arm/mach-armadaxp/Makefile
++++ b/arch/arm/mach-armadaxp/Makefile
+@@ -75,7 +75,7 @@ ifdef NFPLIB
+ 	obj-y   				+=  armadaxp.o
+ else
+ # Objects list
+-COMMON_OBJS	= $(COMMON_DIR)/mvDebug.o $(COMMON_DIR)/mvCommon.o $(COMMON_DIR)/mvStack.o $(COMMON_DIR)/mvList.o
++COMMON_OBJS	= $(COMMON_DIR)/mvDebug.o $(COMMON_DIR)/mvCommon.o $(COMMON_DIR)/mvStack.o $(COMMON_DIR)/mvList.o $(COMMON_DIR)/mvIpc.o
+ 
+ OSSERVICES_OBJS	= $(OSSERV_DIR)/mvOs.o
+ 
+@@ -196,6 +196,8 @@ endif
+ 
+ obj-$(CONFIG_MV_USE_XOR_ENGINE) 	+= $(PLAT_DRIVERS)/mv_xor/
+ obj-$(CONFIG_MV_CESA) 			+= $(PLAT_DRIVERS)/mv_cesa/
++obj-$(CONFIG_MV_IPC_DRIVER)		+= $(PLAT_DRIVERS)/mv_ipc/
++obj-$(CONFIG_MV_IPC_NET)		+= $(PLAT_DRIVERS)/mv_ipc_net/
+ #obj-y					+= $(PLAT_DRIVERS)/mv_btns/
+ obj-y					+= $(PLAT_DRIVERS)/mv_gpio/
+ obj-$(CONFIG_MV_DBG_TRACE)              += $(PLAT_DRIVERS)/mv_trace/
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
+index 527581f..3b78b09 100755
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
+@@ -311,7 +311,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ /*******************************************/
+ /* ARM Doorbell Registers Map		   */
+ /*******************************************/
+-
++#define CPU_SW_TRIG_IRQ						(MV_MBUS_REGS_OFFSET + 0xA04)
++#define CPU_DOORBELL_IN_REG					(MV_CPUIF_LOCAL_REGS_OFFSET + 0x78)
++#define CPU_DOORBELL_IN_MASK_REG			(MV_CPUIF_LOCAL_REGS_OFFSET + 0x7C)
+ #define CPU_HOST_TO_ARM_DRBL_REG(cpu)		(MV_CPUIF_REGS_BASE(cpu) + 0x78)
+ #define CPU_HOST_TO_ARM_MASK_REG(cpu)		(MV_CPUIF_REGS_BASE(cpu) + 0x7C)
+ #define CPU_ARM_TO_HOST_DRBL_REG(cpu)		(MV_CPUIF_REGS_BASE(cpu) + 0x70)
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index ff8602d..7a558f7 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -381,6 +381,60 @@ static int __init mv_rsrc_setup(char *s)
+ __setup("mv_rsrc=", mv_rsrc_setup);
+ #endif /* CONFIG_SMP */
+ 
++#ifdef CONFIG_MV_AMP_ENABLE
++unsigned int sh_mem_base = 0, sh_mem_size = 0;
++static int __init mv_shared_mem_setup(char *s)
++{
++	char *delim = strchr(s, ':');
++	char *base_str  = s;
++	char *size_str  = delim + 1;
++	int fail;
++	void *sh_virt_base;
++
++	if(delim == NULL){
++		printk(KERN_WARNING "AMP: No delimiter in shared memory string %s. use format mv_sh_mem=base:size\n", s);
++		return 1;
++	}
++
++	/*Split the string to base and size strings*/
++	*delim = '\0';
++
++	fail  = strict_strtoul(base_str, 16, &sh_mem_base);
++	fail |= strict_strtoul(size_str, 16, &sh_mem_size);
++
++	if(fail)
++		printk(KERN_WARNING "AMP: Bad shared memory string %s:%s. Cant extract valid values\n", base_str,size_str);
++
++	return 1;
++}
++__setup("mv_sh_mem=", mv_shared_mem_setup);
++#endif /* CONFIG_MV_AMP_ENABLE */
++
++#ifdef CONFIG_MV_IPC_DRIVER
++int ipc_target_cpu;
++static int __init mv_ipc_setup(char *s)
++{
++	int fail;
++	unsigned int cpu_count;
++
++	while (isspace(*s))
++		s++;
++
++	/* Translate string to integer. If fails return to default*/
++	fail = strict_strtoul(s, 10, &ipc_target_cpu);
++	if(fail) {
++		printk(KERN_WARNING "IPC: Received bad target cpu id %s\n", s);
++		ipc_target_cpu = -1;
++	}
++
++	return 1;
++}
++__setup("mv_ipc=", mv_ipc_setup);
++#endif
++
++
++
++
+ void __init armadaxp_setup_cpu_mbus(void)
+ {
+ 	void __iomem *addr;
+@@ -697,6 +751,22 @@ static void __init eth_init(void)
+ 
+ #endif /* CONFIG_MV_ETHERNET */
+ 
++/***********
++ * IPC NET *
++ ***********/
++
++#ifdef CONFIG_MV_IPC_NET
++static struct platform_device mv_ipc_net = {
++	.name	= "mv_ipc_net",
++	.id		= 0,
++	.num_resources	= 0,
++	.dev    = {
++		.platform_data = (void*)&ipc_target_cpu
++	}
++};
++#endif
++
++
+ /*******
+  * RTC *
+  *******/
+@@ -1436,6 +1506,10 @@ static void __init axp_db_init(void)
+ 	eth_init();
+ #endif
+ 
++#ifdef CONFIG_MV_IPC_NET
++	platform_device_register(&mv_ipc_net);
++#endif
++
+ #ifdef CONFIG_FB_DOVE
+ 	if(mvUnitMapIsMine(LCD) == MV_TRUE){
+ 		kw_lcd0_dmi.dram = &armadaxp_mbus_dram_info;
+diff --git a/arch/arm/mach-armadaxp/include/mach/entry-macro.S b/arch/arm/mach-armadaxp/include/mach/entry-macro.S
+index 794a156..dd783c0 100644
+--- a/arch/arm/mach-armadaxp/include/mach/entry-macro.S
++++ b/arch/arm/mach-armadaxp/include/mach/entry-macro.S
+@@ -85,6 +85,9 @@
+ 	beq	1002f
+ 	ldr	\irqnr, [\base, #AXP_IN_DOORBELL_CAUSE]
+ 	HTOLL	\irqnr, \tmp
++	ands    \tmp, \irqnr, #0xF000
++	ands    \irqnr, \irqnr, #0xFF		@ 8 lower doorbells are considered IPI
++	beq     1002f
+ 	clz	\irqnr, \irqnr
+ 	mov	\tmp, #31
+ 	sub	\irqnr, \tmp, \irqnr
+@@ -113,8 +116,27 @@
+ 	ands 	\tmp, \irqstat, #0x00000008		@ was it mp
+ 1005:
+ 	.endm
+-	
+-#else
++
++	.macro test_for_ipc, irqnr, irqstat, base, tmp
++	ands 	\tmp, \irqstat, #0x80000000		@ did we get irq
++	beq	1006f
++	ands 	\tmp, \irqstat, #0x00000001		@ was it doorbell
++	beq	1006f
++	ldr	\irqnr, [\base, #AXP_IN_DOORBELL_CAUSE]
++	HTOLL	\irqnr, \tmp
++	ands    \irqnr, \irqnr, #0xF000		@ 12-15 doorbells are considered IPC
++	beq     1006f
++	clz	\irqnr, \irqnr
++	mov	\tmp, #31
++	sub	\irqnr, \tmp, \irqnr
++	mov 	\tmp, #1
++	lsl	\tmp, \irqnr
++	mvn	\tmp, \tmp
++	strh   	\tmp, [\base, #AXP_IN_DOORBELL_CAUSE]	@ clean irq
++1006:
++	.endm
++
++#else /* CONFIG_ARMADAXP_USE_IRQ_INTERRUPT_ACK */
+ 		/*
+ 		 * The interrupt numbering scheme is defined in the
+ 		 * interrupt controller spec.
+@@ -176,4 +198,13 @@
+ 		moveq	\tmp, #1
+ 		cmp	\tmp, #0
+ 		.endm
++
++		.macro test_for_ipc, irqnr, irqstat, base, tmp @ YY - check this one again
++		ldr	\tmp, =1023
++		and     \irqnr, \irqstat, \tmp
++		cmp	\irqnr, #3
++		movcc	\tmp, #0
++		strcc	\tmp, [\base, #AXP_IN_DOORBELL_CAUSE]   @ clean ipi irq
++		cmpcs	\irqnr, \irqnr
++		.endm
+ #endif
+diff --git a/arch/arm/mach-armadaxp/include/mach/smp.h b/arch/arm/mach-armadaxp/include/mach/smp.h
+index 2a14048..f12d59e 100644
+--- a/arch/arm/mach-armadaxp/include/mach/smp.h
++++ b/arch/arm/mach-armadaxp/include/mach/smp.h
+@@ -6,6 +6,7 @@
+ 
+ extern unsigned int master_cpu_id;
+ extern unsigned int group_cpu_mask;
++extern unsigned long mv_cpu_count;
+ 
+ #define hard_smp_processor_id()			\
+ 	({						\
+diff --git a/arch/arm/mach-armadaxp/irq.c b/arch/arm/mach-armadaxp/irq.c
+index 15e52c1..796db09 100644
+--- a/arch/arm/mach-armadaxp/irq.c
++++ b/arch/arm/mach-armadaxp/irq.c
+@@ -62,7 +62,7 @@ MV_REG_WRITE(CPU_CF_LOCAL_MASK_REG(cpu), val);
+ #ifdef CONFIG_SMP
+ if (cpu > 0) { /*disabled for both cpu */
+ 	val = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_MP));
+-	/* YY - FIXME: assuming all 4 cpus */
++	/* FIXME: assuming all 4 cpus */
+ 	val &= ~0xf;
+ 	MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_MP), val);
+ }
+@@ -160,7 +160,7 @@ if (irq <= max_per_cpu_irq) // per CPU
+ 	temp &= ~(1 << hard_smp_processor_id());
+ /* for GPIO IRQs , don't disable INTS , they will be disabled in the units mask */
+ else if (irq < IRQ_MAIN_INTS_NUM)
+-	temp &= ~0xf; //YY - maybe need to use a different mask here
++	temp &= ~0xf;
+ 
+ MV_REG_WRITE(addr, temp);
+ 
+@@ -210,7 +210,7 @@ if (irq >= IRQ_AURORA_GPIO_START) {
+ 		map = get_hw_cpu_mask(*cpus_addr(*(d->affinity)));
+        }
+ #endif
+-//temp &= ~0xf; //YY
++//temp &= ~0xf;
+ temp |= map;
+ temp |= (0x1 << 28); /* Set IntEn for this source */
+ MV_REG_WRITE(addr, temp);
+@@ -318,7 +318,7 @@ for (irq = 0; irq < IRQ_AURORA_MSI_START ; irq++) {
+ 		*/
+ 	        MV_REG_WRITE(CPU_INT_CLEAR_MASK_LOCAL_REG, 0);
+ 		addr = /*(void __iomem *)*/(AXP_IN_DRBEL_MSK);
+-		MV_REG_WRITE(addr, 0xff); // only IPI 0
++		MV_REG_WRITE(addr, 0xf0ff); // only IPI 0
+ 	}
+ #endif
+ 
+diff --git a/arch/arm/mach-armadaxp/platsmp.c b/arch/arm/mach-armadaxp/platsmp.c
+index f2fa59c..f53efab 100644
+--- a/arch/arm/mach-armadaxp/platsmp.c
++++ b/arch/arm/mach-armadaxp/platsmp.c
+@@ -272,26 +272,19 @@ static void __init initialize_bridge(void)
+ 	MV_U32 reg;
+ 	MV_U32 ncores = get_core_count();
+ 	MV_U32 core_bits;
+-	MV_U32 smp_group_offset;
+ 
+ 	/* Set 1 bits for cores in this group */
+ 	core_bits = ((0x1 << ncores) - 1) << master_cpu_id;
+ 
+-	/* Core 0 will always be part of group 0 */
+-	if(master_cpu_id == 0)
+-		smp_group_offset = 24;
+-	else
+-		smp_group_offset = 16;
+-
+ #ifdef CONFIG_MV_AMP_ENABLE
+ 	mvSemaLock(MV_SEMA_BRIDGE);
+ #endif
+-	/* Assocaite group cores to the same SMP group */
++	/* Associate group cores to the same SMP group */
+ 	reg = MV_REG_READ(SOC_COHERENCY_FABRIC_CFG_REG);
+-	reg |= (core_bits << smp_group_offset);
++	reg |= (core_bits << 24);
+ 	MV_REG_WRITE(SOC_COHERENCY_FABRIC_CFG_REG, reg);
+ 
+-	/* enable CPUs in SMP group on Fabric coherency */
++	/* enable Snooping on coherency fabric */
+ 	reg = MV_REG_READ(SOC_COHERENCY_FABRIC_CTRL_REG);
+ 	reg |= (core_bits << 24);
+ 	MV_REG_WRITE(SOC_COHERENCY_FABRIC_CTRL_REG, reg);
+@@ -302,7 +295,7 @@ static void __init initialize_bridge(void)
+ }
+ 
+ /*
+- * Initialise the CPU possible map early - this describes the CPUs
++ * Initialize the CPU possible map early - this describes the CPUs
+  * which may be present or become present in the system.
+  */
+ void __init smp_init_cpus(void)
+diff --git a/arch/arm/plat-armada/Kconfig b/arch/arm/plat-armada/Kconfig
+index a6a7da9..75efd2c 100644
+--- a/arch/arm/plat-armada/Kconfig
++++ b/arch/arm/plat-armada/Kconfig
+@@ -183,9 +183,19 @@ menu "Armada AMP options"
+ 
+ config MV_AMP_ENABLE
+         bool "Enable AMP support"
+-        depends on   (ARMADA_XP || (MV78XX0)) && (!ARMADA_XP_REV_Z1)
++	depends on   (ARMADA_XP || (MV78XX0)) && (!ARMADA_XP_REV_Z1) && (SMP) && (!MV_ETH_BM)
+         default n
+ 
++config MV_IPC_DRIVER
++        bool "Enable IPC basic driver"
++        depends on   MV_AMP_ENABLE
++        default y
++
++config MV_IPC_NET
++        bool "Enable IPC pseudo network driver"
++        depends on   MV_IPC_DRIVER
++        default y
++
+ config MV_DRAM_BASE
+         hex "Base address of physical memory (= PHYS_OFFSET)"
+         depends on   MV_AMP_ENABLE
+diff --git a/arch/arm/plat-armada/common/mvIpc.c b/arch/arm/plat-armada/common/mvIpc.c
+new file mode 100644
+index 0000000..a8a5be7
+--- /dev/null
++++ b/arch/arm/plat-armada/common/mvIpc.c
+@@ -0,0 +1,975 @@
++/*******************************************************************************
++Copyright (C) Marvell International Ltd. and its affiliates
++
++This software file (the "File") is owned and distributed by Marvell
++International Ltd. and/or its affiliates ("Marvell") under the following
++alternative licensing terms.  Once you have made an election to distribute the
++File under one of the following license alternatives, please (i) delete this
++introductory statement regarding license alternatives, (ii) delete the two
++license alternatives that you have not elected to use and (iii) preserve the
++Marvell copyright notice above.
++
++********************************************************************************
++Marvell Commercial License Option
++
++If you received this File from Marvell and you have entered into a commercial
++license agreement (a "Commercial License") with Marvell, the File is licensed
++to you under the terms of the applicable Commercial License.
++
++********************************************************************************
++Marvell GPL License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File in accordance with the terms and conditions of the General
++Public License Version 2, June 1991 (the "GPL License"), a copy of which is
++available along with the File in the license.txt file or by writing to the Free
++Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
++on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++
++THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
++DISCLAIMED.  The GPL License provides additional details about this warranty
++disclaimer.
++********************************************************************************
++Marvell BSD License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File under the following licensing terms.
++Redistribution and use in source and binary forms, with or without modification,
++are permitted provided that the following conditions are met:
++
++    *   Redistributions of source code must retain the above copyright notice,
++	    this list of conditions and the following disclaimer.
++
++    *   Redistributions in binary form must reproduce the above copyright
++        notice, this list of conditions and the following disclaimer in the
++        documentation and/or other materials provided with the distribution.
++
++    *   Neither the name of Marvell nor the names of its contributors may be
++        used to endorse or promote products derived from this software without
++        specific prior written permission.
++
++THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
++ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
++WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
++DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
++ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
++(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
++LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
++ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
++SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++
++*******************************************************************************/
++
++#include "mvTypes.h"
++#include "ctrlEnv/mvCtrlEnvLib.h"
++#include "ctrlEnv/sys/mvCpuIf.h"
++#include "cpu/mvCpu.h"
++#include "mvIpc.h"
++#include "mvOs.h"
++
++//#define MV_IPC_DEBUG
++#ifdef MV_IPC_DEBUG
++#define mvIpcDbgPrintf mvOsPrintf
++#else
++#define mvIpcDbgPrintf(x...)
++#endif
++
++//#define mvIpcDbgWrite(x, y)  (x = y);
++#define mvIpcDbgWrite(x, y)
++
++#define mvIpcErrPrintf mvOsPrintf
++
++
++//int axp_read_soc_clock(int timer_id);
++
++#define  IPC_BASE_DOORBELL  12
++
++unsigned int    myCpuId;
++void   		    *queueBaseAddr;
++MV_IPC_CHANNEL  ipcChannels[MAX_IPC_CHANNELS];
++
++
++/***********************************************************************************
++* mvIpcGetQueue
++*
++* DESCRIPTION:
++*		This routine allocates an IPC queue from the shared memory space
++*		Since the queue location must be at the same address for both parties
++*		the exact location is determined by this function
++*
++* INPUT:
++*		qId   - the id of the queue to allocate
++*		isRx  - is it used to receive messages
++*		qSize - size of individual queue
++* OUTPUT:
++*       None
++* RETURN:
++*		void * - return pointer to queue
++*
++************************************************************************************/
++static void* mvIpcGetQueue(int qId, bool isRx, int qSize)
++{
++	void *ptr;
++
++	ptr = (void *)((MV_U8*)queueBaseAddr + (qId * 2 * qSize) + (qSize * isRx));
++
++	return ptr;
++}
++
++/***********************************************************************************
++* mvIpcInit
++*
++* DESCRIPTION:
++*		Initializes the IPC mechanism. reset all queues and sets global variables
++*
++* INPUT:
++*		qBasePtr - base pointer to queue space
++*		primary  - is this the primary initializer. help locating queue addresses
++* OUTPUT:
++*       None
++* RETURN:
++*		MV_OK or MV_ERROR
++*
++************************************************************************************/
++MV_STATUS mvIpcInit(MV_VOID *qbasePtr, MV_BOOL primary)
++{
++	MV_U32 chnIdx;
++
++	myCpuId        = whoAmI();
++	queueBaseAddr  = qbasePtr;
++
++	/* Initialize all channels */
++	for(chnIdx = 0; chnIdx < MAX_IPC_CHANNELS; chnIdx++) {
++		ipcChannels[chnIdx].state        = MV_CHN_CLOSED;
++		ipcChannels[chnIdx].txEnable     = MV_FALSE;
++		ipcChannels[chnIdx].rxEnable     = MV_FALSE;
++		ipcChannels[chnIdx].queSizeInMsg = MV_IPC_QUEUE_SIZE;
++		ipcChannels[chnIdx].nextRxMsgIdx = 1;
++		ipcChannels[chnIdx].nextTxMsgIdx = 1;
++		ipcChannels[chnIdx].rxMsgQueVa   = mvIpcGetQueue(chnIdx, (primary == MV_TRUE),  MV_IPC_QUEUE_SIZE * sizeof(MV_IPC_MSG));
++		ipcChannels[chnIdx].txMsgQueVa   = mvIpcGetQueue(chnIdx, (primary == MV_FALSE), MV_IPC_QUEUE_SIZE * sizeof(MV_IPC_MSG));
++		ipcChannels[chnIdx].rxCtrlMsg    = &ipcChannels[chnIdx].rxMsgQueVa[0];
++		ipcChannels[chnIdx].txCtrlMsg    = &ipcChannels[chnIdx].txMsgQueVa[0];
++
++		if(primary){
++			mvOsMemset(ipcChannels[chnIdx].rxMsgQueVa, 0, MV_IPC_QUEUE_SIZE * sizeof(MV_IPC_MSG));
++			mvOsMemset(ipcChannels[chnIdx].txMsgQueVa, 0, MV_IPC_QUEUE_SIZE * sizeof(MV_IPC_MSG));
++		}
++
++		mvIpcDbgPrintf("IPC HAL: Init channel %d with RxQ = 0x%08x; TxQ = 0x%08x\n",
++			       chnIdx, (unsigned int)ipcChannels[chnIdx].rxMsgQueVa, (unsigned int)ipcChannels[chnIdx].txMsgQueVa);
++	}
++
++	mvIpcDbgPrintf("IPC HAL: Initialized interface as %s\n", (primary == MV_TRUE) ? "primary" : "secondary");
++
++	return MV_OK;
++}
++
++/***********************************************************************************
++* mvIpcClose
++*
++* DESCRIPTION:
++*		Closes all IPC channels
++*
++* INPUT:
++*		None
++* OUTPUT:
++*       None
++* RETURN:
++*		MV_OK or MV_ERROR
++*
++************************************************************************************/
++MV_STATUS mvIpcClose(MV_VOID)
++{
++	MV_U32 chnIdx;
++
++	/* De-activate all channels */
++	for(chnIdx = 0; chnIdx < MAX_IPC_CHANNELS; chnIdx++) {
++
++		if(ipcChannels[chnIdx].state == MV_CHN_ATTACHED)
++			mvIpcDettachChannel(chnIdx);
++
++		if(ipcChannels[chnIdx].state == MV_CHN_OPEN)
++			mvIpcCloseChannel(chnIdx);
++	}
++
++	mvIpcDbgPrintf("IPC HAL: CLosed IPC interface\n");
++
++	return MV_OK;
++}
++/***********************************************************************************
++* mvIpcOpenChannel
++*
++* DESCRIPTION:
++*		Opens a ipc channel and prepares it for receiving messages
++*
++* INPUT:
++*		chnId - the channel ID to open
++* OUTPUT:
++*       None
++* RETURN:
++*		MV_OK or MV_ERROR
++*
++************************************************************************************/
++MV_STATUS mvIpcOpenChannel(MV_U32 chnId)
++{
++	MV_IPC_CHANNEL *chn;
++	MV_U32 msgId;
++
++	/* Verify parameters */
++	if(chnId > MAX_IPC_CHANNELS){
++		mvIpcErrPrintf("IPC ERROR: Open channel: Invalid channel id %d\n", chnId);
++		return MV_ERROR;
++	}
++
++	chn = &ipcChannels[chnId];
++
++	if(chn->state != MV_CHN_CLOSED){
++		mvIpcErrPrintf("IPC ERROR: Can't open channel %d. It is already open\n", chnId);
++		return MV_ERROR;
++	}
++
++	/* Initialize the transmit queue */
++	for(msgId = 0; msgId < chn->queSizeInMsg; msgId++)
++		chn->txMsgQueVa[msgId].isUsed = MV_FALSE;
++
++	/* Initialize channel members */
++	chn->state	  	  = MV_CHN_OPEN;
++	chn->nextRxMsgIdx = 1;
++	chn->nextTxMsgIdx = 1;
++	chn->rxEnable     = MV_TRUE;
++
++	mvIpcDbgPrintf("IPC HAL: Opened channel %d successfully\n", chnId);
++
++	return MV_OK;
++}
++
++/***********************************************************************************
++* mvIpcAckAttach
++*
++* DESCRIPTION:
++*		Acknowledges and Attach request from receiver.
++*
++* INPUT:
++*		chnId - the channel ID
++*		cpuId - the CPU ID to attach to
++*		acknowledge - do i need to acknowledge the message
++* OUTPUT:
++*       None
++* RETURN:
++*		MV_OK or MV_ERROR
++*
++************************************************************************************/
++static MV_STATUS mvIpcAckAttach(MV_U32 chnId, MV_U32 cpuId, MV_BOOL acknowledge)
++{
++	MV_IPC_CHANNEL *chn = &ipcChannels[chnId];
++	MV_IPC_MSG attachMsg;
++	MV_STATUS status;
++
++	/* Cannot acknowledge remote attach until local attach was requested*/
++	if((chn->state != MV_CHN_ATTACHED) && (chn->state != MV_CHN_LINKING)) {
++		mvIpcDbgPrintf("IPC HAL: Can't acknowledge attach. channel in state %d\n", chn->state);
++		return MV_ERROR;
++	}
++
++	if(acknowledge == MV_TRUE) {
++
++		/* Check that channel is not already coupled to another CPU*/
++		if(chn->remoteCpuId != cpuId) {
++			mvIpcDbgPrintf("IPC HAL: Can't acknowledge attach. CPU %d != %d\n", chn->remoteCpuId, cpuId);
++			return MV_ERROR;
++		}
++
++		mvIpcDbgPrintf("IPC HAL: Acknowledging attach from CPU %d\n", cpuId);
++
++		/* Send the attach acknowledge message */
++		attachMsg.type  = IPC_MSG_ATTACH_ACK;
++		attachMsg.value = myCpuId;
++		attachMsg.size  = 0;
++		attachMsg.ptr   = 0;
++		status = mvIpcTxCtrlMsg(chnId, &attachMsg);
++		if(status != MV_OK) {
++				mvIpcErrPrintf("IPC ERROR: Cannot Send attach acknowledge message\n");
++				return MV_ERROR;
++		}
++	}
++
++	/* Now change my own state to attached */
++	chn->state = MV_CHN_ATTACHED;
++
++	return MV_OK;
++}
++
++/***********************************************************************************
++* mvIpcAckDetach
++*
++* DESCRIPTION:
++*		Acknowledges detach request from receiver. this closes the channel for
++*		transmission and resets the queues
++*
++* INPUT:
++*		chnId - the channel ID
++*		acknowledge - do i need to acknowledge the message
++* OUTPUT:
++*       None
++* RETURN:
++*		MV_OK or MV_ERROR
++*
++************************************************************************************/
++static MV_STATUS mvIpcAckDetach(MV_U32 chnId, MV_BOOL acknowledge)
++{
++	MV_IPC_CHANNEL *chn = &ipcChannels[chnId];
++	MV_IPC_MSG dettachMsg;
++	MV_STATUS status;
++	MV_U32 msgId;
++
++	/* Cannot acknowledge remote detach until local attach was requested*/
++	if((chn->state != MV_CHN_ATTACHED) && (chn->state != MV_CHN_UNLINKING)) {
++		mvIpcDbgPrintf("IPC HAL: Can't acknowledge detach. channel in state %d\n", chn->state);
++		return MV_ERROR;
++	}
++
++	if(acknowledge == MV_TRUE) {
++		/* Send the attach acknowledge message */
++		dettachMsg.type  = IPC_MSG_DETACH_ACK;
++		dettachMsg.size  = 0;
++		dettachMsg.ptr   = 0;
++		dettachMsg.value = 0;
++
++		status = mvIpcTxCtrlMsg(chnId, &dettachMsg);
++		if(status != MV_OK) {
++				mvIpcErrPrintf("IPC ERROR: Cannot Send dettach acknowledge message\n");
++				return MV_ERROR;
++		}
++	}
++
++	/* Now change my own state to attached */
++	chn->state 		  = MV_CHN_OPEN;
++	chn->txEnable     = MV_FALSE;
++	chn->nextRxMsgIdx = 1;
++	chn->nextTxMsgIdx = 1;
++
++	/* Initialize the transmit queue */
++	for(msgId = 1; msgId < chn->queSizeInMsg; msgId++)
++		chn->txMsgQueVa[msgId].isUsed = MV_FALSE;
++
++	return MV_OK;
++
++	mvIpcDbgPrintf("IPC HAL: Acknowledging dettach message\n");
++}
++
++/***********************************************************************************
++* mvIpcReqAttach
++*
++* DESCRIPTION:
++*		Ask receiver to acknowledge attach request. To verify reception, message
++*		transmission is possible only after receiver acknowledges the attach
++*
++* INPUT:
++*		chn   - pointer to channel structure
++*		chnId - the channel ID
++* OUTPUT:
++*       None
++* RETURN:
++*		MV_OK or MV_ERROR
++*
++************************************************************************************/
++static MV_STATUS mvIpcReqAttach(MV_IPC_CHANNEL *chn, MV_U32 chnId)
++{
++	MV_IPC_MSG attachMsg;
++	MV_STATUS status;
++	int backoff = 10, timeout = 10;
++
++	mvIpcDbgPrintf("IPC HAL: Requesting attach from cpu %d\n", chn->remoteCpuId);
++
++	/* Send the attach message */
++	attachMsg.type  = IPC_MSG_ATTACH_REQ;
++	attachMsg.value = myCpuId;
++	status = mvIpcTxCtrlMsg(chnId, &attachMsg);
++	if(status != MV_OK) {
++			mvIpcErrPrintf("IPC ERROR: Cannot Send attach req message\n");
++			return MV_ERROR;
++	}
++
++	/* Give the receiver 10 seconds to reply */
++	while ((chn->state != MV_CHN_ATTACHED) && timeout) {
++		udelay(backoff);
++		timeout--;
++	}
++
++	if(chn->state != MV_CHN_ATTACHED) {
++		mvIpcDbgPrintf("IPC HAL: Cannot complete attach sequence. no reply from receiver after %d usec\n",
++				  timeout * backoff);
++		return MV_ERROR;
++	}
++
++	mvIpcDbgPrintf("IPC HAL: Attached channel %d\n", chnId);
++
++	return MV_OK;
++}
++/***********************************************************************************
++* mvIpcAttachChannel
++*
++* DESCRIPTION:
++*		Attempts to attach the TX queue to a remote CPU by sending a ATTACH ACK
++*		messages to receiver. if the message is acknowledged the the channel state
++*		becomes attached and message transmission is enabled.
++*
++* INPUT:
++*		chnId 		- The channel ID
++*		remoteCpuId - CPU ID of receiver
++* OUTPUT:
++*		attached   - indicates if channel is attached
++* RETURN:
++*		MV_OK or MV_ERROR
++*
++************************************************************************************/
++MV_STATUS mvIpcAttachChannel(MV_U32 chnId, MV_U32 remoteCpuId, MV_BOOL *attached)
++{
++	MV_IPC_CHANNEL *chn;
++	MV_U32 msgId;
++	MV_STATUS status;
++
++	(*attached) = 0;
++
++	if(chnId > MAX_IPC_CHANNELS){
++		mvIpcErrPrintf("IPC ERROR: Attach channel: Invalid channel id %d\n", chnId);
++		return MV_ERROR;
++	}
++
++	if(remoteCpuId > (NR_CPUS- 1)){
++			mvIpcErrPrintf("IPC ERROR: Attach channel: Invalid target cpu id %d\n", remoteCpuId);
++			return MV_ERROR;
++	}
++
++	chn = &ipcChannels[chnId];
++
++	if(chn->state == MV_CHN_CLOSED){
++		mvIpcErrPrintf("IPC ERROR: Can't attach channel %d. It is closed\n", chnId);
++		return MV_ERROR;
++	}
++
++	if(chn->state == MV_CHN_ATTACHED){
++		(*attached) = 1;
++		return MV_OK;
++	}
++
++	chn->state 		  = MV_CHN_LINKING;
++	chn->remoteCpuId  = remoteCpuId;
++	chn->txEnable	  = MV_TRUE;
++
++	/* Initialize the transmit queue */
++	for(msgId = 1; msgId < chn->queSizeInMsg; msgId++)
++		chn->txMsgQueVa[msgId].isUsed = MV_FALSE;
++
++	/* Send req for attach to other side */
++	status = mvIpcReqAttach(chn, chnId);
++	if(status == MV_OK) {
++		(*attached) = 1;
++		mvIpcDbgPrintf("IPC HAL: Attached channel %d to CPU %d\n", chnId, remoteCpuId);
++	}
++
++	return MV_OK;
++}
++
++/***********************************************************************************
++* mvIpcDettachChannel
++*
++* DESCRIPTION:
++*		Detaches the channel from remote cpu. it notifies the remote cpu by sending
++*		control message and waits for acknowledge. after calling this function
++*		data messages cannot be sent anymore
++*
++* INPUT:
++*		chnId 		- The channel ID
++* OUTPUT:
++*       None
++* RETURN:
++*		MV_OK or MV_ERROR
++*
++************************************************************************************/
++MV_STATUS mvIpcDettachChannel(MV_U32 chnId)
++{
++	MV_IPC_CHANNEL *chn;
++	MV_IPC_MSG msg;
++	MV_STATUS status;
++
++	if(chnId > MAX_IPC_CHANNELS){
++		mvIpcErrPrintf("IPC ERROR: Detach channel: Invalid channel id %d\n", chnId);
++		return MV_ERROR;
++	}
++
++	chn = &ipcChannels[chnId];
++
++	if(chn->state != MV_CHN_ATTACHED){
++		mvIpcErrPrintf("IPC ERROR: Detach: channel %d is not attached\n", chnId);
++		return MV_ERROR;
++	}
++
++	msg.type  = IPC_MSG_DETACH_REQ;
++	msg.size  = 0;
++	msg.ptr   = 0;
++	msg.value = 0;
++
++	status = mvIpcTxCtrlMsg(chnId, &msg);
++	if(status != MV_OK) {
++			mvIpcErrPrintf("IPC ERROR: Cannot Send detach request message\n");
++			return MV_ERROR;
++	}
++
++	chn->remoteCpuId  = 0;
++	chn->state        = MV_CHN_UNLINKING;
++
++	return MV_OK;
++}
++
++/***********************************************************************************
++* mvIpcCloseChannel - CLose and IPC channel
++*
++* DESCRIPTION:
++*		Closes the 	IPC channels. this disables the channels ability to receive messages
++*
++* INPUT:
++*		chnId 		- The channel ID
++* OUTPUT:
++*       None
++* RETURN:
++*		MV_OK or MV_ERROR
++*
++************************************************************************************/
++MV_STATUS mvIpcCloseChannel(MV_U32 chnId)
++{
++	if(chnId > MAX_IPC_CHANNELS){
++		mvIpcErrPrintf("IPC ERROR: Close channel: Invalid channel id %d\n", chnId);
++		return MV_ERROR;
++	}
++	if(ipcChannels[chnId].state == MV_CHN_CLOSED){
++		mvIpcErrPrintf("IPC ERROR: Close channel: Channel %d is already closed\n", chnId);
++		return MV_ERROR;
++	}
++
++	ipcChannels[chnId].state       = MV_CHN_CLOSED;
++	ipcChannels[chnId].txEnable    = MV_FALSE;
++	ipcChannels[chnId].rxEnable    = MV_FALSE;
++	ipcChannels[chnId].remoteCpuId = 0;
++
++	mvIpcDbgPrintf("IPC HAL: Closed channel %d successfully\n", chnId);
++
++	return MV_OK;
++}
++
++/***********************************************************************************
++* mvIpcIsTxReady
++*
++* DESCRIPTION:
++*		Checks if the channel is ready to transmit
++*
++* INPUT:
++*		chnId 		- The channel ID
++* OUTPUT:
++*       None
++* RETURN:
++*		MV_OK or MV_ERROR
++*
++************************************************************************************/
++MV_BOOL mvIpcIsTxReady(MV_U32 chnId)
++{
++	MV_IPC_CHANNEL *chn;
++
++	/* Some parameters verification */
++	if(chnId > MAX_IPC_CHANNELS){
++		mvIpcErrPrintf("IPC ERROR: Tx Test: Invalid channel id %d\n", chnId);
++		return MV_FALSE;
++	}
++	if(ipcChannels[chnId].state != MV_CHN_ATTACHED){
++		mvIpcErrPrintf("IPC ERROR: Tx Test: channel not attached, state is %d\n", ipcChannels[chnId].state);
++		return MV_FALSE;
++	}
++
++	chn = &ipcChannels[chnId];
++
++	/* Is next message still used by receiver, yes means full queue or bug */
++	if(chn->txMsgQueVa[chn->nextTxMsgIdx].isUsed != MV_FALSE) {
++		mvIpcDbgPrintf("IPC HAL: Tx Test: Can't send, Msg %d used flag = %d\n", chn->nextTxMsgIdx, chn->txMsgQueVa[chn->nextTxMsgIdx].isUsed);
++		return MV_FALSE;
++	}
++
++	return MV_TRUE;
++}
++/***********************************************************************************
++* mvIpcSendDoorbell
++*
++* DESCRIPTION:
++* 		Send an IPC doorbell to target CPU
++*
++* INPUT:
++*		cpuId - the id of the target CPU
++*		chnId - The channel ID
++* OUTPUT:
++*       None
++* RETURN:
++*		MV_OK or MV_ERROR
++*
++************************************************************************************/
++static INLINE MV_VOID mvIpcSendDoorbell(MV_U32 cpuId, MV_U32 chnId)
++{
++	MV_U32 cpuBitMask;
++	MV_U32 doorbellNum;
++
++	cpuBitMask   = (1 << cpuId);
++	doorbellNum  = IPC_BASE_DOORBELL + chnId;
++
++	/* Use private doorbell 15 for IPC */
++	MV_REG_WRITE(CPU_SW_TRIG_IRQ, ((cpuBitMask << 8) | doorbellNum));
++
++	return;
++}
++
++/***********************************************************************************
++* mvIpcTxCtrlMsg
++*
++* DESCRIPTION:
++*		Sends a control message to other side. these messages are not forwarded
++*		to user
++*
++* INPUT:
++*		chnId - The channel ID
++*		inMsg - Pointer to message to send
++* OUTPUT:
++*       None
++* RETURN:
++*		MV_OK or MV_ERROR
++*
++************************************************************************************/
++MV_STATUS mvIpcTxCtrlMsg(MV_U32 chnId, MV_IPC_MSG *inMsg)
++{
++	MV_IPC_CHANNEL *chn;
++
++	chn = &ipcChannels[chnId];
++
++	if(chn->txEnable == MV_FALSE)
++	{
++		mvIpcErrPrintf("IPC ERROR: Tx Ctrl msg: Tx not enabled\n");
++		return MV_ERROR;
++	}
++
++	/* Write the message and pass */
++	chn->txCtrlMsg->type  = inMsg->type;
++	chn->txCtrlMsg->size  = inMsg->size;
++	chn->txCtrlMsg->ptr   = inMsg->ptr;
++	chn->txCtrlMsg->value = inMsg->value;
++
++	/* Make sure the msg values are written before the used flag
++	 * to ensure the polling receiver will get valid message once
++	 * it detects isUsed == MV_TRUE.
++	 */
++	dmb();
++
++	chn->txCtrlMsg->isUsed   = MV_TRUE;
++
++	mvIpcDbgWrite(chn->txCtrlMsg->align[0], axp_read_soc_clock(0));
++	mvIpcDbgWrite(chn->txCtrlMsg->align[1], 0);
++	mvIpcDbgWrite(chn->txCtrlMsg->align[2], 0);
++
++	mvIpcDbgPrintf("IPC HAL: Sent control message 0x%8x on channel %d to cpu %d\n", chn->txCtrlMsg, chnId, chn->remoteCpuId);
++
++	mvIpcSendDoorbell(chn->remoteCpuId, chnId);
++
++	return MV_OK;
++}
++
++/***********************************************************************************
++* mvIpcTxMsg
++*
++* DESCRIPTION:
++*		Main transmit function
++*
++* INPUT:
++*		chnId - The channel ID
++*		inMsg - Pointer to message to send
++* OUTPUT:
++*       None
++* RETURN:
++*		MV_OK or MV_ERROR
++*
++************************************************************************************/
++MV_STATUS mvIpcTxMsg(MV_U32 chnId, MV_IPC_MSG *inMsg)
++{
++	MV_IPC_CHANNEL *chn;
++	MV_IPC_MSG     *currMsg;
++
++	if(mvIpcIsTxReady(chnId) == MV_FALSE){
++		mvIpcDbgPrintf("IPC ERROR: Tx msg: Tx Queue not ready. Can't transmit at this time \n");
++		return MV_ERROR;
++	}
++
++	chn = &ipcChannels[chnId];
++
++	/* Write the message */
++	currMsg  = &chn->txMsgQueVa[chn->nextTxMsgIdx];
++
++	currMsg->type  = inMsg->type;
++	currMsg->size  = inMsg->size;
++	currMsg->ptr   = inMsg->ptr;
++	currMsg->value = inMsg->value;
++
++	/* Make sure the msg values are written before the used flag
++	 * to ensure the polling receiver will get valid message once
++	 * it detects isUsed == MV_TRUE.
++	 */
++	dmb();
++
++	/* Pass ownership to remote cpu */
++	currMsg->isUsed   = MV_TRUE;
++
++	mvIpcDbgWrite(currMsg->align[0], axp_read_soc_clock(0));
++	mvIpcDbgWrite(currMsg->align[1], 0);
++	mvIpcDbgWrite(currMsg->align[2], 0);
++
++	chn->nextTxMsgIdx++;
++	if(chn->nextTxMsgIdx == chn->queSizeInMsg)
++		chn->nextTxMsgIdx = 1;
++
++	mvIpcDbgPrintf("IPC HAL: Sent message %d on channel %d to cpu %d\n", chn->nextTxMsgIdx - 1, chnId, chn->remoteCpuId);
++
++	mvIpcSendDoorbell(chn->remoteCpuId, chnId);
++
++	return MV_OK;
++}
++
++/***********************************************************************************
++* mvIpcRecieveDoorbell
++*
++* DESCRIPTION:
++*		Translates a received doorbell to the matching channel
++*
++* INPUT:
++*		chnId   - The channel ID
++*		drblNum - Number of doorbell received
++* OUTPUT:
++*       None
++* RETURN:
++*		MV_OK or MV_ERROR
++*
++************************************************************************************/
++static MV_STATUS mvIpcRecieveDoorbell(int *chnId, MV_U32 drblNum)
++{
++	(*chnId) = (drblNum) - IPC_BASE_DOORBELL;
++	return MV_OK;
++}
++
++/***********************************************************************************
++* mvIpcRxCtrlMsg
++*
++* DESCRIPTION:
++*		This routine initializes IPC channel: setup receive queue and enable data receiving
++*		This routine receives IPC control structure (ipcCtrl) as input parameter.
++*		The following ipcCtrl members must be initialized prior calling this function:
++*
++* INPUT:
++*		chnId - The channel ID
++*		msg   - Pointer to received control message
++* OUTPUT:
++*       None
++* RETURN:
++*		void
++*
++************************************************************************************/
++static void mvIpcRxCtrlMsg(MV_U32 chnId, MV_IPC_MSG *msg)
++{
++	mvIpcDbgPrintf("IPC HAL: Processing control message %d \n", msg->type);
++
++	switch(msg->type) {
++
++	case IPC_MSG_ATTACH_REQ:
++		mvIpcAckAttach(chnId, msg->value, MV_TRUE);
++		break;
++
++	case IPC_MSG_ATTACH_ACK:
++		mvIpcAckAttach(chnId, msg->value, MV_FALSE);
++		break;
++
++	case IPC_MSG_DETACH_REQ:
++		mvIpcAckDetach(chnId, MV_TRUE);
++		break;
++
++	case IPC_MSG_DETACH_ACK:
++		mvIpcAckDetach(chnId, MV_FALSE);
++		break;
++
++	default:
++		mvIpcDbgPrintf("IPC HAL: Unknown internal message type %d \n", msg->type);
++	}
++
++	mvIpcDbgWrite(msg->align[2], axp_read_soc_clock(0));
++
++	mvIpcReleaseMsg(chnId, msg);
++}
++/***********************************************************************************
++* isCtrlMsg
++*
++* DESCRIPTION:
++*		Checks for control message
++*
++* INPUT:
++*		chn - pointer to control channel
++* OUTPUT:
++*       None
++* RETURN:
++*		MV_TRUE or MV_FALSE
++*
++************************************************************************************/
++static MV_BOOL isCtrlMsg(MV_IPC_CHANNEL *chn)
++{
++	if(chn->rxCtrlMsg->isUsed == MV_TRUE)
++		return MV_TRUE;
++	else
++		return MV_FALSE;
++}
++
++/***********************************************************************************
++* mvIpcDisableChnRx
++*
++* DESCRIPTION:
++*		Masks the doorbell for the given channel
++*
++* INPUT:
++*		irq - number of irq/doorbell to mask
++* OUTPUT:
++*       None
++* RETURN:
++*		MV_OK or MV_ERROR
++*
++************************************************************************************/
++MV_VOID mvIpcDisableChnRx(MV_U32 irq)
++{
++	/* Reset the doorbell corresponding to channel */
++	MV_REG_BIT_RESET(CPU_DOORBELL_IN_MASK_REG, (1 << irq));
++}
++
++/***********************************************************************************
++* mvIpcEnableChnRx
++*
++* DESCRIPTION:
++*		Unmasks the doorbell for the given channel
++*
++* INPUT:
++*		irq - number of irq/doorbell to unmask
++* OUTPUT:
++*       None
++* RETURN:
++*		MV_OK or MV_ERROR
++*
++************************************************************************************/
++MV_VOID mvIpcEnableChnRx(MV_U32 irq)
++{
++	/* Set the doorbell corresponding to channel */
++	MV_REG_BIT_SET(CPU_DOORBELL_IN_MASK_REG, (1 << irq));
++}
++
++/***********************************************************************************
++* mvIpcRxMsg
++*
++* DESCRIPTION:
++*		Main Rx routine - should be called from interrupt routine
++*
++* INPUT:
++*		drblNum  - number of doorbel received
++* OUTPUT:
++*       outChnId - the channel id that received a message
++*       outMsg   - pointer to the message received
++* RETURN:
++*		MV_TRUE  - if a message was received
++*		MV_FALSE - if no message exists
++*
++************************************************************************************/
++MV_BOOL mvIpcRxMsg(MV_U32 *outChnId, MV_IPC_MSG **outMsg, MV_U32 drblNum)
++{
++	MV_IPC_CHANNEL *chn;
++	MV_IPC_MSG     *currMsg;
++	MV_U32 	  chnId;
++	MV_STATUS status;
++
++	status = mvIpcRecieveDoorbell(&chnId, drblNum);
++
++	if(chnId > MAX_IPC_CHANNELS) {
++		mvIpcErrPrintf("IPC ERROR: Rx msg: Bad channel id %d\n", chnId);
++		return MV_FALSE;
++	}
++
++	chn = &ipcChannels[chnId];
++
++	/* First process control messages like attach, detach, close */
++	if(isCtrlMsg(chn) == MV_TRUE){
++		mvIpcRxCtrlMsg(chnId, chn->rxCtrlMsg);
++	}
++
++	currMsg = &chn->rxMsgQueVa[chn->nextRxMsgIdx];
++
++	// Check for unread data messages in queue */
++	if(currMsg->isUsed != MV_TRUE){
++		return MV_FALSE;
++	}
++
++	/* Increment msg idx to keep in sync with sender */
++	chn->nextRxMsgIdx++;
++	if(chn->nextRxMsgIdx == chn->queSizeInMsg)
++		chn->nextRxMsgIdx = 1;
++
++	// Check if channel is ready to receive messages */
++	if(chn->state < MV_CHN_OPEN){
++		mvIpcErrPrintf("IPC ERROR: Rx msg: Channel not ready, state = %d\n", chn->state);
++		return MV_FALSE;
++	}
++
++	mvIpcDbgWrite(currMsg->align[2], axp_read_soc_clock(0));
++
++	/* Now process user messages */
++	mvIpcDbgPrintf("IPC HAL: Received message %d on channel %d\n", chn->nextRxMsgIdx - 1, chnId);
++
++	(*outMsg)   = currMsg;
++	(*outChnId) = chnId;
++
++	return MV_TRUE;
++}
++
++/***********************************************************************************
++* mvIpcReleaseMsg
++*
++* DESCRIPTION:
++*		Return ownership on message to transmitter
++*
++* INPUT:
++*		chnId - The channel ID
++*		msg   - Pointer to message to release
++* OUTPUT:
++*       None
++* RETURN:
++*		MV_OK or MV_ERROR
++*
++************************************************************************************/
++MV_STATUS mvIpcReleaseMsg(MV_U32 chnId, MV_IPC_MSG *msg)
++{
++	MV_IPC_CHANNEL *chn;
++
++	if((chnId > MAX_IPC_CHANNELS) || (ipcChannels[chnId].state == MV_CHN_CLOSED)) {
++		mvIpcErrPrintf("IPC ERROR: Msg release: Bad or inactive channel id %d\n", chnId);
++		return MV_ERROR;
++	}
++
++	chn = &ipcChannels[chnId];
++
++	if(msg->isUsed == MV_FALSE) {
++		mvIpcErrPrintf("IPC ERROR: Msg release: Msg %d owned by %d\n", chn->nextRxMsgIdx, msg->isUsed);
++		return MV_ERROR;
++	}
++
++	msg->isUsed   = MV_FALSE;
++	mvIpcDbgWrite(msg->align[1], axp_read_soc_clock(0));
++
++	mvIpcDbgPrintf("IPC HAL: Released message 0x%8x on channel %d\n", msg, chnId);
++
++	return MV_OK;
++}
+diff --git a/arch/arm/plat-armada/common/mvIpc.h b/arch/arm/plat-armada/common/mvIpc.h
+new file mode 100644
+index 0000000..7cf3d44
+--- /dev/null
++++ b/arch/arm/plat-armada/common/mvIpc.h
+@@ -0,0 +1,136 @@
++/*******************************************************************************
++Copyright (C) Marvell International Ltd. and its affiliates
++
++This software file (the "File") is owned and distributed by Marvell
++International Ltd. and/or its affiliates ("Marvell") under the following
++alternative licensing terms.  Once you have made an election to distribute the
++File under one of the following license alternatives, please (i) delete this
++introductory statement regarding license alternatives, (ii) delete the two
++license alternatives that you have not elected to use and (iii) preserve the
++Marvell copyright notice above.
++
++********************************************************************************
++Marvell Commercial License Option
++
++If you received this File from Marvell and you have entered into a commercial
++license agreement (a "Commercial License") with Marvell, the File is licensed
++to you under the terms of the applicable Commercial License.
++
++********************************************************************************
++Marvell GPL License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File in accordance with the terms and conditions of the General
++Public License Version 2, June 1991 (the "GPL License"), a copy of which is
++available along with the File in the license.txt file or by writing to the Free
++Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
++on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++
++THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
++DISCLAIMED.  The GPL License provides additional details about this warranty
++disclaimer.
++********************************************************************************
++Marvell BSD License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File under the following licensing terms.
++Redistribution and use in source and binary forms, with or without modification,
++are permitted provided that the following conditions are met:
++
++    *   Redistributions of source code must retain the above copyright notice,
++	    this list of conditions and the following disclaimer.
++
++    *   Redistributions in binary form must reproduce the above copyright
++        notice, this list of conditions and the following disclaimer in the
++        documentation and/or other materials provided with the distribution.
++
++    *   Neither the name of Marvell nor the names of its contributors may be
++        used to endorse or promote products derived from this software without
++        specific prior written permission.
++
++THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
++ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
++WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
++DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
++ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
++(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
++LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
++ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
++SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++
++*******************************************************************************/
++
++#ifndef __mvIpc_h
++#define __mvIpc_h
++
++#define IPC_TRANSMITTER		0
++#define IPC_RECIEVER		1
++
++typedef enum
++{
++	MV_CHN_CLOSED =  0,
++	MV_CHN_OPEN,
++	MV_CHN_LINKING,
++	MV_CHN_UNLINKING,
++	MV_CHN_ATTACHED
++
++}MV_IPC_CHN_STATE;
++
++typedef struct __ipc_message_struct
++{
++	MV_U32	 type;
++	MV_U32 	 size; 			/*buffer size*/
++	MV_VOID* ptr;   		/*buffer virtual address for Rx side*/
++	MV_U32	 value;			/*User data*/
++	MV_U32   isUsed;		/*CPU Id and optional oob message*/
++	MV_U32	 align[3];		/* Align message size to cache line */
++} MV_IPC_MSG;
++
++typedef struct __ipc_channel_struct
++{
++	MV_IPC_MSG* rxMsgQueVa;   /*buffer virtual address for Rx side*/
++	MV_IPC_MSG* txMsgQueVa;   /*buffer virtual address for Tx side*/
++	MV_IPC_MSG* rxCtrlMsg;    /*buffer virtual address for Rx side*/
++	MV_IPC_MSG* txCtrlMsg;    /*buffer virtual address for Tx side*/
++	MV_U32	 nextRxMsgIdx;
++	MV_U32	 nextTxMsgIdx;
++	MV_U32	 queSizeInMsg;
++	MV_U32   remoteCpuId;
++	MV_BOOL	 txEnable;
++	MV_BOOL	 rxEnable;
++	MV_IPC_CHN_STATE state;
++
++} MV_IPC_CHANNEL;
++
++#define MAX_IPC_CHANNELS     4
++#define MV_IPC_QUEUE_SIZE    256
++#define MV_IPC_QUEUE_MEM     (MV_IPC_QUEUE_SIZE * 2 * sizeof(MV_IPC_MSG) * MAX_IPC_CHANNELS)
++#define MAX_USER_MSG_TYPE	 (1 << 16)
++
++typedef enum
++{
++	IPC_MSG_ATTACH_REQ = 0,
++	IPC_MSG_ATTACH_ACK,
++	IPC_MSG_DETACH_REQ,
++	IPC_MSG_DETACH_ACK
++}MV_IPC_CTRL_MSG_TYPE;
++
++
++MV_STATUS mvIpcInit(MV_VOID *qbasePtr, MV_BOOL primary);
++MV_STATUS mvIpcClose(MV_VOID);
++MV_STATUS mvIpcOpenChannel(MV_U32 chnId);
++MV_STATUS mvIpcCloseChannel(MV_U32 chnId);
++MV_STATUS mvIpcAttachChannel(MV_U32 chnId, MV_U32 remoteCpuId, MV_BOOL *attached);
++MV_STATUS mvIpcDettachChannel(MV_U32 chnId);
++MV_BOOL   mvIpcIsTxReady(MV_U32 chnId);
++MV_STATUS mvIpcTxMsg(MV_U32 chnId, MV_IPC_MSG *inMsg);
++MV_STATUS mvIpcTxCtrlMsg(MV_U32 chnId, MV_IPC_MSG *inMsg);
++MV_STATUS mvIpcRxMsg(MV_U32 *outChnId, MV_IPC_MSG **outMsg, MV_U32 drblNum);
++MV_STATUS mvIpcReleaseMsg(MV_U32 chnId, MV_IPC_MSG *msg);
++MV_VOID   mvIpcDisableChnRx(MV_U32 irq);
++MV_VOID   mvIpcEnableChnRx(MV_U32 irq);
++
++
++#endif /*__mvIpc_h */
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/Makefile b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/Makefile
+new file mode 100644
+index 0000000..9fd5e4d
+--- /dev/null
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/Makefile
+@@ -0,0 +1,7 @@
++#
++# Makefile for the Marvell IPC Pseudo Network driver
++#
++ifeq ($(CONFIG_ARCH_ARMADA_XP),y)
++	include $(srctree)/arch/arm/mach-armadaxp/config/mvRules.mk
++endif
++obj-$(CONFIG_MV_IPC_NET) += mv_ipc.o
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/mv_ipc.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/mv_ipc.c
+new file mode 100644
+index 0000000..a0fc143
+--- /dev/null
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/mv_ipc.c
+@@ -0,0 +1,238 @@
++/* This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ */
++#include <linux/module.h>
++#include <linux/kernel.h>
++#include <linux/netdevice.h>
++#include <linux/etherdevice.h>
++#include <linux/init.h>
++#include <linux/moduleparam.h>
++#include <asm/irq_regs.h>
++
++#include "mvTypes.h"
++#include "mvOs.h"
++#include "mvDebug.h"
++#include "mvCommon.h"
++#include "mvIpc.h"
++#include "mv_ipc.h"
++#include "ctrlEnv/mvCtrlEnvLib.h"
++#include "cpu/mvCpu.h"
++#include "include/mach/smp.h"
++
++
++extern unsigned int sh_mem_base, sh_mem_size;
++
++void   *sh_virt_base;
++void   *sh_mem_stack;
++unsigned int sh_mem_remain;
++unsigned int virt_phys_offset;
++bool   ipcInitialized = 0;
++
++MV_IPC_CHN ipc_drv_channels[MAX_IPC_CHANNELS];
++
++#define IPC_RX_MAX_MSGS_PER_ISR		50
++
++//#define IPC_DRV_DEBUG
++#ifdef IPC_DRV_DEBUG
++#define ipc_debug	printk
++#else
++#define ipc_debug(x...)
++#endif
++
++/****************************************************************************************
++ * ipc_sh_malloc()                                 				        		*
++ *   Allocate memory on AMP shared space
++ ***************************************************************************************/
++void* ipc_sh_malloc(unsigned int size)
++{
++	void *ptr;
++
++	if(size > sh_mem_remain)
++		return NULL;
++
++	ptr = sh_mem_stack;
++
++	sh_mem_stack  += size;
++	sh_mem_remain -= size;
++
++	return ptr;
++}
++
++/****************************************************************************************
++ * ipc_virt_to_phys()                                 				        		*
++ *   address translation for shared stack
++ ***************************************************************************************/
++void* ipc_virt_to_phys(void *virt_addr)
++{
++	void *phys_addr = 0;
++
++	if((virt_addr >= sh_virt_base) && (virt_addr < (sh_virt_base + sh_mem_size)))
++		phys_addr = (void *)((unsigned int)virt_addr - virt_phys_offset);
++
++	return phys_addr;
++}
++
++/****************************************************************************************
++ * ipc_phys_to_virt()                                 				        		*
++ *   address translation for shared stack
++ ***************************************************************************************/
++void* ipc_phys_to_virt(void *phys_addr)
++{
++	void *virt_addr = 0;
++
++	if(((int)phys_addr >= sh_mem_base) && ((int)phys_addr < (sh_mem_base + sh_mem_size)))
++		virt_addr = (void *)((unsigned int)phys_addr + virt_phys_offset);
++
++	return virt_addr;
++}
++
++/****************************************************************************************
++ * ipc_init_shared_stack()                                 				        		*
++ *   Initialize the shared stack used for communication
++ ***************************************************************************************/
++static int __init ipc_init_shared_stack(unsigned int sh_phys_base, unsigned int sh_mem_size,
++										unsigned int reserved, unsigned int baseIdx)
++{
++	if(sh_mem_size < reserved) {
++		printk(KERN_ERR "IPC: Shared mem size %d smaller then reserved %d\n", sh_mem_size, reserved);
++		return 0;
++	}
++
++	/* Map shared memory and initialize shared stack */
++	sh_virt_base  = ioremap(sh_phys_base, sh_mem_size);
++	if(!sh_virt_base) {
++		printk(KERN_ERR "IPC: Unable to map physical shared mem block (%#010x - %#010x)\n",
++			sh_phys_base, sh_phys_base + sh_mem_size );
++		return 0;
++	}
++
++	virt_phys_offset = (unsigned int)sh_virt_base - sh_phys_base;
++
++	/* Reserve space shared by both amp groups */
++	sh_mem_stack   = sh_virt_base + reserved;
++	sh_mem_remain  = sh_mem_size  - reserved;
++
++	/* Each group receives half of remaining memory */
++	sh_mem_stack  += ((sh_mem_remain >> 1) * baseIdx);
++	sh_mem_remain -= (sh_mem_remain >> 1);
++
++	ipc_debug(KERN_INFO "IPC: Remaped Shared memory PA %#010x to VA %#010x\n",
++	          (unsigned int) sh_phys_base, (unsigned int) sh_virt_base);
++
++	ipc_debug(KERN_INFO "IPC: Based shared stack %#010x\n", (unsigned int) sh_mem_stack);
++
++	return 1;
++}
++
++/****************************************************************************************
++ * ipc_open_chn()                                 				        		*
++ *   Initialize and register IPC network interface 										*
++ ***************************************************************************************/
++int ipc_open_chn(int chnId, IPC_RX_CLBK rx_clbk)
++{
++	MV_STATUS ret;
++
++	ret = mvIpcOpenChannel(chnId);
++	if(ret != MV_OK)
++		return -1;
++
++	ipc_drv_channels[chnId].rxCallback = rx_clbk;
++	return 0;
++}
++
++/****************************************************************************************
++ * do_ipc_rx_irq()                                 				        		*
++ *  rx interrupt service routine 												*
++ ***************************************************************************************/
++void do_ipc_rx_irq(int irq, struct pt_regs *regs)
++{
++	int chnId = 0;
++	MV_IPC_MSG *msg;
++	int read_msgs = IPC_RX_MAX_MSGS_PER_ISR;
++	struct pt_regs *old_regs = set_irq_regs(regs);
++
++	ipc_debug(KERN_INFO "IPC: RX callback. got irq no = %d  time = %d\n", irq, axp_read_soc_clock(0));
++
++	irq_enter();
++	mvIpcDisableChnRx(irq);
++
++	/* Pull msg from IPC HAL until no more msgs*/
++	while (read_msgs)
++	{
++		if(mvIpcRxMsg(&chnId, &msg, irq) == MV_FALSE)
++			break;
++
++		if(ipc_drv_channels[chnId].rxCallback != 0)
++			ipc_drv_channels[chnId].rxCallback(msg);
++
++		read_msgs--;
++	}
++
++	mvIpcEnableChnRx(irq);
++	irq_exit();
++
++	if(read_msgs == IPC_RX_MAX_MSGS_PER_ISR)
++		ipc_debug(KERN_WARNING "IPC: Received interrupt with no messages at %d\n", axp_read_soc_clock(0));
++
++	set_irq_regs(old_regs);
++}
++
++/****************************************************************************************
++ * ipc_init_module()                                 				        		*
++ *   intialize and register IPC driver interface 										*
++ ***************************************************************************************/
++static int __init ipc_init_module(void)
++{
++	unsigned int cpuId = whoAmI();
++	MV_STATUS status;
++	int chnId;
++
++	/* Initialize shared memory - Reserve space for ipc queues */
++	ipc_init_shared_stack(sh_mem_base, sh_mem_size, MV_IPC_QUEUE_MEM, (cpuId != 0));
++
++	status = mvIpcInit(sh_virt_base, (master_cpu_id == 0));
++	if(status != MV_OK) {
++		printk(KERN_ERR "IPC: IPC HAL initialization failed\n");
++	}
++
++	/* Reset Rx callback pointers */
++	for(chnId = 0; chnId < MAX_IPC_CHANNELS; chnId++)
++		ipc_drv_channels[chnId].rxCallback = 0;
++
++	ipcInitialized = 1;
++
++	printk(KERN_INFO "IPC: Driver initialized successfully\n");
++
++	return 0;
++}
++
++/****************************************************************************************
++ * ipc_cleanup_module()                                 				        	*
++ *   close IPC driver 																*
++ ***************************************************************************************/
++static void __exit ipc_cleanup_module(void)
++{
++	ipcInitialized = 0;
++
++	mvIpcClose();
++
++	/* Unmap shared memory space */
++	iounmap(sh_virt_base);
++}
++
++module_init(ipc_init_module);
++module_exit(ipc_cleanup_module);
++MODULE_DESCRIPTION("Marvell Inter Processor Communication (IPC) Driver");
++MODULE_AUTHOR("Yehuda Yitschak <yehuday@marvell.com>");
++MODULE_LICENSE("GPL");
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/mv_ipc.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/mv_ipc.h
+new file mode 100644
+index 0000000..481474a
+--- /dev/null
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/mv_ipc.h
+@@ -0,0 +1,53 @@
++/*******************************************************************************
++Copyright (C) Marvell International Ltd. and its affiliates
++
++This software file (the "File") is owned and distributed by Marvell
++International Ltd. and/or its affiliates ("Marvell") under the following
++alternative licensing terms.  Once you have made an election to distribute the
++File under one of the following license alternatives, please (i) delete this
++introductory statement regarding license alternatives, (ii) delete the two
++license alternatives that you have not elected to use and (iii) preserve the
++Marvell copyright notice above.
++
++
++********************************************************************************
++Marvell GPL License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File in accordance with the terms and conditions of the General
++Public License Version 2, June 1991 (the "GPL License"), a copy of which is
++available along with the File in the license.txt file or by writing to the Free
++Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
++on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++
++THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
++DISCLAIMED.  The GPL License provides additional details about this warranty
++disclaimer.
++*******************************************************************************/
++
++#ifndef __MV_IPC_H__
++#define __MV_IPC_H__
++
++
++#define ipc_attach_chn(chnId, cpu, ret) 	mvIpcAttachChannel(chnId, cpu, ret)
++#define ipc_dettach_chn(chnId) 				mvIpcDettachChannel(chnId)
++#define ipc_close_chn(chnId)		 		mvIpcCloseChannel(chnId)
++#define ipc_tx_msg(chnId, msg)		 		mvIpcTxMsg(chnId, msg)
++#define ipc_tx_ready(chnId)		 			mvIpcIsTxReady(chnId)
++#define ipc_release_msg(chnId, msg)			mvIpcReleaseMsg(chnId, msg)
++
++typedef int (*IPC_RX_CLBK)(MV_IPC_MSG *msg);
++
++typedef struct __ipc_channel_info
++{
++	IPC_RX_CLBK  rxCallback;
++
++} MV_IPC_CHN;
++
++void* ipc_sh_malloc(unsigned int size);
++void* ipc_virt_to_phys(void *virt_addr);
++void* ipc_phys_to_virt(void *phys_addr);
++int ipc_open_chn(int chnId, IPC_RX_CLBK rx_clbk);
++
++#endif /* __MV_IPC_H__ */
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/Makefile b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/Makefile
+new file mode 100644
+index 0000000..029e7ab
+--- /dev/null
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/Makefile
+@@ -0,0 +1,7 @@
++#
++# Makefile for the Marvell Gigabit Ethernet driver
++#
++ifeq ($(CONFIG_ARCH_ARMADA_XP),y)
++	include $(srctree)/arch/arm/mach-armadaxp/config/mvRules.mk
++endif
++obj-$(CONFIG_MV_IPC_NET) += ipc_net.o
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c
+new file mode 100644
+index 0000000..a6e07be
+--- /dev/null
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c
+@@ -0,0 +1,601 @@
++/*
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ */
++#include <linux/module.h>
++#include <linux/kernel.h>
++#include <linux/netdevice.h>
++#include <linux/etherdevice.h>
++#include <linux/init.h>
++#include <linux/moduleparam.h>
++#include <linux/platform_device.h>
++
++#include "include/mach/smp.h"
++#include "mvTypes.h"
++#include "mvOs.h"
++#include "mvDebug.h"
++#include "mvCommon.h"
++#include "mvStack.h"
++#include "mvIpc.h"
++#include "mv_ipc/mv_ipc.h"
++#include "cpu/mvCpu.h"
++
++//#define IPC_NET_DEBUG
++#ifdef IPC_NET_DEBUG
++#define ipcnet_dbg	printk
++#else
++#define ipcnet_dbg(x...)
++#endif
++
++#define IPC_NET_WRAP                (4 + ETH_HLEN + 4)
++#define IPC_NET_RX_BUF_SIZE(mtu) 	MV_ALIGN_UP(((mtu) + IPC_NET_WRAP), CPU_D_CACHE_LINE_SIZE)
++#define IPC_NET_MAX_TX_DESC			256
++#define IPC_NET_MTU_SIZE			1500
++#define IPC_NET_CHANNEL_ID			0
++#define IPC_NET_BUFF_USED(ptr)      (ptr)
++#define IPC_NET_ALLOC_TIME(ptr)     (ptr + 1)
++#define IPC_NET_DATA_PTR(ptr)       (ptr + 2)
++
++static void set_multicast_list(struct net_device *dev);
++static void ipc_net_tx_timeout( struct net_device *dev);
++int ipc_net_start(struct net_device *dev);
++int ipc_net_stop( struct net_device *dev);
++static int ipc_net_xmit(struct sk_buff *skb, struct net_device *dev);
++static struct net_device_stats *ipc_net_get_stats(struct net_device *dev);
++static int ipc_net_set_address(struct net_device *dev, void *p);
++
++typedef enum
++{
++	IPC_NET_SHARED_BUF = 0,
++	IPC_NET_PRIVATE_BUF,
++	IPC_NET_RELEASE_MSG
++
++}ipc_net_msg_type;
++
++static struct ipc_net_device *ipc_net_dev = NULL;
++struct ipc_net_device
++{
++	struct net_device   *net_dev;
++	struct delayed_work ipc_net_link;
++	struct timer_list 	watchdog_timer;
++	u32 				watchdog_timeo;
++	struct net_device_stats 	stats;
++	u32*				sh_buff_fifo[IPC_NET_MAX_TX_DESC];
++	int  				next_sh_buff;
++	spinlock_t         	lock;
++	u32					target_cpu;
++} ipc_net_device;
++
++static const struct net_device_ops mv_ipc_netdev_ops = {
++	.ndo_open = ipc_net_start,
++	.ndo_stop = ipc_net_stop,
++	.ndo_start_xmit = ipc_net_xmit,
++	.ndo_set_multicast_list = set_multicast_list,
++	.ndo_set_mac_address = ipc_net_set_address,
++	.ndo_change_mtu = NULL,
++	.ndo_tx_timeout = ipc_net_tx_timeout,
++	.ndo_get_stats  = ipc_net_get_stats,
++};
++
++
++
++/****************************************************************************************
++ * set_multicast_list()                                 				        		*
++ *   fake multicast ability function 													*
++ ***************************************************************************************/
++static void set_multicast_list(struct net_device *dev)
++{
++}
++
++/****************************************************************************************
++ * ipc_net_tx_timeout()                                 				        		*
++ *   transmit timeout function function (dummy)											*
++ ***************************************************************************************/
++static void ipc_net_tx_timeout( struct net_device *dev )
++{
++    printk(KERN_INFO "%s: tx timeout\n", dev->name);
++}
++
++/****************************************************************************************
++ * ipc_net_watchdog()                                 				        		*
++ *   xmit watchdog function: restart the blocked TX queue 								*
++ ***************************************************************************************/
++static void ipc_net_watchdog(unsigned long data)
++{
++    struct net_device   *dev = (struct net_device *)data;
++    struct ipc_net_device* priv = netdev_priv(dev);
++
++    ipcnet_dbg("IPC NET: Entering Watchdog\n");
++
++    spin_lock(&priv->lock);
++
++	if (ipc_tx_ready(IPC_NET_CHANNEL_ID) == MV_OK) {
++		if (netif_queue_stopped(dev) && (dev->flags & IFF_UP))
++			netif_wake_queue(dev);
++	}
++	else{
++		mod_timer(&priv->watchdog_timer, jiffies + priv->watchdog_timeo);
++	}
++
++    spin_unlock(&priv->lock);
++
++    ipcnet_dbg("IPC NET: Leaving Watchdog\n");
++}
++
++/****************************************************************************************
++ * ipc_net_set_address()                                 				        	*
++ *   set new MAC address 																*
++ ***************************************************************************************/
++static int ipc_net_set_address(struct net_device *dev, void *p)
++{
++	struct sockaddr *sa = p;
++
++	if (!is_valid_ether_addr(sa->sa_data))
++		return -EADDRNOTAVAIL;
++
++	memcpy(dev->dev_addr, sa->sa_data, ETH_ALEN);
++	return 0;
++}
++/****************************************************************************************
++ * ipc_net_get_stats()	                                 				        	*
++ *   return network interface statistics 												*
++ ***************************************************************************************/
++static struct net_device_stats *ipc_net_get_stats(struct net_device *dev)
++{
++	struct ipc_net_device* priv = netdev_priv(dev);
++	return &priv->stats;
++}
++
++/****************************************************************************************
++ * ipc_net_stop()                                 				        			*
++ *   stop IPC network interface 														*
++ ***************************************************************************************/
++int ipc_net_stop( struct net_device *dev )
++{
++
++	/* stop upper layer */
++	netif_carrier_off(dev);
++	netif_stop_queue(dev);
++
++	del_timer_sync(&dev->watchdog_timer);
++
++	if(mvIpcDettachChannel(IPC_NET_CHANNEL_ID) != MV_OK) {
++		printk("IPC NET: Failed to detach channel %d", IPC_NET_CHANNEL_ID);
++	}
++
++	printk(KERN_NOTICE "%s: stopped\n", dev->name);
++
++	return 0;
++}
++
++/****************************************************************************************
++ * ipc_net_get_buff()                                 				        		*
++ *   Allocate a shared buffer from buffer pool
++ ***************************************************************************************/
++static INLINE u32* ipc_net_get_buff(struct ipc_net_device *priv)
++{
++	int cnt;
++	u32 used, *buff;
++
++	for(cnt = 0; cnt < IPC_NET_MAX_TX_DESC; cnt++) {
++		buff = priv->sh_buff_fifo[priv->next_sh_buff];
++		used = *(IPC_NET_BUFF_USED(buff));
++
++		if(!used)
++			break;
++		else {
++			//TODO - add code here that releases a buffer based on time diff since allocation
++
++			ipcnet_dbg(KERN_INFO "IPC NET: Buffer %d ptr 0x%8x allocated at %u still used now in %u\n",
++				   priv->next_sh_buff, buff ,*(IPC_NET_ALLOC_TIME(buff)), (u32)jiffies );
++			priv->next_sh_buff++;
++		}
++	}
++
++	/* Check if buffer was allocated */
++	if(cnt == IPC_NET_MAX_TX_DESC)
++		return 0;
++
++	/* Mark the buffer as used and store the allocation time */
++	*(IPC_NET_BUFF_USED(buff))  = 1;
++	*(IPC_NET_ALLOC_TIME(buff)) = (u32)jiffies;
++
++	priv->next_sh_buff++;
++	if(priv->next_sh_buff == IPC_NET_MAX_TX_DESC)
++		priv->next_sh_buff = 0;
++
++	return buff;
++}
++
++/****************************************************************************************
++ * ipc_net_xmit()	                                 				        		*
++ *   net xmit function: transmit buffer through IPC interface						    *
++ ***************************************************************************************/
++static int ipc_net_xmit(struct sk_buff *skb, struct net_device *dev)
++{
++	struct ipc_net_device* priv = netdev_priv(dev);
++	int tx_in_interrupt	        = in_interrupt();
++	MV_STATUS status;
++	MV_IPC_MSG msg;
++	u32 *sh_buf;
++	unsigned long flags = 0;
++
++	ipcnet_dbg(KERN_INFO "IPC NET: TX: Sending skb of size %d\n", skb->len);
++
++	if (skb_shinfo(skb)->nr_frags != 0) {
++		printk(KERN_ERR"%s: can't transmit fragmented skb.\n", dev->name);
++		return 1;
++	}
++
++	if (netif_queue_stopped(dev)) {
++		priv->stats.tx_errors++;
++		priv->stats.tx_carrier_errors++;
++		printk(KERN_ERR"%s: transmitting while stopped.\n", dev->name);
++		return 1;
++	}
++	if (!tx_in_interrupt)
++		local_irq_save(flags);
++
++	if (!spin_trylock(&priv->lock)) {
++		/* Collision - tell upper layer to re-queue */
++		if (!tx_in_interrupt)
++			local_irq_restore(flags);
++		priv->stats.tx_dropped++;
++		return NETDEV_TX_LOCKED;
++	}
++
++	sh_buf  = ipc_net_get_buff(priv);
++	if(sh_buf == 0) {
++		printk(KERN_ERR "IPC NET: Cannot allocate shared buffer for transmit\n");
++		priv->stats.tx_dropped++;
++		return NETDEV_TX_BUSY;
++	}
++
++	memcpy(IPC_NET_DATA_PTR(sh_buf), skb->data, skb->len);
++
++	msg.type  = IPC_NET_SHARED_BUF;
++	msg.ptr   = ipc_virt_to_phys((void*)sh_buf);
++	msg.size  = skb->len;
++	msg.value = (MV_U32)sh_buf;
++
++	status = ipc_tx_msg(IPC_NET_CHANNEL_ID, &msg);
++
++	priv->stats.tx_bytes += skb->len;
++	priv->stats.tx_packets++;
++
++	if (status == MV_ERROR) {
++		netif_stop_queue(dev);
++		mod_timer(&priv->watchdog_timer, jiffies + priv->watchdog_timeo);
++		*(IPC_NET_BUFF_USED(sh_buf)) = 0;
++		printk(KERN_INFO "IPC NET: TX: TX queue busy\n");
++	}
++
++	if (!tx_in_interrupt)
++		spin_unlock_irqrestore(&priv->lock, flags);
++	else
++		spin_unlock(&priv->lock);
++
++	if (unlikely(status == MV_ERROR)) {
++		priv->stats.tx_dropped++;
++		return NETDEV_TX_BUSY;
++	}
++	else {
++		dev_kfree_skb_any(skb);
++		return NETDEV_TX_OK;
++	}
++}
++
++/****************************************************************************************
++ * ipc_net_rx()	                                 				        				*
++ *   net receive function: called from IPC driver on msg arrival						*
++ ***************************************************************************************/
++int ipc_net_rx(MV_IPC_MSG *msg)
++{
++	struct ipc_net_device *priv = (struct ipc_net_device *)ipc_net_dev;
++	struct net_device *dev = priv->net_dev;
++	struct sk_buff *skb;
++	u32* ptr_virt;
++	u32 size;
++
++	ipcnet_dbg("Recieved msg %d, %d, 0x%08x, 0x%08x\n", msg->type, msg->size, msg->ptr, msg->value);
++
++	if(msg->type == IPC_NET_SHARED_BUF)
++	{
++		skb = dev_alloc_skb(IPC_NET_RX_BUF_SIZE(dev->mtu));
++		if (unlikely(!skb)) {
++			printk(KERN_ERR "%s: skb alloc failure!\n", dev->name);
++			ipc_release_msg(IPC_NET_CHANNEL_ID, msg);
++			return MV_ERROR;
++		}
++
++		ptr_virt = (u32*)ipc_phys_to_virt(msg->ptr);
++		if(ptr_virt == 0) {
++			printk(KERN_ERR "IPC NET: Unable to map shared buf ptr 0x%08x\n", (u32)msg->ptr);
++
++		}
++
++		size = msg->size;
++
++		skb_reserve(skb, NET_IP_ALIGN);
++		skb_put(skb, size);
++
++		/* Copy the buffer, release the buffer and the message */
++		memcpy(skb->data, IPC_NET_DATA_PTR(ptr_virt), size);
++
++		*(IPC_NET_BUFF_USED(ptr_virt)) = 0;
++		ipc_release_msg(IPC_NET_CHANNEL_ID, msg);
++	}
++	else {
++		ipcnet_dbg("IPC NET: Received unknown msg type %d\n", msg->type);
++		ipc_release_msg(IPC_NET_CHANNEL_ID, msg);
++		return -1;
++	}
++
++	skb->dev       = dev;
++	skb->csum      = 0;
++	skb->ip_summed = CHECKSUM_UNNECESSARY;
++	skb->protocol  = eth_type_trans(skb, dev);
++
++	ipcnet_dbg("IPC NET: Passing skb 0x%08x to stack\n", skb);
++	if (likely(!netif_rx(skb))) {
++		ipcnet_dbg("IPC NET: Processed skb 0x%08x by stack\n", skb);
++		priv->stats.rx_packets++;
++		priv->stats.rx_bytes += size;
++		return 0;
++	}
++	else {
++		priv->stats.rx_errors++;
++		printk("netif_receive_skb err\n");
++		return -1;
++	}
++}
++
++/****************************************************************************************
++ * ipc_net_link_worker()                                 				        		*
++ *   worker thread: wait for iPC link to establish										*
++ ***************************************************************************************/
++static void ipc_net_link_worker(struct work_struct *dummy)
++{
++	MV_STATUS ret;
++	int attached;
++
++	ret = ipc_attach_chn(IPC_NET_CHANNEL_ID, ipc_net_dev->target_cpu, &attached);
++	if(ret != MV_OK){
++		printk(KERN_ERR "IPC NET: IPC attach returned error for target CPU %d\n", ipc_net_dev->target_cpu);
++		return;
++	}
++
++	if (attached) {
++		printk(KERN_INFO "%s link up\n", ipc_net_dev->net_dev->name);
++		netif_carrier_on(ipc_net_dev->net_dev);
++		netif_wake_queue(ipc_net_dev->net_dev);
++	}
++	else {
++		schedule_delayed_work(&ipc_net_dev->ipc_net_link, HZ);
++	}
++}
++
++/****************************************************************************************
++ * ipc_net_start()                                 				        			*
++ *   start IPC network interface 														*
++ ***************************************************************************************/
++int ipc_net_start(struct net_device *dev)
++{
++    struct ipc_net_device *priv = netdev_priv(dev);
++
++    ipcnet_dbg("IPC NET: Starting %s interface\n", dev->name);
++
++    /* in default link is down */
++    netif_carrier_off(dev);
++
++    /* Stop the TX queue - it will be enabled upon PHY status change after link-up interrupt/timer */
++    netif_stop_queue(dev);
++
++    /* If you want to request irq - do it here */
++
++    /* CLear statistics */
++    memset(&priv->stats, 0, sizeof(priv->stats));
++
++    /* Init watchdog mechanism */
++	priv->watchdog_timeo = 10;
++	priv->watchdog_timer.function = ipc_net_watchdog;
++	priv->watchdog_timer.data = (unsigned long) dev;
++	init_timer(&priv->watchdog_timer);
++	spin_lock_init(&priv->lock);
++
++	INIT_DELAYED_WORK(&priv->ipc_net_link, ipc_net_link_worker);
++	schedule_delayed_work(&priv->ipc_net_link, HZ);
++
++	printk(KERN_NOTICE "IPC NET: %s started\n", dev->name);
++
++	return 0;
++}
++
++/****************************************************************************************
++ * ipc_net_init_buff_pool()                                 				       		*
++ *   Initialize IPC network buffer pool 												*
++ ***************************************************************************************/
++static INLINE int ipc_net_init_buff_pool(struct ipc_net_device *priv, int mtu)
++{
++	int i;
++	u32 *sh_mem_ptr;
++
++	for(i = 0; i < IPC_NET_MAX_TX_DESC; i++) {
++		sh_mem_ptr = (u32*)ipc_sh_malloc(IPC_NET_RX_BUF_SIZE(mtu));
++		if(!sh_mem_ptr){
++			ipcnet_dbg(KERN_ERR "IPC NET: Failed to allocate shared mem of size %d\n", mtu);
++			return 0;
++		}
++
++		*(IPC_NET_BUFF_USED(sh_mem_ptr)) = 0;
++		priv->sh_buff_fifo[i] = sh_mem_ptr;
++	}
++
++	priv->next_sh_buff = 0;
++
++	return 1;
++}
++
++/****************************************************************************************
++ * ipc_net_init()                                 				        		*
++ *   Initialize IPC network interface 										*
++ ***************************************************************************************/
++static int ipc_net_init(void *platform_data)
++{
++	struct net_device     *dev = NULL;
++	struct ipc_net_device *priv;
++	MV_STATUS status;
++	int success, i;
++	int target_cpu, min_cpu, max_cpu;
++
++	if(ipc_net_dev){
++		printk(KERN_ERR "%s: ipc0 already initialized\n", __FUNCTION__);
++		return -1;
++	}
++
++	target_cpu = *((int*)platform_data);
++	min_cpu    = min((int)0, (int)(master_cpu_id + mv_cpu_count));
++	max_cpu    = max((int)(NR_CPUS - 1), (int)master_cpu_id);
++
++	if((target_cpu < min_cpu) || (target_cpu > max_cpu)){
++		printk(KERN_ERR "IPC NET: Target CPU %d out of range [%d, %d]\n", target_cpu, min_cpu, max_cpu);
++		return -1;
++	}
++
++	/* Allocate a network device */
++	dev = alloc_netdev(sizeof(struct ipc_net_device),"ipc%d", ether_setup);
++	if (!dev) {
++		printk(KERN_ERR"%s: Out of memory\n", __FUNCTION__);
++		return -ENOMEM;
++	}
++
++	/* Initialize the private device structure */
++	priv = netdev_priv(dev);
++	memset(priv, 0, sizeof(struct ipc_net_device));
++	priv->net_dev = dev;
++
++	/* Initialize the device structure. */
++	dev->irq 			= 0;
++	dev->tx_queue_len   = IPC_NET_MAX_TX_DESC;
++	dev->watchdog_timeo = 5*HZ;
++	dev->mtu 			= IPC_NET_MTU_SIZE;
++	dev->netdev_ops		= &mv_ipc_netdev_ops;
++	dev->flags    	   &= ~IFF_MULTICAST;
++	dev->features       = NETIF_F_SG | NETIF_F_LLTX;
++
++	/* Set a static MAC address*/
++	for(i = 0; i < ETH_ALEN; i++) {
++		dev->dev_addr[i] = i + whoAmI();
++	}
++
++	priv->target_cpu = target_cpu;
++
++	success = ipc_net_init_buff_pool(priv, dev->mtu);
++	if(!success)
++	{
++		printk(KERN_ERR "failed to allocate buffer pool for %s\n", dev->name);
++		goto open_fail;
++	}
++
++	/* Initialize IPC driver */
++	status = ipc_open_chn(IPC_NET_CHANNEL_ID, ipc_net_rx);
++	if(status != MV_OK) {
++		printk(KERN_ERR "IPC NET: Failed to open IPC channel %d", IPC_NET_CHANNEL_ID);
++		goto open_fail;
++	}
++
++	if (register_netdev(dev)) {
++		printk(KERN_ERR "failed to register %s\n", dev->name);
++		goto open_fail;
++	} else {
++		printk(KERN_INFO "IPC NET: Registered %s, ifindex = %d, Channel = %d, cpu = %d",
++				dev->name, dev->ifindex, IPC_NET_CHANNEL_ID, priv->target_cpu);
++	}
++
++	ipc_net_dev = priv;
++
++	return 0;
++
++open_fail:
++	free_netdev(dev);
++	return -1;
++
++}
++
++/****************************************************************************************
++ * ipc_net_cleanup_module()                                 				        	*
++ *   free IPC network interface 														*
++ ***************************************************************************************/
++static void __exit ipc_net_cleanup_module(void)
++{
++
++}
++
++/****************************************************************************************
++ * ipc_net_probe()                                 				        		*
++ *   probe IPC network interface 												*
++ ***************************************************************************************/
++static int ipc_net_probe(struct platform_device *pdev)
++{
++	return ipc_net_init(pdev->dev.platform_data);
++}
++
++/****************************************************************************************
++ * ipc_net_shutdown()                                 				        		*
++ *   probe IPC network interface 												*
++ ***************************************************************************************/
++static void ipc_net_shutdown(struct platform_device *pdev)
++{
++    printk(KERN_INFO "Shutting Down Marvell IPC Net Driver\n");
++}
++
++/****************************************************************************************
++ * ipc_net_remove()                                 				        		*
++ *   probe IPC network interface 												*
++ ***************************************************************************************/
++static int ipc_net_remove(struct platform_device *pdev)
++{
++    printk(KERN_INFO "Removing Marvell IPC Net Driver\n");
++    return 0;
++}
++
++
++
++static struct platform_driver ipc_net_driver = {
++	.probe    = ipc_net_probe,
++	.remove   = ipc_net_remove,
++	.shutdown = ipc_net_shutdown,
++#ifdef CONFIG_CPU_IDLE
++//	.suspend = mv_eth_suspend, //TODO
++//	.resume  = mv_eth_resume, // TODO
++#endif /* CONFIG_CPU_IDLE */
++	.driver = {
++		.name = "mv_ipc_net",
++	},
++};
++
++/****************************************************************************************
++ * ipc_net_init_module()                                 				        		*
++ *   register IPC network interface 										*
++ ***************************************************************************************/
++static int __init ipc_net_init_module(void)
++{
++	return platform_driver_register(&ipc_net_driver);
++}
++
++module_init(ipc_net_init_module);
++module_exit(ipc_net_cleanup_module);
++MODULE_DESCRIPTION("Marvell Inter-Processor Pseudo-NIC Driver");
++MODULE_AUTHOR("Yehuda Yitschak <yehuday@marvell.com>");
++MODULE_LICENSE("GPL");
+-- 
+1.7.9.5
+

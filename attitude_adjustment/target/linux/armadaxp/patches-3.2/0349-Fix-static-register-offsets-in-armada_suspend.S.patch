@@ -1,0 +1,97 @@
+From bf8fb2a761fe85199ab69551e2bbef842e1be07a Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Sun, 25 Nov 2012 13:35:39 +0200
+Subject: [PATCH 349/609] Fix static register offsets in armada_suspend.S
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/include/mach/armadaxp.h   |    7 ++++++-
+ arch/arm/plat-armada/armada_suspend.S            |   14 ++++++++------
+ 3 files changed, 19 insertions(+), 7 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/include/mach/armadaxp.h b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
+index 3213722..6d79d21 100644
+--- a/arch/arm/mach-armadaxp/include/mach/armadaxp.h
++++ b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
+@@ -327,9 +327,14 @@
+ #define AXP_CPU_RESET_REG(cpu)		(AXP_BRIDGE_VIRT_BASE | (0x800+(cpu)*8))
+ #define AXP_CPU_RESET_OFFS		0
+ 
+-#define AXP_L2_CLEAN_WAY_REG		(INTER_REGS_BASE | 0x87BC) 
++#define AXP_L2_CLEAN_WAY_REG		(INTER_REGS_BASE | 0x87BC)
+ #define AXP_L2_MNTNC_STAT_REG		(INTER_REGS_BASE | 0x8704)
+ #define AXP_SNOOP_FILTER_PHYS_REG	(INTER_REGS_PHYS_BASE | 0x21020)
+ #define AXP_REVISION_ID_PHYS_REG	(INTER_REGS_PHYS_BASE | 0x40008)
+ #define AXP_REVISION_ID_VIRT_REG	(INTER_REGS_BASE | 0x40008)
++
++#define AXP_HW_SEMAPHORE_0_VIRT_REG		(INTER_REGS_BASE | 0x20500)
++#define AXP_HW_SEMAPHORE_0_PHYS_REG		(INTER_REGS_PHYS_BASE | 0x20500)
++#define AXP_COHER_FABRIC_CTRL_VIRT_REG	(INTER_REGS_BASE | 0x20200)
++#define AXP_COHER_FABRIC_CTRL_PHYS_REG	(INTER_REGS_PHYS_BASE | 0x20200)
+ #endif
+diff --git a/arch/arm/plat-armada/armada_suspend.S b/arch/arm/plat-armada/armada_suspend.S
+index 5724393..be6b75b 100644
+--- a/arch/arm/plat-armada/armada_suspend.S
++++ b/arch/arm/plat-armada/armada_suspend.S
+@@ -12,6 +12,8 @@
+ #include <asm/assembler.h>
+ #include <mach/hardware.h>
+ 
++
++
+ #if 1  /* B0-GP board GPIO pins*/
+ #define MPP_CTRL_PM_REG				(INTER_REGS_BASE + 0x18008)
+ #define GPIO_OUT_VALUE_REG			(INTER_REGS_BASE + 0x18100)
+@@ -251,7 +253,7 @@ ENTRY(armadaxp_cpu_suspend)
+ /* Lock Semaphore */
+ 	mrc	15, 0, r1, cr0, cr0, 5
+ 	and	r1, r1, #15
+-	ldr	r4, =0xFBB20500
++	ldr	r4, =AXP_HW_SEMAPHORE_0_VIRT_REG
+ 1:
+ 	ldr	r2, [r4]
+ 	and	r2, r2, #0xF
+@@ -263,13 +265,13 @@ ENTRY(armadaxp_cpu_suspend)
+ 	and	r1, r1, #15
+ 	mov	r6, #1
+ 	add	r7, r1, #24
+-	ldr	r2, =0xFBB20200
++	ldr	r2, =AXP_COHER_FABRIC_CTRL_VIRT_REG
+ 	ldr	r3, [r2]
+ 	bic	r3, r3, r6, lsl r7
+ 	str	r3, [r2]
+ 
+ /* Release Semaphore */
+-	ldr	r2, =0xFBB20500
++	ldr	r2, =AXP_HW_SEMAPHORE_0_VIRT_REG
+ 	ldr 	r0, =0xff
+ 	strb	r0, [r2]
+ 
+@@ -315,7 +317,7 @@ ENTRY(armadaxp_cpu_resume)
+ /* Lock Semaphore */
+ 	mrc	15, 0, r1, cr0, cr0, 5
+ 	and	r1, r1, #15
+-	ldr	r4, =0xD0020500
++	ldr	r4, =AXP_HW_SEMAPHORE_0_PHYS_REG
+ 1:
+ 	ldr	r2, [r4]
+ 	and	r2, r2, #0xF
+@@ -327,13 +329,13 @@ ENTRY(armadaxp_cpu_resume)
+ 	and	r1, r1, #15
+ 	mov	r6, #1
+ 	add	r7, r1, #24
+-	ldr	r2, =0xD0020200
++	ldr	r2, =AXP_COHER_FABRIC_CTRL_PHYS_REG
+ 	ldr	r3, [r2]
+ 	orr	r3, r3, r6, lsl r7
+ 	str	r3, [r2]
+ 
+ /* Release Semaphore */
+-	ldr	r2, =0xD0020500
++	ldr	r2, =AXP_HW_SEMAPHORE_0_PHYS_REG
+ 	ldr 	r0, =0xff
+ 	strb	r0, [r2]
+ 
+-- 
+1.7.9.5
+

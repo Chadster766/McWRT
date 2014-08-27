@@ -1,0 +1,16 @@
+#!/bin/sh /etc/rc.common
+#Copyright (C) 2007 RoadRunner.cx
+START=85
+
+start() {
+    [ -f /etc/imsnif.conf ] && /usr/bin/imsnif || {
+	cat <<EOF
+You have not created configuration file.
+Store your configuration as /etc/imsnif.conf
+EOF
+    }
+}
+
+stop() {
+    [ `ps ax|grep -v grep|grep -c imsnif` != "0" ] && killall imsnif
+}

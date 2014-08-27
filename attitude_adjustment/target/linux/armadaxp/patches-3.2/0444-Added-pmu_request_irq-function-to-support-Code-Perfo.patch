@@ -1,0 +1,51 @@
+From f04dbf3550dd6fe75c1b634fbcbe38439c56bd9a Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 20 Nov 2012 13:32:32 +0200
+Subject: [PATCH 444/609] Added pmu_request_irq function to support Code
+ Performance Analyzer (Pixiu)
+
+Change-Id: I6c88dcc6e87c9c40addc0f3a1cc02f1637d5a25b
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/irq.c |   25 +++++++++++++++++++++++++
+ 1 file changed, 25 insertions(+)
+
+diff --git a/arch/arm/mach-armadaxp/irq.c b/arch/arm/mach-armadaxp/irq.c
+index d0b7183..f1ba69c 100644
+--- a/arch/arm/mach-armadaxp/irq.c
++++ b/arch/arm/mach-armadaxp/irq.c
+@@ -328,5 +328,30 @@ void __init axp_init_irq(void)
+ 
+ }
+ 
++/*
++ * This functions used by Pixiu driver under tools/pixiu.
++ */
++int pmu_request_irq(int irq, irq_handler_t handler)
++{
++        int i;
++        int ret = request_irq(irq, handler, IRQF_DISABLED | IRQF_NOBALANCING, "armpmu", NULL);
++        if (!ret) {
++                for_each_online_cpu(i) {
++                        axp_unmask_fabric_interrupt(i);
++                }
++        }
++        return ret;
++}
++EXPORT_SYMBOL(pmu_request_irq);
++
++void pmu_free_irq(int irq)
++{
++        int i;
++        for_each_online_cpu(i) {
++                axp_mask_fabric_interrupt(i);
++        }
++        free_irq(irq, NULL);
++}
++EXPORT_SYMBOL(pmu_free_irq);
+ 
+ 
+-- 
+1.7.9.5
+

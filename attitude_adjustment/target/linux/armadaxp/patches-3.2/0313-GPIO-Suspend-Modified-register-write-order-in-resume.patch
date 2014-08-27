@@ -1,0 +1,33 @@
+From dd9bb65e46e51cb209a9fde25ce4436195f2a31a Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 3 Oct 2012 16:14:33 +0200
+Subject: [PATCH 313/609] GPIO Suspend: Modified register write order in
+ resume Signed-off-by: Yehuda Yitschak
+ <yehuday@marvell.com>
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../plat-armada/mv_drivers_lsp/mv_gpio/mv_gpio.c   |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_gpio/mv_gpio.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_gpio/mv_gpio.c
+index ea8b51c..7f96800 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_gpio/mv_gpio.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_gpio/mv_gpio.c
+@@ -203,12 +203,12 @@ static int mv_gpio_resume(struct platform_device *dev)
+ 	for(i = 0; i < MV_GPP_MAX_REG_SET; i++)
+ 	{
+ 		MV_REG_WRITE(GPP_DATA_OUT_REG(i), regs[i].data_out);
+-		MV_REG_WRITE(GPP_DATA_OUT_EN_REG(i), regs[i].data_out_enable);
+ 		MV_REG_WRITE(GPP_BLINK_EN_REG(i), regs[i].blink_enable);
+ 		MV_REG_WRITE(GPP_DATA_IN_POL_REG(i), regs[i].data_in_polarity);
+ 		MV_REG_WRITE(GPP_INT_MASK_REG(i), regs[i].interrupt_mask);
+ 		MV_REG_WRITE(GPP_INT_LVL_REG(i), regs[i].interrupt_level_mask);
+ 		MV_REG_WRITE(GPP_BLINK_SEL_REG(i), regs[i].blink_cntr_select);
++		MV_REG_WRITE(GPP_DATA_OUT_EN_REG(i), regs[i].data_out_enable);
+ 	}
+ 
+ 	return 0;
+-- 
+1.7.9.5
+

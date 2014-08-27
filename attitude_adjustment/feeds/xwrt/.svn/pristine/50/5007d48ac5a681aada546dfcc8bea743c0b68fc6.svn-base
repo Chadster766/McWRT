@@ -1,0 +1,367 @@
+################################################################################
+#
+# Sample ChilliSpot configuration file
+#
+################################################################################
+config chilli service
+	option 'config' 'uci'
+
+config chilli settings
+# TAG: fg
+# Include this flag if process is to run in the foreground
+#		option 'fg' '0'
+
+# TAG: debug
+# Include this flag to include debug information.
+#		option 'debug' '0'
+
+# TAG: conf
+# Read configuration file (default = /etc/chilli.conf) where each line
+# corresponds to one command line option, but with the leading '--' removed.
+# Command line options override the options given in the configuration file. 
+#		option 'conf' '/etc/chilli.conf'
+
+# TAG: interval
+# Re-read configuration file at this interval. Will also cause new domain
+# name lookups to be performed. Value is given in seconds.
+#		option 'interval' '3600'
+
+# TAG: pidfile
+# File to store information about the process id of the program.
+# The program must have write access to this file/directory.
+#		option 'pidfile' '/var/run/chilli.pid'
+
+# TAG: statedir
+# Directory to use for nonvolatile storage.
+# The program must have write access to this directory.
+# This tag is currently ignored
+#		option 'statedir' './'
+
+
+# TUN parameters
+# TAG: net
+# IP network address of external packet data network
+# Used to allocate dynamic IP addresses and set up routing.
+# Normally you do not need to uncomment this tag.
+#		option 'net' '192.168.182.0/24'
+
+# TAG: dynip
+# Dynamic IP address pool
+# Used to allocate dynamic IP addresses to clients.
+# If not set it defaults to the net tag.
+# Do not uncomment this tag unless you are an experienced user!
+#		option 'dynip' '192.168.182.0/24'
+
+# TAG: statip
+# Static IP address pool
+# Used to allocate static IP addresses to clients.
+# Do not uncomment this tag unless you are an experienced user!
+#		option 'statip' '192.168.182.0/24'
+
+
+# TAG: dns1
+# Primary DNS server.
+# Will be suggested to the client. 
+# If omitted the system default will be used.
+# Normally you do not need to uncomment this tag.
+#		option 'dns1' '172.16.1.1'
+		option 'dns1' '192.168.182.1'
+
+# TAG: dns2
+# Secondary DNS server.
+# Will be suggested to the client.
+# If omitted the system default will be used.
+# Normally you do not need to uncomment this tag.
+		option 'dns2' '190.7.25.160'
+
+# TAG: domain
+# Domain name
+# Will be suggested to the client.
+# Normally you do not need to uncomment this tag.
+#		option 'domain' 'key.chillispot.org'
+
+# TAG: ipup
+# Script executed after network interface has been brought up.
+# Executed with the following parameters: <devicename> <ip address>
+# <mask>
+# Normally you do not need to uncomment this tag.
+#		option 'ipup' '/etc/chilli.ipup'
+
+# TAG: ipdown
+# Script executed after network interface has been taken down.
+# Executed with the following parameters: <devicename> <ip address>
+# <mask>
+# Normally you do not need to uncomment this tag.
+#		option 'ipdown' '/etc/chilli.ipdown'
+
+# TAG: conup
+# Script executed after a user has been authenticated.
+# Executed with the following parameters: <devicename> <ip address>
+# <mask> <user ip address> <user mac address> <filter ID>
+# Normally you do not need to uncomment this tag.
+#		option 'conup' '/etc/chilli.conup'
+
+# TAG: condown
+# Script executed after a user has disconnected.
+# Executed with the following parameters: <devicename> <ip address>
+# <mask> <user ip address> <user mac address> <filter ID>
+# Normally you do not need to uncomment this tag.
+#		option 'condown' '/etc/chilli.condown'
+
+
+# Radius parameters
+
+# TAG: radiuslisten
+# IP address to listen to
+# Normally you do not need to uncomment this tag.
+#		option 'radiuslisten' '127.0.0.1'
+
+# TAG: radiusserver1
+# IP address of radius server 1
+# For most installations you need to modify this tag.
+#		option 'radiusserver1' 'rad01.chillispot.org'
+#		option 'radiusserver1' '192.168.1.1'
+
+# TAG: radiusserver2
+# IP address of radius server 2
+# If you have only one radius server you should set radiusserver2 to the
+# same value as radiusserver1.
+# For most installations you need to modify this tag.
+#		option 'radiusserver2' 'rad02.chillispot.org'
+#		option 'radiusserver2' '127.0.0.1'
+
+# TAG: radiusauthport
+# Radius authentication port
+# The UDP port number to use for radius authentication requests.
+# The same port number is used for both radiusserver1 and radiusserver2.
+# Normally you do not need to uncomment this tag.
+#		option 'radiusauthport' '1812'
+
+# TAG: radiusacctport
+# Radius accounting port
+# The UDP port number to use for radius accounting requests.
+# The same port number is used for both radiusserver1 and radiusserver2.
+# Normally you do not need to uncomment this tag.
+#		option 'radiusacctport' '1813'
+
+# TAG: radiussecret
+# Radius shared secret for both servers
+# For all installations you should modify this tag.
+		option 'radiussecret' 'testing123'
+
+# TAG: radiusnasid
+# Radius NAS-Identifier
+# Normally you do not need to uncomment this tag.
+#		option 'radiusnasid' 'nas01'
+
+# TAG: radiusnasip
+# Radius NAS-IP-Address
+# Normally you do not need to uncomment this tag.
+#		option 'radiusnasip' '127.0.0.1'
+
+# TAG: radiuscalled
+# Radius Called-Station-ID
+# Normally you do not need to uncomment this tag.
+#		option 'radiuscalled' '00133300'
+
+# TAG: radiuslocationid
+# WISPr Location ID. Should be in the format: isocc=<ISO_Country_Code>,
+# cc=<E.164_Country_Code>,ac=<E.164_Area_Code>,network=<ssid/ZONE>
+# Normally you do not need to uncomment this tag.
+#		option 'radiuslocationid' 'isocc=us,cc=1,ac=408,network=ACMEWISP_NewarkAirport'
+
+# TAG: radiuslocationname
+# WISPr Location Name. Should be in the format: 
+# <HOTSPOT_OPERATOR_NAME>,<LOCATION>
+# Normally you do not need to uncomment this tag.
+#		option 'radiuslocationname' 'ACMEWISP,Gate_14_Terminal_C_of_Newark_Airport'
+#		option 'radiuslocationname' '"Centro San Ignacio"'
+
+# TAG: radiusnasporttype
+# Value of NAS-Port-Type attribute. Defaults to 19 (Wireless-IEEE-802.11). 
+#		option 'radiusnasporttype' '19'
+
+# TAG: coaport
+# UDP port to listen to for accepting radius disconnect requests. 
+#		option 'coaport' 'port' 
+
+# TAG: coanoipcheck
+# If this option is given no check is performed on the source IP address of radius disconnect requests. Otherwise it is checked that radius disconnect requests originate from radiusserver1 or radiusserver2. 
+#		option	'coanoipcheck' '0'
+
+# Radius proxy parameters
+
+# TAG: proxylisten
+# IP address to listen to
+# Normally you do not need to uncomment this tag.
+#		option 'proxylisten' '10.0.0.1'
+
+# TAG: proxyport
+# UDP port to listen to. 
+# If not specified a port will be selected by the system
+# Normally you do not need to uncomment this tag.
+#		option 'proxyport' '1645'
+
+# TAG: proxyclient
+# Client(s) from which we accept radius requests
+# Normally you do not need to uncomment this tag.
+#		option 'proxyclient' '10.0.0.1/24'
+
+# TAG: proxysecret
+# Radius proxy shared secret for all clients
+# If not specified defaults to radiussecret
+# Normally you do not need to uncomment this tag.
+#		option 'proxysecret' 'testing123'
+
+# TAG: confusername
+# If confusername is specified together with confpassword chillispot
+# will at regular intervals specified by the interval option query the
+# radius server for configuration information.
+# The reply from the radius server must have the Service-Type attribute set to 
+# ChilliSpot-Authorize-Only in order to have any effect. 
+# Currently ChilliSpot-UAM-Allowed, ChilliSpot-MAC-Allowed and 
+# ChilliSpot-Interval is supported. These attributes override the uamallowed ,
+# macallowed and interval options respectively. 
+# Normally you do not need to uncomment this tag.
+#		option 'confusername' 'conf'
+
+# TAG: confpassword
+# If confusername is specified together with confpassword chillispot
+# will at regular intervals specified by the interval option query the
+# radius server for configuration information.
+# Normally you do not need to uncomment this tag.
+#		option 'confpassword' 'secret'
+
+
+# DHCP Parameters
+# TAG: dhcpif
+# Ethernet interface to listen to.
+# This is the network interface which is connected to the access points.
+# In a typical configuration this tag should be set to eth1.
+		option 'dhcpif' 'br-wifi'
+
+# TAG: dhcpmac
+# Use specified MAC address.
+# MAC address to listen to. If not specified the MAC address of the interface
+# will be used. The MAC address should be chosen so that it does not conflict
+# with other addresses on the LAN.
+# An address in the range 00:00:5E:00:02:00 - 00:00:5E:FF:FF:FF falls
+# within the IANA range of addresses and is not allocated for other purposes. 
+# The --dhcpmac option can be used in conjunction with access filters in the
+# access points, or with access points which supports packet forwarding to a
+# specific MAC address. Thus it is possible at the MAC level to separate access
+# point management traffic from user traffic for improved system security. 
+#
+# The --dhcpmac option will set the interface in promisc mode. 
+# Normally you do not need to uncomment this tag.
+#		option 'dhcpmac' '00:00:5E:00:02:00'
+
+# TAG: lease
+# Time before DHCP lease expires
+# Normally you do not need to uncomment this tag.
+#		option 'lease' '600'
+
+# TAG: eapolenable
+# If this option is given IEEE 802.1x authentication is enabled.
+# ChilliSpot will listen for EAP authentication requests on the interface
+# specified by --dhcpif.
+# EAP messages received on this interface are forwarded to the radius server. 
+#		option 'eapolenable' '0'
+
+# Universal access method (UAM) parameters
+
+# TAG: uamserver
+# URL of web server handling authentication.
+#		option 'uamserver' 'https://radius.chillispot.org/hotspotlogin'
+#		option 'uamserver' 'http://192.168.182.1/cgi-bin/login/login'
+#		option 'uamserver' 'http://www.internet-wifi.com.ar/hotspotlogin_m.php'
+
+# TAG: uamhomepage
+# URL of welcome homepage.
+# Unauthenticated users will be redirected to this URL. If not specified
+# users will be redirected to the uamserver instead.
+# Normally you do not need to uncomment this tag.
+#		option 'uamhomepage' 'http://192.168.182.1/welcome.html'
+
+# TAG: uamsecret
+# Shared between chilli and authentication web server
+#		option 'uamsecret' 'ht2eb8ej6s4et3rg1ulp'
+
+# TAG: uamlisten
+# IP address to listen to for authentication requests
+# Do not uncomment this tag unless you are an experienced user!
+#		option 'uamlisten' '192.168.182.1'
+
+# TAG: uamport
+# TCP port to listen to for authentication requests
+# Do not uncomment this tag unless you are an experienced user!
+#		option 'uamport' '3990'
+
+# TAG: uamallowed
+# Comma separated list of domain names, IP addresses or network segments
+# the client can access without first authenticating.
+# Normally you do not need to uncomment this tag.
+#	list 'uamallowed' '10.0.0.0/8'
+	list 'uamallowed' 'www.chillispot.info'
+	list 'uamallowed' 'x-wrt.org'
+	list 'uamallowed' 'openwrt.org'
+	list 'uamallowed' 'www.google.com'
+	list 'uamallowed' '192.168.1.1/24'
+	
+
+# TAG: uamanydns
+# If this flag is given unauthenticated users are allowed to use
+# any DNS server.
+# Normally you do not need to uncomment this tag.
+		option 'uamanydns' '0'
+
+
+# MAC authentication
+
+# TAG: macauth
+# If this flag is given users will be authenticated only on their MAC
+# address.
+# Normally you do not need to uncomment this tag.
+#		option 'macauth' '0'
+
+# TAG: macallowed
+# List of MAC addresses.
+# The MAC addresses specified in this list will be authenticated only on
+# their MAC address.
+# The User-Name sent to the radius server will consist of the MAC address and 
+# an optional suffix which is specified by the macsuffix option. 
+# If the macauth option is specified the macallowed option is ignored. 
+# It is possible to specify the macallowed option several times.
+# This is useful if many mac addresses has to be specified. 
+# This tag is ignored if the macauth tag is given.
+# Normally you do not need to uncomment this tag.
+#	list 'macallowed' '00-0A-5E-AC-BE-51'
+#	list 'macallowed' '00-30-1B-3C-32-E9'
+#	list 'macallowed' '00-18-DE-26-E8-35'
+	
+# TAG: macpasswd
+# Password to use for MAC authentication.
+# Normally you do not need to uncomment this tag.
+#		option 'macpasswd' 'password'
+
+# TAG: macsuffix
+# Suffix to add to MAC address in order to form the User-Name,
+# which is sent to the radius server. 
+# Normally you do not need to uncomment this tag.
+#		option 'macsuffix' 'suffix'
+
+# TAG: rmtlisten
+# IP address to listen to for remote monitor and config
+# Do not uncomment this tag unless you are an experienced user!
+#		option 'rmtlisten' '127.0.0.1'
+
+# TAG: rmtport
+# TCP port to listen to for remote monitor and config
+# Do not uncomment this tag unless you are an experienced user!
+		option 'rmtport' '3991'
+
+# TAG: rmtpasswd
+# Password to use for remote config by socket.
+# Normally you do not need to uncomment this tag.
+#		option 'rmtpasswd' 'rmtpassword'
+

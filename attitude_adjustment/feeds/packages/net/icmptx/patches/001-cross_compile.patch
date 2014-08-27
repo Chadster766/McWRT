@@ -1,0 +1,24 @@
+--- a/Makefile
++++ b/Makefile
+@@ -1,15 +1,17 @@
+-flags=-g3 -Wall -ansi -pedantic -D_GNU_SOURCE
++OPT_FLAGS=-g3
++
++flags=$(OPT_FLAGS) -Wall -ansi -pedantic -D_GNU_SOURCE
+ 
+ all: icmptx
+ 
+ icmptx: it.o icmptx.c tun_dev.o
+-	gcc $(flags) -o icmptx icmptx.c it.o tun_dev.o
++	$(CC) $(flags) -o icmptx icmptx.c it.o tun_dev.o
+ 
+ it.o: it.c tun_dev.h
+-	gcc $(flags) -c it.c
++	$(CC) $(flags) -c it.c
+ 
+ tun_dev.o: tun_dev.c
+-	gcc $(flags) -c tun_dev.c
++	$(CC) $(flags) -c tun_dev.c
+ 
+ clean:
+ 	rm -f tun_dev.o it.o icmptx

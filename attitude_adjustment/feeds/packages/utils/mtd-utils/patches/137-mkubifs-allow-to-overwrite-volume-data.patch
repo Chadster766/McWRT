@@ -1,0 +1,61 @@
+--- a/mkfs.ubifs/mkfs.ubifs.c
++++ b/mkfs.ubifs/mkfs.ubifs.c
+@@ -110,6 +110,7 @@ static int out_fd;
+ static int out_ubi;
+ static int squash_owner;
+ static int squash_rino_perm = -1;
++static int overwrite_volume;
+ 
+ /* The 'head' (position) which nodes are written */
+ static int head_lnum;
+@@ -132,7 +133,7 @@ static struct inum_mapping **hash_table;
+ /* Inode creation sequence number */
+ static unsigned long long creat_sqnum;
+ 
+-static const char *optstring = "d:r:m:o:D:h?vVe:c:g:f:Fp:k:x:X:j:R:l:j:UQq";
++static const char *optstring = "d:r:m:o:OD:h?vVe:c:g:f:Fp:k:x:X:j:R:l:j:UQq";
+ 
+ static const struct option longopts[] = {
+ 	{"root",               1, NULL, 'r'},
+@@ -140,6 +141,7 @@ static const struct option longopts[] =
+ 	{"leb-size",           1, NULL, 'e'},
+ 	{"max-leb-cnt",        1, NULL, 'c'},
+ 	{"output",             1, NULL, 'o'},
++	{"overwrite",          0, NULL, 'O'},
+ 	{"devtable",           1, NULL, 'D'},
+ 	{"help",               0, NULL, 'h'},
+ 	{"verbose",            0, NULL, 'v'},
+@@ -176,6 +178,7 @@ static const char *helptext =
+ "-e, --leb-size=SIZE      logical erase block size\n"
+ "-c, --max-leb-cnt=COUNT  maximum logical erase block count\n"
+ "-o, --output=FILE        output to FILE\n"
++"-O, --overwrite          force overwriting of the existing volume\n"
+ "-j, --jrn-size=SIZE      journal size\n"
+ "-R, --reserved=SIZE      how much space should be reserved for the super-user\n"
+ "-x, --compr=TYPE         compression type - \"lzo\", \"favor_lzo\", \"zlib\" or\n"
+@@ -594,6 +597,9 @@ static int get_options(int argc, char**a
+ 		case 'o':
+ 			output = strdup(optarg);
+ 			break;
++		case 'O':
++			overwrite_volume = 1;
++			break;
+ 		case 'D':
+ 			tbl_file = optarg;
+ 			if (stat(tbl_file, &st) < 0)
+@@ -2180,8 +2186,13 @@ static int open_target(void)
+ 		if (ubi_set_property(out_fd, UBI_PROP_DIRECT_WRITE, 1))
+ 			return sys_err_msg("ubi_set_property failed");
+ 
+-		if (check_volume_empty())
+-			return err_msg("UBI volume is not empty");
++		if (check_volume_empty()) {
++			if (overwrite_volume)
++				if (verbose)
++					printf("Warning: overwriting existing data\n");
++			else
++				return err_msg("UBI volume is not empty");
++		}
+ 	} else {
+ 		out_fd = open(output, O_CREAT | O_RDWR | O_TRUNC,
+ 			      S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);

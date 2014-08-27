@@ -1,0 +1,541 @@
+From 28bee8087b2a74b5eea84774d90cf291200707bd Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Mon, 9 Jul 2012 07:30:08 -0400
+Subject: [PATCH 144/609] AXP enabling perf in SMP and some code cleanup
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/kernel/perf_event.c                      |   27 +-----
+ arch/arm/kernel/perf_event_pj4b.c                 |  105 ++++++++++++---------
+ arch/arm/kernel/smp.c                             |    2 +-
+ arch/arm/mach-armadaxp/include/mach/entry-macro.S |   19 +---
+ arch/arm/mach-armadaxp/irq.c                      |   80 ++++++++++------
+ 5 files changed, 115 insertions(+), 118 deletions(-)
+ mode change 100644 => 100755 arch/arm/kernel/perf_event.c
+
+diff --git a/arch/arm/kernel/perf_event.c b/arch/arm/kernel/perf_event.c
+old mode 100644
+new mode 100755
+index 8775b32..499dbda
+--- a/arch/arm/kernel/perf_event.c
++++ b/arch/arm/kernel/perf_event.c
+@@ -27,11 +27,6 @@
+ #include <asm/pmu.h>
+ #include <asm/stacktrace.h>
+ 
+-#ifdef CONFIG_ARCH_ARMADA_XP
+-int pmu_request_irq(int irq, irq_handler_t handler);
+-void pmu_free_irq(int irq);
+-#endif
+-
+ /*
+  * ARMv6 supports a maximum of 3 events, starting from index 0. If we add
+  * another platform that supports more, we need to increase this to be the
+@@ -387,11 +382,7 @@ armpmu_release_hardware(struct arm_pmu *armpmu)
+ 			continue;
+ 		irq = platform_get_irq(pmu_device, i);
+ 		if (irq >= 0)
+-#ifdef CONFIG_ARCH_ARMADA_XP
+-			pmu_free_irq(irq);
+-#else
+ 			free_irq(irq, armpmu);
+-#endif
+ 	}
+ 
+ 	release_pmu(armpmu->type);
+@@ -443,13 +434,9 @@ armpmu_reserve_hardware(struct arm_pmu *armpmu)
+ 			continue;
+ 		}
+ 
+-#ifdef CONFIG_ARCH_ARMADA_XP
+-               err = pmu_request_irq(irq, handle_irq);
+-#else
+ 		err = request_irq(irq, handle_irq,
+ 				  IRQF_DISABLED | IRQF_NOBALANCING,
+ 				  "arm-pmu", armpmu);
+-#endif
+ 		if (err) {
+ 			pr_err("unable to request IRQ%d for ARM PMU counters\n",
+ 				irq);
+@@ -570,6 +557,7 @@ static int armpmu_event_init(struct perf_event *event)
+ 
+ 	if (err)
+ 		return err;
++
+ 	err = __hw_perf_event_init(event);
+ 	if (err)
+ 		hw_perf_event_destroy(event);
+@@ -621,6 +609,7 @@ int __init armpmu_register(struct arm_pmu *armpmu, char *name, int type)
+ #include "perf_event_v6.c"
+ #include "perf_event_v7.c"
+ #include "perf_event_pj4b.c"
++
+ /*
+  * Ensure the PMU has sane values out of reset.
+  * This requires SMP to be available, so exists as a separate initcall.
+@@ -711,17 +700,7 @@ init_hw_perf_events(void)
+ 			cpu_pmu = armv6pmu_init();
+ 			break;
+ 		case 0xB020:	/* ARM11mpcore */
+-#ifdef CONFIG_ARCH_ARMADA_XP
+-                       /*armpmu = &mrvl_pj4b_pmu;
+-                       memcpy(armpmu_perf_cache_map, mrvl_pj4b_perf_cache_map,
+-                                       sizeof(mrvl_pj4b_perf_cache_map));
+-                       mrvl_pj4b_read_reset_pmnc();
+-                       perf_max_events = mrvl_pj4b_pmu.num_events;*/
+-                       printk(KERN_INFO "Armada-XP Performance Monitor Unit detected (ARM MPcore ID)!!!\n");
+-                       armpmu=mrvl_pj4b_pmu_init();
+-#else
+ 			cpu_pmu = armv6mpcore_pmu_init();
+-#endif
+ 			break;
+ 		case 0xC080:	/* Cortex-A8 */
+ 			cpu_pmu = armv7_a8_pmu_init();
+@@ -756,7 +735,7 @@ init_hw_perf_events(void)
+ 		case 0x584:
+ 			printk(KERN_INFO "Armada-XP Performance Monitor Unit detected (Marvell ID)!!!\n");
+ 			mrvl_pj4b_read_reset_pmnc();
+-			armpmu=mrvl_pj4b_pmu_init();
++			cpu_pmu=mrvl_pj4b_pmu_init();
+ 			break;
+ 		}
+ 	}
+diff --git a/arch/arm/kernel/perf_event_pj4b.c b/arch/arm/kernel/perf_event_pj4b.c
+index 3539532..037ee29 100644
+--- a/arch/arm/kernel/perf_event_pj4b.c
++++ b/arch/arm/kernel/perf_event_pj4b.c
+@@ -233,8 +233,29 @@ static const unsigned mrvl_pj4b_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
+ 			[C(RESULT_MISS)]    = CACHE_OP_UNSUPPORTED,
+ 		},
+ 	},
++	[C(NODE)] = {
++		[C(OP_READ)] = {
++			[C(RESULT_ACCESS)]	= CACHE_OP_UNSUPPORTED,
++			[C(RESULT_MISS)]	= CACHE_OP_UNSUPPORTED,
++		},
++		[C(OP_WRITE)] = {
++			[C(RESULT_ACCESS)]	= CACHE_OP_UNSUPPORTED,
++			[C(RESULT_MISS)]	= CACHE_OP_UNSUPPORTED,
++		},
++		[C(OP_PREFETCH)] = {
++			[C(RESULT_ACCESS)]	= CACHE_OP_UNSUPPORTED,
++			[C(RESULT_MISS)]	= CACHE_OP_UNSUPPORTED,
++		},
++	},
+ };
+ 
++static int mrvl_pj4b_map_event(struct perf_event *event)
++{
++	return map_cpu_event(event, &mrvl_pj4b_perf_map,
++				&mrvl_pj4b_perf_cache_map, 0xFF);
++}
++
++
+ /*Helper functions*/
+ static inline void mrvl_pj4b_pmu_cntr_disable(u32 val)
+ {
+@@ -358,11 +379,6 @@ static void mrvl_pj4b_pmu_write_counter(int counter, u32 val)
+ }
+ 
+ 
+-static u64 mrvl_pj4b_pmu_raw_event(u64 config)
+-{
+-	return config & 0xff;
+-}
+-
+ static inline int mrvl_pj4b_pmu_event_map(int config)
+ {
+ 	int mapping = mrvl_pj4b_perf_map[config];
+@@ -371,7 +387,7 @@ static inline int mrvl_pj4b_pmu_event_map(int config)
+ 	return mapping;
+ }
+ 
+-static int mrvl_pj4b_pmu_get_event_idx(struct cpu_hw_events *cpuc,
++static int mrvl_pj4b_pmu_get_event_idx(struct pmu_hw_events *cpuc,
+ 				  struct hw_perf_event *event)
+ {
+ 	int idx;
+@@ -386,7 +402,7 @@ static int mrvl_pj4b_pmu_get_event_idx(struct cpu_hw_events *cpuc,
+ 		 * For anything other than a cycle counter, try and use
+ 		 * the events counters
+ 		 */
+-		for (idx = MRVL_PJ4B_PMN0; idx < armpmu->num_events; ++idx) {
++		for (idx = MRVL_PJ4B_PMN0; idx < cpu_pmu->num_events; ++idx) {
+ 			if (!test_and_set_bit(idx, cpuc->used_mask)) {			
+ 				return idx;
+ 			}
+@@ -400,7 +416,8 @@ void mrvl_pj4b_pmu_enable_event(struct hw_perf_event *hwc, int idx)
+ {
+ 	u32 enable;
+ 	unsigned long flags;
+-	raw_spin_lock_irqsave(&pmu_lock, flags);
++	struct pmu_hw_events *events = cpu_pmu->get_hw_events();
++	raw_spin_lock_irqsave(&events->pmu_lock, flags);
+ 	if (idx == MRVL_PJ4B_CCNT) {	
+ 		enable = (1 << MRVL_PJ4B_CCNT_BIT_OFFSET);
+ 	} 
+@@ -419,7 +436,7 @@ void mrvl_pj4b_pmu_enable_event(struct hw_perf_event *hwc, int idx)
+ 		mrvl_pj4b_pmu_select_event((idx-MRVL_PJ4B_PMN0), evt);
+ 	}	
+ 	mrvl_pj4b_pmu_cntr_enable(enable);
+-	raw_spin_unlock_irqrestore(&pmu_lock, flags);	
++	raw_spin_unlock_irqrestore(&events->pmu_lock, flags);
+ }
+ 
+ 
+@@ -427,7 +444,8 @@ void mrvl_pj4b_pmu_disable_event(struct hw_perf_event *hwc, int idx)
+ {
+ 	u32 enable;
+ 	unsigned long flags;
+-	raw_spin_lock_irqsave(&pmu_lock, flags);
++	struct pmu_hw_events *events = cpu_pmu->get_hw_events();
++	raw_spin_lock_irqsave(&events->pmu_lock, flags);
+ 	if (idx == MRVL_PJ4B_CCNT) {	
+ 		enable = (1 << MRVL_PJ4B_CCNT_BIT_OFFSET);
+ 	} 
+@@ -439,7 +457,7 @@ void mrvl_pj4b_pmu_disable_event(struct hw_perf_event *hwc, int idx)
+ 		return;
+ 	}	
+ 	mrvl_pj4b_pmu_cntr_disable(enable);
+-	raw_spin_unlock_irqrestore(&pmu_lock, flags);
++	raw_spin_unlock_irqrestore(&events->pmu_lock, flags);
+ }
+ 
+ 
+@@ -449,7 +467,7 @@ static irqreturn_t mrvl_pj4b_pmu_handle_irq(int irq, void *arg)
+ 	u32 flag;
+ 	struct pt_regs *regs;
+ 	struct perf_sample_data data;	
+-	struct cpu_hw_events *cpuc;	
++	struct pmu_hw_events *cpuc;
+ 	u32 pmnc;
+ 
+ 	pmnc = mrvl_pj4b_read_pmnc();	
+@@ -475,14 +493,15 @@ static irqreturn_t mrvl_pj4b_pmu_handle_irq(int irq, void *arg)
+ 
+ 	cpuc = &__get_cpu_var(cpu_hw_events);
+ 
+-	for (i = MRVL_PJ4B_CCNT; i < armpmu->num_events; i++) {
++	for (i = MRVL_PJ4B_CCNT; i < cpu_pmu->num_events; i++) {
+ 
+ 		struct perf_event *event = cpuc->events[i];
+ 		struct hw_perf_event *hwc;
+ 
+-		if (!test_bit(i, cpuc->active_mask)) {
++/*	if (!test_bit(i, cpuc->active_mask)) {
+ 			continue;
+ 		}
++*/
+ 		if (!mrvl_pj4b_pmu_counter_has_overflowed(flag, i)) {		
+ 			continue;
+ 		}
+@@ -495,8 +514,8 @@ static irqreturn_t mrvl_pj4b_pmu_handle_irq(int irq, void *arg)
+ 			continue;
+ 		}
+ 
+-		if (perf_event_overflow(event, 0, &data, regs))
+-			armpmu->disable(hwc, i);
++		if (perf_event_overflow(event, &data, regs))
++			cpu_pmu->disable(hwc, i);
+  	}	
+ 	pmnc |= MRVL_PJ4B_PMU_ENABLE;
+ 	mrvl_pj4b_write_pmnc(pmnc);	
+@@ -514,29 +533,30 @@ static irqreturn_t mrvl_pj4b_pmu_handle_irq(int irq, void *arg)
+ 	return IRQ_HANDLED;
+ } 
+ 
+-
+-/*
+-asmlinkage void __exception do_mrvl_pj4b_pmu_event(struct pt_regs *regs)
+-{	
+-	struct pt_regs *old_regs = set_irq_regs(regs);
+-	int cpu = smp_processor_id();
+-	irq_enter();
+-	irq_stat[cpu].local_pmu_irqs++;
+-	armpmu->handle_irq(IRQ_AURORA_MP, NULL);    
+-	irq_exit();	 	
+-	set_irq_regs(old_regs);
++#if 0
++asmlinkage void __exception_irq_entry do_mrvl_pj4b_pmu_event(struct pt_regs *regs)
++{
++       struct pt_regs *old_regs = set_irq_regs(regs);
++       int cpu = smp_processor_id();
++       irq_enter();
++       irq_stat[cpu].local_pmu_irqs++;
++       cpu_pmu->handle_irq(IRQ_AURORA_MP, NULL);
++       irq_exit();
++       set_irq_regs(old_regs);
+ }
+-*/
++
++#endif
+ 
+ static void mrvl_pj4b_pmu_stop(void)
+ {
+ 	u32 pmnc;
+ 	unsigned long flags;
+-	raw_spin_lock_irqsave(&pmu_lock, flags);
++	struct pmu_hw_events *events = cpu_pmu->get_hw_events();
++	raw_spin_lock_irqsave(&events->pmu_lock, flags);
+ 	pmnc = mrvl_pj4b_read_pmnc();
+ 	pmnc &= ~MRVL_PJ4B_PMU_ENABLE;
+ 	mrvl_pj4b_write_pmnc(pmnc);	
+-	raw_spin_unlock_irqrestore(&pmu_lock, flags);
++	raw_spin_unlock_irqrestore(&events->pmu_lock, flags);
+ } 
+ 
+ 
+@@ -544,12 +564,12 @@ static void mrvl_pj4b_pmu_start(void)
+ {
+ 	u32 pmnc;
+ 	unsigned long flags;
+-
+-	raw_spin_lock_irqsave(&pmu_lock, flags);		
++	struct pmu_hw_events *events = cpu_pmu->get_hw_events();
++        raw_spin_lock_irqsave(&events->pmu_lock, flags);
+ 	pmnc = mrvl_pj4b_read_pmnc();
+ 	pmnc |= (MRVL_PJ4B_PMU_ENABLE);
+ 	mrvl_pj4b_write_pmnc(pmnc);
+-	raw_spin_unlock_irqrestore(&pmu_lock, flags);
++	raw_spin_unlock_irqrestore(&events->pmu_lock, flags);
+ } 
+ 
+ static u32 __init mrvl_pj4b_read_reset_pmnc(void)
+@@ -566,7 +586,7 @@ static u32 __init mrvl_pj4b_read_reset_pmnc(void)
+ 
+ static void mrvl_pj4b_pmu_reset(void *info)
+ {
+-	u32 idx, nb_cnt = armpmu->num_events;
++	u32 idx, nb_cnt = cpu_pmu->num_events;
+ 
+ 	/* The counter and interrupt enable registers are unknown at reset. */
+ 	for (idx = 1; idx < nb_cnt; ++idx)
+@@ -578,28 +598,25 @@ static void mrvl_pj4b_pmu_reset(void *info)
+ }
+ 
+ 
+-static const struct arm_pmu mrvl_pj4b_pmu = {
++static struct arm_pmu mrvl_pj4b_pmu = {
+ 	
+-	.id				= MRVL_PERF_PMU_ID_PJ4B,
++	.id			= MRVL_PERF_PMU_ID_PJ4B,
+ 	.name			= "Armada PJ4",
+ 	.stop			= mrvl_pj4b_pmu_stop, /*v*/
+ 	.start			= mrvl_pj4b_pmu_start, /*v*/
+ 	.enable			= mrvl_pj4b_pmu_enable_event, /*v*/
+ 	.disable		= mrvl_pj4b_pmu_disable_event, /*v*/
+-	.read_counter	= mrvl_pj4b_pmu_read_counter, /*v*/
+-	.write_counter	= mrvl_pj4b_pmu_write_counter, /*v*/
+-	.get_event_idx	= mrvl_pj4b_pmu_get_event_idx,/*v*/
+-	.cache_map		= &mrvl_pj4b_perf_cache_map,
+-	.event_map		= &mrvl_pj4b_perf_map, //mrvl_pj4b_pmu_event_map, /*v*/
++	.read_counter		= mrvl_pj4b_pmu_read_counter, /*v*/
++	.write_counter		= mrvl_pj4b_pmu_write_counter, /*v*/
++	.get_event_idx		= mrvl_pj4b_pmu_get_event_idx,/*v*/
+ 	.handle_irq		= mrvl_pj4b_pmu_handle_irq, /*v*/
+ 	.reset 			= mrvl_pj4b_pmu_reset,
+-	/*.raw_event		= mrvl_pj4b_pmu_raw_event,*/
+-	.raw_event_mask	= 0xFF,
++	.map_event		= mrvl_pj4b_map_event,
+ 	.num_events		= MRVL_PJ4B_MAX_COUNTERS,
+ 	.max_period		= (1LLU << 32) - 1,
+ };
+ 
+-static const struct arm_pmu *__init mrvl_pj4b_pmu_init(void)
++static struct arm_pmu *__init mrvl_pj4b_pmu_init(void)
+ {
+ 	return &mrvl_pj4b_pmu;
+ }
+diff --git a/arch/arm/kernel/smp.c b/arch/arm/kernel/smp.c
+index 2fc5fbb..c4ad54f 100644
+--- a/arch/arm/kernel/smp.c
++++ b/arch/arm/kernel/smp.c
+@@ -486,7 +486,7 @@ u64 smp_irq_stat_cpu(unsigned int cpu)
+ static DEFINE_PER_CPU(struct clock_event_device, percpu_clockevent);
+ 
+ #if defined(CONFIG_ARCH_ARMADA_XP) && defined(CONFIG_PERF_EVENTS)
+-void show_local_pmu_irqs(struct seq_file *p)
++void show_local_pmu_irqs(struct seq_file *p, int prec)
+ {
+ 	 unsigned int cpu;
+ 
+diff --git a/arch/arm/mach-armadaxp/include/mach/entry-macro.S b/arch/arm/mach-armadaxp/include/mach/entry-macro.S
+index bcb34c4..3e2ab6e 100755
+--- a/arch/arm/mach-armadaxp/include/mach/entry-macro.S
++++ b/arch/arm/mach-armadaxp/include/mach/entry-macro.S
+@@ -47,7 +47,7 @@
+ #ifdef CONFIG_SMP
+ 	@ if vec sel is 0 and bits 0-4 are set then it is IPI timer handled seperatly.
+ 	bne	1000f
+-	ands	\tmp, \irqstat, #0x1d
++	ands	\tmp, \irqstat, #0x15
+ 	beq 	1000f
+ 
+ 	@restore tmp - should be optimized!!!!
+@@ -105,14 +105,6 @@
+ 1003:
+ 	.endm
+ 
+-
+-	.macro test_for_pmuirq, irqnr, irqstat, base, tmp
+-	ands 	\tmp, \irqstat, #0x80000000		@ did we get irq
+-	beq	1005f
+-	ands 	\tmp, \irqstat, #0x00000008		@ was it mp
+-1005:
+-	.endm
+-
+ 	.macro test_for_ipc, irqnr, irqstat, base, tmp
+ 	ands 	\tmp, \irqstat, #0x80000000		@ did we get irq
+ 	beq	1006f
+@@ -186,15 +178,6 @@
+ 		cmp     \tmp, #0
+ 		.endm
+ 
+-		.macro test_for_pmuirq, irqnr, irqstat, base, tmp
+-		ldr	\tmp, =1023
+-		and     \irqnr, \irqstat, \tmp
+-		mov	\tmp, #0
+-		cmp	\irqnr, #3
+-		moveq	\tmp, #1
+-		cmp	\tmp, #0
+-		.endm
+-
+ 		.macro test_for_ipc, irqnr, irqstat, base, tmp @ YY - check this one again
+ 		ldr	\tmp, =1023
+ 		and     \irqnr, \irqstat, \tmp
+diff --git a/arch/arm/mach-armadaxp/irq.c b/arch/arm/mach-armadaxp/irq.c
+index 796db09..227a6f6 100644
+--- a/arch/arm/mach-armadaxp/irq.c
++++ b/arch/arm/mach-armadaxp/irq.c
+@@ -72,31 +72,61 @@ if (cpu > 0) { /*disabled for both cpu */
+ #ifdef CONFIG_ARMADAXP_USE_IRQ_INDIRECT_MODE
+ void axp_irq_mask(struct irq_data *d)
+ {	
+-u32 irq=d->irq;
+-if (irq < 8) // per CPU; treat giga as shared interrupt
+-	MV_REG_WRITE(CPU_INT_SET_MASK_LOCAL_REG, irq);
++	u32 irq=d->irq;
++	int i;
++	if (irq < 8){ // per CPU; treat giga as shared interrupt
++		MV_REG_WRITE(CPU_INT_SET_MASK_LOCAL_REG, irq);
++#if defined(CONFIG_PERF_EVENTS) && defined(CONFIG_HW_PERF_EVENTS)
++		if(irq==IRQ_AURORA_MP){
++			for_each_online_cpu(i) {
++                        axp_mask_fabric_interrupt(i);
++			}
++		}
++#endif
++	}
+ else
+ 	MV_REG_WRITE(CPU_INT_CLEAR_ENABLE_REG, irq);
+ }
+ 
+ void axp_irq_unmask(struct irq_data *d)
+ {	
+-if (d->irq < 8) // per CPU
+-	MV_REG_WRITE(CPU_INT_CLEAR_MASK_LOCAL_REG, d->irq);
+-else
++	int i;
++	if (d->irq < 8){ // per CPU
++		MV_REG_WRITE(CPU_INT_CLEAR_MASK_LOCAL_REG, d->irq);
++#if defined(CONFIG_PERF_EVENTS) && defined(CONFIG_HW_PERF_EVENTS)
++		if(d->irq==IRQ_AURORA_MP){
++			for_each_online_cpu(i) {
++				axp_unmask_fabric_interrupt(i);
++			}
++		}
++#endif
++	}else
+ 	MV_REG_WRITE(CPU_INT_SET_ENABLE_REG, d->irq);
+ }
+ 
+ void axp_irq_disable(struct irq_data *d)
+ {	
+-u32 irq=d->irq;
+-MV_REG_WRITE(CPU_INT_CLEAR_ENABLE_REG, irq);
++	int i;
++	u32 irq=d->irq;
++	MV_REG_WRITE(CPU_INT_CLEAR_ENABLE_REG, irq);
++	for_each_online_cpu(i) {
++                axp_mask_fabric_interrupt(i);
++        }
++
+ }
+ 
+ void axp_irq_enable(struct irq_data *d)
+ {	
+-u32 irq=d->irq;
+-MV_REG_WRITE(CPU_INT_SET_ENABLE_REG, irq);
++	u32 irq=d->irq;
++	int i;
++	MV_REG_WRITE(CPU_INT_SET_ENABLE_REG, irq);
++#if defined(CONFIG_PERF_EVENTS) && defined(CONFIG_HW_PERF_EVENTS)
++	if(irq==IRQ_AURORA_MP){
++		for_each_online_cpu(i) {
++			axp_unmask_fabric_interrupt(i);
++		}
++	}
++#endif
+ }
+ 
+ #ifdef CONFIG_SMP
+@@ -122,6 +152,7 @@ return 0;
+ 
+ void axp_irq_mask(struct irq_data *d)
+ {	
++	int i;
+ u32 irq = d->irq;
+ MV_U32 addr, temp, gpio_indx;
+ if ((irq >= IRQ_AURORA_GPIO_START) && (irq < IRQ_AURORA_MSI_START)) {
+@@ -163,7 +194,13 @@ else if (irq < IRQ_MAIN_INTS_NUM)
+ 	temp &= ~0xf;
+ 
+ MV_REG_WRITE(addr, temp);
+-
++#if defined(CONFIG_PERF_EVENTS) && defined(CONFIG_HW_PERF_EVENTS)
++	 if(irq==IRQ_AURORA_MP){
++		for_each_online_cpu(i) {
++			axp_unmask_fabric_interrupt(i);
++		}
++	}
++#endif
+ #ifdef CONFIG_MV_AMP_ENABLE
+        mvSemaLock(MV_SEMA_IRQ);
+ #else
+@@ -297,7 +334,7 @@ for (irq = 0; irq < IRQ_AURORA_MSI_START ; irq++) {
+ 	we crash duing boot, keep this for timers for now.
+ 	This is a  TODO at a second stage, evalute perfrmance and fix as needed
+ 	*/
+-	if( irq < MAX_PER_CPU_IRQ_NUMBER ) {
++	if( irq < MAX_PER_CPU_IRQ_NUMBER && irq != IRQ_AURORA_MP) {
+ 			irq_set_chip_and_handler(irq, &axp_irq_chip,
+ 						 handle_percpu_devid_irq);
+ 			irq_set_percpu_devid(irq);
+@@ -326,24 +363,5 @@ for (irq = 0; irq < IRQ_AURORA_MSI_START ; irq++) {
+ 
+ }
+ 
+-int pmu_request_irq(int irq, irq_handler_t handler)
+-{
+-	int i;
+-	int ret = request_irq(irq, handler, IRQF_DISABLED | IRQF_NOBALANCING, "armpmu", NULL);
+-	if (!ret) {
+-		for_each_online_cpu(i) {
+-			axp_unmask_fabric_interrupt(i);
+-		}
+-	}
+-	return ret;
+-}
+ 
+-void pmu_free_irq(int irq)
+-{
+-	int i;
+-	for_each_online_cpu(i) {
+-		axp_mask_fabric_interrupt(i);
+-	}
+-	free_irq(irq, NULL);
+-}
+ 
+-- 
+1.7.9.5
+

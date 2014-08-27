@@ -1,0 +1,7 @@
+if [ -r /etc/openwrt_release ] && [ -n "$OPENWRT_INTERFACE" ]; then
+    uci_set_state network "$OPENWRT_INTERFACE" banner "$CISCO_BANNER"
+    uci_set_state network "$OPENWRT_INTERFACE" ifname "$TUNDEV"
+    [ -n "$INTERNAL_IP4_ADDRESS" ] && uci_set_state network "$OPENWRT_INTERFACE" ipaddr "$INTERNAL_IP4_ADDRESS"
+    [ -n "$INTERNAL_IP6_NETMASK" ] && uci_set_state network "$OPENWRT_INTERFACE" ip6addr "$INTERNAL_IP6_NETMASK"
+    env -i ACTION="ifup" INTERFACE="$OPENWRT_INTERFACE" DEVICE="$TUNDEV" PROTO=openconnect /sbin/hotplug-call "iface"
+fi

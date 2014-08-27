@@ -1,0 +1,257 @@
+From e35422c201cd3f1ff2fa75c23ffe8e6f5d46c612 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Tue, 20 Nov 2012 16:01:18 +0200
+Subject: [PATCH 428/609] Removed Z1 support and unnecessary defines
+
+Change-Id: Iaa5813f11fd4e6cdc6bf00276f5988408ef80816
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/boardEnv/mvBoardEnvLib.c      |   17 ---------------
+ .../armada_xp_family/boardEnv/mvBoardEnvLib.h      |    5 -----
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvLib.c        |   20 +++---------------
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvLib.h        |   11 ----------
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h       |   22 +-------------------
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h       |   13 +-----------
+ 6 files changed, 5 insertions(+), 83 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+index 8ed9b60..3d7b42c 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+@@ -1788,11 +1788,7 @@ MV_STATUS mvBoardBootDevWidthSet(MV_U8 val)
+ 	return MV_OK;
+ }
+ /*******************************************************************************/
+-#ifdef MV88F78X60_Z1
+-MV_U8 mvBoardCpu0CoreModeGet(MV_VOID)
+-#else
+ MV_U8 mvBoardCpu0EndianessGet(MV_VOID)
+-#endif
+ {
+ 	MV_U8 sar;
+ 	if (DB_784MP_GP_ID == mvBoardIdGet())
+@@ -1801,18 +1797,10 @@ MV_U8 mvBoardCpu0EndianessGet(MV_VOID)
+ 	sar = mvBoardTwsiSatRGet(3, 0);
+ 	if ((MV_8)MV_ERROR == (MV_8)sar)
+ 		return MV_ERROR;
+-#ifdef MV88F78X60_Z1
+-	return (sar & 0x18) >> 3;
+-#else
+ 	return (sar & 0x08) >> 3;
+-#endif
+ }
+ /*******************************************************************************/
+-#ifdef MV88F78X60_Z1
+-MV_STATUS mvBoardCpu0CoreModeSet(MV_U8 val)
+-#else
+ MV_STATUS mvBoardCpu0EndianessSet(MV_U8 val)
+-#endif
+ {
+ 	MV_U8 sar;
+ 	if (DB_784MP_GP_ID == mvBoardIdGet())
+@@ -1821,13 +1809,8 @@ MV_STATUS mvBoardCpu0EndianessSet(MV_U8 val)
+ 	sar = mvBoardTwsiSatRGet(3, 0);
+ 	if ((MV_8)MV_ERROR == (MV_8)sar)
+ 		return MV_ERROR;
+-#ifdef MV88F78X60_Z1
+-	sar &= ~(0x3 << 3);
+-	sar |= ((val & 0x3) << 3);
+-#else
+ 	sar &= ~(0x1 << 3);
+ 	sar |= ((val & 0x1) << 3);
+-#endif
+ 	if (MV_OK != mvBoardTwsiSatRSet(3, 0, sar)) {
+ 		DB1(mvOsPrintf("Board: Write Cpu0CoreMode S@R fail\n"));
+ 		return MV_ERROR;
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
+index 6fff1fe..75ebb8d 100755
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
+@@ -413,13 +413,8 @@ MV_U8 mvBoardBootDevGet(MV_VOID);
+ MV_STATUS mvBoardBootDevSet(MV_U8 val);
+ MV_U8 mvBoardBootDevWidthGet(MV_VOID);
+ MV_STATUS mvBoardBootDevWidthSet(MV_U8 val);
+-#ifdef MV88F78X60_Z1
+-MV_U8 mvBoardCpu0CoreModeGet(MV_VOID);
+-MV_STATUS mvBoardCpu0CoreModeSet(MV_U8 val);
+-#else
+ MV_U8 mvBoardCpu0EndianessGet(MV_VOID);
+ MV_STATUS mvBoardCpu0EndianessSet(MV_U8 val);
+-#endif
+ MV_U8 mvBoardL2SizeGet(MV_VOID);
+ MV_STATUS mvBoardL2SizeSet(MV_U8 val);
+ MV_U8 mvBoardCpuCoresNumGet(MV_VOID);
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
+index 395d442..7d3f9af 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
+@@ -109,18 +109,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #endif
+ MV_U32 dummyFlavour = 0;
+ MV_BIOS_MODE bios_modes[BIOS_MODES_NUM] = {
+-#ifdef MV88F78X60_Z1
+-/*	DBConf ConfID Code L2Size CPUFreq CpuFreqMode FabricFreq FabricFreqMode CPU1/2/3Enable cpuMode dramBusWidth*/
+-/*	0x4d/[1:0] 0x4d/[4:2] 0x4e[0] 0x4e/[4:1] 0x4f[0] 0x4f/[2:1] 0x4f/[4:3]	*/
+-       {"78130", 0x10, 0x7813, 0x1, 0x2, 0x0, 0xC, 0x0, 0x0, 0x1, 0x1},
+-       {"6710" , 0x11, 0x6710, 0x0, 0x2, 0x0, 0x5, 0x0, 0x0, 0x1, 0x0},
+-       {"78160", 0x12, 0x7816, 0x1, 0x2, 0x0, 0x5, 0x0, 0x0, 0x1, 0x0},
+-       {"78230", 0x13, 0x7823, 0x1, 0x2, 0x0, 0xC, 0x0, 0x2, 0x2, 0x1},
+-       {"78260", 0x14, 0x7826, 0x1, 0x2, 0x0, 0x5, 0x0, 0x2, 0x2, 0x0},
+-       {"78460", 0x15, 0x7846, 0x3, 0x2, 0x0, 0x5, 0x0, 0x3, 0x2, 0x0},
+-       {"78480", 0x16, 0x7846, 0x3, 0x2, 0x0, 0x5, 0x0, 0x3, 0x2, 0x0}
+-};
+-#else
+ /*DBConf ConfID Code L2Size CPUFreq CpuFreqMode FabricFreq  Altfabricfreq     FabricFreqMode CPU1/2/3Enable cpuEndianess dramBusWidth BootSRC BootWidth */
+ /*	                       0x4d/[1:0]  0x4d/[4:2]  0x4e[0]      0x4e/[4:1]  	0x4f[0]   0x4f/[2:1]      0x4f/[3]   	  */
+ {"78130",0x10, 0x7813, 0x1,  0x3,      0x0,  0x1a,		0x5,		0x1,	     0x0,	    0x1,	0x1, 	     0x3,	0x1},
+@@ -132,7 +120,7 @@ MV_BIOS_MODE bios_modes[BIOS_MODES_NUM] = {
+ 
+ /*	{"6710" ,0x11, 0x6710,	0x0,	   0x3,		0x0,	      0x5, 		0x0,		0x0,		0x1,		0x0},     */
+ };
+-#endif
++
+ MV_BIOS_MODE bios_modes_b0[BIOS_MODES_NUM] = {
+ /*DBConf ConfID Code L2Size CPUFreq CpuFreqMode FabricFreq  Altfabricfreq  FabricFreqMode CPUEna  cpuEndianess dramBusWidth BootSRC BootWidth */
+ /*	                       0x4d/[1:0]  0x4d/[4:2]  0x4e[0]      0x4e/[4:1]  	0x4f[0]   0x4f/[2:1]      0x4f/[3]   	  */
+@@ -330,9 +318,8 @@ MV_STATUS mvCtrlEnvInit(MV_VOID)
+ 	if (MV_OK != mvCtrlSerdesPhyConfig())
+ 		mvOsPrintf("mvCtrlEnvInit: Can't init some or all SERDES lanes\n");
+ 
+-#ifndef MV88F78X60_Z1
+ 	MV_REG_BIT_SET(PUP_EN_REG,0x17); /* Enable GBE0, GBE1, LCD and NFC PUP */
+-#endif
++
+ 	mvOsDelay(100);
+ 
+ 	return MV_OK;
+@@ -2169,13 +2156,12 @@ MV_STATUS mvCtrlSerdesPhyConfig(MV_VOID)
+ 		mvCtrlPwrClckSet(PEX_UNIT_ID, 9, MV_FALSE);
+ 	}
+ 
+-#ifndef MV88F78X60_Z1
++
+ /*this code is valid for all devices after Z1*/
+ 	if(!(powermngmntctrlregmap & BIT25)) {
+ 		DB(mvOsPrintf("%s:       TDM\n", __func__));
+ 		mvCtrlPwrClckSet(TDM_32CH_UNIT_ID, 0, MV_FALSE);
+ 	}
+-#endif
+ 	/*apply clock gatting*/
+ 	MV_REG_WRITE(POWER_MNG_CTRL_REG, MV_REG_READ(POWER_MNG_CTRL_REG) & powermngmntctrlregmap);
+ 	/*the Sata driver doesn't support clock gating at this point so we enable the logic to the block*/
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
+index f497e3c..59baf1d 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
+@@ -174,12 +174,7 @@ typedef struct _boardSerdesConf {
+ #define SAR1_FABRIC_MODE_OFFSET	19
+ 
+ #define SAR_CPU_FAB_GET(cpu, fab)	(((cpu & 0x7) << 21) | ((fab & 0xF) << 24))
+-#ifdef MV88F78X60_Z1
+-#define BIOS_MODES_NUM			7
+-#else
+ #define BIOS_MODES_NUM			6
+-#endif
+-
+ 
+ typedef struct {
+ 	char *name;
+@@ -189,16 +184,10 @@ typedef struct {
+ 	MV_U8 cpuFreq;
+ 	MV_U8 cpuFreqMode;
+ 	MV_U8 fabricFreq;
+-#ifndef MV88F78X60_Z1
+ 	MV_U8 AltfabricFreq;
+-#endif
+ 	MV_U8 fabricFreqMode;
+ 	MV_U8 cpuEna;
+-#ifdef MV88F78X60_Z1
+-	MV_U8 cpuMode;
+-#else
+ 	MV_U8 cpuEndianess;
+-#endif
+ 	MV_U8 dramBusWidth;
+ 	MV_U8 bootSource;
+ 	MV_U8 bootWidth;
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
+index cdf83ec..67dd2de 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
+@@ -520,7 +520,7 @@ typedef enum {
+ 	Serdes 0-7 selectors		0x18270
+ 	and Serdes 8-15 selectors  	0x18274
+ */
+-#ifndef MV88F78X60_Z1
++
+ #define SERDES_CFG {	\
+ 	{0, 1, -1 , -1, -1, -1, -1, -1}, /* Lane 0 */	\
+ 	{0, 1, -1 , -1, -1, -1, -1, -1}, /* Lane 1 */	\
+@@ -540,26 +540,6 @@ typedef enum {
+ 	{0, 1, -1 , -1, -1, -1, -1, -1}	 /* Lane 15 */	\
+ }
+ 
+-#else
+-#define SERDES_CFG {	\
+-	{0, 1, -1 , -1, -1, -1, -1, -1}, /* Lane 0 */	\
+-	{0, 1, -1 , -1, -1, -1, -1, -1}, /* Lane 1 */	\
+-	{0, 1, -1 ,  2, -1, -1, -1, -1}, /* Lane 2 */	\
+-	{0, 1, -1 , -1,  2, -1, -1, -1}, /* Lane 3 */	\
+-	{0, 1,  2 , -1, -1,  3, -1, -1}, /* Lane 4 */	\
+-	{0, 1,  2 , -1,  3, -1, -1,  4}, /* Lane 5 */	\
+-	{0, 1, -1 , -1, -1,  2,  3, -1}, /* Lane 6 */	\
+-	{0, 1, -1 ,  2, -1, -1,  3, -1}, /* Lane 7*/	\
+-	{0, 1,  2 , -1, -1, -1,  3,  4}, /* Lane 8 */	\
+-	{0, 1,  2 ,  3, -1, -1, -1, -1}, /* Lane 9 */	\
+-	{0, 1, -1 , -1, -1, -1, -1, -1}, /* Lane 10 */	\
+-	{0, 1, -1 , -1, -1, -1, -1, -1}, /* Lane 11 */	\
+-	{0, 1, -1 , -1, -1, -1, -1, -1}, /* Lane 12 */	\
+-	{0, 1, -1 , -1, -1, -1, -1, -1}, /* Lane 13 */	\
+-	{0, 1, -1 , -1, -1, -1, -1, -1}, /* Lane 14 */	\
+-	{0, 1, -1 , -1, -1, -1, -1, -1}	 /* Lane 15 */	\
+-}
+-#endif
+ 
+ /*
+ 	This enum should reflect the units numbers in register
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
+index dd5c77e..ec29890 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
+@@ -85,20 +85,12 @@ extern "C" {
+ #define MV_AURORA_L2_REGS_OFFSET		(0x8000)
+ #define MV_RTC_REGS_OFFSET			(0x10300)
+ #define MV_DEV_BUS_REGS_OFFSET			(0x10400)
+-#ifdef MV88F78X60_Z1
+-#define MV_SPI_REGS_OFFSET(unit)               (0x10600)
+-#else
+ #define MV_SPI_REGS_OFFSET(unit)		(0x10600 + (unit * 0x80))
+-#endif
+ #define MV_TWSI_SLAVE_REGS_OFFSET(chanNum)	(0x11000 + (chanNum * 0x100))
+ #define MV_UART_REGS_OFFSET(chanNum)		(0x12000 + (chanNum * 0x100))
+ #define MV_RUNIT_PMU_REGS_OFFSET		(0x1C000)
+ #define MV_MPP_REGS_OFFSET			(0x18000)
+-#ifdef MV88F78X60_Z1
+-#define MV_GPP_REGS_OFFSET(unit)		(0x18100 + ((unit) * 0x20))
+-#else
+ #define MV_GPP_REGS_OFFSET(unit)		(0x18100 + ((unit) * 0x40))
+-#endif
+ #define MV_MISC_REGS_OFFSET			(0x18200)
+ #define MV_CLK_CMPLX_REGS_OFFSET	(0x18700)
+ #define MV_MBUS_REGS_OFFSET			(0x20000)
+@@ -157,11 +149,8 @@ extern "C" {
+ 
+ #define MV_GPP_MAX_PINS				68
+ #define MV_GPP_MAX_GROUP    			3 /* group == configuration register? */
+-#ifndef MV88F78X60_Z1
+ #define MV_CNTMR_MAX_COUNTER 		8 /* 4 global + 1 global WD + 2 current private CPU + 1 private CPU WD*/
+-#else
+-#define MV_CNTMR_MAX_COUNTER 		17/* 4 global + 1 global WD + 2 per CPU + 4 CPU WD*/
+-#endif
++
+ /*
+ 	MV88F78X60_Z1								MV88F78X60_A0
+ 	-------------------------------             -------------------------------
+-- 
+1.7.9.5
+

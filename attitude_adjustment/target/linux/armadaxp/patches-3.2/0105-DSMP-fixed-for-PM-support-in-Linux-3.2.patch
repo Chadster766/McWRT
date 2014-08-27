@@ -1,0 +1,50 @@
+From 00c3557aa0487d50a0dc52196d03e8a3f0fdfe0f Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Mon, 5 Mar 2012 04:11:07 +0200
+Subject: [PATCH 105/609] DSMP fixed for PM support in Linux 3.2
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/cpuidle.c |   10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/plat-armada/cpuidle.c b/arch/arm/plat-armada/cpuidle.c
+index fc062cf..a68f54f 100755
+--- a/arch/arm/plat-armada/cpuidle.c
++++ b/arch/arm/plat-armada/cpuidle.c
+@@ -435,15 +435,15 @@ int armadaxp_init_cpuidle(void)
+ 	cpu_idle_proc->write_proc = mv_cpu_idle_write;
+ 	cpu_idle_proc->nlink = 1;
+ #endif
+-	if (pm_support == 1)
++	if (pm_support == WFI)
+ 		printk(" (WFI)\n");
+-	else if (pm_support == 2)
++	else if (pm_support == DEEP_IDLE)
+ 		printk(" (IDLE)\n");
+-	else if (pm_support == 3)
++	else if (pm_support == SNOOZE)
+ 		printk(" (SNOOZE)\n");
+ 	else {
+ 		printk(" (DISABLED)\n");
+-		device_registered = 0;
++		device_registered = DISABLED;
+ 	}
+ 	pm_mode = pm_support;
+ 
+@@ -476,10 +476,12 @@ int armadaxp_init_cpuidle(void)
+                 strcpy(driver->states[2].desc, "Snooze");
+ 
+                 if(pm_mode) {
++			 cpuidle_register_driver(driver);
+                         if (cpuidle_register_device(device)) {
+                                 printk(KERN_ERR "armadaxp_init_cpuidle: Failed registering\n");
+                                 return -EIO;
+                         }
++			//			cpuidle_register_driver(driver);
+ 		}
+ 	}
+ 
+-- 
+1.7.9.5
+

@@ -1,0 +1,18 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2011 OpenWrt.org
+
+START=60
+
+boot() {
+	return 0
+}
+
+start() {
+	mkdir -p `awk -F: '/^network:/{print $6}' /etc/passwd`
+	mkdir -p /var/db/
+	/sbin/ntpd -s
+}
+
+stop() {
+	service_kill ntpd
+}

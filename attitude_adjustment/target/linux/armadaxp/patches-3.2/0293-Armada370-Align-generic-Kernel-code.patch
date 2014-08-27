@@ -1,0 +1,392 @@
+From 732fef2ed6b804b68de6359de1e6d5deb74a0ddd Mon Sep 17 00:00:00 2001
+From: Piotr Nowak <pn@semihalf.com>
+Date: Tue, 11 Sep 2012 16:44:34 +0200
+Subject: [PATCH 293/609] Armada370: Align generic Kernel code.
+
+Changes applied from diff between Armada-370 and Armada-XP on
+Linux 3.0.6 baseline.
+
+Signed-off-by: Piotr Nowak <pn@semihalf.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/Kconfig                 |   16 ++++++++++++++++
+ arch/arm/Makefile                |    3 +++
+ arch/arm/include/asm/setup.h     |    5 +++++
+ arch/arm/kernel/Makefile         |    5 ++++-
+ arch/arm/mm/Kconfig              |   27 ++++++++++++++++++++-------
+ arch/arm/mm/Makefile             |    4 +++-
+ arch/arm/mm/mmu.c                |    4 +---
+ arch/arm/mm/proc-sheeva_pj4bv7.S |    5 +++++
+ arch/arm/tools/mach-types        |    2 +-
+ drivers/rtc/Kconfig              |    2 +-
+ drivers/tty/serial/8250.c        |   32 ++++++++++++++++++++++++++++++--
+ drivers/tty/serial/serial_core.c |    6 ++++++
+ fs/splice.c                      |   10 ++++------
+ include/linux/serial_core.h      |    6 ++++++
+ 14 files changed, 105 insertions(+), 22 deletions(-)
+
+diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+index 5319779..80d5ea5 100644
+--- a/arch/arm/Kconfig
++++ b/arch/arm/Kconfig
+@@ -564,6 +564,20 @@ config ARCH_LPC32XX
+ 	help
+ 	  Support for the NXP LPC32XX family of processors
+ 	  
++config ARCH_ARMADA370
++    bool "Marvell Armada-370"
++    select PCI
++    select ARCH_REQUIRE_GPIOLIB
++    select GENERIC_GPIO
++    select GENERIC_TIME
++    select GENERIC_CLOCKEVENTS
++    select PLAT_ARMADA
++    select HAVE_REGS_AND_STACK_ACCESS_API
++    select COMMON_CLKDEV
++    select NEED_MACH_MEMORY_H
++    help
++      Support for the Marvell Armada-370 SoC Family
++
+ config ARCH_ARMADA_XP
+ 	bool "Marvell Armada XP"
+ 	select PCI
+ 
+diff --git a/arch/arm/Makefile b/arch/arm/Makefile
+index 4e1e1a1..31a8214 100644
+--- a/arch/arm/Makefile
++++ b/arch/arm/Makefile
+@@ -135,6 +135,7 @@ textofs-$(CONFIG_ARCH_MSM8960) := 0x00208000
+ 
+ # Machine directory name.  This list is sorted alphanumerically
+ # by CONFIG_* macro name.
++machine-$(CONFIG_ARCH_ARMADA370)	:= armada370
+ machine-$(CONFIG_ARCH_AT91)		:= at91
+ machine-$(CONFIG_ARCH_BCMRING)		:= bcmring
+ machine-$(CONFIG_ARCH_CLPS711X)		:= clps711x
+@@ -235,6 +236,8 @@ else
+ MACHINE  :=
+ endif
+ 
++export MACHINE
++
+ machdirs := $(patsubst %,arch/arm/mach-%/,$(machine-y))
+ platdirs := $(patsubst %,arch/arm/plat-%/,$(plat-y))
+ 
+diff --git a/arch/arm/include/asm/setup.h b/arch/arm/include/asm/setup.h
+index b477411..3a1c067 100644
+--- a/arch/arm/include/asm/setup.h
++++ b/arch/arm/include/asm/setup.h
+@@ -161,8 +161,13 @@ struct tag_mv_uboot {
+         __u8  macAddr[MV_UBOOT_ETH_PORTS][6];
+ 	__u16 mtu[MV_UBOOT_ETH_PORTS];
+ 	__u32 nand_ecc;
++#if !defined (CONFIG_ARCH_ARMADA370)
+ 	__u32 rgmii0Src;
+ 	__u32 feGeSrc;
++#endif
++#if defined (CONFIG_ARCH_ARMADA370)
++	__u32 bit_mask_config;
++#endif
+ };                     
+ 
+ struct tag {
+diff --git a/arch/arm/kernel/Makefile b/arch/arm/kernel/Makefile
+index 544bc06..b0fd2c4 100644
+--- a/arch/arm/kernel/Makefile
++++ b/arch/arm/kernel/Makefile
+@@ -13,7 +13,10 @@ CFLAGS_REMOVE_return_address.o = -pg
+ 
+ # Object file lists.
+ 
+-include 	  $(srctree)/arch/arm/mach-armadaxp/config/mvRules.mk
++ifneq ($(MACHINE),)
++include $(srctree)/$(MACHINE)/config/mvRules.mk
++endif
++
+ obj-y		:= elf.o entry-armv.o entry-common.o irq.o \
+ 		   process.o ptrace.o return_address.o setup.o signal.o \
+ 		   sys_arm.o stacktrace.o time.o traps.o
+diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
+index 6a24d23..7f17b6c 100644
+--- a/arch/arm/mm/Kconfig
++++ b/arch/arm/mm/Kconfig
+@@ -384,7 +384,7 @@ config CPU_FEROCEON_OLD_ID
+ 
+ choice
+ 	prompt "Marvell Sheeva CPU Architecture"
+-	default CPU_SHEEVA_PJ4B_V6
++	default CPU_SHEEVA_PJ4B_V7
+ 
+ config CPU_SHEEVA_PJ4B_V6
+ 	bool "Support Sheeva processor in V6 mode" if ARCH_ARMADA_XP
+@@ -394,7 +394,7 @@ config CPU_SHEEVA_PJ4B_V6
+ 	select DMA_CACHE_RWFO if SMP
+ 
+ config CPU_SHEEVA_PJ4B_V7
+-	bool "Support Sheeva processor in V7 mode" if ARCH_ARMADA_XP
++	bool "Support Sheeva processor in V7 mode" if ARCH_ARMADA_XP || ARCH_ARMADA370
+ 	select CPU_V7
+ 
+ endchoice
+@@ -1098,7 +1098,7 @@ config SHEEVA_ERRATA_ARM_CPU_ADD_DELAY_FOR_STREX
+ 
+ config SHEEVA_DEEP_IDLE
+ 	bool "Enable CPU/L2 Deep Idle Power Management"
+-	depends on ARCH_ARMADA_XP && CPU_IDLE
++	depends on (ARCH_ARMADA_XP || ARCH_ARMADA370) && CPU_IDLE
+ 
+ config CPU_FREQ_ARMADA_XP
+ 	bool "Enable CPU frequency scaling"
+@@ -1108,10 +1108,23 @@ config STANDBY_UART_WAKE
+ 	bool "Enable wake up from standby by UART"
+ 	depends on ARCH_ARMADA_XP && CPU_IDLE && HOTPLUG_CPU
+ 
++config ARMADA_SUPPORT_DEEP_IDLE_DRAM_SR
++	bool "Support DDR Self-Refresh in Deep-Idle"
++	default n
++	depends on SHEEVA_DEEP_IDLE
++
++config ARMADA_SUPPORT_DEEP_IDLE_FAST_EXIT
++	bool "Enable Fast Exit from Deep-Idle"
++	default y
++	depends on SHEEVA_DEEP_IDLE
++	help
++	  Enable fast exit from Deep-Idle by using a reserved block in crypto engine SRAM.
++
+ config CACHE_AURORA_L2
+ 	bool "Enable Marvell Aurora L2 cache controller"
+-	depends on ARCH_ARMADA_XP
+-	default y	
++	depends on ARCH_ARMADA_XP || ARCH_ARMADA370
++	default y
++    select OUTER_CACHE if ARCH_ARMADA370
+ 	help
+ 	  This option enables the Marvell Aurora L2 cache controller.
+ 
+@@ -1153,7 +1166,7 @@ config ENABLE_UNALINGED_ACCESS_FAULT
+ 
+ config AURORA_IO_CACHE_COHERENCY
+ 	bool "Enable Marvell Aurora I/O cache coherency"
+-	depends on ARCH_ARMADA_XP
++	depends on ARCH_ARMADA_XP || ARCH_ARMADA370
+ 	default y
+ 	help
+ 	  This option enables the hardware mechanism for I/O cache coherency.
+@@ -1175,7 +1188,7 @@ config MV_SUPPORT_L2_DEPOSIT
+ 
+ config MV_SUPPORT_64KB_PAGE_SIZE
+ 	bool "Support 64KB page size"
+-	depends on ARCH_ARMADA_XP
++	depends on ARCH_ARMADA_XP || ARCH_ARMADA370
+ 	default n
+ 	help
+ 	  This option enables 64KB pages.
+diff --git a/arch/arm/mm/Makefile b/arch/arm/mm/Makefile
+index 33ac891..6effaa4 100644
+--- a/arch/arm/mm/Makefile
++++ b/arch/arm/mm/Makefile
+@@ -2,7 +2,9 @@
+ # Makefile for the linux arm-specific parts of the memory manager.
+ #
+ 
+-include 	  $(srctree)/arch/arm/mach-armadaxp/config/mvRules.mk
++ifneq ($(MACHINE),)
++include $(srctree)/$(MACHINE)/config/mvRules.mk
++endif
+ 
+ obj-y				:= dma-mapping.o extable.o fault.o init.o \
+ 				   iomap.o
+diff --git a/arch/arm/mm/mmu.c b/arch/arm/mm/mmu.c
+index 484a496..db62fab 100644
+--- a/arch/arm/mm/mmu.c
++++ b/arch/arm/mm/mmu.c
+@@ -878,8 +878,7 @@ void __init sanity_check_meminfo(void)
+ 
+ 		j++;
+ 	}
+-#ifndef CONFIG_ARCH_ARMADA_XP
+-#ifdef CONFIG_HIGHMEM
++#if !defined (ARCH_PLAT_ARMADA) && defined (CONFIG_HIGHMEM)
+ 	if (highmem) {
+ 		const char *reason = NULL;
+ 
+@@ -899,7 +898,6 @@ void __init sanity_check_meminfo(void)
+ 		}
+ 	}
+ #endif
+-#endif
+ 	meminfo.nr_banks = j;
+ 	memblock_set_current_limit(lowmem_limit);
+ }
+diff --git a/arch/arm/mm/proc-sheeva_pj4bv7.S b/arch/arm/mm/proc-sheeva_pj4bv7.S
+index a917bd4..1936ca3 100644
+--- a/arch/arm/mm/proc-sheeva_pj4bv7.S
++++ b/arch/arm/mm/proc-sheeva_pj4bv7.S
+@@ -16,7 +16,12 @@
+ #include <asm/hwcap.h>
+ #include <asm/pgtable-hwdef.h>
+ #include <asm/pgtable.h>
++#if defined(CONFIG_ARCH_ARMADA_XP)
+ #include <mach/armadaxp.h>
++#elif defined(CONFIG_ARCH_ARMADA370)
++#include <mach/armada370.h>
++#include <mach/kw_macro.h>
++#endif
+ 
+ #include "proc-macros.S"
+ #include "sheeva_pj4b-macros.S"
+diff --git a/arch/arm/tools/mach-types b/arch/arm/tools/mach-types
+index 2b3987a..2129a4a 100644
+--- a/arch/arm/tools/mach-types
++++ b/arch/arm/tools/mach-types
+@@ -3006,7 +3006,7 @@ armada_xp_gp		MACH_ARMADA_XP_GP	ARMADA_XP_GP		3035
+ armada_xp_db		MACH_ARMADA_XP_DB	ARMADA_XP_DB		3036
+ armada_xp_rd_nas	MACH_ARMADA_XP_RD_NAS	ARMADA_XP_RD_NAS	3500
+ armada_xp_rdsrv         MACH_ARMADA_XP_RDSRV    ARMADA_XP_RDSRV         3037
+-gtib			MACH_GTIB		GTIB			3038
++armada_370      MACH_ARMADA_370     ARMADA_370      3038
+ dgm3240			MACH_DGM3240		DGM3240			3039
+ htcmega			MACH_HTCMEGA		HTCMEGA			3041
+ tricorder		MACH_TRICORDER		TRICORDER		3042
+diff --git a/drivers/rtc/Kconfig b/drivers/rtc/Kconfig
+index de2165e..1f8905e 100644
+--- a/drivers/rtc/Kconfig
++++ b/drivers/rtc/Kconfig
+@@ -959,7 +959,7 @@ config RTC_DRV_TX4939
+ 
+ config RTC_DRV_MV
+ 	tristate "Marvell SoC RTC"
+-	depends on ARCH_KIRKWOOD || ARCH_DOVE || ARCH_ARMADA_XP
++	depends on ARCH_KIRKWOOD || ARCH_DOVE || ARCH_ARMADA_XP || ARCH_ARMADA370
+ 	help
+ 	  If you say yes here you will get support for the in-chip RTC
+ 	  that can be found in some of Marvell's SoC devices, such as
+diff --git a/drivers/tty/serial/8250.c b/drivers/tty/serial/8250.c
+index f021114..46b004d 100644
+--- a/drivers/tty/serial/8250.c
++++ b/drivers/tty/serial/8250.c
+@@ -1619,15 +1619,43 @@ static irqreturn_t serial8250_interrupt(int irq, void *dev_id)
+ 	do {
+ 		struct uart_8250_port *up;
+ 		struct uart_port *port;
++		unsigned int iir;
+ 
+ 		up = list_entry(l, struct uart_8250_port, list);
+ 		port = &up->port;
+ 
++#if !defined(CONFIG_ARCH_ARMADA370)
+ 		if (port->handle_irq(port)) {
+ 			handled = 1;
+ 			end = NULL;
+-		} else if (end == NULL)
+-			end = l;
++		}
++#endif
++#if defined(CONFIG_ARCH_ARMADA370)
++
++		iir = serial_in(up, UART_IIR);
++		if (!(iir & UART_IIR_NO_INT)) {
++			serial8250_handle_port(up);
++			handled = 1;
++			end = NULL;
++                }
++		else if ((up->port.iotype == UPIO_DWAPB ||
++                            up->port.iotype == UPIO_DWAPB32) &&
++                          (iir & UART_IIR_BUSY) == UART_IIR_BUSY) {
++                        /* The DesignWare APB UART has an Busy Detect (0x07)
++                         * interrupt meaning an LCR write attempt occurred while the
++                         * UART was busy. The interrupt must be cleared by reading
++                         * the UART status register (USR) and the LCR re-written. */
++                        unsigned int status;
++                        status = *(volatile u32 *)up->port.private_data;
++                        serial_out(up, UART_LCR, up->lcr);
++
++                        handled = 1;
++                        end = NULL;
++
++                }
++#endif
++		else if (end == NULL)
++                        end = l;
+ 
+ 		l = l->next;
+ 
+diff --git a/drivers/tty/serial/serial_core.c b/drivers/tty/serial/serial_core.c
+index 14bcf03..9f4fcf2 100644
+--- a/drivers/tty/serial/serial_core.c
++++ b/drivers/tty/serial/serial_core.c
+@@ -2062,6 +2062,9 @@ uart_report_port(struct uart_driver *drv, struct uart_port *port)
+ 	case UPIO_MEM32:
+ 	case UPIO_AU:
+ 	case UPIO_TSI:
++#if defined(CONFIG_ARCH_ARMADA370)
++	case UPIO_DWAPB:
++#endif
+ 		snprintf(address, sizeof(address),
+ 			 "MMIO 0x%llx", (unsigned long long)port->mapbase);
+ 		break;
+@@ -2475,6 +2478,9 @@ int uart_match_port(struct uart_port *port1, struct uart_port *port2)
+ 	case UPIO_MEM32:
+ 	case UPIO_AU:
+ 	case UPIO_TSI:
++#if defined(CONFIG_ARCH_ARMADA370)
++	case UPIO_DWAPB:
++#endif
+ 		return (port1->mapbase == port2->mapbase);
+ 	}
+ 	return 0;
+diff --git a/fs/splice.c b/fs/splice.c
+index 3c39eff..de9c797 100644
+--- a/fs/splice.c
++++ b/fs/splice.c
+@@ -2095,7 +2095,7 @@ SYSCALL_DEFINE6(splice, int, fd_in, loff_t __user *, off_in,
+ 		int, fd_out, loff_t __user *, off_out,
+ 		size_t, len, unsigned int, flags)
+ {
+-	long error;
++	int error;
+ 	struct file *in, *out;
+ 	int fput_in, fput_out;
+ 	struct socket *sock = NULL;
+@@ -2144,8 +2144,7 @@ done:
+ 	}
+ 
+ 	return error;
+-	
+-	}
++}
+ 
+ /*
+  * Make sure there's data to read. Wait for input if we can, otherwise
+@@ -2484,9 +2483,8 @@ static int __init init_splice_pools(void)
+ 	unsigned int rcv_pool_size= sizeof(struct recvfile_ctl_blk) * MAX_PAGES_PER_RECVFILE;
+ 	unsigned int kve_pool_size= sizeof(struct kvec) * MAX_PAGES_PER_RECVFILE;
+ 
+-	rcv_pool =  common_mempool_create(4 * num_possible_cpus(), rcv_pool_size);
+-	kvec_pool = common_mempool_create(4 * num_possible_cpus(), kve_pool_size);
+-
++	rcv_pool =  common_mempool_create((8 * num_possible_cpus()), rcv_pool_size);
++	kvec_pool = common_mempool_create((8 * num_possible_cpus()), kve_pool_size);
+ 	if (!rcv_pool || !kvec_pool)
+ 	{
+ 		return -ENOMEM;
+diff --git a/include/linux/serial_core.h b/include/linux/serial_core.h
+index eadf33d..0914cfb 100644
+--- a/include/linux/serial_core.h
++++ b/include/linux/serial_core.h
+@@ -319,6 +319,12 @@ struct uart_port {
+ #define UPIO_MEM32		(3)
+ #define UPIO_AU			(4)			/* Au1x00 type IO */
+ #define UPIO_TSI		(5)			/* Tsi108/109 type IO */
++
++#if defined (CONFIG_ARCH_ARMADA370)
++#define UPIO_DWAPB		(6)
++#define UPIO_DWAPB32		(7)
++#endif
++
+ #define UPIO_RM9000		(6)			/* RM9000 type IO */
+ 
+ 	unsigned int		read_status_mask;	/* driver specific */
+-- 
+1.7.9.5
+

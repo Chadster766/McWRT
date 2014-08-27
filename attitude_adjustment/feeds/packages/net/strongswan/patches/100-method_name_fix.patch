@@ -1,0 +1,40 @@
+--- a/src/libipsec/ip_packet.c
++++ b/src/libipsec/ip_packet.c
+@@ -95,7 +95,7 @@ METHOD(ip_packet_t, get_next_header, u_i
+ 	return this->next_header;
+ }
+ 
+-METHOD(ip_packet_t, clone, ip_packet_t*,
++METHOD(ip_packet_t, clone_, ip_packet_t*,
+ 	private_ip_packet_t *this)
+ {
+ 	return ip_packet_create(chunk_clone(this->packet));
+@@ -183,7 +183,7 @@ ip_packet_t *ip_packet_create(chunk_t pa
+ 			.get_destination = _get_destination,
+ 			.get_next_header = _get_next_header,
+ 			.get_encoding = _get_encoding,
+-			.clone = _clone,
++			.clone = _clone_,
+ 			.destroy = _destroy,
+ 		},
+ 		.src = src,
+--- a/src/libipsec/esp_packet.c
++++ b/src/libipsec/esp_packet.c
+@@ -115,7 +115,7 @@ METHOD(packet_t, skip_bytes, void,
+ 	return this->packet->skip_bytes(this->packet, bytes);
+ }
+ 
+-METHOD(packet_t, clone, packet_t*,
++METHOD(packet_t, clone_, packet_t*,
+ 	private_esp_packet_t *this)
+ {
+ 	private_esp_packet_t *pkt;
+@@ -414,7 +414,7 @@ static private_esp_packet_t *esp_packet_
+ 				.get_dscp = _get_dscp,
+ 				.set_dscp = _set_dscp,
+ 				.skip_bytes = _skip_bytes,
+-				.clone = _clone,
++				.clone = _clone_,
+ 				.destroy = _destroy,
+ 			},
+ 			.get_source = _get_source,

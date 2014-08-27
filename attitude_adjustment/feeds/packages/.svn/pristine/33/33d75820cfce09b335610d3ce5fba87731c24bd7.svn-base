@@ -1,0 +1,20 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2012 OpenWrt.org
+
+START=99
+APP=snort
+BIN_FILE="/usr/bin/"$APP
+PID_FILE="/var/run/"$APP"_"$INTERFACE".pid"
+OPTIONS=
+DEFAULT=/etc/default/snort
+LOG_D=/var/log/snort
+
+start() {
+	[ -d $LOG_D ] || mkdir -p $LOG_D
+	start-stop-daemon -S -x $BIN_FILE -p $PID_FILE -b -m -- $OPTIONS
+}
+
+stop() {
+	start-stop-daemon -K -x $BIN_FILE -p $PID_FILE -q
+	rm -rf $PID_FILE
+}

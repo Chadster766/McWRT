@@ -1,0 +1,20 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2007-2011 OpenWrt.org
+
+START=70
+
+SERVICE_USE_PID=1
+
+start() {
+	user_exists nagios 50 || user_add nagios 50
+	group_exists nagios 50 || group_add nagios 50
+	[ -d /var/run/nagios ] || {
+		mkdir -m 0755 -p /var/run/nagios
+		chown nagios:nagios /var/run/nagios
+	}
+	service_start /usr/sbin/nrpe -c /etc/nrpe.cfg -d
+}
+
+stop() {
+	service_stop /usr/sbin/nrpe
+}

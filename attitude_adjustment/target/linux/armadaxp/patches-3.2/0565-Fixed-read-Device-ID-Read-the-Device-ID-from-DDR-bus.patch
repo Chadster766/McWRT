@@ -1,0 +1,135 @@
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
+index ec95d36..424c151 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
+@@ -192,66 +192,6 @@ MV_BOOL mvCtrlIsValidSatR(MV_VOID)
+ 	}
+ 	return MV_FALSE;
+ }
+-MV_STATUS mvCtrlUpdatePexId(MV_VOID)
+-{
+-	MV_U32 pmCtrl;
+-#if defined(DB_88F78X60) || defined(RD_88F78460_SERVER) || defined (DB_88F78X60_REV2)|| defined(DB_784MP_GP) || defined(DB_78X60_AMC)
+-	MV_BIOS_MODE * pBbiosModes;
+-	MV_U32 devVendId;
+-	int i, j;
+-	MV_U16 confId;
+-	MV_U32 tmp;
+-
+-	if (mvCtrlRevGet() == 2)
+-		pBbiosModes = bios_modes_b0;
+-	else
+-		pBbiosModes = bios_modes;
+-
+-#endif
+-	/* if PEX0 clock is disabled - enable it for reading the device ID */
+-	pmCtrl = MV_REG_READ(POWER_MNG_CTRL_REG);
+-	if ((pmCtrl & PMC_PEXSTOPCLOCK_MASK(0)) == PMC_PEXSTOPCLOCK_STOP(0)) {
+-		MV_REG_WRITE(POWER_MNG_CTRL_REG,
+-			(pmCtrl & ~PMC_PEXSTOPCLOCK_MASK(0)) | PMC_PEXSTOPCLOCK_EN(0));
+-	}
+-#if defined(DB_88F78X60) || defined (DB_88F78X60_REV2) || defined(DB_784MP_GP)
+-
+-	devVendId = MV_REG_READ(PEX_CFG_DIRECT_ACCESS(0, PEX_DEVICE_AND_VENDOR_ID));
+-
+-	confId = mvBoardConfIdGet();
+-	tmp = MV_REG_READ(SOC_CTRL_REG);
+-	for (i = 0; i < BIOS_MODES_NUM; i++) {
+-		if (pBbiosModes->confId == confId) {
+-			devVendId &= 0x0000FFFF;
+-			devVendId |= pBbiosModes->code << 16;
+-			for (j=0;j<mvCtrlPexMaxIfGet();j++){
+-				MV_REG_WRITE(MV_PEX_IF_REGS_OFFSET(j), devVendId);
+-				if ((0 == j) & (0 == (tmp & PCIE0_QUADX1_EN)))
+-					j+=3;
+-				if ((4 == j) & (0 == (tmp & PCIE1_QUADX1_EN)))
+-					j+=3;
+-			}
+-		}
+-		pBbiosModes++;
+-	}
+-
+-#elif defined(RD_88F78460_SERVER) || defined(DB_78X60_AMC)
+-	devVendId = MV_REG_READ(PEX_CFG_DIRECT_ACCESS(0, PEX_DEVICE_AND_VENDOR_ID));
+-	devVendId &= 0x0000FFFF;
+-	devVendId |= 0x7846 << 16;
+-	MV_REG_WRITE(MV_PEX_IF_REGS_OFFSET(0), devVendId);
+-//#elif defined(RD_78460_GP)
+-//	devVendId = MV_REG_READ(PEX_CFG_DIRECT_ACCESS(0, PEX_DEVICE_AND_VENDOR_ID));
+-//	devVendId &= 0x0000FFFF;
+-//	devVendId |= 0x7846 << 16;
+-//	MV_REG_WRITE(MV_PEX_IF_REGS_OFFSET(0), devVendId);
+-#endif
+-	/* Reset the original value of PEX0 clock */
+-	if ((pmCtrl & PMC_PEXSTOPCLOCK_MASK(0)) == PMC_PEXSTOPCLOCK_STOP(0))
+-		MV_REG_WRITE(POWER_MNG_CTRL_REG, pmCtrl);
+-
+-	return MV_OK;
+-}
+ /*******************************************************************************
+ * mvCtrlEnvInit - Initialize Marvell controller environment.
+ *
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
+index 155dba7..f0b56f2 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
+@@ -150,28 +150,32 @@ typedef struct _boardSerdesConf {
+ 
+ 
+ /* BIOS Modes related defines */
+-#define SAR0_CPU_FREQ_MASK	0x00E00000
++
++#define SAR0_BOOTWIDTH_OFFSET	3
++#define SAR0_BOOTWIDTH_MASK		(0x3 << SAR0_BOOTWIDTH_OFFSET)
++#define SAR0_BOOTSRC_OFFSET		5
++#define SAR0_BOOTSRC_MASK		(0xF << SAR0_BOOTSRC_OFFSET)
++
++#define SAR0_L2_SIZE_OFFSET		19
++#define SAR0_L2_SIZE_MASK		(0x3 << SAR0_L2_SIZE_OFFSET)
+ #define SAR0_CPU_FREQ_OFFSET	21
+-#define SAR0_FABRIC_FREQ_MASK	0x0F000000
++#define SAR0_CPU_FREQ_MASK		(0x7 << SAR0_CPU_FREQ_OFFSET)
+ #define SAR0_FABRIC_FREQ_OFFSET	24
+-#define SAR0_L2_SIZE_MASK	0x00180000
+-#define SAR0_L2_SIZE_OFFSET	19
+-#define SAR0_BOOTSRC_MASK	0X1E0
+-#define SAR0_BOOTSRC_OFFSET	5
+-#define SAR0_BOOTWIDTH_MASK	0X18
+-#define SAR0_BOOTWIDTH_OFFSET	3
+-#define SAR0_CPU0CORE_MASK	0X80000000
++#define SAR0_FABRIC_FREQ_MASK	(0xF << SAR0_FABRIC_FREQ_OFFSET)
+ #define SAR0_CPU0CORE_OFFSET	31
+-#define PEX_CLK_100MHZ_MASK    0x00000004
+-#define PEX_CLK_100MHZ_OFFSET  2
+-#define SAR1_CPU0CORE_MASK	0x1
++#define SAR0_CPU0CORE_MASK		(0x1 << SAR0_CPU0CORE_OFFSET)
+ #define SAR1_CPU0CORE_OFFSET	0
+-#define SAR1_CPU_CORE_MASK	0x00000018
++#define SAR1_CPU0CORE_MASK		(0x1 << SAR1_CPU0CORE_OFFSET)
++
++#define PEX_CLK_100MHZ_OFFSET	2
++#define PEX_CLK_100MHZ_MASK     (0x1 << PEX_CLK_100MHZ_OFFSET)
++
+ #define SAR1_CPU_CORE_OFFSET	3
+-#define SAR1_CPU_MODE_MASK	0x00100000
+-#define SAR1_CPU_MODE_OFFSET	20
+-#define SAR1_FABRIC_MODE_MASK	0x00080000
++#define SAR1_CPU_CORE_MASK		(0x3 << SAR1_CPU_CORE_OFFSET)
+ #define SAR1_FABRIC_MODE_OFFSET	19
++#define SAR1_FABRIC_MODE_MASK	(0x1 << SAR1_FABRIC_MODE_OFFSET)
++#define SAR1_CPU_MODE_OFFSET	20
++#define SAR1_CPU_MODE_MASK		(0x1 << SAR1_CPU_MODE_OFFSET)
+ 
+ #define SAR_CPU_FAB_GET(cpu, fab)	(((cpu & 0x7) << 21) | ((fab & 0xF) << 24))
+ #define BIOS_MODES_NUM			4
+@@ -199,7 +203,6 @@ extern MV_BIOS_MODE bios_modes_b0[];
+ /* mcspLib.h API list */
+ MV_U32 mvCtrlGetCpuNum(MV_VOID);
+ MV_U32 mvCtrlGetQuadNum(MV_VOID);
+-MV_STATUS mvCtrlUpdatePexId(MV_VOID);
+ MV_BOOL mvCtrlIsValidSatR(MV_VOID);
+ 
+ MV_STATUS mvCtrlEnvInit(MV_VOID);
+-- 
+1.7.9.5
+

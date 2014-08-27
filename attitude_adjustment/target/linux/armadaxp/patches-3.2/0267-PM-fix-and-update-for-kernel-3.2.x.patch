@@ -1,0 +1,548 @@
+From 054e4b888d0755439603b48b3ec18a1ff9adc2ae Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Mon, 27 Aug 2012 13:34:42 +0300
+Subject: [PATCH 267/609] PM fix and update for kernel 3.2.x
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/armadaxp_suspend.S |  186 ++++++++++++++++++++-----------
+ arch/arm/plat-armada/cpuidle.c          |   77 +++++++------
+ 2 files changed, 160 insertions(+), 103 deletions(-)
+
+diff --git a/arch/arm/plat-armada/armadaxp_suspend.S b/arch/arm/plat-armada/armadaxp_suspend.S
+index d692ff3..1e50433 100644
+--- a/arch/arm/plat-armada/armadaxp_suspend.S
++++ b/arch/arm/plat-armada/armadaxp_suspend.S
+@@ -17,36 +17,38 @@
+ * input:
+ */
+ ENTRY(armadaxp_cpu_suspend)
+-	/* Save ARM registers */
+-	stmfd	sp!, {r4-r12, lr}		@ save registers on stack
+-        /*
+-         * Save the CP15 context
+-         */
+-        mrc     p15, 0, r2, c1, c0, 0           @ save CP15 - CR
+-        mrc     p15, 0, r3, c3, c0, 0           @ save CP15 - DACR
+-        mrc     p15, 0, r4, c13, c0, 0          @ save CP15 - FCSE
+-        mrc     p15, 0, r5, c2, c0, 0           @ save CP15 - TTBR
+-        mrc     p15, 0, r6, c13, c0, 1          @ save CP15 - context ID
+-        mrc     p15, 1, r7, c15, c1, 0          @ save CP15 - extra features
+-        mrc     p15, 0, r8, c1, c0, 1           @ save CP15 - Aux CR
+-        mov     r9, r13                         @ save resume SP
+-        stmfd   sp!, {r2-r9}
+-	mrc	p15, 1, r3, c15, c2, 0		@ save CP15 - Aux Func Modes Ctrl 0
+-	mrc	p15, 1, r4, c15, c1, 2		@ save CP15 - Aux Debug Modes Ctrl 2
+-        mrc     p15, 1, r5, c15, c1, 1          @ save CP15 - Aux Debug Modes Ctrl 1
+-        mrc     p15, 0, r6, c9, c14, 0          @ save CP15 - PMC
+-        mrc     p15, 0, r7, c10, c2, 0          @ save CP15 - PRRR
+-        mrc     p15, 0, r8, c10, c2, 1          @ save CP15 - NMRR
++/* Save ARM registers */
++	stmfd	sp!, {r4-r12, lr}				@ save registers on stack
++
++/*
++* Save the CP15 context
++*/
++	mrc     p15, 0, r2, c1, c0, 0			@ save CP15 - CR
++	mrc     p15, 0, r3, c3, c0, 0			@ save CP15 - DACR
++	mrc     p15, 0, r4, c13, c0, 0			@ save CP15 - FCSE
++        mrc     p15, 0, r5, c2, c0, 0           @ save CP15 - TTBR0
++	mrc     p15, 0, r6, c13, c0, 1			@ save CP15 - context ID
++	mrc     p15, 1, r7, c15, c1, 0			@ save CP15 - extra features
++	mrc     p15, 0, r8, c1, c0, 1			@ save CP15 - Aux CR
++	mov     r9, r13							@ save resume SP
++	stmfd   sp!, {r2-r9}
++	mrc     p15, 0, r2, c2, c0, 1           @ save CP15 - TTBR1
++	mrc	p15, 1, r3, c15, c2, 0				@ save CP15 - Aux Func Modes Ctrl 0
++	mrc	p15, 1, r4, c15, c1, 2				@ save CP15 - Aux Debug Modes Ctrl 2
++	mrc     p15, 1, r5, c15, c1, 1			@ save CP15 - Aux Debug Modes Ctrl 1
++	mrc     p15, 0, r6, c9, c14, 0			@ save CP15 - PMC
++	mrc     p15, 0, r7, c10, c2, 0			@ save CP15 - PRRR
++	mrc     p15, 0, r8, c10, c2, 1			@ save CP15 - NMRR
+ 	
+-        stmfd   sp!, {r3-r8}
++        stmfd   sp!, {r2-r8}
+ 
+-	/*
+-	* TODO: Save Debug Registers
+-	*/
++/*
++* TODO: Save Debug Registers
++*/
+ 
+-        /*
+-	* Save the physical address of the resume SP
+-	*/
++/*
++* Save the physical address of the resume SP
++*/
+         mov     r0, sp
+         bl      suspend_phys_addr
+         ldr     r1, =suspend_saved_sp
+@@ -57,9 +59,11 @@ ENTRY(armadaxp_cpu_suspend)
+ #else
+         str     r0, [r1]
+ #endif
+-	/*
+-	* Flush L1 DCache
+-	*/
++
++/*
++* Flush L1 DCache
++*/
++
+ #ifdef CONFIG_CPU_V6
+ 	bl v6_flush_kern_cache_all
+ #elif CONFIG_CPU_V7
+@@ -67,77 +71,120 @@ ENTRY(armadaxp_cpu_suspend)
+ #else
+ #error "CPU Arch version not defined!\n"
+ #endif
++
++/* Prepare Deep Idle Function - Set PMU Configurations*/
+ 	bl armadaxp_fabric_prepare_deepIdle
+ 
+-	/*
+-	* Issue a Data Synchronization Barrier instruction to ensure that all
+-	* state saving has been	completed.
+-	*/
++/*
++* Issue a Data Synchronization Barrier instruction to ensure that all
++* state saving has been	completed.
++*/
+ #ifdef CONFIG_CPU_V6
+ 	mcr     p15, 0, r0, c7, c10, 4	@ Data Synchronization Barrier
+ #elif defined (CONFIG_CPU_V7)
+ 	dsb				@ Data Synchronization Barrier
+ #endif
+-	ldr	r2, =(SDRAM_OPERATION_REG - INTER_REGS_BASE)
+-	ldr	r0, =INTER_REGS_BASE
+-	orr	r2, r2, r0
+-	ldr	r0, [r2]
+-#ifdef CONFIG_CPU_BIG_ENDIAN
+-	ldr	r3, =0x07000000
+-#else
+-	ldr	r3, =0x00000007
+-#endif
+-	orr	r0, r0, r3
+-	str	r0, [r2]
++
++/* Lock Semaphore */
++	mrc	15, 0, r1, cr0, cr0, 5
++	and	r1, r1, #15
++	ldr	r4, =0xFBB20500
++1:
++	ldr	r2, [r4]
++	and	r2, r2, #0xF
++	cmp	r1, r2
++	bne	1b
++
++/* Disable SnoopEna */
++	mrc	15, 0, r1, cr0, cr0, 5
++	and	r1, r1, #15
++	mov	r6, #1
++	add	r7, r1, #24
++	ldr	r2, =0xFBB20200
++	ldr	r3, [r2]
++	bic	r3, r3, r6, lsl r7
++	str	r3, [r2]
++
++/* Release Semaphore */
++	ldr	r2, =0xFBB20500
++	ldr 	r0, =0xff
++	strb	r0, [r2]
++
++dowfi:
++/* WFI */
+ #ifdef CONFIG_CPU_V6
+ 	mcr     p15, 0, r1, c7, c0, 4	@ wait for interrupt
+ #elif defined (CONFIG_CPU_V7)
+ 	wfi				@ wait for interrupt
+ #endif
++
++	/* After disabling the SnoopEna by SW regret is not allowed!! */
++	b dowfi
++
++#if 0
+ 	/* if we reach this point then deepIdle returned from regret mode and cpu
+ 	* state retained
+ 	*/
+-
+ 	mov	r0, #1
+ 	ldmfd   sp!, {r3-r8}
+ 	ldmfd   sp!, {r2-r9}
+ 	
+ 	ldmfd   sp!, {r4-r12, pc}
++#endif
+ ENDPROC(armadaxp_cpu_suspend)
+ 
+-
++/*
++* armadaxp_cpu_resume: resume from cpu deepIdle state
++* input:
++*/
+ ENTRY(armadaxp_cpu_resume)
+ 
+ #ifdef CONFIG_CPU_ENDIAN_BE32
+-        /* convert CPU to big endian */
+-        .word 0x100f11ee /* mrc p15, 0, r0, c1, c0 */
+-        .word 0x800080e3 /* orr r0, r0, #0x80 */
+-        .word 0x100f01ee /* mcr p15, 0, r0, c1, c0 */
++	/* convert CPU to big endian */
++	.word 0x100f11ee /* mrc p15, 0, r0, c1, c0 */
++	.word 0x800080e3 /* orr r0, r0, #0x80 */
++	.word 0x100f01ee /* mcr p15, 0, r0, c1, c0 */
+ #endif
+ #ifdef CONFIG_CPU_ENDIAN_BE8
+-                setend  be
++	setend  be
+ #endif
+-//	mcr	p15, 0, r0, c8, c7, 0   @ flush I,D TLBs
+-//	mcr     p15, 0, r0, c7, c6, 0   @ invalidate D cache
+-	
+-//wait:	
+-//	ldr	r0, =0xD0018100
+-//	ldr	r1, =0x8000000
+-//	str	r1, [r0]                        @ set 7seg
+-//	ldr	r1, [r0]
+-//	b 	wait
++
++/* Lock Semaphore */
++	mrc	15, 0, r1, cr0, cr0, 5
++	and	r1, r1, #15
++	ldr	r4, =0xD0020500
++1:
++	ldr	r2, [r4]
++	and	r2, r2, #0xF
++	cmp	r1, r2
++	bne	1b
++
++/* Enable SnoopEna */
++	mrc	15, 0, r1, cr0, cr0, 5
++	and	r1, r1, #15
++	mov	r6, #1
++	add	r7, r1, #24
++	ldr	r2, =0xD0020200
++	ldr	r3, [r2]
++	orr	r3, r3, r6, lsl r7
++	str	r3, [r2]
++
++/* Release Semaphore */
++	ldr	r2, =0xD0020500
++	ldr 	r0, =0xff
++	strb	r0, [r2]
+ 
+ #ifdef CONFIG_SMP
+-        adr     r0, suspend_saved_sp
+-        mrc     p15, 0, r1, c0, c0, 5
+-        and     r1, r1, #15
+-        ldr     r0, [r0, r1, lsl #2]    @ stack phys addr
++	adr     r0, suspend_saved_sp
++	mrc     p15, 0, r1, c0, c0, 5
++	and     r1, r1, #15
++	ldr     r0, [r0, r1, lsl #2]    @ stack phys addr
+ #else
+-        ldr     r0, suspend_saved_sp            @ stack phys addr
++	ldr     r0, suspend_saved_sp            @ stack phys addr
+ #endif
+ 
+-	ldmfd   r0!, {r3-r8}
+-
++	ldmfd   r0!, {r2-r8}
++	mcr     p15, 0, r2, c2, c0, 1           @ restore CP15 - TTBR1
+ 	mcr     p15, 1, r3, c15, c2, 0          @ restore CP15 - Aux Func Modes Ctrl 0
+ 	mcr     p15, 1, r4, c15, c1, 2          @ restore CP15 - Aux Debug Modes Ctrl 2
+ 	mcr     p15, 1, r5, c15, c1, 1          @ restore CP15 - Aux Debug Modes Ctrl 1
+@@ -157,6 +204,7 @@ ENTRY(armadaxp_cpu_resume)
+ 	mcr	p15, 0, r3, c13, c0, 1          @ set 0 in CP15 - context ID
+ 	mcr	p15, 0, r2, c1, c0, 0		@ restore CP15 - CR  @enable mmu
+ 	mrc     p15, 0, r3, c0, c0, 0           @ read id reg
++
+ 	ldr	r3, resume2
+ 	mov	pc, r3
+ ENDPROC(armadaxp_cpu_resume)
+@@ -164,11 +212,13 @@ ENDPROC(armadaxp_cpu_resume)
+ 	/* stage 2 of the resume function that runs from PAGE_OFFSET virtual space */
+ ENTRY(armadaxp_cpu_resume2)	
+ 	/* restore original page table*/
++
+ 	mcr	p15, 0, r5, c2, c0, 0		@ restore CP15 - TTBR
+ 	mcr	p15, 0, r6, c13, c0, 1          @ restore CP15 - context ID
+ 	mcr     p15, 0, r0, c8, c7, 0           @ TLB invalidate
+ 	mov	sp, r9				@ restore virtual sp
+ 	mov	r0, #0
++
+ 	ldmfd   sp!, {r4-r12, pc}               @ restore SVC registers
+ 
+ ENDPROC(armadaxp_cpu_resume2)
+diff --git a/arch/arm/plat-armada/cpuidle.c b/arch/arm/plat-armada/cpuidle.c
+index 7d3a8ca..5c42577 100755
+--- a/arch/arm/plat-armada/cpuidle.c
++++ b/arch/arm/plat-armada/cpuidle.c
+@@ -46,6 +46,7 @@ extern unsigned char armadaxp_deep_idle_exit_end;
+ #ifdef	CONFIG_CPU_IDLE
+ static int device_registered;
+ 
++#if 0
+ static void hw_sem_lock(void)
+ {
+ 	unsigned int cpu = hard_smp_processor_id();
+@@ -57,6 +58,7 @@ static void hw_sem_unlock(void)
+ {
+ 	writeb(0xff, INTER_REGS_BASE + MV_CPU_HW_SEM_OFFSET);
+ }
++#endif
+ 
+ unsigned long suspend_phys_addr(void * physaddr)
+ {
+@@ -99,7 +101,7 @@ static int __init pm_enable_setup(char *str)
+ 		pm_support = SNOOZE;
+ 	else if (!strncmp(str, "off", 3))
+ 		pm_support = DISABLED;
+-
++	
+ 	return 1;
+ }
+ 
+@@ -138,7 +140,7 @@ void armadaxp_fabric_prepare_hotplug(void)
+ 	MV_U32  reg;
+ 
+ 	MV_REG_WRITE(PM_CPU_BOOT_ADDR_REDIRECT(processor_id), virt_to_phys(axp_secondary_startup));
+-
++	
+ 	reg = MV_REG_READ(PM_STATUS_AND_MASK_REG(processor_id));
+ 	/* set WaitMask fields */
+ 	reg |= PM_STATUS_AND_MASK_CPU_IDLE_WAIT;
+@@ -152,7 +154,7 @@ void armadaxp_fabric_prepare_hotplug(void)
+ 	MV_REG_WRITE(PM_STATUS_AND_MASK_REG(processor_id), reg);
+ 
+ 	/* Disable delivering of other CPU core cache maintenance instruction,
+-	 * TLB, and Instruction synchronization to the CPU core
++	 * TLB, and Instruction synchronization to the CPU core 
+ 	 */
+ 	/* TODO */
+ #ifdef CONFIG_CACHE_AURORA_L2
+@@ -166,6 +168,11 @@ void armadaxp_fabric_prepare_hotplug(void)
+ 	reg = MV_REG_READ(PM_CONTROL_AND_CONFIG_REG(processor_id));
+ 	reg |= PM_CONTROL_AND_CONFIG_PWDDN_REQ;
+ 	MV_REG_WRITE(PM_CONTROL_AND_CONFIG_REG(processor_id), reg);
++
++	/* Disable snoop disable by HW */
++	reg = MV_REG_READ(MV_CPU_PMU_UNIT_SERV_OFFSET(processor_id) + 0x8);
++	reg |= 0x1;
++	MV_REG_WRITE(MV_CPU_PMU_UNIT_SERV_OFFSET(processor_id) + 0x8, reg);
+ }
+ #endif
+ 
+@@ -175,21 +182,20 @@ void armadaxp_fabric_prepare_deepIdle(void)
+ 	MV_U32  reg;
+ 
+ 	MV_REG_WRITE(PM_CPU_BOOT_ADDR_REDIRECT(processor_id), virt_to_phys(armadaxp_cpu_resume));
+-
++	
+ 	reg = MV_REG_READ(PM_STATUS_AND_MASK_REG(processor_id));
+ 	/* set WaitMask fields */
+ 	reg |= PM_STATUS_AND_MASK_CPU_IDLE_WAIT;
+ 	/* Enable wakeup events */
+ 	reg |= PM_STATUS_AND_MASK_IRQ_WAKEUP | PM_STATUS_AND_MASK_FIQ_WAKEUP;
+ //	reg |= PM_STATUS_AND_MASK_DBG_WAKEUP;
+-
+ 	/* Mask interrupts */
+ 	reg |= PM_STATUS_AND_MASK_IRQ_MASK | PM_STATUS_AND_MASK_FIQ_MASK;
+ 
+ 	MV_REG_WRITE(PM_STATUS_AND_MASK_REG(processor_id), reg);
+ 
+ 	/* Disable delivering of other CPU core cache maintenance instruction,
+-	 * TLB, and Instruction synchronization to the CPU core
++	 * TLB, and Instruction synchronization to the CPU core 
+ 	 */
+ 	/* TODO */
+ #ifdef CONFIG_CACHE_AURORA_L2
+@@ -200,10 +206,16 @@ void armadaxp_fabric_prepare_deepIdle(void)
+ 		MV_REG_WRITE(PM_CONTROL_AND_CONFIG_REG(processor_id), reg);
+ 	}
+ #endif
++
+ 	/* request power down */
+ 	reg = MV_REG_READ(PM_CONTROL_AND_CONFIG_REG(processor_id));
+ 	reg |= PM_CONTROL_AND_CONFIG_PWDDN_REQ;
+ 	MV_REG_WRITE(PM_CONTROL_AND_CONFIG_REG(processor_id), reg);
++
++	/* Disable snoop disable by HW */
++	reg = MV_REG_READ(MV_CPU_PMU_UNIT_SERV_OFFSET(processor_id) + 0x8);
++	reg |= 0x1;
++	MV_REG_WRITE(MV_CPU_PMU_UNIT_SERV_OFFSET(processor_id) + 0x8, reg);
+ }
+ 
+ void armadaxp_fabric_restore_deepIdle(void)
+@@ -223,10 +235,9 @@ void armadaxp_fabric_restore_deepIdle(void)
+ 	MV_REG_WRITE(PM_CONTROL_AND_CONFIG_REG(processor_id), reg);
+ #endif
+ 	/* cancel Disable delivering of other CPU core cache maintenance instruction,
+-	 * TLB, and Instruction synchronization to the CPU core
++	 * TLB, and Instruction synchronization to the CPU core 
+ 	 */
+ 	/* TODO */
+-
+ 	/* cancel Enable wakeup events */
+ 	reg = MV_REG_READ(PM_STATUS_AND_MASK_REG(processor_id));
+ 	reg &= ~(PM_STATUS_AND_MASK_IRQ_WAKEUP | PM_STATUS_AND_MASK_FIQ_WAKEUP);
+@@ -237,16 +248,6 @@ void armadaxp_fabric_restore_deepIdle(void)
+ 	/* Mask interrupts */
+ 	reg &= ~(PM_STATUS_AND_MASK_IRQ_MASK | PM_STATUS_AND_MASK_FIQ_MASK);
+ 	MV_REG_WRITE(PM_STATUS_AND_MASK_REG(processor_id), reg);
+-
+-#if defined(CONFIG_AURORA_IO_CACHE_COHERENCY)
+-	/* cancel Disable delivery of snoop requests to the CPU core by setting */
+-	hw_sem_lock();
+-	reg = MV_REG_READ(MV_COHERENCY_FABRIC_CTRL_REG);
+-	reg |= 1 << (24 + processor_id);
+-	MV_REG_WRITE(MV_COHERENCY_FABRIC_CTRL_REG, reg);
+-	MV_REG_READ(MV_COHERENCY_FABRIC_CTRL_REG);
+-	hw_sem_unlock();
+-#endif
+ }
+ 
+ /*
+@@ -262,17 +263,20 @@ void armadaxp_deepidle(int power_state)
+ 	if (elf_hwcap & HWCAP_IWMMXT)
+ 		iwmmxt_task_disable(NULL);
+ #endif
+-
+ #if defined(CONFIG_VFP)
+         vfp_save();
+ #endif
+ 	aurora_l2_pm_enter();
++
+ 	/* none zero means deepIdle wasn't entered and regret event happened */
+ 	armadaxp_cpu_suspend();
++
+ 	cpu_init();
++
+ 	armadaxp_fabric_restore_deepIdle();
+ 
+ 	aurora_l2_pm_exit();
++
+ #if defined(CONFIG_VFP)
+ 	vfp_restore();
+ #endif
+@@ -306,11 +310,11 @@ static int armadaxp_enter_idle(struct cpuidle_device *dev,
+ 	} else if (index == 1) {
+ //		printk(KERN_ERR "armadaxp_enter_idle: Deep Idle \n");
+ 		/* Deep Idle */
+-		armadaxp_deepidle(DEEP_IDLE);
++			armadaxp_deepidle(DEEP_IDLE);
+ 	} else if (index == 2) {
+ //		printk(KERN_ERR "armadaxp_enter_idle: Snooze \n");
+ 		/* Snooze */
+-		armadaxp_deepidle(SNOOZE);
++			armadaxp_deepidle(SNOOZE);
+ 	}
+ 	do_gettimeofday(&after);
+ 	local_fiq_enable();
+@@ -356,7 +360,7 @@ static int mv_cpu_idle_write(struct file *file, const char *buffer,
+ 			device = &per_cpu(armadaxp_cpuidle_device, i);
+ 			cpuidle_disable_device(device);
+ 		}
+-	} else if (!strncmp (buffer, "deep", strlen("deep")) || !strncmp (buffer, "snooze", strlen("snooze")) ||
++	} else if (!strncmp (buffer, "deep", strlen("deep")) || !strncmp (buffer, "snooze", strlen("snooze")) || 
+ 				   !strncmp (buffer, "wfi", strlen("wfi"))) {
+ 		if (!strncmp (buffer, "deep", strlen("deep")))
+ 			target_power_state = DEEP_IDLE;
+@@ -364,7 +368,7 @@ static int mv_cpu_idle_write(struct file *file, const char *buffer,
+ 			target_power_state = SNOOZE;
+ 		else		/* WFI */
+ 			target_power_state = WFI;
+-
++		
+ 		for (i=0; i<IRQ_MAIN_INTS_NUM; i++) {
+ 			if (i == IRQ_AURORA_UART0)
+ 				continue;
+@@ -372,7 +376,7 @@ static int mv_cpu_idle_write(struct file *file, const char *buffer,
+ 			backup[i] = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(i));
+ 			MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(i), 0);
+ 		}
+-
++		
+ 		printk(KERN_INFO "Processor id = %d, Press any key to leave deep idle:",smp_processor_id());
+ 
+ 		if (target_power_state > WFI)
+@@ -418,11 +422,12 @@ int armadaxp_init_cpuidle(void)
+ 	int i;
+ 
+ 	device_registered = 1;
++
+ 	printk("Initializing Armada-XP CPU power management ");
+ 
+ 	if (build_identity_page_table()) {
+ 		printk(KERN_ERR "armadaxp_init_cpuidle: Failed to build identity page table\n");
+-		return -ENOMEM;
++                return -ENOMEM;
+ 	}
+ 
+ 	armadaxp_fabric_setup_deepIdle();
+@@ -447,34 +452,35 @@ int armadaxp_init_cpuidle(void)
+ 		printk(" (DISABLED)\n");
+ 		device_registered = DISABLED;
+ 	}
++
+ 	pm_mode = pm_support;
+ 
+ /* Set cpuidle driver */
+        driver->state_count = pm_support;
+        driver->safe_state_index = 0;
+-       /* Wait for interrupt state */
++		/* Wait for interrupt state */
+        driver->states[0].enter = armadaxp_enter_idle;
+        driver->states[0].exit_latency = 1;             /* Few CPU clock cycles */
+        driver->states[0].target_residency = 10;
+        driver->states[0].flags = CPUIDLE_FLAG_TIME_VALID;
+        strcpy(driver->states[0].name, "WFI");
+        strcpy(driver->states[0].desc, "Wait for interrupt");
+-       /* Deep Idle Mode */
++		/* Deep Idle Mode */
+        driver->states[1].enter = armadaxp_enter_idle;
+        driver->states[1].exit_latency = 100;
+        driver->states[1].target_residency = 1000;
+        driver->states[1].flags = CPUIDLE_FLAG_TIME_VALID;
+        strcpy(driver->states[1].name, "DEEP IDLE");
+        strcpy(driver->states[1].desc, "Deep Idle");
+-       /* Snooze - Deep Deep Idle Mode */
++		/* Snooze - Deep Deep Idle Mode */
+        driver->states[2].enter = armadaxp_enter_idle;
+        driver->states[2].exit_latency = 1000;
+        driver->states[2].target_residency = 10000;
+        driver->states[2].flags = CPUIDLE_FLAG_TIME_VALID;
+        strcpy(driver->states[2].name, "SNOOZE");
+        strcpy(driver->states[2].desc, "Snooze");
+-
+-       if(pm_mode) {
++		
++		if(pm_mode) {
+                if (cpuidle_register_driver(driver)) {
+                        printk(KERN_ERR "armadaxp_init_cpuidle: register driver failed\n");
+                        return -EIO;
+@@ -485,14 +491,15 @@ int armadaxp_init_cpuidle(void)
+                        device->cpu = i;
+                        device->state_count = pm_support;
+ 
+-                       if (cpuidle_register_device(device)) {
++			if (cpuidle_register_device(device)) {
+                                printk(KERN_ERR "CPUidle register device failed\n,");
+-                               return -EIO;
+-                       }
+-               }
+-       }
++				return -EIO;
++			}
++		}
++	}
+ 	return 0;
+ }
+ 
+ device_initcall(armadaxp_init_cpuidle);
++
+ #endif
+-- 
+1.7.9.5
+

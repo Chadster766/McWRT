@@ -1,0 +1,18 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+uci_revert_state dhcp6c state
+uci_set_state dhcp6c state "" dhcp6c_state
+uci_set_state dhcp6c state domain_name_servers "$new_domain_name_servers"
+uci_set_state dhcp6c state domain_name "$new_domain_name"                    
+uci_set_state dhcp6c state ntp_servers "$new_ntp_servers"                    
+uci_set_state dhcp6c state sip_server_address "$new_sip_servers"
+uci_set_state dhcp6c state sip_server_domain_name "$new_sip_name"
+uci_set_state dhcp6c state nis_server_address "$new_nis_servers"      
+uci_set_state dhcp6c state nis_domain_name "$new_nis_name"            
+uci_set_state dhcp6c state nisp_server_address "$new_nisp_servers"    
+uci_set_state dhcp6c state nisp_domain_name "$new_nisp_name"          
+uci_set_state dhcp6c state bcmcs_server_address "$new_bcmcs_servers"  
+uci_set_state dhcp6c state bcmcs_server_domain_name "$new_bcmcs_name"
+

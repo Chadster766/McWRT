@@ -1,0 +1,83 @@
+From 14a37b8d4f51c2499ddef46307582ea0f4931fcf Mon Sep 17 00:00:00 2001
+From: Kosta Zertsekel <konszert@marvell.com>
+Date: Thu, 14 Feb 2013 11:37:12 +0200
+Subject: [PATCH 522/609] A300: Fix Big Endian support
+
+Assembly macro that calculates IRQ (get_irqnr_and_base)
+needs to respect CPU endianness.
+
+Change-Id: Ifaa5f9c0197c56939b5285ea09dc4108de7a9a19
+Signed-off-by: Kosta Zertsekel <konszert@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1139
+Reviewed-by: Tawfik Bayouk <tawfik@marvell.com>
+Tested-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-kirkwood/include/mach/bridge-regs.h |    4 +++
+ arch/arm/mach-kirkwood/include/mach/entry-macro.S |   28 ++++++++++++++++++---
+ 2 files changed, 28 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/mach-kirkwood/include/mach/bridge-regs.h b/arch/arm/mach-kirkwood/include/mach/bridge-regs.h
+index 07294e3..f83b586 100644
+--- a/arch/arm/mach-kirkwood/include/mach/bridge-regs.h
++++ b/arch/arm/mach-kirkwood/include/mach/bridge-regs.h
+@@ -36,6 +36,10 @@
+ #define IRQ_MASK_LOW_OFF	0x0004
+ #define IRQ_CAUSE_HIGH_OFF	0x0010
+ #define IRQ_MASK_HIGH_OFF	0x0014
++#define IRQ_VIRT_CAUSE_LOW_REG	(BRIDGE_VIRT_BASE + 0x0200)
++#define IRQ_VIRT_CAUSE_HIGH_REG	(BRIDGE_VIRT_BASE + 0x0210)
++#define IRQ_VIRT_MASK_LOW_REG	(BRIDGE_VIRT_BASE + 0x0204)
++#define IRQ_VIRT_MASK_HIGH_REG	(BRIDGE_VIRT_BASE + 0x0214)
+ 
+ #define TIMER_VIRT_BASE		(BRIDGE_VIRT_BASE | 0x0300)
+ 
+diff --git a/arch/arm/mach-kirkwood/include/mach/entry-macro.S b/arch/arm/mach-kirkwood/include/mach/entry-macro.S
+index 8939d36..b3c7e82 100644
+--- a/arch/arm/mach-kirkwood/include/mach/entry-macro.S
++++ b/arch/arm/mach-kirkwood/include/mach/entry-macro.S
+@@ -20,17 +20,37 @@
+ 	ldr	\base, =IRQ_VIRT_BASE
+ 	.endm
+ 
++#if defined(CONFIG_CPU_BIG_ENDIAN)
++	.macro	HTOLL sr, tt		@ sr   = A  ,B  ,C  ,D
++	eor \tt, \sr, \sr, ror #16 ;    @ temp = A^C,B^
++	bic \tt, \tt, #0xff0000 ;       @ temp = A^C,0  ,C^A,D^B
++	mov \sr, \sr, ror #8 ;          @ sr   = D  ,A  ,B  ,C
++	eor \sr, \sr, \tt, lsr #8       @ sr   = D  ,C  ,B  ,A
++	.endm
++#else
++	.macro	HTOLL sr, tt
++	.endm
++#endif
++
+ 	.macro  get_irqnr_and_base, irqnr, irqstat, base, tmp
+ 	@ check low interrupts
+-	ldr	\irqstat, [\base, #IRQ_CAUSE_LOW_OFF]
+-	ldr	\tmp, [\base, #IRQ_MASK_LOW_OFF]
++	ldr	\base, =IRQ_VIRT_CAUSE_LOW_REG
++	ldr	\irqstat, [\base]
++	HTOLL	\irqstat, \base
++	ldr	\base, =IRQ_VIRT_MASK_LOW_REG
++	ldr	\tmp, [\base]
++	HTOLL	\tmp, \base
+ 	mov	\irqnr, #31
+ 	ands	\irqstat, \irqstat, \tmp
+ 	bne	1001f
+ 
+ 	@ if no low interrupts set, check high interrupts
+-	ldr	\irqstat, [\base, #IRQ_CAUSE_HIGH_OFF]
+-	ldr	\tmp, [\base, #IRQ_MASK_HIGH_OFF]
++	ldr	\base, =IRQ_VIRT_CAUSE_HIGH_REG
++	ldr	\irqstat, [\base]
++	HTOLL	\irqstat, \base
++	ldr	\base, =IRQ_VIRT_MASK_HIGH_REG
++	ldr	\tmp, [\base]
++	HTOLL	\tmp, \base
+ 	mov	\irqnr, #63
+ 	ands	\irqstat, \irqstat, \tmp
+ 
+-- 
+1.7.9.5
+

@@ -1,0 +1,612 @@
+From 4a9bda3e347f5aa8fabb2a5360b4b796586b34c6 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Sun, 19 Aug 2012 14:11:27 +0300
+Subject: [PATCH 250/609] AXP-B0 LPAE Integration
+
+Tested to work on a 2G GB per CS system, still not tested with 4GB per CS.
+
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/Kconfig                                   |    2 ++
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.c    |   15 ++++++++
+ .../armada_xp_family/ctrlEnv/sys/mvAhbToMbus.c     |    2 +-
+ .../armada_xp_family/ctrlEnv/sys/mvAhbToMbusRegs.h |    1 +
+ .../armada_xp_family/ctrlEnv/sys/mvCpuIf.c         |   38 +++++++++++++++-----
+ arch/arm/mach-armadaxp/config/mvSysHwConfig.h      |    6 ++++
+ arch/arm/mach-armadaxp/core.c                      |   37 ++++++++++++++++---
+ arch/arm/mach-armadaxp/mv_hal_if/mvSysNeta.c       |    2 +-
+ arch/arm/mach-armadaxp/mv_hal_if/mvSysPci.c        |    4 +--
+ arch/arm/plat-armada/common/mvCommon.c             |   32 ++++++++++-------
+ arch/arm/plat-armada/common/mvCommon.h             |    2 +-
+ arch/arm/plat-armada/common/mvTypes.h              |    2 +-
+ arch/arm/plat-armada/mv_hal/cesa/mvCesaAddrDec.c   |    2 +-
+ arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.c      |    6 ++--
+ arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIfRegs.h  |    2 ++
+ .../plat-armada/mv_hal/neta/gbe/mvNetaAddrDec.c    |    4 +--
+ arch/arm/plat-armada/mv_hal/pex/mvPexAddrDec.c     |    2 +-
+ .../mv_hal/sata/CoreDriver/mvSataAddrDec.c         |    2 +-
+ arch/arm/plat-armada/mv_hal/sdmmc/mvSdmmcAddrDec.c |    2 +-
+ arch/arm/plat-armada/mv_hal/usb/mvUsbAddrDec.c     |    2 +-
+ 20 files changed, 125 insertions(+), 40 deletions(-)
+ mode change 100644 => 100755 arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvAhbToMbus.c
+ mode change 100644 => 100755 arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvAhbToMbusRegs.h
+ mode change 100644 => 100755 arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
+ mode change 100644 => 100755 arch/arm/mach-armadaxp/config/mvSysHwConfig.h
+ mode change 100644 => 100755 arch/arm/plat-armada/common/mvCommon.c
+ mode change 100644 => 100755 arch/arm/plat-armada/common/mvCommon.h
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.c
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIfRegs.h
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/pex/mvPexAddrDec.c
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataAddrDec.c
+
+diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+index b6efcb2..6c7c60c 100644
+--- a/arch/arm/Kconfig
++++ b/arch/arm/Kconfig
+@@ -579,6 +579,8 @@ config ARCH_ARMADA_XP
+ 	select CLKSRC_MMIO
+ 	select CLKDEV_LOOKUP
+ 	select NEED_MACH_MEMORY_H
++	select DMABOUNCE
++
+ 
+ config ARCH_MV78XX0
+ 	bool "Marvell MV78xx0"
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.c
+index 7ad882c..6a15521 100755
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.c
+@@ -204,6 +204,7 @@ MV_STATUS mvCtrlAddrWinMapBuild(MV_UNIT_WIN_INFO *pAddrWinMap, MV_U32 len)
+ 	MV_U32 i;
+ 	MV_TARGET_ATTRIB targetAttrib;
+ 	MV_STATUS status;
++	MV_U64 startAddr, endAddr;
+ 
+ 	/* Check size of CPU address win table */
+ 	if (len <= MAX_TARGETS) {
+@@ -223,6 +224,20 @@ MV_STATUS mvCtrlAddrWinMapBuild(MV_UNIT_WIN_INFO *pAddrWinMap, MV_U32 len)
+ 				return MV_ERROR;
+ 			}
+ 		}
++		if (MV_TARGET_IS_DRAM(i)) {
++			/* As all IO address decode windows support only 32-bit
++			** addresses, limit the DRAM base / size to 4GB max.
++			*/
++			startAddr = (MV_U64)((((MV_U64)cpuAddrDecWin.addrWin.baseHigh << 32ll)) +
++					(MV_U64)cpuAddrDecWin.addrWin.baseLow);
++			endAddr = (MV_U64)(startAddr + (MV_U64)cpuAddrDecWin.addrWin.size) - 1;
++			if (endAddr > 0xFFFFFFFFll) {
++				if (startAddr <= 0xFFFFFFFFll)
++					cpuAddrDecWin.addrWin.size = (0x100000000ll - cpuAddrDecWin.addrWin.baseLow);
++				else
++					cpuAddrDecWin.enable = MV_FALSE;	
++			}
++		}
+ 
+ 		pAddrWinMap[i].addrWin.baseLow = cpuAddrDecWin.addrWin.baseLow;
+ 		pAddrWinMap[i].addrWin.baseHigh = cpuAddrDecWin.addrWin.baseHigh;
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvAhbToMbus.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvAhbToMbus.c
+old mode 100644
+new mode 100755
+index 5cd70aa..1cc1aa3
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvAhbToMbus.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvAhbToMbus.c
+@@ -148,7 +148,7 @@ MV_STATUS mvAhbToMbusWinSet(MV_U32 winNum, MV_AHB_TO_MBUS_DEC_WIN *pAddrDecWin)
+ 	/* check if address is aligned to the size */
+ 	if (MV_IS_NOT_ALIGN(pAddrDecWin->addrWin.baseLow, pAddrDecWin->addrWin.size)) {
+ 		mvOsPrintf("mvAhbToMbusWinSet:Error setting AHB to MBUS window %d to "
+-			   "target %s.\nAddress 0x%08x is unaligned to size 0x%x.\n",
++			   "target %s.\nAddress 0x%08x is unaligned to size 0x%llx.\n",
+ 			   winNum,
+ 			   mvCtrlTargetNameGet(pAddrDecWin->target),
+ 			   pAddrDecWin->addrWin.baseLow, pAddrDecWin->addrWin.size);
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvAhbToMbusRegs.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvAhbToMbusRegs.h
+old mode 100644
+new mode 100755
+index 3aa0e12..50fd816
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvAhbToMbusRegs.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvAhbToMbusRegs.h
+@@ -137,6 +137,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define BRIDGWCR_ENABLE				BIT0
+ #define BRIDGWCR_SIZE_OFFS			16
+ #define BRIDGWCR_SIZE_MASK			(0xFFFF << BRIDGWCR_SIZE_OFFS)
++#define MBUS_BRIDGE_WIN_BASE_REG		(MV_MBUS_REGS_OFFSET + 0x254)
+ 
+ #endif /* __INCmvAhbToMbusRegsh */
+ 
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
+old mode 100644
+new mode 100755
+index f134b15..7859548
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
+@@ -157,12 +157,32 @@ MV_STATUS mvCpuIfInitForCpu(MV_U32 cpu, MV_CPU_DEC_WIN *cpuAddrWinMap)
+ 	MV_U32 regVal, i;
+ 	MV_TARGET target;
+ 	MV_ADDR_WIN addrWin;
++	MV_U32 minBase = 0xFFFFFFFF;
+ 
+ 	if (cpuAddrWinMap == NULL) {
+ 		DB(mvOsPrintf("mvCpuIfInit:ERR. cpuAddrWinMap == NULL\n"));
+ 		return MV_ERROR;
+ 	}
+ 
++	/* Set IO Bypass base address and size according to the cpuAddrWinMap */
++	for (target = 0; cpuAddrWinMap[target].enable != TBL_TERM; target++) {
++		if ((MV_TARGET_IS_DRAM(target)) || (DIS == cpuAddrWinMap[target].enable))
++			continue;
++		if (cpuAddrWinMap[target].addrWin.baseLow == 0)
++			continue;
++		if (cpuAddrWinMap[target].addrWin.baseLow < minBase)
++			minBase = cpuAddrWinMap[target].addrWin.baseLow;
++	}
++	if (minBase != 0x0) {
++		/* Now write the base and size */
++		MV_REG_WRITE(MBUS_BRIDGE_WIN_BASE_REG, minBase);
++		/* Align window size to 64KB */
++		regVal = ((0xFFFFFFFF - minBase) + SDRAMWBR_BASE_ALIGNMENT) & ~(SDRAMWBR_BASE_ALIGNMENT - 1);
++		regVal = (regVal / SDRAMWBR_BASE_ALIGNMENT) - 1;
++		regVal = (regVal << 16) | 0x1;
++		MV_REG_WRITE(MBUS_BRIDGE_WIN_CTRL_REG, regVal);
++	}
++
+ 	/* Set CPU Configuration register */
+ 	regVal = MV_REG_READ(CPU_CONFIG_REG(cpu));
+ 	regVal &= ~CPU_CONFIG_DEFAULT_MASK;
+@@ -179,7 +199,6 @@ MV_STATUS mvCpuIfInitForCpu(MV_U32 cpu, MV_CPU_DEC_WIN *cpuAddrWinMap)
+ 	for (target = 0; cpuAddrWinMap[target].enable != TBL_TERM; target++) {
+ 		if ((MV_TARGET_IS_DRAM(target)) || (target == INTER_REGS))
+ 			continue;
+-
+ #ifdef CONFIG_MV_AMP_ENABLE
+ 		if(target == BOOT_ROM_CS)
+ 			continue;
+@@ -298,28 +317,31 @@ MV_STATUS mvCpuIfInit(MV_CPU_DEC_WIN *cpuAddrWinMap)
+ *******************************************************************************/
+ MV_STATUS mvCpuIfDramInit()
+ {
+-	MV_U32 base = 0;
++	MV_U64 base = 0;
+ 	MV_U32 size, cs, temp;
+ 
+ 	for (cs = 0; cs < SDRAM_MAX_CS; cs++) {
+ 		size = MV_REG_READ(SDRAM_SIZE_REG(cs)) & SDRAM_ADDR_MASK;
+-		if (size > 0 && base < SDRAM_MAX_ADDR) {
++//		if (size > 0 && base < SDRAM_MAX_ADDR) {
++		if (size != 0) {
+ 			size |= ~(SDRAM_ADDR_MASK);
+ 
+ 			/* Set Base Address */
+-			MV_REG_WRITE(SDRAM_WIN_BASE_REG(cs), (base & SDRAM_ADDR_MASK));
++			temp = (base & 0xFF000000ll) | ((base >> 32) & 0xF);
++			MV_REG_WRITE(SDRAM_WIN_BASE_REG(cs), temp);
+ 
+ 			/* Check if out of max window size and resize the window */
++#if 0
+ 			if (base+size > SDRAM_MAX_ADDR) {
+ 				size = SDRAM_MAX_ADDR - base - 1;
+ 				MV_REG_WRITE(SDRAM_SIZE_REG(cs), 0);
+ 			}
+-
++#endif
+ 			temp = (MV_REG_READ(SDRAM_WIN_CTRL_REG(cs)) & ~(SDRAM_ADDR_MASK)) | (1<<SDRAM_WIN_CTRL_WIN_ENA_OFFS);
+ 			temp |= (size & SDRAM_ADDR_MASK);
+ 
+ 			MV_REG_WRITE(SDRAM_WIN_CTRL_REG(cs), temp);
+-			base += (size + 1);
++			base += ((MV_U64)size + 1);
+ 		}
+ 	}
+ 
+@@ -452,7 +474,7 @@ MV_STATUS mvCpuIfTargetWinGet(MV_TARGET target, MV_CPU_DEC_WIN *pAddrDecWin)
+ 		/* copy relevant data to MV_CPU_DEC_WIN structure */
+ 		pAddrDecWin->addrWin.baseLow = addrDecWin.addrWin.baseLow;
+ 		pAddrDecWin->addrWin.baseHigh = addrDecWin.addrWin.baseHigh;
+-		pAddrDecWin->addrWin.size = addrDecWin.addrWin.size;
++		pAddrDecWin->addrWin.size = (MV_U64)addrDecWin.addrWin.size;
+ 		pAddrDecWin->enable = addrDecWin.enable;
+ 		pAddrDecWin->winNum = target;
+ 	} else {
+@@ -920,7 +942,7 @@ MV_VOID mvCpuIfAddDecShow(MV_VOID)
+ 
+ 		if (mvCpuIfTargetWinGet(target, &win) == MV_OK) {
+ 			if (win.enable) {
+-				mvOsOutput("base %08x, ", win.addrWin.baseLow);
++				mvOsOutput("base %01x%08x, ", win.addrWin.baseHigh, win.addrWin.baseLow);
+ 				mvSizePrint(win.addrWin.size);
+ 				mvOsOutput("\n");
+ 			} else
+diff --git a/arch/arm/mach-armadaxp/config/mvSysHwConfig.h b/arch/arm/mach-armadaxp/config/mvSysHwConfig.h
+old mode 100644
+new mode 100755
+index 4f742f3..b0f7c6e
+--- a/arch/arm/mach-armadaxp/config/mvSysHwConfig.h
++++ b/arch/arm/mach-armadaxp/config/mvSysHwConfig.h
+@@ -265,6 +265,12 @@ disclaimer.
+  #define MV_TDM_USE_EXTERNAL_PCLK_SOURCE
+ #endif
+ 
++/****************************************************************/
++/******************* LPAE configuration *************************/
++/****************************************************************/
++#ifdef CONFIG_ARM_LPAE
++#define ARM_LPAE_SUPPORT
++#endif
+ /* We use the following registers to store DRAM interface pre configuration   */
+ /* auto-detection results													  */
+ /* IMPORTANT: We are using mask register for that purpose. Before writing     */
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index eecdcb5..24acb3e 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -1198,7 +1198,7 @@ static struct platform_device armadaxp_xor00_channel = {
+ 	.resource	= armadaxp_xor00_resources,
+ 	.dev		= {
+ 		.dma_mask		= &armadaxp_xor_dmamask,
+-		.coherent_dma_mask	= DMA_BIT_MASK(64),
++		.coherent_dma_mask	= DMA_BIT_MASK(32),
+ 		.platform_data		= &armadaxp_xor00_data,
+ 	},
+ };
+@@ -1224,7 +1224,7 @@ static struct platform_device armadaxp_xor01_channel = {
+ 	.resource	= armadaxp_xor01_resources,
+ 	.dev		= {
+ 		.dma_mask		= &armadaxp_xor_dmamask,
+-		.coherent_dma_mask	= DMA_BIT_MASK(64),
++		.coherent_dma_mask	= DMA_BIT_MASK(32),
+ 		.platform_data		= &armadaxp_xor01_data,
+ 	},
+ };
+@@ -1296,7 +1296,7 @@ static struct platform_device armadaxp_xor10_channel = {
+ 	.resource	= armadaxp_xor10_resources,
+ 	.dev		= {
+ 		.dma_mask		= &armadaxp_xor_dmamask,
+-		.coherent_dma_mask	= DMA_BIT_MASK(64),
++		.coherent_dma_mask	= DMA_BIT_MASK(32),
+ 		.platform_data		= &armadaxp_xor10_data,
+ 	},
+ };
+@@ -1322,7 +1322,7 @@ static struct platform_device armadaxp_xor11_channel = {
+ 	.resource	= armadaxp_xor11_resources,
+ 	.dev		= {
+ 		.dma_mask		= &armadaxp_xor_dmamask,
+-		.coherent_dma_mask	= DMA_BIT_MASK(64),
++		.coherent_dma_mask	= DMA_BIT_MASK(32),
+ 		.platform_data		= &armadaxp_xor11_data,
+ 	},
+ };
+@@ -1603,6 +1603,34 @@ void __init axp_tag_fixup_mem32(struct machine_desc *mdesc, struct tag *t,
+ }
+ #endif /* CONFIG_FB_DOVE */
+ 
++void __init axp_tag_fixup(struct tag *t, char **from,
++			    struct meminfo *meminfo)
++{
++	int i = 0;
++	__u64 base = 0x0ll;
++	for (; t->hdr.size; t = tag_next(t))
++		if (t->hdr.tag == ATAG_MEM64) {
++#if 0
++			i++;
++			if (i > 3) {
++				t->u.mem64.start = 0x0;
++				t->u.mem64.size = 0x0;
++			} else if (i == 1) {
++				t->u.mem64.start = base;
++				t->u.mem64.size = (2ll << 30ll);
++			} else if (i == 2) {
++				t->u.mem64.start = base;
++				t->u.mem64.size = (uint64_t)(1ll << 30ll);
++			} else {
++				t->u.mem64.start = base;
++				t->u.mem64.size = (uint64_t)(2ll << 30ll);
++			}
++			base += (2ll << 30ll);
++#endif
++			printk(KERN_ERR "Base 0x%llx, Size 0x%llx.\n",
++				t->u.mem64.start, t->u.mem64.size);
++		}
++}
+ 
+ MACHINE_START(ARMADA_XP_DB, "Marvell Armada XP Development Board")
+ 	/* MAINTAINER("MARVELL") */
+@@ -1611,6 +1639,7 @@ MACHINE_START(ARMADA_XP_DB, "Marvell Armada XP Development Board")
+ 	.init_irq	= axp_init_irq,
+ 	.timer		= &axp_timer,
+ 	.init_machine	= axp_db_init,
++	.fixup		= axp_tag_fixup,
+ #ifdef CONFIG_FB_DOVE
+ 	/* reserve memory for LCD */
+ 	.fixup		= axp_tag_fixup_mem32,
+diff --git a/arch/arm/mach-armadaxp/mv_hal_if/mvSysNeta.c b/arch/arm/mach-armadaxp/mv_hal_if/mvSysNeta.c
+index fe2be33..4eadde2 100644
+--- a/arch/arm/mach-armadaxp/mv_hal_if/mvSysNeta.c
++++ b/arch/arm/mach-armadaxp/mv_hal_if/mvSysNeta.c
+@@ -108,7 +108,7 @@ void 	mvSysNetaInit(void)
+ 			addrWinMap[i].attrib |= 0x30;
+ 		}
+ #endif
+-		mvOsPrintf("%d - Base 0x%08x , Size = 0x%08x.\n", i,
++		mvOsPrintf("%d - Base 0x%08x , Size = 0x%08llx.\n", i,
+                                 addrWinMap[i].addrWin.baseLow,
+                                 addrWinMap[i].addrWin.size);
+ 	}
+diff --git a/arch/arm/mach-armadaxp/mv_hal_if/mvSysPci.c b/arch/arm/mach-armadaxp/mv_hal_if/mvSysPci.c
+index a537357..ce4e013 100644
+--- a/arch/arm/mach-armadaxp/mv_hal_if/mvSysPci.c
++++ b/arch/arm/mach-armadaxp/mv_hal_if/mvSysPci.c
+@@ -666,7 +666,7 @@ MV_STATUS mvPciProtWinSet(MV_U32 pciIf,
+ 	if (MV_TRUE != pciWinIsValid(pProtWin->addrWin.baseLow, 
+                                  pProtWin->addrWin.size))
+ 	{
+-        mvOsPrintf("mvPciProtWinSet: ERR. Win base 0x%x unaligned to size 0x%x\n",
++        mvOsPrintf("mvPciProtWinSet: ERR. Win base 0x%x unaligned to size 0x%llx\n",
+                    pProtWin->addrWin.baseLow, pProtWin->addrWin.size);
+ 
+ 		return MV_BAD_PARAM;
+@@ -976,7 +976,7 @@ MV_STATUS mvPciTargetRemap(MV_U32 pciIf,
+ 	if (MV_IS_NOT_ALIGN(pAddrWin->baseLow, PBARR_REMAP_ALIGNMENT))
+ 	{
+ 		mvOsPrintf("mvPciTargetRemap: Error remapping PCI interface %d bar %s."\
+-				   "\nAddress 0x%08x is unaligned to size 0x%x.\n",
++				   "\nAddress 0x%08x is unaligned to size 0x%llx.\n",
+ 				   pciIf,
+ 				   pciBarNameGet(bar),
+                    pAddrWin->baseLow,
+diff --git a/arch/arm/plat-armada/common/mvCommon.c b/arch/arm/plat-armada/common/mvCommon.c
+old mode 100644
+new mode 100755
+index 22eb180..e2a6e10
+--- a/arch/arm/plat-armada/common/mvCommon.c
++++ b/arch/arm/plat-armada/common/mvCommon.c
+@@ -164,30 +164,30 @@ MV_STATUS mvMacHexToStr(MV_U8 *macHex, char *macStr)
+ *       None.
+ *
+ *******************************************************************************/
+-MV_VOID mvSizePrint(MV_U32 size)
++MV_VOID mvSizePrint(MV_U64 size)
+ {
+ 	mvOsOutput("size ");
+ 
+ 	if (size >= _1G) {
+-		mvOsOutput("%3dGB ", size / _1G);
+-		size %= _1G;
++		mvOsOutput("%3lldGB ", (MV_U64)(size >> 30));
++		size &= (MV_U64)(_1G - 1);
+ 		if (size)
+ 			mvOsOutput("+");
+ 	}
+ 	if (size >= _1M) {
+-		mvOsOutput("%3dMB ", size / _1M);
++		mvOsOutput("%3lldMB ", size / _1M);
+ 		size %= _1M;
+ 		if (size)
+ 			mvOsOutput("+");
+ 	}
+ 	if (size >= _1K) {
+-		mvOsOutput("%3dKB ", size / _1K);
++		mvOsOutput("%3lldKB ", size / _1K);
+ 		size %= _1K;
+ 		if (size)
+ 			mvOsOutput("+");
+ 	}
+ 	if (size > 0)
+-		mvOsOutput("%3dB ", size);
++		mvOsOutput("%3lldB ", size);
+ 
+ }
+ 
+@@ -301,6 +301,13 @@ MV_U32 mvLog2(MV_U32 num)
+ *******************************************************************************/
+ MV_STATUS mvWinOverlapTest(MV_ADDR_WIN *pAddrWin1, MV_ADDR_WIN *pAddrWin2)
+ {
++#ifdef ARM_LPAE_SUPPORT
++	/* Need to cancel overlap testing when in LPAE mode, because we use the
++	** MBUS Bridge Windows to access IO windows, and thus there will be
++	** always an overlap between the IO & DRAM windows.
++	*/
++	return MV_FALSE;
++#else
+ 	MV_U32 winBase1, winBase2;
+ 	MV_U32 winTop1, winTop2;
+ 
+@@ -319,6 +326,7 @@ MV_STATUS mvWinOverlapTest(MV_ADDR_WIN *pAddrWin1, MV_ADDR_WIN *pAddrWin2)
+ 		return MV_TRUE;
+ 	else
+ 		return MV_FALSE;
++#endif
+ }
+ 
+ /*******************************************************************************
+@@ -340,13 +348,13 @@ MV_STATUS mvWinOverlapTest(MV_ADDR_WIN *pAddrWin1, MV_ADDR_WIN *pAddrWin2)
+ *******************************************************************************/
+ MV_STATUS mvWinWithinWinTest(MV_ADDR_WIN *pAddrWin1, MV_ADDR_WIN *pAddrWin2)
+ {
+-	MV_U32 winBase1, winBase2;
+-	MV_U32 winTop1, winTop2;
++	MV_U64 winBase1, winBase2;
++	MV_U64 winTop1, winTop2;
+ 
+-	winBase1 = pAddrWin1->baseLow;
+-	winBase2 = pAddrWin2->baseLow;
+-	winTop1 = winBase1 + pAddrWin1->size - 1;
+-	winTop2 = winBase2 + pAddrWin2->size - 1;
++	winBase1 = ((MV_U64)pAddrWin1->baseHigh << 32) + (MV_U32)pAddrWin1->baseLow;
++	winBase2 = ((MV_U64)pAddrWin2->baseHigh << 32) + (MV_U32)pAddrWin2->baseLow;
++	winTop1 = winBase1 + (MV_U64)pAddrWin1->size - 1;
++	winTop2 = winBase2 + (MV_U64)pAddrWin2->size - 1;
+ 
+ 	if (((winBase1 >= winBase2) && (winBase1 <= winTop2)) || ((winTop1 >= winBase2) && (winTop1 <= winTop2)))
+ 		return MV_TRUE;
+diff --git a/arch/arm/plat-armada/common/mvCommon.h b/arch/arm/plat-armada/common/mvCommon.h
+old mode 100644
+new mode 100755
+index 1301e01..5f5d2bb
+--- a/arch/arm/plat-armada/common/mvCommon.h
++++ b/arch/arm/plat-armada/common/mvCommon.h
+@@ -381,7 +381,7 @@ void mvBinToAscii(const MV_U8 *bin, char *asciiStr, int size);
+ 
+ MV_STATUS mvMacStrToHex(const char *macStr, MV_U8 *macHex);
+ MV_STATUS mvMacHexToStr(MV_U8 *macHex, char *macStr);
+-void mvSizePrint(MV_U32);
++void mvSizePrint(MV_U64);
+ 
+ MV_U32 mvLog2(MV_U32 num);
+ 
+diff --git a/arch/arm/plat-armada/common/mvTypes.h b/arch/arm/plat-armada/common/mvTypes.h
+index 814db81..14a45e5 100755
+--- a/arch/arm/plat-armada/common/mvTypes.h
++++ b/arch/arm/plat-armada/common/mvTypes.h
+@@ -191,7 +191,7 @@ typedef enum {
+ typedef struct _mvAddrWin {
+ 	MV_U32 baseLow;		/* 32bit base low       */
+ 	MV_U32 baseHigh;	/* 32bit base high      */
+-	MV_U32 size;		/* 32bit size           */
++	MV_U64 size;		/* 64bit size           */
+ } MV_ADDR_WIN;
+ 
+ /* This binary enumerator describes protection attribute status             */
+diff --git a/arch/arm/plat-armada/mv_hal/cesa/mvCesaAddrDec.c b/arch/arm/plat-armada/mv_hal/cesa/mvCesaAddrDec.c
+index 555b1bc..6946464 100644
+--- a/arch/arm/plat-armada/mv_hal/cesa/mvCesaAddrDec.c
++++ b/arch/arm/plat-armada/mv_hal/cesa/mvCesaAddrDec.c
+@@ -178,7 +178,7 @@ static MV_STATUS mvCesaTdmaWinWrite(MV_U8 chan, MV_U32 winNum, MV_UNIT_WIN_INFO
+ 	/* check if address is aligned to the size */
+ 	if (MV_IS_NOT_ALIGN(pDecWin->addrWin.baseLow, pDecWin->addrWin.size)) {
+ 		mvOsPrintf("mvCesaTdmaWinSet: Error setting CESA TDMA window %d.\n"
+-			   "Address 0x%08x is unaligned to size 0x%x.\n",
++			   "Address 0x%08x is unaligned to size 0x%llx.\n",
+ 			   winNum, pDecWin->addrWin.baseLow, pDecWin->addrWin.size);
+ 		return MV_ERROR;
+ 	}
+diff --git a/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.c b/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.c
+old mode 100644
+new mode 100755
+index fb3e743..0c026ea
+--- a/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.c
++++ b/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.c
+@@ -216,7 +216,7 @@ MV_STATUS mvDramIfWinSet(MV_TARGET target, MV_DRAM_DEC_WIN *pAddrDecWin)
+ 	/* check if address is aligned to the size */
+ 	if (MV_IS_NOT_ALIGN(pAddrDecWin->addrWin.baseLow, pAddrDecWin->addrWin.size)) {
+ 		mvOsPrintf("mvDramIfWinSet:Error setting DRAM interface window %d."
+-			   "\nAddress 0x%08x is unaligned to size 0x%x.\n",
++			   "\nAddress 0x%08x is unaligned to size 0x%llx.\n",
+ 			   target, pAddrDecWin->addrWin.baseLow, pAddrDecWin->addrWin.size);
+ 		return MV_ERROR;
+ 	}
+@@ -275,7 +275,7 @@ MV_STATUS mvDramIfWinGet(MV_TARGET target, MV_DRAM_DEC_WIN *pAddrDecWin)
+ 
+ 	sizeRegVal = (sizeReg & SDRAMWCR_SIZE_MASK) >> SDRAMWCR_SIZE_OFFS;
+ 
+-	pAddrDecWin->addrWin.size = (sizeRegVal + 1) * SDRAMWCR_SIZE_ALLIGNMENT;
++	pAddrDecWin->addrWin.size = (MV_U64)((sizeRegVal + 1) * SDRAMWCR_SIZE_ALLIGNMENT);
+ 
+ 	/* Check if ctrlRegToSize returned OK */
+ 	if (-1 == pAddrDecWin->addrWin.size) {
+@@ -286,7 +286,7 @@ MV_STATUS mvDramIfWinGet(MV_TARGET target, MV_DRAM_DEC_WIN *pAddrDecWin)
+ 	/* Extract base address                                         */
+ 	/* Base register [31:16] ==> baseLow[31:16]             */
+ 	pAddrDecWin->addrWin.baseLow = baseReg & SDRAMWBR_BASE_MASK;
+-	pAddrDecWin->addrWin.baseHigh = 0;
++	pAddrDecWin->addrWin.baseHigh = baseReg & SDRAMWBR_BASE_EXT_MASK;
+ 
+ 	if (sizeReg & SDRAMWCR_ENABLE)
+ 		pAddrDecWin->enable = MV_TRUE;
+diff --git a/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIfRegs.h b/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIfRegs.h
+old mode 100644
+new mode 100755
+index 7953fad..2a00716
+--- a/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIfRegs.h
++++ b/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIfRegs.h
+@@ -75,6 +75,8 @@ extern "C" {
+ #define SDRAM_WIN_BASE_REG(winNum)		(MV_DDR_WIN_REGS_BASE + 0x180 + winNum * 0x8)
+ #define SDRAMWBR_BASE_OFFS			24
+ #define SDRAMWBR_BASE_MASK			(0xFF << SDRAMWBR_BASE_OFFS)
++#define SDRAMWBR_BASE_EXT_MASK			(0xF)
++
+ #define SDRAMWBR_BASE_ALIGNMENT			0x10000
+ 
+ #define SDRAM_WIN_CTRL_REG(winNum)		(MV_DDR_WIN_REGS_BASE + 0x184 + winNum * 0x8)
+diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaAddrDec.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaAddrDec.c
+index 8421d75..0a238bf 100755
+--- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaAddrDec.c
++++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaAddrDec.c
+@@ -184,7 +184,7 @@ MV_STATUS mvNetaWinWrite(MV_U32 port, MV_U32 winNum, MV_UNIT_WIN_INFO *pAddrDecW
+ 	if (!MV_IS_POWER_OF_2(size)) {
+ 		/* try to get a good size */
+ 		pAddrDecWin->addrWin.size = 1 << (mvLog2(size) + 1);
+-		mvOsPrintf("%s: WARN. Wrong window size %d, rounding to %d\n",
++		mvOsPrintf("%s: WARN. Wrong window size %d, rounding to %lld\n",
+ 			__func__, size, pAddrDecWin->addrWin.size);
+ 		size = pAddrDecWin->addrWin.size;
+ 	}
+@@ -198,7 +198,7 @@ MV_STATUS mvNetaWinWrite(MV_U32 port, MV_U32 winNum, MV_UNIT_WIN_INFO *pAddrDecW
+ 	/* check if address is aligned to the size */
+ 	if (MV_IS_NOT_ALIGN(pAddrDecWin->addrWin.baseLow, pAddrDecWin->addrWin.size)) {
+ 		mvOsPrintf("mvNetaWinSet: Error setting Ethernet window %d.\n"
+-			   "Address 0x%08x is unaligned to size 0x%x.\n",
++			   "Address 0x%08x is unaligned to size 0x%llx.\n",
+ 			   winNum, pAddrDecWin->addrWin.baseLow, pAddrDecWin->addrWin.size);
+ 		return MV_ERROR;
+ 	}
+diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPexAddrDec.c b/arch/arm/plat-armada/mv_hal/pex/mvPexAddrDec.c
+old mode 100644
+new mode 100755
+index 75f8a00..ef8b451
+--- a/arch/arm/plat-armada/mv_hal/pex/mvPexAddrDec.c
++++ b/arch/arm/plat-armada/mv_hal/pex/mvPexAddrDec.c
+@@ -661,7 +661,7 @@ MV_STATUS mvPexTargetWinRemap(MV_U32 pexIf, MV_U32 winNum, MV_PEX_REMAP_WIN *pAd
+ 
+ 	if (MV_IS_NOT_ALIGN(pAddrWin->addrWin.baseLow, PXWRR_REMAP_ALIGNMENT)) {
+ 		mvOsPrintf("mvPexTargetWinRemap: Error remap PEX interface %d win %d."
+-			   "\nAddress 0x%08x is unaligned to size 0x%x.\n",
++			   "\nAddress 0x%08x is unaligned to size 0x%llx.\n",
+ 			   pexIf, winNum, pAddrWin->addrWin.baseLow, pAddrWin->addrWin.size);
+ 		return MV_ERROR;
+ 	}
+diff --git a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataAddrDec.c b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataAddrDec.c
+old mode 100644
+new mode 100755
+index 1d6f99a..20483fc
+--- a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataAddrDec.c
++++ b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataAddrDec.c
+@@ -206,7 +206,7 @@ MV_STATUS mvSataWinWrite(MV_U32 dev, MV_U32 winNum, MV_UNIT_WIN_INFO *pAddrDecWi
+ 	/* check if address is aligned to the size */
+ 	if (MV_IS_NOT_ALIGN(pAddrDecWin->addrWin.baseLow, pAddrDecWin->addrWin.size)) {
+ 		mvOsPrintf("mvSataWinSet:Error setting SATA window %d.\n"
+-			   "Address 0x%08x is unaligned to size 0x%x.\n",
++			   "Address 0x%08x is unaligned to size 0x%llx.\n",
+ 			   winNum, pAddrDecWin->addrWin.baseLow, pAddrDecWin->addrWin.size);
+ 		return MV_ERROR;
+ 	}
+diff --git a/arch/arm/plat-armada/mv_hal/sdmmc/mvSdmmcAddrDec.c b/arch/arm/plat-armada/mv_hal/sdmmc/mvSdmmcAddrDec.c
+index c58adce..1c91de4 100644
+--- a/arch/arm/plat-armada/mv_hal/sdmmc/mvSdmmcAddrDec.c
++++ b/arch/arm/plat-armada/mv_hal/sdmmc/mvSdmmcAddrDec.c
+@@ -200,7 +200,7 @@ MV_STATUS mvSdmmcWinWrite(MV_U32 dev, MV_U32 winNum, MV_UNIT_WIN_INFO *pAddrDecW
+ 	/* check if address is aligned to the size */
+ 	if (MV_IS_NOT_ALIGN(pAddrDecWin->addrWin.baseLow, pAddrDecWin->addrWin.size)) {
+ 		mvOsPrintf("mvSdmmcWinWrite:Error setting SDMMC window %d.\n"
+-			   "Address 0x%08x is unaligned to size 0x%x.\n",
++			   "Address 0x%08x is unaligned to size 0x%llx.\n",
+ 			   winNum, pAddrDecWin->addrWin.baseLow, pAddrDecWin->addrWin.size);
+ 		return MV_ERROR;
+ 	}
+diff --git a/arch/arm/plat-armada/mv_hal/usb/mvUsbAddrDec.c b/arch/arm/plat-armada/mv_hal/usb/mvUsbAddrDec.c
+index cecafd4..2e04579 100755
+--- a/arch/arm/plat-armada/mv_hal/usb/mvUsbAddrDec.c
++++ b/arch/arm/plat-armada/mv_hal/usb/mvUsbAddrDec.c
+@@ -193,7 +193,7 @@ MV_STATUS mvUsbWinWrite(MV_U32 dev, MV_U32 winNum, MV_UNIT_WIN_INFO *pDecWin)
+ 	/* check if address is aligned to the size */
+ 	if (MV_IS_NOT_ALIGN(pDecWin->addrWin.baseLow, pDecWin->addrWin.size)) {
+ 		mvOsPrintf("mvUsbWinWrite:Error setting USB window %d.\n"
+-			   "Address 0x%08x is unaligned to size 0x%x.\n",
++			   "Address 0x%08x is unaligned to size 0x%llx.\n",
+ 			   winNum, pDecWin->addrWin.baseLow, pDecWin->addrWin.size);
+ 		return MV_ERROR;
+ 	}
+-- 
+1.7.9.5
+

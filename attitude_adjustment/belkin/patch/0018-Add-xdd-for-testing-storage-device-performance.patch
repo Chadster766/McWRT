@@ -1,0 +1,108 @@
+From 4765d07b54ee8df2cab20cba63164a240c2bde56 Mon Sep 17 00:00:00 2001
+From: Matthew Fatheree <Matthew.Fatheree@belkin.com>
+Date: Tue, 13 May 2014 23:34:06 +0700
+Subject: [PATCH 18/31] Add xdd for testing storage device performance
+
+Signed-off-by: Matthew Fatheree <Matthew.Fatheree@belkin.com>
+---
+ package/xdd/Makefile                        |   39 +++++++++++++++++++++++++
+ package/xdd/patches/001-cross-compile.patch |   41 +++++++++++++++++++++++++++
+ 2 files changed, 80 insertions(+)
+ create mode 100644 package/xdd/Makefile
+ create mode 100644 package/xdd/patches/001-cross-compile.patch
+
+diff --git a/package/xdd/Makefile b/package/xdd/Makefile
+new file mode 100644
+index 0000000..8f0c8a1
+--- /dev/null
++++ b/package/xdd/Makefile
+@@ -0,0 +1,39 @@
++#
++# Copyright (C) 2011 OpenWrt.org
++#
++# This is free software, licensed under the GNU General Public License v2.
++# See /LICENSE for more information.
++#
++
++include $(TOPDIR)/rules.mk
++
++PKG_NAME:=xdd65.013007
++PKG_RELEASE:=1
++
++PKG_SOURCE:=$(PKG_NAME).tgz
++PKG_SOURCE_URL:=http://openbsd.mirrors.tds.net/pub/FreeBSD/distfiles
++
++PKG_INSTALL:=1
++
++include $(INCLUDE_DIR)/package.mk
++
++define Package/xdd
++  SECTION:=utils
++  CATEGORY:=Utilities
++  TITLE:=xdd benchmark
++  URL:=http://openbsd.mirrors.tds.net/pub/FreeBSD/distfiles
++  DEPENDS:=+libpthread
++endef
++
++define Package/xdd/description
++	Tool for testing perfomance
++endef
++
++define Package/xdd/install
++	$(INSTALL_DIR) $(1)/usr/bin
++	$(INSTALL_BIN) $(PKG_BUILD_DIR)/xdd $(1)/usr/bin/
++	$(INSTALL_BIN) $(PKG_BUILD_DIR)/timeserver $(1)/usr/bin/
++	$(INSTALL_BIN) $(PKG_BUILD_DIR)/gettime $(1)/usr/bin/
++endef
++
++$(eval $(call BuildPackage,xdd))
+diff --git a/package/xdd/patches/001-cross-compile.patch b/package/xdd/patches/001-cross-compile.patch
+new file mode 100644
+index 0000000..2ae9a1a
+--- /dev/null
++++ b/package/xdd/patches/001-cross-compile.patch
+@@ -0,0 +1,41 @@
++diff -urN xdd65.013007/Makefile xdd65.013007-new/Makefile
++--- xdd65.013007/Makefile	1970-01-01 07:00:00.000000000 +0700
+++++ xdd65.013007-new/Makefile	2010-07-26 13:50:54.000000000 +0700
++@@ -0,0 +1,37 @@
+++# XDD Makefile for Linux
+++CFLAGS +=	-Os -pipe -fhonour-copts -DLINUX -D_GNU_SOURCE -D_LARGEFILE64_SOURCE
+++SHELL =		/bin/sh
+++PROJECT =	xdd
+++OBJECTS =	xdd.o access_pattern.o barrier.o global_time.o initialization.o parse.o pclk.o read_after_write.o results.o sg.o ticker.o time_stamp.o verify.o
+++HEADERS = 	xdd.h pclk.h ticker.h misc.h sg.h sg_err.h
+++TSOBJECTS =	timeserver.o pclk.o ticker.o
+++GTOBJECTS = gettime.o global_time.o pclk.o ticker.o
+++
+++all:	xdd timeserver gettime
+++
+++xdd:	$(OBJECTS) 
+++	$(CC)  -o xdd $(CFLAGS) $(LDFLAGS) $(OBJECTS) -lpthread -v
+++#	mv -f xdd bin/xdd.linux
+++
+++timeserver:	$(TSOBJECTS) 
+++	$(CC)  -o timeserver $(CFLAGS) $(LDFLAGS) $(TSOBJECTS) -lpthread -v
+++#	mv -f timeserver bin/timeserver.linux
+++
+++gettime:	$(GTOBJECTS) 
+++	$(CC)  -o gettime $(CFLAGS) $(LDFLAGS) $(GTOBJECTS) -lpthread -v
+++#	mv -f gettime bin/gettime.linux
+++
+++.c.o:
+++	$(CC) $(CFLAGS) -o $@ -c $<
+++
+++dist:	clean
+++	tar cf ../dist.tar .
+++clean:
+++	-rm -f xdd timeserver gettime a.out $(OBJECTS) $(TSOBJECTS) $(GTOBJECTS)
+++
+++install: all
+++	mkdir -p $(DESTDIR)/usr/bin
+++	cp -rv xdd $(DESTDIR)/usr/bin
+++	cp -rv xdd timeserver gettime $(DESTDIR)/usr/bin
+++
+++	
+-- 
+1.7.9.5
+

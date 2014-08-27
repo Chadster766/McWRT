@@ -1,0 +1,701 @@
+From 7dc39a09480b5644238ef43a91fd1f1527f3e69c Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Sun, 26 Feb 2012 12:53:39 +0200
+Subject: [PATCH 034/609] DSMP NAPI groups (by Rami R.)
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig |   78 ++++++-
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_eth_switch.c |   11 +-
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c  |   15 ++
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c   |    9 +-
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |  237 ++++++++++++++++++--
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h     |    8 +-
+ arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c      |    3 +-
+ arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h      |    1 +
+ arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c |   14 ++
+ 9 files changed, 347 insertions(+), 29 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
+index d4bd197..06ee7c5 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
+@@ -603,7 +603,7 @@ config  MV_ETH_RX_PKT_PREFETCH
+         Use pld instruction to prefetch first two cache lines of received packet data
+ 
+ config  MV_ETH_NAPI_GROUPS
+-        int "Number of NAPI instanses can be used per port"
++        int "Number of NAPI instances can be used per port"
+ 	range 1 NR_CPUS if SMP
+ 	range 1 1 if !SMP
+         default 1
+@@ -887,6 +887,82 @@ config MV_ETH_NFP_SEC
+ 
+ endmenu
+ 
++menuconfig MV_ETH_NAPI
++        bool "NAPI configuration"
++        default y
++
++menuconfig MV_ETH_NAPI_GR0
++        bool "NAPI configuration for group 0"
++		depends on MV_ETH_NAPI
++        default y
++
++config MV_ETH_GROUP0_CPU
++	hex "CPU affinity for group0"
++	depends on MV_ETH_NAPI && MV_ETH_NAPI && MV_ETH_NAPI_GR0
++    range 0x0 0xf if (NR_CPUS=4)
++    range 0x0 0x7 if (NR_CPUS=3)
++    range 0x0 0x3 if (NR_CPUS=2)
++	range 0x0 0x1 if (NR_CPUS=1)
++	default 0xf
++config MV_ETH_GROUP0_RXQ
++	hex "RXQ affinity for group0"
++	depends on MV_ETH_NAPI && MV_ETH_NAPI_GR0
++	range 0x0 0xff
++	default 0xff
++
++menuconfig MV_ETH_NAPI_GR1
++	bool "NAPI configuration for group 1"
++	depends on MV_ETH_NAPI && (MV_ETH_NAPI_GROUPS !=1)
++	default y
++
++config MV_ETH_GROUP1_CPU
++	hex "CPU affinity for group1"
++	depends on MV_ETH_NAPI && MV_ETH_NAPI_GR1
++    range 0x0 0xf if (NR_CPUS=4)
++    range 0x0 0x7 if (NR_CPUS=3)
++    range 0x0 0x3 if (NR_CPUS=2)
++	range 0x0 0x3 if (NR_CPUS=1)
++	default 0x0
++config MV_ETH_GROUP1_RXQ
++	hex "RXQ affinity for group1"
++	depends on MV_ETH_NAPI && MV_ETH_NAPI_GR1
++	range 0x0 0xff
++	default 0x0
++menuconfig MV_ETH_NAPI_GR2
++        bool "NAPI configuration for group 2"
++		depends on MV_ETH_NAPI && (MV_ETH_NAPI_GROUPS !=1) && (MV_ETH_NAPI_GROUPS !=2)
++        default y
++config MV_ETH_GROUP2_CPU
++	hex "CPU affinity for group2"
++	depends on MV_ETH_NAPI && MV_ETH_NAPI && MV_ETH_NAPI_GR2
++    range 0x0 0xf if (NR_CPUS=4)
++    range 0x0 0x7 if (NR_CPUS=3)
++    range 0x0 0x3 if (NR_CPUS=2)
++	range 0x0 0x3 if (NR_CPUS=1)
++	default 0x0
++config MV_ETH_GROUP2_RXQ
++	hex "RXQ affinity for group2"
++	depends on MV_ETH_NAPI && MV_ETH_NAPI_GR2
++	range 0x0 0xff
++	default 0x0
++menuconfig MV_ETH_NAPI_GR3
++        bool "NAPI configuration for group 3"
++		depends on MV_ETH_NAPI && (MV_ETH_NAPI_GROUPS !=1) && (MV_ETH_NAPI_GROUPS !=2) && (MV_ETH_NAPI_GROUPS !=3)
++        default y
++config MV_ETH_GROUP3_CPU
++	hex "CPU affinity for group3"
++	depends on MV_ETH_NAPI && MV_ETH_NAPI_GR3
++    range 0x0 0xf if (NR_CPUS=4)
++    range 0x0 0x7 if (NR_CPUS=3)
++    range 0x0 0x3 if (NR_CPUS=2)
++	range 0x0 0x3 if (NR_CPUS=1)
++	default 0x0
++config MV_ETH_GROUP3_RXQ
++	hex "RXQ affinity for group3"
++	depends on MV_ETH_NAPI && MV_ETH_NAPI_GR3
++	range 0x0 0xff
++	default 0x0
++
+ menu "PON support for Network driver"
+ 
+ config MV_PON
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_switch.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_switch.c
+index e5c4e59..d3f1975 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_switch.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_switch.c
+@@ -452,6 +452,7 @@ int    mv_eth_switch_start(struct net_device *dev)
+ 	struct eth_netdev *dev_priv = MV_DEV_PRIV(dev);
+ 	unsigned char broadcast[MV_MAC_ADDR_SIZE] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+ 	int i;
++	int group;
+ 
+ 	/* Check that MTU value is identical for all gateway interfaces */
+ 	for (i = mv_eth_switch_netdev_first; i <= mv_eth_switch_netdev_last; i++) {
+@@ -483,13 +484,15 @@ int    mv_eth_switch_start(struct net_device *dev)
+ 		}
+ 
+ 		/* enable polling on the port, must be used after netif_poll_disable */
+-		napi_enable(priv->napiGroup[CPU_GROUP_DEF]);
++		for (group = 0; group < CONFIG_MV_ETH_NAPI_GROUPS; group++)
++			napi_enable(priv->napiGroup[group]);
+ 
+ 		/* connect to port interrupt line */
+ 		if (request_irq(dev->irq, mv_eth_isr, IRQF_DISABLED|IRQF_SAMPLE_RANDOM, "mv_eth", priv)) {
+ 			printk(KERN_ERR "cannot request irq %d for %s port %d\n",
+ 				dev->irq, dev->name, priv->port);
+-			napi_disable(priv->napiGroup[CPU_GROUP_DEF]);
++			for (group = 0; group < CONFIG_MV_ETH_NAPI_GROUPS; group++)
++				napi_disable(priv->napiGroup[group]);
+ 			goto error;
+ 		}
+ 
+@@ -519,6 +522,7 @@ int     mv_eth_switch_stop(struct net_device *dev)
+ {
+ 	struct eth_port *priv = MV_ETH_PRIV(dev);
+ 	struct eth_netdev *dev_priv = MV_DEV_PRIV(dev);
++	int group;
+ 
+ 	/* stop upper layer */
+ 	netif_carrier_off(dev);
+@@ -542,7 +546,8 @@ int     mv_eth_switch_stop(struct net_device *dev)
+ 		/* first make sure that the port finished its Rx polling - see tg3 */
+ 		/* otherwise it may cause issue in SMP, one CPU is here and the other is doing the polling */
+ 		/* and both of it are messing with the descriptors rings!! */
+-		napi_disable(priv->napiGroup[CPU_GROUP_DEF]);
++		for (group = 0; group < CONFIG_MV_ETH_NAPI_GROUPS; group++)
++			napi_disable(priv->napiGroup[group]);
+ 
+ 		/* stop tx/rx activity, mask all interrupts, relese skb in rings,*/
+ 		mv_eth_stop_internals(priv);
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
+index e759726..52ec0b2 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
+@@ -41,6 +41,7 @@ static ssize_t mv_eth_help(char *buf)
+ 	int off = 0;
+ 
+ 	off += sprintf(buf+off, "cat                ports           - show all ports info\n");
++	off += sprintf(buf+off, "echo p             > napi         - show port NAPI groups: CPUs and RXQs\n");
+ #ifdef CONFIG_MV_ETH_PNC
+ 	off += sprintf(buf+off, "echo {0|1}         > pnc           - enable / disable PNC access\n");
+ #endif /* CONFIG_MV_ETH_PNC */
+@@ -67,6 +68,8 @@ static ssize_t mv_eth_help(char *buf)
+ 	off += sprintf(buf+off, "echo p hex         > debug         - bit0:rx, bit1:tx, bit2:isr, bit3:poll, bit4:dump\n");
+ 	off += sprintf(buf+off, "echo p l s         > buf_num       - set number of long <l> and short <s> buffers allocated for port <p>\n");
+ 	off += sprintf(buf+off, "echo p rxq tos     > rxq_tos       - set <rxq> for incoming IP packets with <tos>\n");
++	off += sprintf(buf+off, "echo p group cpus  > cpu_group     - set <cpus mask>  for <port/napi group>.\n");
++	off += sprintf(buf+off, "echo p group rxqs  > rxq_group     - set  <rxqs mask> for <port/napi group>.\n");
+ 	off += sprintf(buf+off, "echo p rxq prio    > rxq_vlan      - set <rxq> for incoming VLAN packets with <prio>\n");
+ 	off += sprintf(buf+off, "echo p rxq cpus    > rxq_cpus      - set <cpus> enable to process packets incoming to <rxq>\n");
+ 	off += sprintf(buf+off, "echo p rxq v       > rxq_size      - set number of descriptors <v> for <port/rxq>.\n");
+@@ -227,6 +230,8 @@ static ssize_t mv_eth_port_store(struct device *dev,
+ 	} else if (!strcmp(name, "pnc")) {
+ 		mv_eth_ctrl_pnc(p);
+ #endif /* CONFIG_MV_ETH_PNC */
++	} else if (!strcmp(name, "napi")) {
++		mv_eth_napi_group_show(p);
+ 	} else {
+ 		err = 1;
+ 		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
+@@ -264,6 +269,10 @@ static ssize_t mv_eth_3_hex_store(struct device *dev,
+ 		err = mv_eth_rxq_vlan_prio_set(p, i, v);
+ 	} else if (!strcmp(name, "rxq_cpus")) {
+ 		err = mvNetaRxqCpuMaskSet(p, i, v);
++	} else if (!strcmp(name, "cpu_group")) {
++		err = mv_eth_napi_set_cpu_affinity(p, i, v);
++	} else if (!strcmp(name, "rxq_group")) {
++		err = mv_eth_napi_set_rxq_affinity(p, i, v);
+ 	} else {
+ 		err = 1;
+ 		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
+@@ -431,6 +440,9 @@ static DEVICE_ATTR(tx_done,     S_IWUSR, mv_eth_show, mv_eth_3_store);
+ #ifdef CONFIG_MV_ETH_PNC
+ static DEVICE_ATTR(pnc,         S_IWUSR, NULL, mv_eth_port_store);
+ #endif /* CONFIG_MV_ETH_PNC */
++static DEVICE_ATTR(cpu_group,   S_IWUSR, mv_eth_show, mv_eth_3_hex_store);
++static DEVICE_ATTR(rxq_group,   S_IWUSR, mv_eth_show, mv_eth_3_hex_store);
++static DEVICE_ATTR(napi,        S_IWUSR, mv_eth_show, mv_eth_port_store);
+ 
+ static struct attribute *mv_eth_attrs[] = {
+ 
+@@ -480,6 +492,9 @@ static struct attribute *mv_eth_attrs[] = {
+ #ifdef CONFIG_MV_ETH_PNC
+     &dev_attr_pnc.attr,
+ #endif /* CONFIG_MV_ETH_PNC */
++	&dev_attr_cpu_group.attr,
++	&dev_attr_rxq_group.attr,
++	&dev_attr_napi.attr,
+ 	NULL
+ };
+ 
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c
+index b3138e1..b82122a 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c
+@@ -60,6 +60,7 @@ static int mv_eth_set_mac_addr_internals(struct net_device *dev, void *addr);
+ static int mv_eth_start(struct net_device *dev)
+ {
+ 	struct eth_port *priv = MV_ETH_PRIV(dev);
++	int group;
+ 
+ 	/* in default link is down */
+ 	netif_carrier_off(dev);
+@@ -75,7 +76,9 @@ static int mv_eth_start(struct net_device *dev)
+ 
+ 	/* enable polling on the port, must be used after netif_poll_disable */
+ 	if (priv->flags & MV_ETH_F_CONNECT_LINUX)
+-		napi_enable(priv->napiGroup[CPU_GROUP_DEF]);
++		for (group = 0; group < CONFIG_MV_ETH_NAPI_GROUPS; group++)
++			napi_enable(priv->napiGroup[group]);
++
+ 
+ 	if ((priv->flags & MV_ETH_F_LINK_UP) && !(priv->flags & MV_ETH_F_EXT_SWITCH)) {
+ 
+@@ -124,9 +127,11 @@ int mv_eth_stop(struct net_device *dev)
+ {
+ 	int	cpu;
+ 	struct eth_port *priv = MV_ETH_PRIV(dev);
++	int group;
+ 
+ 	/* first make sure that the port finished its Rx polling - see tg3 */
+-	napi_disable(priv->napiGroup[CPU_GROUP_DEF]);
++	for (group = 0; group < CONFIG_MV_ETH_NAPI_GROUPS; group++)
++		napi_disable(priv->napiGroup[group]);
+ 
+ 	/* stop upper layer */
+ 	netif_carrier_off(dev);
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 56f29aa..c6a0bff 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -73,6 +73,9 @@ MV_CPU_CNTRS_EVENT	*event5 = NULL;
+ 
+ unsigned int ext_switch_port_mask = 0;
+ 
++void handle_group_affinity(void);
++void set_rxq_affinity(struct eth_port *pp, MV_U32 rxqAffinity, int group);
++
+ 
+ /* uncomment if you want to debug the SKB recycle feature */
+ /* #define ETH_SKB_DEBUG */
+@@ -221,6 +224,92 @@ int mv_eth_cmdline_port3_config(char *s)
+ 	return 1;
+ }
+ 
++void set_cpu_affinity(struct eth_port *pp, MV_U32 cpuAffinity, int group)
++{
++	int cpu;
++	MV_U32 rxqAffinity = 0, currRxqAffinity;
++
++	/* nothing to do when cpuAffinity == 0 */
++	if (cpuAffinity == 0)
++		return;
++
++	/* First, read affinity of the target group, in case it contains CPUs */
++	for (cpu = 0; cpu < CONFIG_NR_CPUS; cpu++)
++		if (pp->napiCpuGroup[cpu] == group) {
++			rxqAffinity = MV_REG_READ(NETA_CPU_MAP_REG(pp->port, cpu)) & 0xff;
++			break;
++		}
++
++	for (cpu = 0; cpu < CONFIG_NR_CPUS; cpu++) {
++		/* read rxqAffinity of the current group */
++		currRxqAffinity = MV_REG_READ(NETA_CPU_MAP_REG(pp->port, cpu)) & 0xff;
++		if (cpuAffinity & 1) {
++			pp->napi[cpu] = pp->napiGroup[group];
++			pp->napiCpuGroup[cpu] = group;
++			/* set rxq affinity, except for the first time */
++			if (pp->napiCpuGroup[cpu] != -1)
++				set_rxq_affinity(pp, currRxqAffinity | rxqAffinity, group);
++		}
++		cpuAffinity >>= 1;
++	}
++}
++
++int group_has_cpus(struct eth_port *pp, int group)
++{
++	int cpu;
++
++	for (cpu = 0; cpu < CONFIG_NR_CPUS; cpu++)
++		if (pp->napiCpuGroup[cpu] == group)
++			return 1;
++
++	/* the group contains no CPU */
++	return 0;
++}
++
++void set_rxq_affinity(struct eth_port *pp, MV_U32 rxqAffinity, int group)
++{
++	int rxq, cpu;
++	MV_U32 regVal;
++	MV_U32 tmpRxqAffinity;
++	int groupHasCpus;
++	int cpuInGroup;
++
++	/* nothing to do when rxqAffinity == 0 */
++	if (rxqAffinity == 0)
++		return;
++
++	groupHasCpus = group_has_cpus(pp, group);
++
++	if (!groupHasCpus) {
++		printk(KERN_ERR "%s: operation not performed; group %d has no cpu \n", __func__, group);
++		return;
++	}
++
++   for (cpu = 0; cpu < CONFIG_NR_CPUS; cpu++) {
++	   tmpRxqAffinity = rxqAffinity;
++
++	   if (pp->napiCpuGroup[cpu] == group) {
++		   cpuInGroup = 1;
++		   regVal = 0;
++	   } else {
++		   cpuInGroup = 0;
++		   regVal = MV_REG_READ(NETA_CPU_MAP_REG(pp->port, cpu));
++		}
++
++	   for (rxq = 0; rxq < CONFIG_MV_ETH_RXQ; rxq++) {
++		   /* set rxq affinity for this cpu */
++		   if (tmpRxqAffinity & 1) {
++			   if (cpuInGroup)
++				   regVal |= NETA_CPU_RXQ_ACCESS_MASK(rxq);
++			   else
++				   regVal &= ~NETA_CPU_RXQ_ACCESS_MASK(rxq);
++			}
++			tmpRxqAffinity >>= 1;
++	   }
++	   MV_REG_WRITE(NETA_CPU_MAP_REG(pp->port, cpu), regVal | NETA_CPU_TXQ_ACCESS_ALL_MASK);
++   }
++}
++
+ static int mv_eth_port_config_parse(struct eth_port *pp)
+ {
+ 	char *str;
+@@ -3461,16 +3550,20 @@ int mv_eth_poll(struct napi_struct *napi, int budget)
+ 	MV_U32 causeRxTx;
+ 	struct eth_port *pp = MV_ETH_PRIV(napi->dev);
+ #ifdef CONFIG_MV_ETH_DEBUG_CODE
++	int i;
+ 	if (pp->flags & MV_ETH_F_DBG_POLL) {
+-		printk(KERN_ERR "%s_%d ENTER: port=%d, cpu=%d, mask=0x%x, cause=0x%x\n",
+-			__func__, pp->stats.poll, pp->port, smp_processor_id(),
++		printk(KERN_ERR "%s ENTER: port=%d, cpu=%d, mask=0x%x, cause=0x%x\n",
++			__func__, pp->port, smp_processor_id(),
+ 			MV_REG_READ(NETA_INTR_NEW_MASK_REG(pp->port)), MV_REG_READ(NETA_INTR_NEW_CAUSE_REG(pp->port)));
++		for (i = 0; i < CONFIG_MV_ETH_NAPI_GROUPS; i++)
++			printk(KERN_INFO "%d:", pp->stats.poll[i]);
++		printk(KERN_INFO "\n");
+ 	}
+ #endif /* CONFIG_MV_ETH_DEBUG_CODE */
+ 
+ 	read_lock(&pp->rwlock);
+ 
+-	STAT_INFO(pp->stats.poll++);
++	STAT_INFO(pp->stats.poll[smp_processor_id()]++);
+ 
+ 	/* Read cause register */
+ 	causeRxTx = MV_REG_READ(NETA_INTR_NEW_CAUSE_REG(pp->port)) &
+@@ -3528,8 +3621,11 @@ int mv_eth_poll(struct napi_struct *napi, int budget)
+ 
+ #ifdef CONFIG_MV_ETH_DEBUG_CODE
+ 	if (pp->flags & MV_ETH_F_DBG_POLL) {
+-		printk(KERN_ERR "%s_%d  EXIT: port=%d, cpu=%d, budget=%d, rx_done=%d\n",
+-			__func__, pp->stats.poll, pp->port, smp_processor_id(), budget, rx_done);
++		printk(KERN_ERR "%s  EXIT: port=%d, cpu=%d, budget=%d, rx_done=%d\n",
++			__func__, pp->port, smp_processor_id(), budget, rx_done);
++		for (i = 0; i < CONFIG_MV_ETH_NAPI_GROUPS; i++)
++			printk(KERN_INFO "%d:", pp->stats.poll[i]);
++		printk(KERN_INFO "\n");
+ 	}
+ #endif /* CONFIG_MV_ETH_DEBUG_CODE */
+ 
+@@ -3539,7 +3635,7 @@ int mv_eth_poll(struct napi_struct *napi, int budget)
+ 		causeRxTx = 0;
+ 
+ 		napi_complete(napi);
+-		STAT_INFO(pp->stats.poll_exit++);
++		STAT_INFO(pp->stats.poll_exit[smp_processor_id()]++);
+ 
+ 		local_irq_save(flags);
+ 		MV_REG_WRITE(NETA_INTR_NEW_MASK_REG(pp->port),
+@@ -3782,6 +3878,7 @@ static int mv_eth_load_network_interfaces(void)
+ 		dev_i++;
+ 	}
+ 
++	handle_group_affinity();
+ 	mv_net_devs_num = dev_i;
+ 
+ 	return 0;
+@@ -4051,12 +4148,17 @@ struct net_device *mv_eth_netdev_init(struct eth_port *pp, int mtu, u8 *mac)
+ 		pp->napiGroup[i] = (struct napi_struct *)kmalloc(sizeof(struct napi_struct), GFP_KERNEL);
+ 		memset(pp->napiGroup[i], 0, sizeof(struct napi_struct));
+ 	}
+-	for (cpu = 0; cpu < CONFIG_NR_CPUS; cpu++)
+-		pp->napi[cpu] = pp->napiGroup[CPU_GROUP_DEF];
++
++	for (cpu = 0; cpu < CONFIG_NR_CPUS; cpu++) {
++		pp->napiCpuGroup[cpu] = -1;
++		pp->napi[cpu]         = NULL;
++		}
+ 
+ 	/* Add NAPI default group */
+-	if (pp->flags & MV_ETH_F_CONNECT_LINUX)
+-		netif_napi_add(dev, pp->napiGroup[CPU_GROUP_DEF], mv_eth_poll, pp->weight);
++	if (pp->flags & MV_ETH_F_CONNECT_LINUX) {
++		for (i = 0; i < CONFIG_MV_ETH_NAPI_GROUPS; i++)
++			netif_napi_add(dev, pp->napiGroup[i], mv_eth_poll, pp->weight);
++	}
+ 
+ 	pp->tx_done_timer.data = (unsigned long)dev;
+ 	pp->cleanup_timer.data = (unsigned long)dev;
+@@ -4094,7 +4196,7 @@ bool mv_eth_netdev_find(unsigned int dev_idx)
+ 
+ void mv_eth_netdev_update(int dev_index, struct eth_port *pp)
+ {
+-	int cpu;
++	int i;
+ 	struct eth_dev_priv *dev_priv;
+ #ifdef CONFIG_MV_ETH_SWITCH
+ 	struct eth_netdev *eth_netdev_priv;
+@@ -4107,11 +4209,10 @@ void mv_eth_netdev_update(int dev_index, struct eth_port *pp)
+ 
+ 	dev->irq = NET_TH_RXTX_IRQ_NUM(pp->port);
+ 
+-	if (pp->flags & MV_ETH_F_CONNECT_LINUX)
+-		netif_napi_add(dev, pp->napiGroup[CPU_GROUP_DEF], mv_eth_poll, pp->weight);
+-
+-	for (cpu = 0; cpu < CONFIG_NR_CPUS; cpu++)
+-		pp->napi[cpu] = pp->napiGroup[CPU_GROUP_DEF];
++	if (pp->flags & MV_ETH_F_CONNECT_LINUX) {
++		for (i = 0; i < CONFIG_MV_ETH_NAPI_GROUPS; i++)
++			netif_napi_add(dev, pp->napiGroup[i], mv_eth_poll, pp->weight);
++	}
+ 
+ 	pp->tx_done_timer.data = (unsigned long)dev;
+ 	pp->cleanup_timer.data = (unsigned long)dev;
+@@ -4336,6 +4437,9 @@ void mv_eth_config_show(void)
+ static void mv_eth_netdev_set_features(struct net_device *dev)
+ {
+ 	dev->features = NETIF_F_SG | NETIF_F_LLTX;
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 34)
++	dev->features |= NETIF_F_NTUPLE;
++#endif
+ 
+ #ifdef CONFIG_MV_ETH_TX_CSUM_OFFLOAD_DEF
+ 	if (dev->mtu <= MV_ETH_TX_CSUM_MAX_SIZE)
+@@ -4352,6 +4456,92 @@ static void mv_eth_netdev_set_features(struct net_device *dev)
+ 
+ }
+ 
++int mv_eth_napi_set_cpu_affinity(int port, int group, int affinity)
++{
++	struct eth_port *pp = mv_eth_port_by_id(port);
++	if (group >= CONFIG_MV_ETH_NAPI_GROUPS) {
++		printk(KERN_ERR "%s: group number is higher than %d\n", __func__, CONFIG_MV_ETH_NAPI_GROUPS-1);
++		return -1;
++		}
++	if (pp->flags & MV_ETH_F_STARTED) {
++		printk(KERN_ERR "Port %d must be stopped before\n", port);
++		return -EINVAL;
++	}
++
++	set_cpu_affinity(pp, affinity, group);
++	return 0;
++
++}
++void handle_group_affinity(void)
++{
++	int port = 0, group;
++	struct eth_port *pp;
++	MV_U32 group_cpu_affinity[4];
++	MV_U32 rxq_affinity[4];
++	group_cpu_affinity[0] = CONFIG_MV_ETH_GROUP0_CPU;
++	rxq_affinity[0] 	  = CONFIG_MV_ETH_GROUP0_RXQ;
++
++#ifdef CONFIG_MV_ETH_NAPI_GR1
++		group_cpu_affinity[1] = CONFIG_MV_ETH_GROUP1_CPU;
++		rxq_affinity[1] 	  = CONFIG_MV_ETH_GROUP1_RXQ;
++#endif
++
++#ifdef CONFIG_MV_ETH_NAPI_GR2
++		group_cpu_affinity[2] = CONFIG_MV_ETH_GROUP2_CPU;
++		rxq_affinity[2] 	  = CONFIG_MV_ETH_GROUP2_RXQ;
++#endif
++
++#ifdef CONFIG_MV_ETH_NAPI_GR3
++		group_cpu_affinity[3] = CONFIG_MV_ETH_GROUP3_CPU;
++		rxq_affinity[3] 	  = CONFIG_MV_ETH_GROUP3_RXQ;
++#endif
++
++	for (port = 0; port < mv_eth_ports_num; port++) {
++		pp = mv_eth_port_by_id(port);
++		for (group = 0; group < CONFIG_MV_ETH_NAPI_GROUPS; group++) {
++			set_cpu_affinity(pp, group_cpu_affinity[group], group);
++			set_rxq_affinity(pp, rxq_affinity[group], group);
++		}
++	}
++}
++
++
++
++int	mv_eth_napi_set_rxq_affinity(int port, int group, int rxqAffinity)
++{
++	struct eth_port *pp = mv_eth_port_by_id(port);
++	if (group >= CONFIG_MV_ETH_NAPI_GROUPS) {
++		printk(KERN_ERR "%s: group number is higher than %d\n", __func__, CONFIG_MV_ETH_NAPI_GROUPS-1);
++		return -1;
++		}
++	if (pp->flags & MV_ETH_F_STARTED) {
++		printk(KERN_ERR "Port %d must be stopped before\n", port);
++		return -EINVAL;
++	}
++
++	set_rxq_affinity(pp, rxqAffinity, group);
++	return MV_OK;
++}
++
++
++void mv_eth_napi_group_show(int port)
++{
++	int cpu, group;
++
++	struct eth_port *pp = mv_eth_port_by_id(port);
++	for (group = 0; group < CONFIG_MV_ETH_NAPI_GROUPS; group++) {
++		printk(KERN_INFO "group=%d:\n", group);
++		for (cpu = 0; cpu < CONFIG_NR_CPUS; cpu++) {
++			if (pp->napiCpuGroup[cpu] == group) {
++				printk(KERN_INFO "   CPU%d ", cpu);
++				mvNetaRxqCpuDump(port, cpu);
++				printk(KERN_INFO "\n");
++			}
++		}
++		printk(KERN_INFO "\n");
++	}
++}
++
+ void mv_eth_priv_cleanup(struct eth_port *pp)
+ {
+ 	/* TODO */
+@@ -5479,6 +5669,10 @@ void mv_eth_port_stats_print(unsigned int port)
+ 	int txp, queue;
+ 	u32 total_rx_ok, total_rx_fill_ok;
+ 
++#ifdef CONFIG_MV_ETH_STAT_INF
++	int i;
++#endif
++
+ 	TRC_OUTPUT();
+ 
+ 	if (pp == NULL) {
+@@ -5509,8 +5703,10 @@ void mv_eth_port_stats_print(unsigned int port)
+ 	printk(KERN_ERR "\n====================================================\n");
+ 	printk(KERN_ERR "ethPort_%d: Events", port);
+ 	printk(KERN_CONT "\n-------------------------------\n");
+-	printk(KERN_ERR "poll..........................%10u\n", stat->poll);
+-	printk(KERN_ERR "poll_exit.....................%10u\n", stat->poll_exit);
++	for (i = 0; i < CONFIG_NR_CPUS; i++) {
++		printk(KERN_ERR "poll[%d].....................%10u\n", i, stat->poll[i]);
++		printk(KERN_ERR "poll_exit[%d]................%10u\n", i, stat->poll_exit[i]);
++	}
+ 	printk(KERN_ERR "tx_fragmentation..............%10u\n", stat->tx_fragment);
+ 	printk(KERN_ERR "tx_done_event.................%10u\n", stat->tx_done);
+ 	printk(KERN_ERR "tx_done_timer_event...........%10u\n", stat->tx_done_timer);
+@@ -5658,7 +5854,7 @@ void mv_eth_port_stats_print(unsigned int port)
+ 
+ static int mv_eth_port_cleanup(int port)
+ {
+-	int txp, txq, rxq;
++	int txp, txq, rxq, i;
+ 	struct eth_port *pp;
+ 	struct tx_queue *txq_ctrl;
+ 	struct rx_queue *rxq_ctrl;
+@@ -5737,7 +5933,8 @@ static int mv_eth_port_cleanup(int port)
+ 	mvNetaPortDestroy(port);
+ 
+ 	if (pp->flags & MV_ETH_F_CONNECT_LINUX)
+-		netif_napi_del(pp->napiGroup[CPU_GROUP_DEF]);
++		for (i = 0; i < CONFIG_MV_ETH_NAPI_GROUPS; i++)
++			netif_napi_del(pp->napiGroup[i]);
+ 
+ 	return 0;
+ }
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+index f0d28b9..8e41714 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+@@ -143,8 +143,8 @@ struct port_stats {
+ #ifdef CONFIG_MV_ETH_STAT_INF
+ 	u32 irq;
+ 	u32 irq_err;
+-	u32 poll;
+-	u32 poll_exit;
++	u32 poll[CONFIG_NR_CPUS];
++	u32 poll_exit[CONFIG_NR_CPUS];
+ 	u32 tx_fragment;
+ 	u32 tx_done;
+ 	u32 tx_done_timer;
+@@ -320,6 +320,7 @@ struct eth_port {
+ 	int     (*tx_special_check)(int port, struct net_device *dev, struct sk_buff *skb,
+ 					struct mv_eth_tx_spec *tx_spec_out);
+ #endif /* CONFIG_MV_ETH_TX_SPECIAL */
++	int napiCpuGroup[CONFIG_NR_CPUS];
+ };
+ 
+ struct eth_netdev {
+@@ -482,6 +483,9 @@ void        mv_eth_mac_show(int port);
+ void        mv_eth_tos_map_show(int port);
+ int         mv_eth_rxq_tos_map_set(int port, int rxq, unsigned char tos);
+ int         mv_eth_txq_tos_map_set(int port, int txq, unsigned char tos);
++int 				mv_eth_napi_set_cpu_affinity(int port, int group, int affinity);
++int 				mv_eth_napi_set_rxq_affinity(int port, int group, int rxq);
++void 				mv_eth_napi_group_show(int port);
+ 
+ int         mv_eth_rxq_vlan_prio_set(int port, int rxq, unsigned char prio);
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
+index b881542..165a684 100644
+--- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
++++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
+@@ -317,7 +317,8 @@ MV_STATUS mvNetaDefaultsSet(int port)
+ 	/* Enable MBUS Retry bit16 */
+ 	MV_REG_WRITE(NETA_MBUS_RETRY_REG(port), NETA_MBUS_RETRY_CYCLES(0x20));
+ 
+-	/* Set CPU queue access map - default CPU_0 can access all RX and TX queues */
++	/* Set CPU queue access map - all CPUs have access to all RX queues and to all TX queues */
++
+ 	for (i = 0; i < mvNetaHalData.maxCPUs; i++)
+ 		MV_REG_WRITE(NETA_CPU_MAP_REG(port, i), (NETA_CPU_RXQ_ACCESS_ALL_MASK | NETA_CPU_TXQ_ACCESS_ALL_MASK));
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
+index 5653e4c..fcd4f0d 100644
+--- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
++++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
+@@ -621,6 +621,7 @@ MV_STATUS	mvNetaSpeedDuplexSet(int portNo, MV_ETH_PORT_SPEED speed, MV_ETH_PORT_
+ MV_STATUS 	mvNetaSpeedDuplexGet(int portNo, MV_ETH_PORT_SPEED *speed, MV_ETH_PORT_DUPLEX *duplex);
+ 
+ MV_STATUS	mvNetaRxqCpuMaskSet(int port, int rxq, int cpu_mask);
++void	mvNetaRxqCpuDump(int port, int cpu);
+ 
+ void		mvNetaSetOtherMcastTable(int portNo, int queue);
+ void		mvNetaSetUcastTable(int port, int queue);
+diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c
+index ae07523..12e799c 100644
+--- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c
++++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c
+@@ -759,6 +759,20 @@ void mvNetaHwfTxpRegs(int port, int p, int txp)
+ }
+ #endif /* CONFIG_MV_ETH_HWF */
+ 
++void mvNetaRxqCpuDump(int port, int cpu)
++{
++	MV_U32 regVal = MV_REG_READ(NETA_CPU_MAP_REG(port, cpu));
++	int j;
++	for (j = 0; j < CONFIG_MV_ETH_RXQ; j++) {
++		if (regVal & 1)
++			printk("RXQ-%d ", j);
++		else
++			printk("       ");
++	regVal >>= 1;
++	}
++	printk(KERN_INFO "\n");
++}
++
+ #ifdef CONFIG_MV_PON
+ void mvNetaPonTxpRegs(int port, int txp)
+ {
+-- 
+1.7.9.5
+

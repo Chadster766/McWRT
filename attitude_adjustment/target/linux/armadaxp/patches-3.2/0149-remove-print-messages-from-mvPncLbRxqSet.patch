@@ -1,0 +1,33 @@
+From 6dc1fbe0ca490323d4203ca09cf8bc89f110c997 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Wed, 15 Feb 2012 04:08:51 -0500
+Subject: [PATCH 149/609] remove print messages from mvPncLbRxqSet
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/neta/pnc/mvPncLb.c |    2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncLb.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncLb.c
+index 3c3745e..01ed15c 100755
+--- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncLb.c
++++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncLb.c
+@@ -64,7 +64,6 @@ int    mvPncLbRxqSet(int hash, int rxq)
+ 
+ 	entry = (hash / 4) & MV_PNC_LB_TBL_ADDR_MASK;
+ 	index = (hash & 3);
+-	mvOsPrintf("%s: hash=%d rxq=%d, entry=%d, index=%d\n", __func__, hash, rxq, entry, index);
+ 
+ 	MV_REG_WRITE(MV_PNC_LB_TBL_ACCESS_REG, entry);
+ 	regVal = MV_REG_READ(MV_PNC_LB_TBL_ACCESS_REG);
+@@ -75,7 +74,6 @@ int    mvPncLbRxqSet(int hash, int rxq)
+ 	regVal |= ((rxq << (index * 3)) << MV_PNC_LB_TBL_DATA_OFFS);
+ 	regVal |= MV_PNC_LB_TBL_WRITE_TRIG_MASK;
+ 	MV_REG_WRITE(MV_PNC_LB_TBL_ACCESS_REG, regVal);
+-	mvOsPrintf("write regVal=0x%x\n", regVal);
+ 
+ 	return 0;
+ }
+-- 
+1.7.9.5
+

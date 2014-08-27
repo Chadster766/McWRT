@@ -1,0 +1,29 @@
+diff -ruN microcom-1.02-old/Makefile microcom-1.02-new/Makefile
+--- microcom-1.02-old/Makefile	2006-10-29 21:55:45.000000000 +0100
++++ microcom-1.02-new/Makefile	2006-10-29 22:00:09.000000000 +0100
+@@ -19,19 +19,19 @@
+ #** Rev. 0.91 - Jan. 2000 - minor fixes, compiled under Mandrake 6.0
+ #****************************************************************************/
+ microcom: microcom.o mux.o script.o help.o autodet.o
+-	gcc -o microcom microcom.o mux.o script.o help.o autodet.o
++	$(CC) -o microcom microcom.o mux.o script.o help.o autodet.o
+ 
+ autodet.o: autodet.c microcom.h
+-	gcc -O -c autodet.c
++	$(CC) $(CFLAGS)  -c autodet.c
+ 
+ script.o: script.c script.h microcom.h
+-	gcc -O -c script.c
++	$(CC) $(CFLAGS) -c script.c
+ 
+ mux.o: mux.c microcom.h
+-	gcc -O -c mux.c
++	$(CC) $(CFLAGS) -c mux.c
+ 
+ microcom.o: microcom.c microcom.h
+-	gcc -O -c microcom.c
++	$(CC) $(CFLAGS) -c microcom.c
+ 
+ help.o: help.c microcom.h
+-	gcc -O -c help.c
++	$(CC) $(CFLAGS) -c help.c

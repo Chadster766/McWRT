@@ -1,0 +1,92 @@
+From 4e1c4cf36a12ce2f4b2c4ebaf93398bf1aa16734 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Sun, 4 Dec 2011 06:10:57 -0500
+Subject: [PATCH 031/609] NETA: Fix bug in MTU change
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.h   |    2 ++
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |   13 ++++++++++---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h     |    5 ++---
+ 3 files changed, 14 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.h
+index 5000fbc..4e673e7 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.h
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.h
+@@ -2,6 +2,8 @@
+ #ifndef NET_DEV_MV_ETH_TOOL_H
+ #define NET_DEV_MV_ETH_TOOL_H
+ 
++#include <linux/ethtool.h>
++
+ extern const struct ethtool_ops mv_eth_tool_ops;
+ 
+ #endif
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 7e6303f..56f29aa 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -119,13 +119,19 @@ int mv_eth_ctrl_nfp(struct net_device *dev, int en)
+ #ifdef CONFIG_NET_SKB_RECYCLE
+ static int mv_ctrl_recycle = CONFIG_NET_SKB_RECYCLE_DEF;
+ 
+-void mv_eth_ctrl_recycle(int en)
++int mv_eth_ctrl_recycle(int en)
+ {
+ 	mv_ctrl_recycle = en;
++	return 0;
+ }
+ 
+ #define mv_eth_is_recycle()     (mv_ctrl_recycle)
+ #else
++int mv_eth_ctrl_recycle(int en)
++{
++	printk(KERN_ERR "Not supported\n");
++	return 1;
++}
+ #define mv_eth_is_recycle()     0
+ #endif /* CONFIG_NET_SKB_RECYCLE */
+ 
+@@ -4929,12 +4935,13 @@ int mv_eth_change_mtu_internals(struct net_device *dev, int mtu)
+ 		/* If long pool assigned and MTU really changed and can't use old pool - free buffers */
+ 		write_lock_irqsave(&pp->rwlock, rwflags);
+ 
++		config_pkt_size = 0;
+ #ifdef CONFIG_MV_ETH_BM_CPU
+-		config_pkt_size = mv_eth_bm_config_pkt_size_get(new_pool->pool);
+ 		new_pool = mv_eth_long_pool_get(pp, RX_PKT_SIZE(mtu));
++		if (new_pool != NULL)
++			config_pkt_size = mv_eth_bm_config_pkt_size_get(new_pool->pool);
+ #else
+ 		/* If BM is not used always free buffers */
+-		config_pkt_size = 0;
+ 		new_pool = NULL;
+ #endif /* CONFIG_MV_ETH_BM_CPU */
+ 
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+index a80ed00..f0d28b9 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+@@ -307,7 +307,7 @@ struct eth_port {
+ 	__u16               speed_cfg;
+ 	__u8                duplex_cfg;
+ 	__u8                autoneg_cfg;
+-	__u16		    advertise_cfg;
++	__u16		        advertise_cfg;
+ #endif/* CONFIG_MV_ETH_TOOL */
+ #ifdef CONFIG_MV_ETH_RX_CSUM_OFFLOAD
+ 	MV_U32              rx_csum_offload;
+@@ -493,8 +493,7 @@ void        mv_eth_port_stats_print(unsigned int port);
+ void        mv_eth_set_noqueue(struct net_device *dev, int enable);
+ 
+ void        mv_eth_ctrl_hwf(int en);
+-
+-void        mv_eth_ctrl_recycle(int en);
++int         mv_eth_ctrl_recycle(int en);
+ void        mv_eth_ctrl_txdone(int num);
+ int         mv_eth_ctrl_tx_mh(int port, u16 mh);
+ int         mv_eth_ctrl_tx_cmd(int port, u32 cmd);
+-- 
+1.7.9.5
+

@@ -1,0 +1,42 @@
+Source-Makefile: package/mmc_over_gpio/Makefile
+Package: kmod-mmc-over-gpio
+Menu: 1
+Submenu: Other modules
+Version: <LINUX_VERSION>-4
+Depends: @GPIO_SUPPORT +kmod-mmc-spi +kmod-spi-gpio-old
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: MMC/SD card over GPIO support
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: 
+Type: ipkg
+Kernel-Config: CONFIG_GPIOMMC CONFIG_CONFIGFS_FS=y
+Description:  Support for driving an MMC/SD card over GPIO pins via SPI.
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+Config:
+	menu "Configuration"
+		depends PACKAGE_kmod-mmc-over-gpio
+
+	config KMOD_MMC_OVER_GPIO_DI_PIN
+		int "GPIO DI (Data-In) pin"
+		default 1
+
+	config KMOD_MMC_OVER_GPIO_DO_PIN
+		int "GPIO DO (Data-Out) pin"
+		default 3
+
+	config KMOD_MMC_OVER_GPIO_CLK_PIN
+		int "GPIO CLK (Clock) pin"
+		default 4
+
+	config KMOD_MMC_OVER_GPIO_CS_PIN
+		int "GPIO CS (Chip-Select) pin"
+		default 7
+
+	endmenu
+@@
+
+

@@ -1,0 +1,11 @@
+--- a/include/dns.c
++++ b/include/dns.c
+@@ -127,7 +127,7 @@ int dns_t2wtsig(char *pktdata, unsigned
+ 	tsig.hitime = 0;
+ 	tsig.lotime = htonl(signtime);
+ 	tsig.fudge = htons(fudge);
+-	tsig.macsize = 0x1000;	//16
++	tsig.macsize = htons(16);
+ 	memset(tsig.mac, 0, 16);
+ 	memcpy(&tsig.id, pktdata, 2);
+ 	tsig.error = 0;

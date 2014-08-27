@@ -1,0 +1,30 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2009-2011 OpenWrt.org
+
+START=70
+
+SERVICE_DAEMONIZE=1
+SERVICE_WRITE_PID=1
+
+start() {
+	local pri_ip sec_ip pri_port sec_port
+
+	parse_opts() {
+		local cfg="$1"
+		config_get pri_ip   "$cfg" 'primaryip'
+		config_get sec_ip   "$cfg" 'secondaryip'
+		config_get pri_port "$cfg" 'primaryport'
+		config_get sec_port "$cfg" 'secondaryport'
+	}
+
+	config_load 'stund'
+	config_foreach parse_opts
+
+	service_start /usr/sbin/stund \
+		${pri_ip:+-h $pri_ip} ${sec_ip:+-a $sec_ip} \
+		${pri_port:+-p $pri_port} ${sec_port:+-o $sec_port}
+}
+
+stop() {
+	service_stop /usr/sbin/stund
+}

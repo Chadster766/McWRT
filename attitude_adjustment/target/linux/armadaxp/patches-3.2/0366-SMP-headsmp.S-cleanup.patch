@@ -1,0 +1,27 @@
+From 7b733da4baf04064a6498492701e945b37a4a971 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Mon, 17 Dec 2012 15:48:02 +0200
+Subject: [PATCH 366/609] SMP: headsmp.S cleanup
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/headsmp.S |    3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/headsmp.S b/arch/arm/mach-armadaxp/headsmp.S
+index e1653e4..be486ed 100644
+--- a/arch/arm/mach-armadaxp/headsmp.S
++++ b/arch/arm/mach-armadaxp/headsmp.S
+@@ -29,9 +29,6 @@ ENTRY(axp_secondary_startup)
+ #ifdef CONFIG_BE8_ON_LE
+         setend  be
+ #endif
+-	ldr r0, =0xd0001504
+-	ldr r1, =0x3000000
+-	str r1, [r0]
+ 
+ 	mrc	p15, 0, r0, c0, c0, 5
+ 	and	r0, r0, #15
+-- 
+1.7.9.5
+

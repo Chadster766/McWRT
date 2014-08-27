@@ -1,0 +1,48 @@
+--- a/powertop.c
++++ b/powertop.c
+@@ -30,7 +30,9 @@
+ #include <stdint.h>
+ #include <sys/types.h>
+ #include <dirent.h>
++#ifdef ENABLE_GETTEXT
+ #include <libintl.h>
++#endif
+ #include <ctype.h>
+ #include <assert.h>
+ #include <locale.h>
+@@ -783,9 +785,11 @@ int main(int argc, char **argv)
+ 	uint64_t cur_usage[8], cur_duration[8];
+ 	double wakeups_per_second = 0;
+ 
++#ifdef ENABLE_GETTEXT
+ 	setlocale (LC_ALL, "");
+ 	bindtextdomain ("powertop", "/usr/share/locale");
+ 	textdomain ("powertop");
++#endif
+ 
+  	while (1) {
+  		static struct option opts[] = {
+--- a/powertop.h
++++ b/powertop.h
+@@ -26,7 +26,9 @@
+ #ifndef __INCLUDE_GUARD_POWERTOP_H_
+ #define __INCLUDE_GUARD_POWERTOP_H_
+ 
++#ifdef ENABLE_GETTEXT
+ #include <libintl.h>
++#endif
+ 
+ struct line {
+ 	char	*string;
+@@ -86,7 +88,11 @@ extern suggestion_func *suggestion_activ
+         _x < _y ? _x : _y; })
+ 
+ 
++#ifdef ENABLE_GETTEXT
+ #define _(STRING)    gettext(STRING)
++#else
++#define _(STRING)    STRING
++#endif
+ 
+ 
+ #define PT_COLOR_DEFAULT    1

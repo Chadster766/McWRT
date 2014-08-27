@@ -1,0 +1,85 @@
+From a024135ddbd6b5f619cf8e2a0f86f7bd77b95ebd Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Wed, 28 Nov 2012 13:29:06 +0200
+Subject: [PATCH 430/609] replaced old A370/AXP board detections with
+ mvCtrlDevFamilyIdGet
+
+Change-Id: I4d100e4a2815cd446f999626f4834077fe7183f1
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/pex/mvPex.c |   12 +++---------
+ arch/arm/plat-armada/mv_hal/usb/mvUsb.c |   13 +++----------
+ 2 files changed, 6 insertions(+), 19 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPex.c b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
+index d90a297..fb2e69f 100755
+--- a/arch/arm/plat-armada/mv_hal/pex/mvPex.c
++++ b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
+@@ -117,9 +117,7 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+ 		status = MV_REG_READ(PEX_CFG_DIRECT_ACCESS(pexIf, PEX_STATUS_AND_COMMAND));
+ 		status |= PXSAC_INT_DIS;
+ 		MV_REG_WRITE(PEX_CFG_DIRECT_ACCESS(pexIf, PEX_STATUS_AND_COMMAND), status);
+-		if ((ctrlModel == MV_6710_DEV_ID) ||
+-			(ctrlModel == MV_6W11_DEV_ID) ||
+-			(ctrlModel == MV_6707_DEV_ID)) {
++		if (mvCtrlDevFamilyIdGet(ctrlModel)==MV_67XX) {
+ 			/* PEX capability */
+ 			regVal = MV_REG_READ(PEX_CFG_DIRECT_ACCESS(pexIf, PEX_LINK_CAPABILITY_REG)) & 0xF;
+ 			if (regVal == 0x2) {
+@@ -130,9 +128,7 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+ 			}
+ 		}
+ 	} else { /* if (MV_PEX_ROOT_COMPLEX != pexType) */
+-		if ((ctrlModel == MV_6710_DEV_ID) ||
+-			(ctrlModel == MV_6W11_DEV_ID) ||
+-			(ctrlModel == MV_6707_DEV_ID)) {
++		if (mvCtrlDevFamilyIdGet(ctrlModel)==MV_67XX) {
+ 			/* TODO: 14/12/10 - requested by CV to support EP Compliance */
+ 			MV_REG_WRITE(PEX_DBG_CTRL_REG(pexIf), 0x0F62F0C0);
+ 
+@@ -150,9 +146,7 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+ 		}
+ 	}
+ 
+-	if ((ctrlModel == MV_6710_DEV_ID) ||
+-		(ctrlModel == MV_6W11_DEV_ID) ||
+-		(ctrlModel == MV_6707_DEV_ID)) {
++	if (mvCtrlDevFamilyIdGet(ctrlModel)==MV_67XX) {
+ 		 mvCpuIfEnablePex(pexIf);
+ 	}
+ 	/* now wait 1ms to be sure the link is valid */
+diff --git a/arch/arm/plat-armada/mv_hal/usb/mvUsb.c b/arch/arm/plat-armada/mv_hal/usb/mvUsb.c
+index 6b12a71..13720e0 100755
+--- a/arch/arm/plat-armada/mv_hal/usb/mvUsb.c
++++ b/arch/arm/plat-armada/mv_hal/usb/mvUsb.c
+@@ -207,9 +207,7 @@ static int mvUsbPhy40nmInit(int dev)
+ 	/*-------------------------------------------------*/
+ 
+ /* BTS #231 - for KW40 only */
+-	if ((usbHalData.ctrlModel == MV_6710_DEV_ID) ||
+-	    (usbHalData.ctrlModel == MV_6W11_DEV_ID) ||
+-		(usbHalData.ctrlModel == MV_6707_DEV_ID)) {
++	if (mvCtrlDevFamilyIdGet(usbHalData.ctrlModel)==MV_67XX) {
+ 		MV_REG_WRITE(0x50850, 0x20000131);
+ 		MV_REG_WRITE(0x50890, 0x20000131);
+ 	}
+@@ -825,13 +823,8 @@ MV_STATUS mvUsbHalInit(int dev, MV_BOOL isHost, MV_USB_HAL_DATA *halData)
+ 		mvUsbPhy65nmNewInit(dev);
+ 
+ /* 	mvUsbPhyKW6500Init(dev); */
+-	} else if ((usbHalData.ctrlModel == MV_78130_DEV_ID) ||
+-		(usbHalData.ctrlModel == MV_78160_DEV_ID) ||
+-		(usbHalData.ctrlModel == MV_6710_DEV_ID) ||
+-		(usbHalData.ctrlModel == MV_78230_DEV_ID) ||
+-		(usbHalData.ctrlModel == MV_78260_DEV_ID) ||
+-		(usbHalData.ctrlModel == MV_78460_DEV_ID) ||
+-		(usbHalData.ctrlModel == MV_78000_DEV_ID)) {
++	} else if ((mvCtrlDevFamilyIdGet(usbHalData.ctrlModel)==MV_67XX) ||
++		(mvCtrlDevFamilyIdGet(usbHalData.ctrlModel)==MV_78XX0)) {
+ 
+ 		if (mvUsbPhy40nmInit(dev))
+ 			status = MV_NOT_READY;
+-- 
+1.7.9.5
+

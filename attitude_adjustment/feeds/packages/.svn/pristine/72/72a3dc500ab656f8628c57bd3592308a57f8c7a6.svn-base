@@ -1,0 +1,20 @@
+--- a/lib.common
++++ b/lib.common
+@@ -292,7 +292,7 @@
+ 
+     [ -n "${MODULE_SUFFIX:=o gz ko o.gz ko.gz}" ]
+ 
+-    [ -z "$MODULESDIR" ] && MODULESDIR=/lib/modules/$(uname -r)/kernel/net/ipv6/netfilter:/lib/modules/$(uname -r)/kernel/net/netfilter:/lib/modules/$(uname -r)/kernel/net/sched
++    [ -z "$MODULESDIR" ] && MODULESDIR=/lib/modules/$(uname -r)/kernel/net/ipv6/netfilter:/lib/modules/$(uname -r)/kernel/net/netfilter:/lib/modules/$(uname -r)/kernel/net/sched:/lib/modules/$(uname -r)
+     MODULES=$(lsmod | cut -d ' ' -f1)
+ 
+     for directory in $(split $MODULESDIR); do
+@@ -328,7 +328,7 @@
+     [ -n "${MODULE_SUFFIX:=o gz ko o.gz ko.gz}" ]
+ 
+     [ -z "$MODULESDIR" ] && \
+-	MODULESDIR=/lib/modules/$(uname -r)/kernel/net/ipv6/netfilter:/lib/modules/$(uname -r)/kernel/net/netfilter:/lib/modules/$(uname -r)/kernel/net/sched
++	MODULESDIR=/lib/modules/$(uname -r)/kernel/net/ipv6/netfilter:/lib/modules/$(uname -r)/kernel/net/netfilter:/lib/modules/$(uname -r)/kernel/net/sched:/lib/modules/$(uname -r)
+ 
+     for directory in $(split $MODULESDIR); do
+ 	[ -d $directory ] && moduledirectories="$moduledirectories $directory"

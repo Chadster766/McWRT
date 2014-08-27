@@ -1,0 +1,93 @@
+--- libspe2-2.3.0.old/spebase/run.c	2008-10-28 14:43:09.000000000 +0100
++++ libspe2-2.3.0/spebase/run.c	2008-10-28 14:44:07.000000000 +0100
+@@ -37,6 +37,7 @@
+ #include "spebase.h"
+ #include "regs.h"
+ 
++#if 0
+ /*Thread-local variable for use by the debugger*/
+ __thread struct spe_context_info {
+ 	int spe_id;
+@@ -44,13 +45,15 @@
+ 	unsigned int status;
+ 	struct spe_context_info *prev;
+ }*__spe_current_active_context;
++#endif
+ 
+-
++#if 0
+ static void cleanupspeinfo(struct spe_context_info *ctxinfo)
+ {
+ 	struct spe_context_info *tmp = ctxinfo->prev;
+ 	__spe_current_active_context = tmp;
+ }
++#endif
+ 
+ static int issue_isolated_exit(struct spe_context *spe)
+ {
+@@ -69,12 +72,14 @@
+ 	return 0;
+ }
+ 
++#if 0
+ static inline void freespeinfo()
+ {
+ 	/*Clean up the debug variable*/
+ 	struct spe_context_info *tmp = __spe_current_active_context->prev;
+ 	__spe_current_active_context = tmp;
+ }
++#endif
+ 
+ int _base_spe_context_run(spe_context_ptr_t spe, unsigned int *entry,
+ 		unsigned int runflags, void *argp, void *envp,
+@@ -83,7 +88,9 @@
+ 	int retval = 0, run_rc;
+ 	unsigned int run_status, tmp_entry;
+ 	spe_stop_info_t	stopinfo_buf;
++#if 0
+ 	struct spe_context_info this_context_info __attribute__((cleanup(cleanupspeinfo)));
++#endif
+ 
+ 	/* If the caller hasn't set a stopinfo buffer, provide a buffer on the
+ 	 * stack instead. */
+@@ -146,6 +153,7 @@
+ 			return -1;
+ 	}
+ 
++#if 0
+ 	/*Leave a trail of breadcrumbs for the debugger to follow */
+ 	if (!__spe_current_active_context) {
+ 		__spe_current_active_context = &this_context_info;
+@@ -162,18 +170,23 @@
+ 	}
+ 	/*remember the ls-addr*/
+ 	__spe_current_active_context->spe_id = spe->base_private->fd_spe_dir;
++#endif
+ 
+ do_run:
++#if 0
+ 	/*Remember the npc value*/
+ 	__spe_current_active_context->npc = tmp_entry;
++#endif
+ 
+ 	/* run SPE context */
+ 	run_rc = spu_run(spe->base_private->fd_spe_dir,
+ 			&tmp_entry, &run_status);
+ 
++#if 0
+ 	/*Remember the npc value*/
+ 	__spe_current_active_context->npc = tmp_entry;
+ 	__spe_current_active_context->status = run_status;
++#endif
+ 
+ 	DEBUG_PRINTF("spu_run returned run_rc=0x%08x, entry=0x%04x, "
+ 			"ext_status=0x%04x.\n", run_rc, tmp_entry, run_status);
+@@ -341,6 +354,8 @@
+ 
+ 	}
+ 
++#if 0
+ 	freespeinfo();
++#endif
+ 	return retval;
+ }

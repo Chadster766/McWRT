@@ -1,0 +1,196 @@
+From 7bc1e8999212340e56439c07471dcfb46fc3c670 Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Tue, 26 Feb 2013 09:58:03 +0200
+Subject: [PATCH 537/609] Complete AMC board support - add machine type to AMC
+ board
+
+Change-Id: Ifa554e76620a865e50fa1f7496c8b9012c45605d
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1186
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Yehuda Yitschak <yehuday@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/core.c |  147 +++++++++++++++++++++++++++++++++++++++++
+ arch/arm/tools/mach-types     |    4 +-
+ 2 files changed, 149 insertions(+), 2 deletions(-)
+ mode change 100644 => 100755 arch/arm/tools/mach-types
+
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index d647211..76d9336 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -1892,6 +1892,153 @@ MACHINE_START(ARMADA_XP_GP, "Marvell Armada XP GP Board")
+ MACHINE_END
+ 
+ /*****************************************************************************
++ * AMC BOARD
++ ****************************************************************************/
++static void __init axp_amc_init(void)
++{
++#ifdef CONFIG_MV_AMP_ENABLE
++	/* Init Resource sharing */
++	if (mvUnitMapIsRsrcLimited() == MV_FALSE)
++		mvUnitMapSetAllMine();
++#endif
++
++	/* Call Aurora/cpu special configurations */
++	cpu_fabric_common_init();
++
++	/* Select appropriate Board ID for Machine */
++	gBoardId = DB_78X60_AMC_ID;
++
++	/* init the Board environment */
++	mvBoardEnvInit();
++
++	/* init the controller environment */
++	if (mvCtrlEnvInit()) {
++		printk(KERN_ERR "Controller env initialization failed.\n");
++		return;
++	}
++
++	armadaxp_setup_cpu_mbus();
++
++	/* Init the CPU windows setting and the access protection windows. */
++#ifdef CONFIG_MV_AMP_ENABLE
++	if (mvAmpInitCpuIf()) {
++#else
++	if (mvCpuIfInit(mv_sys_map())) {
++#endif
++		printk(KERN_ERR "Cpu Interface initialization failed.\n");
++		return;
++	}
++
++	/* Init Tclk & SysClk */
++	mvTclk = mvBoardTclkGet();
++	mvSysclk = mvBoardSysClkGet();
++
++	elf_hwcap &= ~HWCAP_JAVA;
++
++#ifndef CONFIG_MV_UART_PORT
++	serial_initialize(0);
++#else
++	serial_initialize(CONFIG_MV_UART_PORT);
++#endif
++
++	/* At this point, the CPU windows are configured according to default
++	   definitions in mvSysHwConfig.h and cpuAddrWinMap table in mvCpuIf.c.
++	   Now it's time to change defaults for each platform.         */
++
++	/* mvCpuIfAddDecShow();*/
++
++	print_board_info();
++
++	/* GPIO */
++	mv_gpio_init();
++
++	/* RTC */
++	rtc_init();
++
++#ifdef CONFIG_MV_INCLUDE_SPI
++	/* SPI */
++	if (mvUnitMapIsMine(SPI) == MV_TRUE)
++		mvSysSpiInit(0, _16M);
++#endif
++
++	/* ETH-PHY */
++	mvSysEthPhyInit();
++
++	/* Sata */
++#ifdef CONFIG_SATA_MV
++	armadaxp_sata_init(&dbdsmp_sata_data);
++#endif
++#ifdef CONFIG_MTD_NAND_NFC
++	/* NAND */
++	axp_db_nfc_init();
++#endif
++	/* HWMON */
++	armadaxp_hwmon_init();
++
++	/* XOR */
++#ifdef XOR0_ENABLE
++	armadaxp_xor0_init();
++#endif
++	armadaxp_xor1_init();
++
++	/* I2C */
++	armadaxp_i2c0_init();
++
++#ifdef CONFIG_FB_DOVE
++	if ((lcd0_enable == 1) && (lcd_panel == 0))
++		armadaxp_i2c1_init();
++#endif
++	/* SDIO */
++#if defined(CONFIG_MV_INCLUDE_SDIO)
++	armadaxp_sdio_init();
++#endif
++
++#ifdef CONFIG_MV_ETHERNET
++	/* Ethernet */
++	eth_init();
++#endif
++
++#ifdef CONFIG_MV_IPC_NET
++	platform_device_register(&mv_ipc_net);
++#endif
++
++#ifdef CONFIG_FB_DOVE
++	if (mvUnitMapIsMine(LCD) == MV_TRUE) {
++		kw_lcd0_dmi.dram = &armadaxp_mbus_dram_info;
++		if (lcd_panel) {
++			kw_lcd0_dmi.lvds_info.enabled = 1;
++			kw_lcd0_dmi.fixed_full_div = 1;
++			kw_lcd0_dmi.full_div_val = 7;
++			/* kw_lcd0_dmi.lcd_ref_clk = 27000000; */
++			printk(KERN_INFO "LCD Panel enabled.\n");
++		}
++		clcd_platform_init(&kw_lcd0_dmi, &kw_lcd0_vid_dmi,
++						&dsmp_backlight_data);
++	}
++#endif
++
++	return;
++}
++
++
++MACHINE_START(ARMADA_XP_AMC, "Marvell Armada XP AMC Board")
++	/* MAINTAINER("MARVELL") */
++	.atag_offset	= 0x00000100,
++	.map_io		= axp_map_io,
++	.init_irq	= axp_init_irq,
++	.timer		= &axp_timer,
++	.init_machine	= axp_amc_init,
++#ifdef CONFIG_FB_DOVE
++	/* reserve memory for LCD */
++	.fixup		= axp_tag_fixup_mem32,
++#endif /* CONFIG_FB_DOVE */
++#ifdef CONFIG_SUSPEND
++	.reserve	= reserve_training_mem,
++#endif /* CONFIG_SUSPEND */
++MACHINE_END
++
++
++/*****************************************************************************
+  * RD NAS BOARD
+  ****************************************************************************/
+ static void __init axp_rd_nas_init(void)
+diff --git a/arch/arm/tools/mach-types b/arch/arm/tools/mach-types
+old mode 100644
+new mode 100755
+index b26d989..692f30c
+--- a/arch/arm/tools/mach-types
++++ b/arch/arm/tools/mach-types
+@@ -3006,8 +3006,8 @@ armada_xp_gp		MACH_ARMADA_XP_GP	ARMADA_XP_GP		3035
+ armada_xp_db		MACH_ARMADA_XP_DB	ARMADA_XP_DB		3036
+ armada_xp_rd_nas	MACH_ARMADA_XP_RD_NAS	ARMADA_XP_RD_NAS	3500
+ armada_xp_rdsrv         MACH_ARMADA_XP_RDSRV    ARMADA_XP_RDSRV         3037
+-armada_370      MACH_ARMADA_370     ARMADA_370      3038
+-dgm3240			MACH_DGM3240		DGM3240			3039
++armada_370              MACH_ARMADA_370         ARMADA_370              3038
++armada_xp_amc           MACH_ARMADA_XP_AMC      ARMADA_XP_AMC		3039
+ htcmega			MACH_HTCMEGA		HTCMEGA			3041
+ tricorder		MACH_TRICORDER		TRICORDER		3042
+ tx28			MACH_TX28		TX28			3043
+-- 
+1.7.9.5
+

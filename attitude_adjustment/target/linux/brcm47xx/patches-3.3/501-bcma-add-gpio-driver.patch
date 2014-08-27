@@ -1,0 +1,22 @@
+--- a/include/linux/bcma/bcma_driver_chipcommon.h
++++ b/include/linux/bcma/bcma_driver_chipcommon.h
+@@ -678,6 +678,8 @@ void bcma_chipco_irq_mask(struct bcma_dr
+ 
+ u32 bcma_chipco_irq_status(struct bcma_drv_cc *cc, u32 mask);
+ 
++#define BCMA_CC_GPIO_LINES	16
++
+ /* Chipcommon GPIO pin access. */
+ u32 bcma_chipco_gpio_in(struct bcma_drv_cc *cc, u32 mask);
+ u32 bcma_chipco_gpio_out(struct bcma_drv_cc *cc, u32 mask, u32 value);
+@@ -687,6 +689,10 @@ u32 bcma_chipco_gpio_intmask(struct bcma
+ u32 bcma_chipco_gpio_polarity(struct bcma_drv_cc *cc, u32 mask, u32 value);
+ u32 bcma_chipco_gpio_pullup(struct bcma_drv_cc *cc, u32 mask, u32 value);
+ u32 bcma_chipco_gpio_pulldown(struct bcma_drv_cc *cc, u32 mask, u32 value);
++static inline int bcma_chipco_gpio_count(void)
++{
++	return BCMA_CC_GPIO_LINES;
++}
+ 
+ /* PMU support */
+ extern void bcma_pmu_init(struct bcma_drv_cc *cc);

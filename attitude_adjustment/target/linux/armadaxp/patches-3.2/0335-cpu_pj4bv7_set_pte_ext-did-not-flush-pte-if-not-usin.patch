@@ -1,0 +1,29 @@
+From c22065b79d854dfa43179d033708daf29250efcb Mon Sep 17 00:00:00 2001
+From: Po-Yu Chuang <pychuang@marvell.com>
+Date: Wed, 17 Oct 2012 10:23:15 +0800
+Subject: [PATCH 335/609] cpu_pj4bv7_set_pte_ext did not flush pte if not
+ using 64KB page
+
+An #else is missing since commit bc0fbc5014847a499a24547339e54134235ff150.
+
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mm/proc-sheeva_pj4bv7.S |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm/mm/proc-sheeva_pj4bv7.S b/arch/arm/mm/proc-sheeva_pj4bv7.S
+index 1936ca3..0b49cfb 100644
+--- a/arch/arm/mm/proc-sheeva_pj4bv7.S
++++ b/arch/arm/mm/proc-sheeva_pj4bv7.S
+@@ -248,6 +248,7 @@ str	r1, [r0]			@ linux version
+ #else
+ 	mcr		p15, 0, r0, c7, c10, 1			@ flush_pte
+ #endif
++#else /* CONFIG_MV_SUPPORT_64KB_PAGE_SIZE */
+ #if defined CONFIG_SHEEVA_ERRATA_ARM_CPU_6043 || defined(CONFIG_SHEEVA_ERRATA_ARM_CPU_6124) || defined(CONFIG_SHEEVA_ERRATA_ARM_CPU_6076)
+ 	mcr		p15, 0, r0, c7, c14, 1			@ clean & invalidate D entry
+ #else
+-- 
+1.7.9.5
+

@@ -1,0 +1,56 @@
+From 3b05a121cad8a7693c18214565a6a9feeea539ba Mon Sep 17 00:00:00 2001
+From: Rami Rosen <rosenr@marvell.com>
+Date: Sun, 26 Aug 2012 11:30:33 +0300
+Subject: [PATCH 277/609] NETA: avoid build warning by adding include
+ <linux/module.h>
+
+Signed-off-by: Rami Rosen <rosenr@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ net/bridge/br_fdb.c |    1 +
+ net/core/mv_nfp.c   |    4 +++-
+ net/ipv6/ip6_fib.c  |    1 +
+ 3 files changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/net/bridge/br_fdb.c b/net/bridge/br_fdb.c
+index d00f65b..043aaef 100644
+--- a/net/bridge/br_fdb.c
++++ b/net/bridge/br_fdb.c
+@@ -12,6 +12,7 @@
+  */
+ 
+ #include <linux/kernel.h>
++#include <linux/module.h>
+ #include <linux/init.h>
+ #include <linux/rculist.h>
+ #include <linux/spinlock.h>
+diff --git a/net/core/mv_nfp.c b/net/core/mv_nfp.c
+index 326427e..3b44107 100644
+--- a/net/core/mv_nfp.c
++++ b/net/core/mv_nfp.c
+@@ -62,7 +62,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+ *******************************************************************************/
+ /* mv_nfp.c */
+-#include "linux/mv_nfp.h"
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/mv_nfp.h>
+ 
+ struct nfp_core_ops *nfp_core_p = NULL;
+ struct nfp_hook_ops *nfp_mgr_p = NULL;
+diff --git a/net/ipv6/ip6_fib.c b/net/ipv6/ip6_fib.c
+index 912585e..87eefc3 100644
+--- a/net/ipv6/ip6_fib.c
++++ b/net/ipv6/ip6_fib.c
+@@ -18,6 +18,7 @@
+  * 				routing table.
+  * 	Ville Nuorvala:		Fixed routing subtrees.
+  */
++#include <linux/module.h>
+ #include <linux/errno.h>
+ #include <linux/types.h>
+ #include <linux/net.h>
+-- 
+1.7.9.5
+

@@ -1,0 +1,57 @@
+From 7a8d86e3384cc0458acbfb824b2bd633d5c10800 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Tue, 16 Oct 2012 09:13:13 -0400
+Subject: [PATCH 322/609] NETA: Fix mvNetaPowerUp call during resume operation
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/boardEnv/mvBoardEnvLib.c      |    4 ++++
+ .../armada_xp_family/boardEnv/mvBoardEnvLib.h      |    1 +
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |    4 +---
+ 3 files changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+index c52b9ba..9f58ddd 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+@@ -321,6 +321,10 @@ MV_BOOL mvBoardIsPortInGmii(MV_U32 ethPortNum)
+ 		return MV_FALSE;
+ }
+ 
++MV_BOOL mvBoardIsPortInRgmii(MV_U32 ethPortNum)
++{
++	return !mvBoardIsPortInGmii(ethPortNum);
++}
+ 
+ /*******************************************************************************
+ * mvBoardPhyAddrGet - Get the phy address
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
+index fd3611c..b4d457d 100755
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
+@@ -350,6 +350,7 @@ MV_U16 mvBoardRevGet(MV_VOID);
+ MV_STATUS mvBoardNameGet(char *pNameBuff);
+ MV_BOOL mvBoardIsPortInSgmii(MV_U32 ethPortNum);
+ MV_BOOL mvBoardIsPortInGmii(MV_U32 ethPortNum);
++MV_BOOL mvBoardIsPortInRgmii(MV_U32 ethPortNum);
+ MV_32 mvBoardPhyAddrGet(MV_U32 ethPortNum);
+ MV_32 mvBoardPhyLinkCryptPortAddrGet(MV_U32 ethPortNum);
+ 
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 13a89ef..bea4973 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -3121,9 +3121,7 @@ int mv_eth_port_resume(int port)
+ 		printk(KERN_ERR "%s: port %d is not suspend.\n", __func__, port);
+ 		return -1;
+ 	}
+-#if !defined(CONFIG_ARCH_ARMADA370)
+-	mvNetaPortPowerUp(port, mvBoardIsPortInSgmii(port), !mvBoardIsPortInGmii(port));
+-#endif
++	mvNetaPortPowerUp(port, mvBoardIsPortInSgmii(port), mvBoardIsPortInRgmii(port));
+ 
+ 	mv_eth_win_init(port);
+ 
+-- 
+1.7.9.5
+

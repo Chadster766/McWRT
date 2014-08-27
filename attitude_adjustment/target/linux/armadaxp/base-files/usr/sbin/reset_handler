@@ -1,0 +1,15 @@
+#!/bin/sh
+
+mode=$1
+if [ $mode = "reboot" ]
+then
+	logger reboot
+	/sbin/reboot
+elif [ $mode = "factory" ]
+then
+	logger factory_reset
+	/sbin/firstboot jffs2reset
+	sleep 2
+	/sbin/reboot
+fi
+

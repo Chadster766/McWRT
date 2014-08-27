@@ -1,0 +1,83 @@
+From 43dc782a507f3dbfae9bcde9c279267684ca632f Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Thu, 13 Dec 2012 19:43:46 +0200
+Subject: [PATCH 475/609] Armada300,mm: Align arch/arm/mm files.
+
+Change-Id: I38e79e3654cb694a85bea01ba02c682ae603577d
+Signed-off-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mm/Kconfig             |    8 ++++++++
+ arch/arm/mm/cache-feroceon-l2.c |    4 ++--
+ arch/arm/mm/proc-feroceon.S     |   16 ++++++++++++++++
+ 3 files changed, 26 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
+index c140995..a2c90a2 100644
+--- a/arch/arm/mm/Kconfig
++++ b/arch/arm/mm/Kconfig
+@@ -1277,3 +1277,11 @@ config ARCH_HAS_BARRIERS
+ 	help
+ 	  This option allows the use of custom mandatory barriers
+ 	  included via the mach/barriers.h file.
++
++config ARM_ARMV5_L2_CACHE_COHERENCY_FIX
++	bool "Enable L2 coherency problem fix on ARMv5"
++	depends on OUTER_CACHE && CPU_CACHE_VIVT
++	default y
++	help
++	Fixes coherency problems on ARM systems that have
++	a non-disableable VIVT L1 cache and a PIPT L2 one.
+diff --git a/arch/arm/mm/cache-feroceon-l2.c b/arch/arm/mm/cache-feroceon-l2.c
+index e0b0e7a..daad0a1 100644
+--- a/arch/arm/mm/cache-feroceon-l2.c
++++ b/arch/arm/mm/cache-feroceon-l2.c
+@@ -129,11 +129,11 @@ static inline void l2_inv_all(void)
+  * inclusive start and end addresses.
+  */
+ #define CACHE_LINE_SIZE		32
+-#define MAX_RANGE_SIZE		1024
++#define MAX_RANGE_SIZE		PAGE_SIZE
+ 
+ static int l2_wt_override;
+ 
+-static unsigned long calc_range_end(unsigned long start, unsigned long end)
++static inline unsigned long calc_range_end(unsigned long start, unsigned long end)
+ {
+ 	unsigned long range_end;
+ 
+diff --git a/arch/arm/mm/proc-feroceon.S b/arch/arm/mm/proc-feroceon.S
+index 8a6c2f7..c7ee0fe 100644
+--- a/arch/arm/mm/proc-feroceon.S
++++ b/arch/arm/mm/proc-feroceon.S
+@@ -116,11 +116,27 @@ ENTRY(cpu_feroceon_reset)
+  *
+  * Called with IRQs disabled
+  */
++#ifdef CONFIG_JTAG_DEBUG
++support_wait_for_interrupt_address:
++        .word   support_wait_for_interrupt
++#endif
++
+ 	.align	5
+ ENTRY(cpu_feroceon_do_idle)
++#ifdef CONFIG_JTAG_DEBUG
++        ldr     r0, support_wait_for_interrupt_address
++        ldr     r0, [r0]
++        cmp     r0, #1    /* check if the device doesn't support wait for interrupt */
++        bne     1f        /* if yes, then go out */
++#endif
+ 	mov	r0, #0
++	mrc	p15, 0, r1, c1, c0, 0		@ Read control register
+ 	mcr	p15, 0, r0, c7, c10, 4		@ Drain write buffer
++	bic	r2, r1, #1 << 12
++	mcr	p15, 0, r2, c1, c0, 0		@ Disable I cache
+ 	mcr	p15, 0, r0, c7, c0, 4		@ Wait for interrupt
++	mcr	p15, 0, r1, c1, c0, 0		@ Restore ICache enable
++1:
+ 	mov	pc, lr
+ 
+ /*
+-- 
+1.7.9.5
+

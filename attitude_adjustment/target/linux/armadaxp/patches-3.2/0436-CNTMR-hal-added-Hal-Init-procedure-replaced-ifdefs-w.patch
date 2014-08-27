@@ -1,0 +1,152 @@
+From 767d6e9147aad46ec0a0363bdb61b86ce40512b9 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Mon, 12 Nov 2012 10:29:37 +0200
+Subject: [PATCH 436/609] CNTMR hal : added Hal Init procedure & replaced
+ ifdefs with mvCtrlDevFamilyIdGet to detect boards
+
+Change-Id: Ia0b1dc66f3d9a5e4b50a4c8e24815be8ef901091
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c |   64 +++++++++++++--------------
+ arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h |    8 ++++
+ 2 files changed, 38 insertions(+), 34 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
+index bd2b709..d0521a5 100755
+--- a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
++++ b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
+@@ -81,12 +81,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+ #define TIMER_GLOBAL_BIT(timer)		((timer == MAX_GLOBAL_TIMER) ? (1<<31) : (1 << (timer * 8)))
+ 
+-
+-
+ #define CNTMR_EVENTS_STATUS_REG_PRIVATE		(MV_CPUIF_LOCAL_REGS_OFFSET + 0x68)
+ #define TIMER_PRIVATE_BIT(timer)	(1 << ((timer - FIRST_PRIVATE_TIMER) * 8))
+ 
++static MV_CNTMR_HAL_DATA cntmrHalData;
+ 
++MV_STATUS mvCntmrHalInit(MV_CNTMR_HAL_DATA *halData)
++{
++	mvOsMemcpy(&cntmrHalData, halData, sizeof(MV_CNTMR_HAL_DATA));
++	return MV_OK;
++}
+ /*******************************************************************************
+ * mvCntmrLoad -
+ *
+@@ -206,31 +210,25 @@ MV_STATUS mvCntmrCtrlSet(MV_U32 countNum, MV_CNTMR_CTRL *pCtrl)
+ 
+ 	/* read control register */
+ 	cntmrCtrl = MV_REG_READ(CNTMR_CTRL_REG(countNum));
+-#if defined(MV88F78X60) || defined(MV88F78X60_A0) ||  defined(MV88F78X60_B0)
+-	cntmrCtrl &= ~((CTCR_ARM_TIMER_EN_MASK(countNum)) | (CTCR_ARM_TIMER_AUTO_MASK(countNum)));
+-#endif
+ 	if (pCtrl->enable)	/* enable counter\timer */
+ 		cntmrCtrl |= (CTCR_ARM_TIMER_EN(countNum));
+-#if !defined(MV88F78X60) && !defined(MV88F78X60_A0) && !defined(MV88F78X60_B0)
+ 	else			/* disable counter\timer */
+ 		cntmrCtrl &= ~(CTCR_ARM_TIMER_EN(countNum));
+-#endif
+ 
+ 	if (pCtrl->autoEnable)	/* Auto mode */
+ 		cntmrCtrl |= (CTCR_ARM_TIMER_AUTO_EN(countNum));
+-#if defined(MV88F78X60) || defined(MV88F78X60_A0) ||  defined(MV88F78X60_B0)
+-	cntmrCtrl &= ~((CTCR_ARM_TIMER_RATIO_MASK(countNum)) | (CTCR_ARM_TIMER_25MhzFRQ_MASK(countNum)));
+-
+-	cntmrCtrl |= (pCtrl->Ratio & 0x7) << (CTCR_ARM_TIMER_RATIO_OFFS(countNum));
+-
+-	if (pCtrl->enable_25Mhz)	/* 25Mhz enable */
+-		cntmrCtrl |= (CTCR_ARM_TIMER_25MhzFRQ_EN(countNum));
+-#else
+ 	else			/* no auto mode */
+ 		cntmrCtrl &= ~(CTCR_ARM_TIMER_AUTO_EN(countNum));
+-#endif
+ 
++	if (cntmrHalData.ctrlFamily==MV_78XX0) {
++		cntmrCtrl &= ~(CTCR_ARM_TIMER_RATIO_MASK(countNum));
++		cntmrCtrl |= (pCtrl->Ratio & 0x7) << (CTCR_ARM_TIMER_RATIO_OFFS(countNum));
+ 
++		if (pCtrl->enable_25Mhz)	/* 25Mhz enable */
++			cntmrCtrl |= (CTCR_ARM_TIMER_25MhzFRQ_EN(countNum));
++		else
++			cntmrCtrl &= ~(CTCR_ARM_TIMER_25MhzFRQ_EN(countNum));
++	}
+ 
+ 	MV_REG_WRITE(CNTMR_CTRL_REG(countNum), cntmrCtrl);
+ 
+@@ -277,11 +275,11 @@ MV_STATUS mvCntmrCtrlGet(MV_U32 countNum, MV_CNTMR_CTRL *pCtrl)
+ 		pCtrl->autoEnable = MV_TRUE;
+ 	else
+ 		pCtrl->autoEnable = MV_FALSE;
+-#if defined(MV88F78X60) || defined(MV88F78X60_A0) ||  defined(MV88F78X60_B0)
+-	pCtrl->Ratio = (cntmrCtrl & (CTCR_ARM_TIMER_RATIO_MASK(countNum))) / (1 << (CTCR_ARM_TIMER_RATIO_OFFS(countNum)));
+-
+-	pCtrl->enable_25Mhz = (cntmrCtrl & CTCR_ARM_TIMER_25MhzFRQ_MASK(countNum)) ? MV_TRUE : MV_FALSE;
+-#endif
++	if (cntmrHalData.ctrlFamily==MV_78XX0)
++	{
++		pCtrl->Ratio = (cntmrCtrl & (CTCR_ARM_TIMER_RATIO_MASK(countNum))) / (1 << (CTCR_ARM_TIMER_RATIO_OFFS(countNum)));
++		pCtrl->enable_25Mhz = (cntmrCtrl & CTCR_ARM_TIMER_25MhzFRQ_MASK(countNum)) ? MV_TRUE : MV_FALSE;
++	}
+ 	return MV_OK;
+ }
+ 
+@@ -447,17 +445,15 @@ MV_STATUS mvCntmrIntClear(MV_U32 cntmrNum)
+ *******************************************************************************/
+ MV_U32 mvCntmrFrqGet(MV_U32 cntmrNum)
+ {
+-#if defined(MV88F78X60) || defined(MV88F78X60_A0) ||  defined(MV88F78X60_B0)
+-                if (INVALID_CNTMR(cntmrNum))
+-                                return MV_ERROR;
+-                {
+-                                MV_U32 cntmrCtrl;
+-                                cntmrCtrl = MV_REG_READ(CNTMR_CTRL_REG(cntmrNum));
+-
+-
+-                                if (cntmrCtrl & CTCR_ARM_TIMER_25MhzFRQ_MASK(cntmrNum))
+-                                                return MV_BOARD_REFCLK_25MHZ;
+-                }
+-#endif
+-                return mvCpuL2ClkGet();
++	if (cntmrHalData.ctrlFamily==MV_78XX0)
++	{
++		if (INVALID_CNTMR(cntmrNum))
++			return MV_ERROR;
++
++		MV_U32 cntmrCtrl;
++		cntmrCtrl = MV_REG_READ(CNTMR_CTRL_REG(cntmrNum));
++		if (cntmrCtrl & CTCR_ARM_TIMER_25MhzFRQ_MASK(cntmrNum))
++			return MV_BOARD_REFCLK_25MHZ;
++	}
++	return mvCpuL2ClkGet();
+ }
+diff --git a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h
+index 899d09f..203ca9a 100755
+--- a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h
++++ b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h
+@@ -75,6 +75,12 @@ extern "C" {
+ #include "ctrlEnv/mvCtrlEnvSpec.h"
+ #include "mvSysCntmrConfig.h"
+ 
++typedef struct {
++	MV_U16		ctrlModel;
++	MV_U16		ctrlRev;
++	MV_U32		ctrlFamily;
++} MV_CNTMR_HAL_DATA;
++
+ /* This enumerator describe counters\watchdog numbers       */
+ 	typedef enum _mvCntmrID {
+ 		TIMER0 = 0,		/* Global counter 0 */
+@@ -113,6 +119,8 @@ extern "C" {
+ 
+ /* Functions */
+ 
++	MV_STATUS   mvCntmrHalInit(MV_CNTMR_HAL_DATA *halData);
++
+ /* Load an init Value to a given counter/timer */
+ 	MV_STATUS mvCntmrLoad(MV_U32 countNum, MV_U32 value);
+ 
+-- 
+1.7.9.5
+

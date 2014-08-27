@@ -1,0 +1,876 @@
+From 600814aa222ba8126980b3222e4e7f2c7869fb5d Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Sun, 4 Mar 2012 23:46:03 +0200
+Subject: [PATCH 074/609] HotPlug and power management support for SMP -
+ originaly by Nadav H.
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/kernel/head.S                         |   15 +
+ arch/arm/kernel/smp.c                          |    4 +
+ arch/arm/mach-armadaxp/include/mach/armadaxp.h |    3 +
+ arch/arm/mach-armadaxp/platsmp.c               |    9 +-
+ arch/arm/mach-armadaxp/sysmap.c                |    3 +
+ arch/arm/plat-armada/Makefile                  |    4 +-
+ arch/arm/plat-armada/cpuidle.c                 |  401 +++++++++++++++++-------
+ arch/arm/plat-armada/cpuidle.h                 |   24 ++
+ arch/arm/plat-armada/hotplug.c                 |   49 ++-
+ arch/arm/plat-armada/power.h                   |   22 --
+ 10 files changed, 365 insertions(+), 169 deletions(-)
+ create mode 100644 arch/arm/plat-armada/cpuidle.h
+ delete mode 100644 arch/arm/plat-armada/power.h
+
+diff --git a/arch/arm/kernel/head.S b/arch/arm/kernel/head.S
+index 08c82fd..fad477c 100644
+--- a/arch/arm/kernel/head.S
++++ b/arch/arm/kernel/head.S
+@@ -302,6 +302,7 @@ ENTRY(secondary_startup)
+ 	 * the processor type - there is no need to check the machine type
+ 	 * as it has already been validated by the primary processor.
+ 	 */
++
+ 	setmode	PSR_F_BIT | PSR_I_BIT | SVC_MODE, r9
+ 	mrc	p15, 0, r9, c0, c0		@ get processor id
+ 	bl	__lookup_processor_type
+@@ -310,6 +311,10 @@ ENTRY(secondary_startup)
+  THUMB( it	eq )		@ force fixup-able long branch encoding
+ 	beq	__error_p
+ 
++
++
++
++
+ 	/*
+ 	 * Use the page tables supplied from  __cpu_up.
+ 	 */
+@@ -333,6 +338,16 @@ ENDPROC(secondary_startup)
+ ENTRY(__secondary_switched)
+ 	ldr	sp, [r7, #4]			@ get secondary_data.stack
+ 	mov	fp, #0
++/*
++	movw	r3, #33092
++	movt	r3, #53249
++	movt	r3, #64433
++	movw	r2, #0
++	movt	r2, #0
++	str	r2, [r3, #0]
++*/
++
++
+ 	b	secondary_start_kernel
+ ENDPROC(__secondary_switched)
+ 
+diff --git a/arch/arm/kernel/smp.c b/arch/arm/kernel/smp.c
+index 4c18757..2fc5fbb 100644
+--- a/arch/arm/kernel/smp.c
++++ b/arch/arm/kernel/smp.c
+@@ -50,6 +50,7 @@
+ struct secondary_data secondary_data;
+ 
+ enum ipi_msg_type {
++	IPI_WAKE = 0,
+ 	IPI_TIMER = 2,
+ 	IPI_RESCHEDULE,
+ 	IPI_CALL_FUNC,
+@@ -597,6 +598,9 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
+ 		__inc_irq_stat(cpu, ipi_irqs[ipinr - IPI_TIMER]);
+ 
+ 	switch (ipinr) {
++	case IPI_WAKE:
++		break;
++
+ 	case IPI_TIMER:
+ 		irq_enter();
+ 		ipi_timer();
+diff --git a/arch/arm/mach-armadaxp/include/mach/armadaxp.h b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
+index 401718c..7ccec30 100644
+--- a/arch/arm/mach-armadaxp/include/mach/armadaxp.h
++++ b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
+@@ -177,6 +177,7 @@
+ #define BOOTROM_VIRT_BASE		0xFED00000
+ #define BOOTROM_SIZE			_1M
+ 
++
+ #define PMU_SCRATCH_PHYS_BASE		0xF4700000
+ #define PMU_SCRATCH_VIRT_BASE		0xFEE00000
+ #define PMU_SCRATCH_SIZE		_1M
+@@ -217,6 +218,8 @@
+ #endif
+ #define AXP_CPU_RESUME_CTRL_REG		(AXP_BRIDGE_VIRT_BASE | 0x988)
+ #define AXP_CPU_RESET_REG(cpu)		(AXP_BRIDGE_VIRT_BASE | (0x800+(cpu)*8))
++#define AXP_CPU_RESET_OFFS		0
++
+ #define AXP_L2_CLEAN_WAY_REG		(INTER_REGS_BASE | 0x87BC) 
+ #define AXP_L2_MNTNC_STAT_REG		(INTER_REGS_BASE | 0x8704)
+ #define AXP_SNOOP_FILTER_PHYS_REG	(INTER_REGS_PHYS_BASE | 0x21020)
+diff --git a/arch/arm/mach-armadaxp/platsmp.c b/arch/arm/mach-armadaxp/platsmp.c
+index 1e431e4..ea88dc3 100644
+--- a/arch/arm/mach-armadaxp/platsmp.c
++++ b/arch/arm/mach-armadaxp/platsmp.c
+@@ -27,6 +27,7 @@ extern void second_cpu_init(void);
+ extern void second_cpu_msi_init(void);
+ extern MV_CPU_DEC_WIN* mv_sys_map(void);
+ extern unsigned long mv_cpu_count;
++extern void armadaxp_smp_restore_idle(unsigned int processor_id);
+ 
+ unsigned int master_cpu_id  = 0;
+ unsigned int group_cpu_mask = ((1 << NR_CPUS) - 1);
+@@ -85,6 +86,7 @@ static DEFINE_SPINLOCK(boot_lock);
+ void __cpuinit platform_secondary_init(unsigned int cpu)
+ {
+ 	trace_hardirqs_off();
++	armadaxp_smp_restore_idle(cpu);
+ 
+ 	/*
+ 	 * if any interrupts are already enabled for the primary
+@@ -113,6 +115,7 @@ void __cpuinit platform_secondary_init(unsigned int cpu)
+ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
+ {
+ 	unsigned long timeout;
++	unsigned int test;
+ 
+ 	/*
+ 	 * set synchronisation state between this boot processor
+@@ -132,6 +135,9 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
+ 	pen_release = get_hw_cpu_id(cpu);
+ 	flush_cache_all();
+ 
++	/* send ipi to wake cpu in case it in offline state */
++	axp_smp_cross_call(cpumask_of(cpu), 0);
++
+ 	timeout = jiffies + (10 * HZ);
+ 	while (time_before(jiffies, timeout)) {
+ 		smp_rmb();
+@@ -252,7 +258,8 @@ static void __init wakeup_cpus(void)
+ 	for(cpu_id = master_cpu_id + 1; cpu_id < (master_cpu_id + ncores); cpu_id++){
+ 		// TODO YY - check that the core is activated in coherency fabric
+ 		printk("SMP: CPU %d Waking up CPU %d\n", master_cpu_id, cpu_id);
+-		MV_REG_WRITE(AXP_CPU_RESET_REG(cpu_id), 0x0);
++		val = MV_REG_READ(AXP_CPU_RESET_REG(cpu_id)) & ~(1 << AXP_CPU_RESET_OFFS);
++		MV_REG_WRITE(AXP_CPU_RESET_REG(cpu_id), val);
+ 	}
+ 
+ 	mb();
+diff --git a/arch/arm/mach-armadaxp/sysmap.c b/arch/arm/mach-armadaxp/sysmap.c
+index d4c0cfd..cfccc54 100644
+--- a/arch/arm/mach-armadaxp/sysmap.c
++++ b/arch/arm/mach-armadaxp/sysmap.c
+@@ -47,6 +47,9 @@ struct map_desc  MEM_TABLE[] =	{
+ 	{ LEGACY_NAND_VIRT_BASE,	__phys_to_pfn(LEGACY_NAND_PHYS_BASE),	LEGACY_NAND_SIZE, 	MT_DEVICE},
+ #endif
+ 	{ SPI_CS0_VIRT_BASE,		__phys_to_pfn(SPI_CS0_PHYS_BASE),	SPI_CS0_SIZE,		MT_DEVICE},
++
++	{ BOOTROM_VIRT_BASE,		__phys_to_pfn(BOOTROM_PHYS_BASE),	BOOTROM_SIZE,		MT_DEVICE},
++
+ 	{ CRYPT_ENG_VIRT_BASE(0),	__phys_to_pfn(CRYPT_ENG_PHYS_BASE(0)),	CRYPT_ENG_SIZE,		MT_DEVICE},
+ #if (CONFIG_MV_CESA_CHANNELS > 1)
+ 	{ CRYPT_ENG_VIRT_BASE(1),	__phys_to_pfn(CRYPT_ENG_PHYS_BASE(1)),	CRYPT_ENG_SIZE,		MT_DEVICE},
+diff --git a/arch/arm/plat-armada/Makefile b/arch/arm/plat-armada/Makefile
+index 21d1239..0f4132c 100644
+--- a/arch/arm/plat-armada/Makefile
++++ b/arch/arm/plat-armada/Makefile
+@@ -9,7 +9,7 @@ endif
+ # This will never compile, because DUMMY will never by defined.
+ obj-$(DUMMY)   				:= dummy.o
+ 
+-obj-$(CONFIG_SHEEVA_DEEP_IDLE)		+= cpuidle.o armadaxp_suspend.o power.o
+-obj-$(CONFIG_HOTPLUG_CPU)               += hotplug.o power.o  cpuidle.o armadaxp_suspend.o
++obj-$(CONFIG_SHEEVA_DEEP_IDLE)		+= cpuidle.o armadaxp_suspend.o
++obj-$(CONFIG_HOTPLUG_CPU)               += hotplug.o cpuidle.o armadaxp_suspend.o
+ obj-$(CONFIG_ARCH_ARMADA_XP)		+= pmu.o
+ obj-$(CONFIG_PCI_MSI)			+= msi.o
+diff --git a/arch/arm/plat-armada/cpuidle.c b/arch/arm/plat-armada/cpuidle.c
+index ac26905..ba43611 100644
+--- a/arch/arm/plat-armada/cpuidle.c
++++ b/arch/arm/plat-armada/cpuidle.c
+@@ -27,52 +27,41 @@
+ #include <linux/export.h>
+ #include <asm/sections.h>
+ 
++#include <../cpuidle.h>
+ #include "ctrlEnv/sys/mvCpuIfRegs.h"
++#include "ctrlEnv/mvCtrlEnvLib.h"
++#include "ctrlEnv/sys/mvCpuIf.h"
+ #include "mvOs.h"
+-#include "../power.h"
+ 
+-unsigned long suspend_phys_addr(void * physaddr)
++extern int armadaxp_cpu_resume(void);
++extern int axp_secondary_startup(void);
++extern int secondary_startup(void);
++
++#ifdef CONFIG_ARMADA_SUPPORT_DEEP_IDLE_FAST_EXIT
++extern int armadaxp_deep_idle_exit(void);
++extern unsigned char armadaxp_deep_idle_exit_start;
++extern unsigned char armadaxp_deep_idle_exit_end;
++#endif
++
++static void hw_sem_lock(void)
+ {
+-        return virt_to_phys(physaddr);
+-}
++	unsigned int cpu = hard_smp_processor_id();
+ 
+-extern u32 identity_page_table_phys;
++	while(cpu != (readb(INTER_REGS_BASE + MV_CPU_HW_SEM_OFFSET) & 0xf));
++}
+ 
+-/*
+-static inline void identity_mapping_add(pgd_t *pgd, unsigned long start,
+-					unsigned long end)
++static void hw_sem_unlock(void)
+ {
+-        unsigned long addr, prot;
+-        pmd_t *pmd;
+-
+-        prot = PMD_TYPE_SECT | PMD_SECT_AP_WRITE;
+-
+-        for (addr = start & PGDIR_MASK; addr < end;) {
+-                pmd = pmd_offset(pgd + pgd_index(addr), addr);
+-                pmd[0] = __pmd(addr | prot);
+-                addr += SECTION_SIZE;
+-                pmd[1] = __pmd(addr | prot);
+-                addr += SECTION_SIZE;
+-                flush_pmd_entry(pmd);
+-                outer_clean_range(__pa(pmd), __pa(pmd + 1));
+-        }
++	writeb(0xff, INTER_REGS_BASE + MV_CPU_HW_SEM_OFFSET);
+ }
+ 
+-static inline void identity_mapping_del(pgd_t *pgd, unsigned long start,
+-					unsigned long end)
++unsigned long suspend_phys_addr(void * physaddr)
+ {
+-        unsigned long addr;
+-        pmd_t *pmd;
+-
+-        for (addr = start & PGDIR_MASK; addr < end; addr += PGDIR_SIZE) {
+-                pmd = pmd_offset(pgd + pgd_index(addr), addr);
+-                pmd[0] = __pmd(0);
+-                pmd[1] = __pmd(0);
+-                clean_pmd_entry(pmd);
+-                outer_clean_range(__pa(pmd), __pa(pmd + 1));
+-        }
++        return virt_to_phys(physaddr);
+ }
+-*/
++
++extern u32 identity_page_table_phys;
++
+ /*
+  * Allocate initial page tables to allow the CPU to
+  * enable the MMU safely.  This essentially means a set
+@@ -94,17 +83,26 @@ static int build_identity_page_table(void)
+ 	return 0;
+ }
+ 
+-int pm_disable = 0;
+-static int __init pm_enable_setup(char *__unused)
++int pm_mode = 0;
++int pm_support = 0;
++static int __init pm_enable_setup(char *str)
+ {
+-	pm_disable = 1;
++	if (!strncmp(str, "wfi", 3))
++		pm_support = 1;
++	else if (!strncmp(str, "idle", 4))
++		pm_support = 2;
++	else if (!strncmp(str, "snooze", 6))
++		pm_support = 3;
++	else
++		pm_support = 0;
++
+ 	return 1;
+ }
+ 
+-__setup("pm_disable", pm_enable_setup);
++__setup("pm_enable=", pm_enable_setup);
+ 
+ 
+-#define ARMADAXP_IDLE_STATES	2
++#define ARMADAXP_IDLE_STATES	3
+ 
+ struct cpuidle_driver armadaxp_idle_driver = {
+ 	.name =         "armadaxp_idle",
+@@ -113,23 +111,171 @@ struct cpuidle_driver armadaxp_idle_driver = {
+ 
+ DEFINE_PER_CPU(struct cpuidle_device, armadaxp_cpuidle_device);
+ 
+-static void armadaxp_smp_wfi(void)
++u32 cib_ctrl_cfg_reg;
++
++extern int armadaxp_cpu_suspend(void);
++void armadaxp_fabric_setup_deepIdle(void)
++{
++	MV_U32  reg;
++	MV_U32	i;
++
++	/* Enable L2 & Fabric powerdown in Deep-Idle mode - Fabric */
++	reg = MV_REG_READ(MV_L2C_NFABRIC_PM_CTRL_CFG_REG);
++	reg |= MV_L2C_NFABRIC_PM_CTRL_CFG_PWR_DOWN;
++	MV_REG_WRITE(MV_L2C_NFABRIC_PM_CTRL_CFG_REG, reg);
++#if 0
++#ifdef  CONFIG_ARCH_ARMADA_XP
++	for (i=0; i<4; i++) {
++#else
++	for (i=0; i<1; i++) {
++#endif
++		/* Enable L2 & Fabric powerdown in Deep-Idle mode - Per CPUs */
++		reg = MV_REG_READ(PM_CONTROL_AND_CONFIG_REG(i));
++		reg |= PM_CONTROL_AND_CONFIG_L2_PWDDN;
++		MV_REG_WRITE(PM_CONTROL_AND_CONFIG_REG(i), reg);
++	}
++#endif
++	/* Set the resume control registers to do nothing */
++	MV_REG_WRITE(0x20980, 0);
++	MV_REG_WRITE(0x20988, 0);
++}
++
++#ifdef CONFIG_HOTPLUG_CPU
++void armadaxp_fabric_prepare_hotplug(void)
++{
++	unsigned int processor_id = hard_smp_processor_id();
++	MV_U32  reg;
++
++	MV_REG_WRITE(PM_CPU_BOOT_ADDR_REDIRECT(processor_id), virt_to_phys(axp_secondary_startup));
++
++
++	reg = MV_REG_READ(PM_STATUS_AND_MASK_REG(processor_id));
++	/* set WaitMask fields */
++	reg |= PM_STATUS_AND_MASK_CPU_IDLE_WAIT;
++	/* Enable wakeup events */
++	reg |= PM_STATUS_AND_MASK_IRQ_WAKEUP | PM_STATUS_AND_MASK_FIQ_WAKEUP;
++//	reg |= PM_STATUS_AND_MASK_DBG_WAKEUP;
++
++	/* Mask interrupts */
++	reg |= PM_STATUS_AND_MASK_IRQ_MASK | PM_STATUS_AND_MASK_FIQ_MASK;
++
++	MV_REG_WRITE(PM_STATUS_AND_MASK_REG(processor_id), reg);
++
++	/* Disable delivering of other CPU core cache maintenance instruction,
++	 * TLB, and Instruction synchronization to the CPU core
++	 */
++	/* TODO */
++#ifdef CONFIG_CACHE_AURORA_L2
++	/* ask HW to power down the L2 Cache if possible */
++	reg = MV_REG_READ(PM_CONTROL_AND_CONFIG_REG(processor_id));
++	reg |= PM_CONTROL_AND_CONFIG_L2_PWDDN;
++	MV_REG_WRITE(PM_CONTROL_AND_CONFIG_REG(processor_id), reg);
++#endif
++
++	/* request power down */
++	reg = MV_REG_READ(PM_CONTROL_AND_CONFIG_REG(processor_id));
++	reg |= PM_CONTROL_AND_CONFIG_PWDDN_REQ;
++	MV_REG_WRITE(PM_CONTROL_AND_CONFIG_REG(processor_id), reg);
++}
++#endif
++
++void armadaxp_fabric_prepare_deepIdle(void)
++{
++	unsigned int processor_id = hard_smp_processor_id();
++	MV_U32  reg;
++
++	MV_REG_WRITE(PM_CPU_BOOT_ADDR_REDIRECT(processor_id), virt_to_phys(armadaxp_cpu_resume));
++
++	reg = MV_REG_READ(PM_STATUS_AND_MASK_REG(processor_id));
++	/* set WaitMask fields */
++	reg |= PM_STATUS_AND_MASK_CPU_IDLE_WAIT;
++	/* Enable wakeup events */
++	reg |= PM_STATUS_AND_MASK_IRQ_WAKEUP | PM_STATUS_AND_MASK_FIQ_WAKEUP;
++//	reg |= PM_STATUS_AND_MASK_DBG_WAKEUP;
++
++	/* Mask interrupts */
++	reg |= PM_STATUS_AND_MASK_IRQ_MASK | PM_STATUS_AND_MASK_FIQ_MASK;
++
++	MV_REG_WRITE(PM_STATUS_AND_MASK_REG(processor_id), reg);
++
++	/* Disable delivering of other CPU core cache maintenance instruction,
++	 * TLB, and Instruction synchronization to the CPU core
++	 */
++	/* TODO */
++#ifdef CONFIG_CACHE_AURORA_L2
++	if (pm_mode > 2) {
++		/* ask HW to power down the L2 Cache if possible */
++		reg = MV_REG_READ(PM_CONTROL_AND_CONFIG_REG(processor_id));
++		reg |= PM_CONTROL_AND_CONFIG_L2_PWDDN;
++		MV_REG_WRITE(PM_CONTROL_AND_CONFIG_REG(processor_id), reg);
++	}
++#endif
++	/* request power down */
++	reg = MV_REG_READ(PM_CONTROL_AND_CONFIG_REG(processor_id));
++	reg |= PM_CONTROL_AND_CONFIG_PWDDN_REQ;
++	MV_REG_WRITE(PM_CONTROL_AND_CONFIG_REG(processor_id), reg);
++}
++
++void armadaxp_fabric_restore_deepIdle(void)
+ {
+ 	unsigned int processor_id = hard_smp_processor_id();
+-	/* prepare for WFI */
+-	armadaxp_smp_prepare_idle(processor_id);
+-	asm volatile(
+-		"       mcr     p15, 0, %0, c7, c10, 4  @ @ DWB - WFI may enter a low-power mode\n"
+-		"       mcr     p15, 0, %0, c7, c0, 4   @ wait for interrupt\n"
+-#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_4742
+-			"	mcr     p15, 0, %0, c7, c10, 4          @barrier\n"
++	MV_U32  reg;
++
++	/* cancel request power down */
++	reg = MV_REG_READ(PM_CONTROL_AND_CONFIG_REG(processor_id));
++	reg &= ~PM_CONTROL_AND_CONFIG_PWDDN_REQ;
++	MV_REG_WRITE(PM_CONTROL_AND_CONFIG_REG(processor_id), reg);
++
++#ifdef CONFIG_CACHE_AURORA_L2
++	/* cancel ask HW to power down the L2 Cache if possible */
++	reg = MV_REG_READ(PM_CONTROL_AND_CONFIG_REG(processor_id));
++	reg &= ~PM_CONTROL_AND_CONFIG_L2_PWDDN;
++	MV_REG_WRITE(PM_CONTROL_AND_CONFIG_REG(processor_id), reg);
++#endif
++	/* cancel Disable delivering of other CPU core cache maintenance instruction,
++	 * TLB, and Instruction synchronization to the CPU core
++	 */
++	/* TODO */
++
++	/* cancel Enable wakeup events */
++	reg = MV_REG_READ(PM_STATUS_AND_MASK_REG(processor_id));
++	reg &= ~(PM_STATUS_AND_MASK_IRQ_WAKEUP | PM_STATUS_AND_MASK_FIQ_WAKEUP);
++	reg &= ~PM_STATUS_AND_MASK_CPU_IDLE_WAIT;
++	reg &= ~PM_STATUS_AND_MASK_SNP_Q_EMPTY_WAIT;
++//	reg &= ~PM_STATUS_AND_MASK_DBG_WAKEUP;
++
++	/* Mask interrupts */
++	reg &= ~(PM_STATUS_AND_MASK_IRQ_MASK | PM_STATUS_AND_MASK_FIQ_MASK);
++	MV_REG_WRITE(PM_STATUS_AND_MASK_REG(processor_id), reg);
++
++#if defined(CONFIG_AURORA_IO_CACHE_COHERENCY)
++	/* cancel Disable delivery of snoop requests to the CPU core by setting */
++	hw_sem_lock();
++	reg = MV_REG_READ(MV_COHERENCY_FABRIC_CTRL_REG);
++	reg |= 1 << (24 + processor_id);
++	MV_REG_WRITE(MV_COHERENCY_FABRIC_CTRL_REG, reg);
++	MV_REG_READ(MV_COHERENCY_FABRIC_CTRL_REG);
++	hw_sem_unlock();
+ #endif
+-		:
+-		: "r" (0)
+-		: "cc");
+ 
+-	armadaxp_smp_restore_idle(processor_id);
+ }
++
++#if defined(CONFIG_AURORA_IO_CACHE_COHERENCY) || defined(CONFIG_SMP)
++void armadaxp_smp_restore_idle(unsigned int processor_id)
++{
++	u32 reg;
++
++	/* Enable delivery of snoop requests to the CPU core */
++	hw_sem_lock();
++	reg = MV_REG_READ(MV_COHERENCY_FABRIC_CTRL_REG);
++	reg |= 1 << (24 + processor_id);
++	MV_REG_WRITE(MV_COHERENCY_FABRIC_CTRL_REG, reg);
++	MV_REG_READ(MV_COHERENCY_FABRIC_CTRL_REG);
++	hw_sem_unlock();
++}
++EXPORT_SYMBOL(armadaxp_smp_restore_idle);
++#endif
++
+ /*
+  * Enter the DEEP IDLE mode (power off CPU only)
+  */
+@@ -144,15 +290,13 @@ void armadaxp_deepidle(void)
+ #endif
+ 
+ #if defined(CONFIG_VFP)
+-        /*vfp_save();*/
++        vfp_save();
+ #endif
+-	aurora_l2_pm_enter();
+-//	armadaxp_fabric_prepare_deepIdle();
+ 
++	aurora_l2_pm_enter();
+ 	/* none zero means deepIdle wasn't entered and regret event happened */
+ 	armadaxp_cpu_suspend();
+ 	cpu_init();
+-
+ 	armadaxp_fabric_restore_deepIdle();
+ 
+ 	aurora_l2_pm_exit();
+@@ -174,8 +318,10 @@ static int armadaxp_enter_idle(struct cpuidle_device *dev,
+ 	local_fiq_disable();
+ 	do_gettimeofday(&before);
+ 	if (index == 0) {
++//		printk(KERN_ERR "armadaxp_enter_idle: WFI \n");
+ #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_BTS61
+-		armadaxp_smp_wfi();
++		/* Deep Idle */
++		armadaxp_deepidle();
+ #else
+ 		/* Wait for interrupt state */
+ 		cpu_do_idle();
+@@ -183,6 +329,7 @@ static int armadaxp_enter_idle(struct cpuidle_device *dev,
+ 
+ 	}
+ 	else if (index == 1) {
++//		printk(KERN_ERR "armadaxp_enter_idle: Deep Idle \n");
+ 		/* Deep Idle */
+ 		armadaxp_deepidle();
+ 	}
+@@ -208,53 +355,76 @@ struct proc_dir_entry *cpu_idle_proc;
+ static int mv_cpu_idle_write(struct file *file, const char *buffer,
+ 			     unsigned long count, void *data)
+ {
++
++	int i;
++	unsigned int backup[116];
++
+ 	struct cpuidle_device *	device = &per_cpu(armadaxp_cpuidle_device, smp_processor_id());
+ 
+-        if (!strncmp (buffer, "enable", strlen("enable"))) {
+-                if(device_registered == 0) {
+-                        device_registered = 1;
+-                        if (cpuidle_register_device(device)) {
+-                                printk(KERN_ERR "mv_cpu_idle_write: Failed registering\n");
+-                                return -EIO;
+-                        }
+-                }
+-                cpuidle_enable_device(device);
+-        } else if (!strncmp (buffer, "disable", strlen("disable"))) {
+-                cpuidle_disable_device(device);
+-        } else if (!strncmp (buffer, "test", strlen("test"))) {
+-
+-
+-//for debug
+-		disable_irq(IRQ_AURORA_TIMER0);
+-		disable_irq(IRQ_AURORA_GBE0_FIC);
+-		disable_irq(IRQ_AURORA_SDIO);
+-		disable_irq(IRQ_AURORA_SATA0);
+-//		disable_irq(IRQ_AURORA_UART0);
+-
+-                printk(KERN_INFO "Press any key to leave deep idle:");
+-//		cpu_do_idle();
+-		armadaxp_deepidle();
++	if (!strncmp (buffer, "enable", strlen("enable"))) {
++		for_each_online_cpu(i) {
++			device = &per_cpu(armadaxp_cpuidle_device, i);
++			if(device_registered == 0) {
++				device_registered = 1;
++				if (cpuidle_register_device(device)) {
++					printk(KERN_ERR "mv_cpu_idle_write: Failed registering\n");
++					return -EIO;
++				}
++			}
++			cpuidle_enable_device(device);
++		}
++	} else if (!strncmp (buffer, "disable", strlen("disable"))) {
++		for_each_online_cpu(i) {
++			device = &per_cpu(armadaxp_cpuidle_device, i);
++			cpuidle_disable_device(device);
++		}
++	} else if (!strncmp (buffer, "deep", strlen("deep")) || !strncmp (buffer, "snooze", strlen("snooze")) ||
++				   !strncmp (buffer, "wfi", strlen("wfi"))) {
++		if (!strncmp (buffer, "deep", strlen("deep")))
++			pm_mode = 2;
++		else if (!strncmp (buffer, "snooze", strlen("snooze")))
++			pm_mode = 3;
++		else		/* WFI */
++			pm_mode = 1;
++
++		for (i=0; i<IRQ_MAIN_INTS_NUM; i++) {
++			if (i == IRQ_AURORA_UART0)
++				continue;
++
++			backup[i] = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(i));
++			MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(i), 0);
++		}
+ 
++		printk(KERN_INFO "Processor id = %d, Press any key to leave deep idle:",smp_processor_id());
+ 
+-		enable_irq(IRQ_AURORA_TIMER0);
+-		enable_irq(IRQ_AURORA_GBE0_FIC);
+-		enable_irq(IRQ_AURORA_SDIO);
+-		enable_irq(IRQ_AURORA_SATA0);
+-//		enable_irq(IRQ_AURORA_UART0);
++		if (pm_mode > 1)
++			armadaxp_deepidle();
++		else
++			cpu_do_idle();
+ 
+-        }
++		for (i=0; i<IRQ_MAIN_INTS_NUM; i++) {
++			if (i == IRQ_AURORA_UART0)
++				continue;
++			MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(i), backup[i]);
++		}
+ 
+-        return count;
++//		pm_mode = pm_support;
++	}
++
++	return count;
+ }
+ 
+ static int mv_cpu_idle_read(char *buffer, char **buffer_location, off_t offset,
+ 			    int buffer_length, int *zero, void *ptr)
+ {
+         if (offset > 0)
++
+                 return 0;
+         return sprintf(buffer, "enable - Enable CPU Idle framework.\n"
+                                 "disable - Disable CPU idle framework.\n"
+-		       "test - Manually enter CPU Idle state, exit by ket stroke (DEBUG ONLY).\n");
++			"wfi - Manually enter CPU WFI state, exit by ket stroke (DEBUG ONLY).\n"
++			"deep - Manually enter CPU Idle state, exit by ket stroke (DEBUG ONLY).\n"
++			"snooze - Manually enter CPU and Fabric Idle and state, exit by ket stroke (DEBUG ONLY).\n");
+ 
+ }
+ 
+@@ -267,7 +437,7 @@ int armadaxp_init_cpuidle(void)
+ {
+ 	struct cpuidle_device *device;
+ 	int i;
+-
++	device_registered = 0;
+ 	printk("Initializing Armada-XP CPU power management ");
+ 
+ 	if (build_identity_page_table()) {
+@@ -285,28 +455,21 @@ int armadaxp_init_cpuidle(void)
+ 	cpu_idle_proc->write_proc = mv_cpu_idle_write;
+ 	cpu_idle_proc->nlink = 1;
+ #endif
+-	if (pm_disable) {
+-		printk(KERN_INFO " (DISABLED)\n");
+-		return 0;
++	if (pm_support == 1)
++		printk(" (WFI)\n");
++	else if (pm_support == 2)
++		printk(" (IDLE)\n");
++	else if (pm_support == 3)
++		printk(" (SNOOZE)\n");
++	else {
++		printk(" (DISABLED)\n");
+ 	}
++	pm_mode = pm_support;
+ 
+ 	for_each_online_cpu(i) {
+ 		device = &per_cpu(armadaxp_cpuidle_device, i);
+ 		device->cpu = i;
+-#ifdef CONFIG_SMP
+-		/* in smp mode, only wfi supported */
+-		device->state_count = 1;
+-
+-		/* Wait for interrupt state */
+-		driver->states[0].enter = armadaxp_enter_idle;
+-		driver->states[0].exit_latency = 1;             /* Few CPU clock cycles */
+-		driver->states[0].target_residency = 1000;
+-		driver->states[0].flags = CPUIDLE_FLAG_TIME_VALID;
+-		strcpy(driver->states[0].name, "WFI");
+-		strcpy(driver->states[0].desc, "Wait for interrupt");
+-#else
+-		device->state_count = ARMADAXP_IDLE_STATES;
+-		driver->state_count = ARMADAXP_IDLE_STATES;
++		device->state_count = ARMADAXP_IDLE_STATES; //pm_support; //ARMADAXP_IDLE_STATES;
+ 		/* Wait for interrupt state */
+ 		driver->states[0].enter = armadaxp_enter_idle;
+ 		driver->states[0].exit_latency = 1;             /* Few CPU clock cycles */
+@@ -322,17 +485,25 @@ int armadaxp_init_cpuidle(void)
+ 		driver->states[1].flags = CPUIDLE_FLAG_TIME_VALID;
+ 		strcpy(driver->states[1].name, "DEEP IDLE");
+ 		strcpy(driver->states[1].desc, "Deep Idle");
+-#endif
+-		cpuidle_register_driver(&armadaxp_idle_driver);
+-		if (cpuidle_register_device(device)) {
+-			printk(KERN_ERR "armadaxp_init_cpuidle: Failed registering\n");
+-			return -EIO;
++
++		/* Snooze - Deep Deep Idle Mode */
++                driver->states[2].enter = armadaxp_enter_idle;
++                driver->states[2].exit_latency = 1000;
++                driver->states[2].target_residency = 10000;
++                driver->states[2].flags = CPUIDLE_FLAG_TIME_VALID;
++                strcpy(driver->states[2].name, "SNOOZE");
++                strcpy(driver->states[2].desc, "Snooze");
++
++                if(pm_mode) {
++                        if (cpuidle_register_device(device)) {
++				device_registered = 1;
++                                printk(KERN_ERR "armadaxp_init_cpuidle: Failed registering\n");
++                                return -EIO;
++                        }
+ 		}
+ 	}
+ 
+-	printk("\n");
+-
+ 	return 0;
+ }
+ 
+-//device_initcall(armadaxp_init_cpuidle);
++device_initcall(armadaxp_init_cpuidle);
+diff --git a/arch/arm/plat-armada/cpuidle.h b/arch/arm/plat-armada/cpuidle.h
+new file mode 100644
+index 0000000..e15d842
+--- /dev/null
++++ b/arch/arm/plat-armada/cpuidle.h
+@@ -0,0 +1,24 @@
++/*
++ * arch/arm/plat-armada/cpuidle.h
++ *
++ * CPU power management functions
++ *
++ * This file is licensed under the terms of the GNU General Public
++ * License version 2.  This program is licensed "as is" without any
++ * warranty of any kind, whether express or implied.
++ */
++
++#ifndef __PLAT_ARMADA_CPUIDLE_H
++#define __PLAT_ARMADA_CPUIDLE_H
++
++int armadaxp_cpu_suspend(void);
++void armadaxp_fabric_setup_deepIdle(void);
++void armadaxp_fabric_prepare_deepIdle(void);
++void armadaxp_fabric_prepare_hotplug(void);
++void armadaxp_fabric_restore_deepIdle(void);
++void armadaxp_deepidle(void);
++void armadaxp_smp_prepare_idle(unsigned int processor_id);
++void armadaxp_smp_restore_idle(unsigned int processor_id);
++
++
++#endif /* __PLAT_ARMADA_CPUIDLE_H*/
+diff --git a/arch/arm/plat-armada/hotplug.c b/arch/arm/plat-armada/hotplug.c
+index 76c5fe0..823a96b 100644
+--- a/arch/arm/plat-armada/hotplug.c
++++ b/arch/arm/plat-armada/hotplug.c
+@@ -14,9 +14,9 @@
+ #include <linux/completion.h>
+ 
+ #include <asm/cacheflush.h>
+-#include <../power.h>
+-
++#include <../cpuidle.h>
+ 
++#define DEBUG
+ 
+ #define hard_smp_processor_id()                 \
+         ({                                              \
+@@ -31,45 +31,29 @@ extern volatile int pen_release;
+ 
+ static DECLARE_COMPLETION(cpu_killed);
+ 
+-static inline void cpu_enter_lowpower(void)
+-{
+-
+-	flush_cache_all();
+-
+-	armadaxp_smp_prepare_idle(hard_smp_processor_id());
+-}
+-
+-static inline void cpu_leave_lowpower(void)
+-{
+-	armadaxp_smp_restore_idle(hard_smp_processor_id());
+-}
+ 
+ static inline void platform_do_lowpower(unsigned int cpu)
+ {
++
+ 	/*
+ 	 * there is no power-control hardware on this platform, so all
+ 	 * we can do is put the core into WFI; this is safe as the calling
+ 	 * code will have already disabled interrupts
+ 	 */
++
+ 	for (;;) {
++
+ 		/*
+ 		 * here's the WFI
+-		 */
+-		asm volatile(
+-			"       mcr     p15, 0, %0, c7, c10, 4  @ @ DWB - WFI may enter a low-power mode\n"
+-			"       mcr     p15, 0, %0, c7, c0, 4   @ wait for interrupt\n"
+-#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_4742
+-			"	mcr     p15, 0, %0, c7, c10, 4          @barrier\n"
+-#endif
+-			:
+-			: "r" (0)
+-			: "cc");
++		*/
++
++		wfi();
+ 
+ 		if (pen_release == cpu) {
+ 			/*
+ 			 * OK, proper wakeup, we're done
+ 			 */
+-			//		printk("%s %d\n", __func__, __LINE__);
++			printk("%s %d\n", __func__, __LINE__);
+ 			break;
+ 		}
+ 
+@@ -109,20 +93,26 @@ void __ref platform_cpu_die(unsigned int cpu)
+ 	}
+ #endif
+ 
+-	printk(KERN_NOTICE "CPU%u: shutdown\n", cpu);
+ 	complete(&cpu_killed);
+ 
+ 	/*
+ 	 * we're ready for shutdown now, so do it
+ 	 */
+-	cpu_enter_lowpower();
++
++	flush_cache_all();
++
++	armadaxp_fabric_prepare_hotplug();
++
++	/* none zero means deepIdle wasn't entered and regret event happened */
++
+ 	platform_do_lowpower(cpu);
+ 
+ 	/*
+ 	 * bring this CPU back into the world of cache
+-	 * coherency, and then restore interrupts
++	 * coherency, and then restore interrupts - will never get here it.
++	   We will do it as part of the secondary boot flow
+ 	 */
+-	cpu_leave_lowpower();
++
+ }
+ 
+ int platform_cpu_disable(unsigned int cpu)
+@@ -131,6 +121,7 @@ int platform_cpu_disable(unsigned int cpu)
+ 	 * we don't allow CPU 0 to be shutdown (it is still too special
+ 	 * e.g. clock tick interrupts)
+ 	 */
++
+ 	return cpu == 0 ? -EPERM : 0;
+ }
+ 
+diff --git a/arch/arm/plat-armada/power.h b/arch/arm/plat-armada/power.h
+deleted file mode 100644
+index 5c52cb3..0000000
+--- a/arch/arm/plat-armada/power.h
++++ /dev/null
+@@ -1,22 +0,0 @@
+-/*
+- * arch/arm/plat-armada/power.h
+- *
+- * CPU power management functions
+- *
+- * This file is licensed under the terms of the GNU General Public
+- * License version 2.  This program is licensed "as is" without any
+- * warranty of any kind, whether express or implied.
+- */
+-
+-#ifndef __PLAT_ARMADA_POWER_H
+-#define __PLAT_ARMADA_POWER_H
+-
+-int armadaxp_cpu_suspend(void);
+-void armadaxp_fabric_setup_deepIdle(void);
+-void armadaxp_fabric_prepare_deepIdle(void);
+-void armadaxp_fabric_restore_deepIdle(void);
+-
+-void armadaxp_smp_prepare_idle(unsigned int processor_id);
+-void armadaxp_smp_restore_idle(unsigned int processor_id);
+-
+-#endif /* __PLAT_ARMADA_POWER_H*/
+-- 
+1.7.9.5
+

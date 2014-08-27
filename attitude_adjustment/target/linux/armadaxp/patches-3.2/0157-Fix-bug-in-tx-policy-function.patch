@@ -1,0 +1,41 @@
+From 488d26fae529e457930997d336761b711913e3ac Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Thu, 5 Apr 2012 02:15:15 -0400
+Subject: [PATCH 157/609] Fix bug in tx policy function
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |    9 ++++-----
+ 1 file changed, 4 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 6381a27..faf0a9c 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -132,7 +132,7 @@ static int mv_eth_initialized = 0;
+  */
+ static void mv_eth_txq_delete(struct eth_port *pp, struct tx_queue *txq_ctrl);
+ static void mv_eth_tx_timeout(struct net_device *dev);
+-static int mv_eth_tx(struct sk_buff *skb, struct net_device *dev);
++static int  mv_eth_tx(struct sk_buff *skb, struct net_device *dev);
+ static void mv_eth_tx_frag_process(struct eth_port *pp, struct sk_buff *skb, struct tx_queue *txq_ctrl, u16 flags);
+ 
+ static void mv_eth_config_show(void);
+@@ -1137,11 +1137,10 @@ static inline int mv_eth_tx_policy(struct eth_port *pp, struct sk_buff *skb)
+ {
+ 	int txq = pp->txq[smp_processor_id()];
+ 
+-	if (ip_hdr(skb)) {
+-		MV_U8 tos;
++	if (skb->protocol == htons(ETH_P_IP)) {
++		struct iphdr *iph = ip_hdr(skb);
+ 
+-		tos = ip_hdr(skb)->tos;
+-		txq = mv_eth_txq_tos_map_get(pp, tos);
++		txq = mv_eth_txq_tos_map_get(pp, iph->tos);
+ 	}
+ 	return txq;
+ }
+-- 
+1.7.9.5
+

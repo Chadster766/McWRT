@@ -1,0 +1,36 @@
+From 86f44218f0fbbdd5c262b34e790fee313592e854 Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Thu, 21 Feb 2013 17:09:25 +0200
+Subject: [PATCH 547/609] Bug Fix - IPC: Check if channel is already open on
+ RX interrupt. Before start to process messages
+ check that the channel is not closed.
+
+Change-Id: Id39accc35a48abca0c4a2280f4f03157d0f26545
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1176
+Reviewed-by: Kosta Zertsekel <konszert@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Tested-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/common/mvIpc.c |    3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/arch/arm/plat-armada/common/mvIpc.c b/arch/arm/plat-armada/common/mvIpc.c
+index a8a5be7..3deb0e1 100644
+--- a/arch/arm/plat-armada/common/mvIpc.c
++++ b/arch/arm/plat-armada/common/mvIpc.c
+@@ -901,6 +901,9 @@ MV_BOOL mvIpcRxMsg(MV_U32 *outChnId, MV_IPC_MSG **outMsg, MV_U32 drblNum)
+ 
+ 	chn = &ipcChannels[chnId];
+ 
++	if (chn->state == MV_CHN_CLOSED)
++		return MV_FALSE;
++
+ 	/* First process control messages like attach, detach, close */
+ 	if(isCtrlMsg(chn) == MV_TRUE){
+ 		mvIpcRxCtrlMsg(chnId, chn->rxCtrlMsg);
+-- 
+1.7.9.5
+

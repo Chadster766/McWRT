@@ -1,0 +1,224 @@
+From bb8f6c5debf5a8ae06bb82bd3cd99f1157e5f9ee Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Thu, 1 Nov 2012 15:19:50 +0200
+Subject: [PATCH 416/609] adding vxWorks to git
+
+Change-Id: I0013a5435caeaa84b9b62d65bc6ce0bbfc134ac4
+Signed-off-by: Neta Zur <neta@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/boardEnv/mvBoardEnvSpec.c     |    7 ++-
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvLib.c        |   64 ++++++++++++++++++++
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvLib.h        |    4 ++
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h       |    8 +++
+ .../armada_xp_family/ctrlEnv/mvSemaphore.c         |    2 +-
+ .../armada_xp_family/ctrlEnv/sys/mvCpuIf.c         |    2 +-
+ .../armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h     |    2 +
+ arch/arm/plat-armada/common/mvCommon.h             |    5 ++
+ 8 files changed, 89 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+index 706f127..8e01e47 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+@@ -1233,7 +1233,7 @@ MV_BOARD_INFO db78X60amcInfo = {
+ 	.nandFlashControl		= DB_78X60_AMC_BOARD_NAND_CONTROL
+ };
+ 
+-//////////////////////////////////////////////////////////////////////////////////
++/*********************************************************************************/
+ 
+ /***************************/
+ /* ARMADA-XP RD GP  BOARD */
+@@ -1384,7 +1384,8 @@ MV_BOARD_MODULE_TYPE_INFO rd78460customerInfoBoardModTypeInfo[] = {
+ 		.boardOtherMod		= MV_BOARD_NONE
+ 	}
+ };
+-//////////////////////////////////////////////////////////////////////////////////
++/*********************************************************************************/
++
+ 
+ MV_BOARD_GPP_INFO rd78460customerInfoBoardGppInfo[] = {
+ 	/* {{MV_BOARD_GPP_CLASS	devClass, MV_U8	gppPinNum}} */
+@@ -1475,7 +1476,7 @@ MV_BOARD_INFO rd78460customerInfo = {
+ 	.norFlashReadParams		= RD_78460_CUSTOMER_BOARD_NOR_READ_PARAMS,
+ 	.norFlashWriteParams		= RD_78460_CUSTOMER_BOARD_NOR_WRITE_PARAMS
+ };
+-//////////////////////////////////////////////////////////////////////////////////////
++/*********************************************************************************/
+ 
+ MV_BOARD_INFO *boardInfoTbl[] = {
+ 	&db88f78XX0Info,
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
+index 260a2fc..395d442 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
+@@ -582,6 +582,70 @@ MV_U32 mvCtrlSataMaxPortGet(MV_VOID)
+ }
+ #endif
+ 
++#if defined(MV_INCLUDE_IDMA)
++/*******************************************************************************
++* mvCtrlIdmaMaxChanGet - Get Marvell controller number of IDMA channels.
++*
++* DESCRIPTION:
++*       This function returns Marvell controller number of IDMA channels.
++*
++* INPUT:
++*       None.
++*
++* OUTPUT:
++*       None.
++*
++* RETURN:
++*       Marvell controller number of IDMA channels.
++*
++*******************************************************************************/
++MV_U32 mvCtrlIdmaMaxChanGet(MV_VOID)
++{
++	MV_U32 devId;
++	MV_U32 res = 0;
++
++	devId = mvCtrlModelGet();
++
++	switch (devId) {
++	default:
++		res = MV_IDMA_MAX_CHAN;
++		break;
++	}
++	return res;
++}
++
++/*******************************************************************************
++* mvCtrlIdmaMaxUnitGet - Get Marvell controller number of IDMA units.
++*
++* DESCRIPTION:
++*       This function returns Marvell controller number of IDMA units.
++*
++* INPUT:
++*       None.
++*
++* OUTPUT:
++*       None.
++*
++* RETURN:
++*       Marvell controller number of IDMA units.
++*
++*******************************************************************************/
++MV_U32 mvCtrlIdmaMaxUnitGet(MV_VOID)
++{
++	MV_U32 devId;
++	MV_U32 res = 0;
++
++	devId = mvCtrlModelGet();
++
++	switch (devId) {
++	default:
++		res = MV_IDMA_MAX_UNIT;
++		break;
++	}
++	return res;
++}
++#endif /* MV_INCLUDE_IDMA */
++
+ #if defined(MV_INCLUDE_XOR)
+ /*******************************************************************************
+ * mvCtrlXorMaxChanGet - Get Marvell controller number of XOR channels.
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
+index 7a46199..f497e3c 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
+@@ -231,6 +231,10 @@ MV_U32	mvCtrlPciMaxIfGet(MV_VOID);
+ 
+ MV_U32	  mvCtrlEthMaxPortGet(MV_VOID);
+ MV_U8	  mvCtrlEthMaxCPUsGet(MV_VOID);
++#if defined(MV_INCLUDE_IDMA)
++MV_U32 mvCtrlIdmaMaxUnitGet(MV_VOID);
++MV_U32 mvCtrlIdmaMaxChanGet(MV_VOID);
++#endif
+ #if defined(MV_INCLUDE_XOR)
+ MV_U32 mvCtrlXorMaxChanGet(MV_VOID);
+ MV_U32 mvCtrlXorMaxUnitGet(MV_VOID);
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
+index 57ab3cf..b833da9 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
+@@ -121,6 +121,9 @@ extern "C" {
+ 											 : (0x42000 + ((pexIf) % 8) * 0x40000))
+ #define MV_USB_REGS_OFFSET(dev)       		(0x50000 + (dev * 0x1000))
+ #define MV_XOR_REGS_OFFSET(unit)		(unit ? 0xF0900 : 0x60900)
++#if defined(MV_INCLUDE_IDMA)
++#define MV_IDMA_REGS_OFFSET			(0x60800)
++#endif
+ #define MV_CESA_TDMA_REGS_OFFSET(chanNum)	(0x90000 + (chanNum * 0x2000))
+ #define MV_CESA_REGS_OFFSET(chanNum)		(0x9D000 + (chanNum * 0x2000))
+ #define MV_SATA_REGS_OFFSET			(0xA0000)
+@@ -181,6 +184,11 @@ extern "C" {
+ #define MV_XOR_MAX_CHAN         		4 /* total channels for all units together*/
+ #define MV_XOR_MAX_CHAN_PER_UNIT		2 /* channels for units */
+ 
++#if defined(MV_INCLUDE_IDMA)
++#define MV_IDMA_MAX_UNIT			1 /* IDMA unit == IDMA engine */
++#define MV_IDMA_MAX_CHAN			4 /* total channels for all units together */
++#endif
++
+ #define MV_SATA_MAX_CHAN			2
+ 
+ #define MV_MPP_MAX_GROUP			9
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
+index eb846e4..d71df4e 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
+@@ -121,4 +121,4 @@ MV_32 mvReadAmpReg(int regId)
+ MV_32 mvWriteAmpReg(int regId, MV_32 value)
+ {
+ 	return MV_REG_WRITE(MV_AMP_GLOBAL_REG(regId), value);
+-}
+\ No newline at end of file
++}
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
+index 6a8846e..3a406be 100755
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
+@@ -301,7 +301,7 @@ MV_STATUS mvCpuIfDramInit()
+ 
+ 	for (cs = 0; cs < SDRAM_MAX_CS; cs++) {
+ 		size = MV_REG_READ(SDRAM_SIZE_REG(cs)) & SDRAM_ADDR_MASK;
+-//		if (size > 0 && base < SDRAM_MAX_ADDR) {
++/*		if (size > 0 && base < SDRAM_MAX_ADDR) { */
+ 		if (size != 0) {
+ 			size |= ~(SDRAM_ADDR_MASK);
+ 
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
+index b140f8c..21ed29f 100755
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
+@@ -323,6 +323,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define CPU_INT_CLEAR_MASK_LOCAL_REG		(MV_CPUIF_LOCAL_REGS_OFFSET + CPU_INT_CLEAR_MASK_OFFS)
+ 
+ 
++#define CPU_SNOOP_FILTER_CTRL_REG		(MV_CPUIF_LOCAL_REGS_OFFSET + 0x20)
++
+ #define MV_IRQ_NR							116
+ 
+ 
+diff --git a/arch/arm/plat-armada/common/mvCommon.h b/arch/arm/plat-armada/common/mvCommon.h
+index 5f5d2bb..3ef2bd0 100755
+--- a/arch/arm/plat-armada/common/mvCommon.h
++++ b/arch/arm/plat-armada/common/mvCommon.h
+@@ -91,7 +91,12 @@ extern "C" {
+     c -= a; c -= b; c ^= (b>>15);   \
+ }
+ 
++#ifdef MV_VXWORKS
++static __inline__ MV_U32 mv_jhash_3words(MV_U32 a, MV_U32 b, MV_U32 c, MV_U32 initval)
++#else
+ static inline MV_U32 mv_jhash_3words(MV_U32 a, MV_U32 b, MV_U32 c, MV_U32 initval)
++
++#endif
+ {
+ 	a += MV_JHASH_GOLDEN_RATIO;
+ 	b += MV_JHASH_GOLDEN_RATIO;
+-- 
+1.7.9.5
+

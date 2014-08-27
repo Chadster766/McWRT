@@ -1,0 +1,51 @@
+From ab1b751d592b3691ff20526fbccd9a219dd81d13 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Thu, 23 Aug 2012 08:46:42 +0300
+Subject: [PATCH 259/609] LPAE: Fix mvOs APIs to use dma_addr_t instead of U32
+ variables for phys-addr
+
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/linux_oss/mvOs.c |   15 ++++++++++-----
+ 1 file changed, 10 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm/plat-armada/linux_oss/mvOs.c b/arch/arm/plat-armada/linux_oss/mvOs.c
+index db7018e..824ccc3 100644
+--- a/arch/arm/plat-armada/linux_oss/mvOs.c
++++ b/arch/arm/plat-armada/linux_oss/mvOs.c
+@@ -68,20 +68,25 @@ static MV_U32 read_p15_c1 (void);
+ void* mvOsIoCachedMalloc( void* osHandle, MV_U32 size, MV_ULONG* pPhyAddr,
+ 			  MV_U32 *memHandle)
+ {
+-    void *p = kmalloc( size, GFP_ATOMIC );
+-    *pPhyAddr = pci_map_single( osHandle, p, 0, PCI_DMA_BIDIRECTIONAL );
+-    return p;
++	void *p = kmalloc(size, GFP_ATOMIC);
++	dma_addr_t dma_addr;
++	dma_addr = pci_map_single(osHandle, p, 0, PCI_DMA_BIDIRECTIONAL);
++	*pPhyAddr = (MV_ULONG)(dma_addr & 0xFFFFFFFF);
++	return p;
+ }
+ void* mvOsIoUncachedMalloc( void* osHandle, MV_U32 size, MV_ULONG* pPhyAddr,
+ 			    MV_U32 *memHandle)
+ {
+-    return pci_alloc_consistent( osHandle, size, (dma_addr_t *)pPhyAddr );
++	dma_addr_t dma_addr;
++	void *ptr = pci_alloc_consistent(osHandle, size, &dma_addr);
++	*pPhyAddr = (MV_ULONG)(dma_addr & 0xFFFFFFFF);
++	return ptr;
+ }
+  
+ void mvOsIoUncachedFree( void* osHandle, MV_U32 size, MV_ULONG phyAddr, void* pVirtAddr,
+ 			 MV_U32 memHandle)
+ {
+-    return pci_free_consistent( osHandle, size, pVirtAddr, (dma_addr_t)phyAddr );
++	pci_free_consistent(osHandle, size, pVirtAddr, (dma_addr_t)phyAddr);
+ } 
+                                                                                                                                                
+ void mvOsIoCachedFree( void* osHandle, MV_U32 size, MV_ULONG phyAddr, void* pVirtAddr,
+-- 
+1.7.9.5
+

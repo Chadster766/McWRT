@@ -1,0 +1,41 @@
+#!/bin/sh
+
+# Copyright (C) 2006-2010 OpenWrt.org
+# Copyright (C) 2010 Vertical Communications
+
+get_current_rootfs_label() {
+	boot_part=`/usr/sbin/fw_printenv -n boot_part`
+	rootfs_label=""
+	if [ "$boot_part" -eq 1 ]
+	then
+		# primary boot image
+		rootfs_label="rootfs"
+	elif [ "$boot_part" -eq 2 ]
+	then
+		# alternative boot image
+		rootfs_label="alt_rootfs"
+	else
+		# try to guess from bootarg, should not come here
+		grep -q "mtdblock5" /proc/cmdline && boot_part=1 \
+			&& rootfs_label="rootfs"
+		grep -q "mtdblock7" /proc/cmdline && boot_part=2 \
+			&& rootfs_label="alt_rootfs"
+		fw_setenv boot_part $boot_part
+	fi
+	echo "$rootfs_label"
+}
+
+mount_no_ubifs_syscfg_mtd() {
+    mtd unlock $(get_current_rootfs_label)
+    mount -o remount,rw /dev/root /
+}
+
+check_for_ubifs_syscfg() {
+    check_ubifs_syscfg_skip || {
+		grep -qs syscfg /proc/mtd || {
+			mount_no_ubifs_syscfg_mtd && pi_mount_ubifs_sysfs_skip_next=true
+		}
+	}
+}
+
+boot_hook_add preinit_mount_root check_for_ubifs_syscfg

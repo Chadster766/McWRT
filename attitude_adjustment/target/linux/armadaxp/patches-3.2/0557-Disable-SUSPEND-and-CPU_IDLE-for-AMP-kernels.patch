@@ -1,0 +1,87 @@
+From 7b8800cfbff6b21f3626515a17649f4777930524 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Sun, 10 Mar 2013 10:33:52 +0200
+Subject: [PATCH 557/609] Disable SUSPEND and CPU_IDLE for AMP kernels.
+
+CPU suspend requires a training memory to be reserved on the beginning
+of physical RAM. During boot up, the AMP group 1 kernel tries to
+reserve memory for suspend at 0x0 and hangs.
+
+This patch fixes BTS #249: "Linux in AMP mode must run from address 0x0".
+
+Change-Id: I9ede2847e501a4d9184b314e104f4aa61e5b9838
+Signed-off-by: Michal Mazur <arg@semihalf.com>
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1214
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mm/proc-sheeva_pj4bv7.S     |    3 +++
+ arch/arm/mm/proc-sheeva_pj4bv7lpae.S |    3 +++
+ arch/arm/plat-armada/Kconfig         |    2 +-
+ arch/arm/vfp/vfpmodule.c             |    2 ++
+ 4 files changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/mm/proc-sheeva_pj4bv7.S b/arch/arm/mm/proc-sheeva_pj4bv7.S
+index a3639d1..e98a765 100644
+--- a/arch/arm/mm/proc-sheeva_pj4bv7.S
++++ b/arch/arm/mm/proc-sheeva_pj4bv7.S
+@@ -355,6 +355,9 @@ ENTRY(cpu_v7_do_resume)
+ 	mov	r0, r8			@ control register
+ 	b	cpu_resume_mmu
+ ENDPROC(cpu_v7_do_resume)
++#else
++#define cpu_v7_do_suspend	0
++#define cpu_v7_do_resume	0
+ #endif
+ 	__CPUINIT
+ 
+diff --git a/arch/arm/mm/proc-sheeva_pj4bv7lpae.S b/arch/arm/mm/proc-sheeva_pj4bv7lpae.S
+index f03cab2..d21b06e 100644
+--- a/arch/arm/mm/proc-sheeva_pj4bv7lpae.S
++++ b/arch/arm/mm/proc-sheeva_pj4bv7lpae.S
+@@ -233,6 +233,9 @@ ENTRY(cpu_v7_do_resume)
+ 	mov	r0, r8			@ control register
+ 	b	cpu_resume_mmu
+ ENDPROC(cpu_v7_do_resume)
++#else
++#define cpu_v7_do_suspend	0
++#define cpu_v7_do_resume	0
+ #endif
+ 
+ 	__CPUINIT
+diff --git a/arch/arm/plat-armada/Kconfig b/arch/arm/plat-armada/Kconfig
+index cf00f75..dc601d4 100644
+--- a/arch/arm/plat-armada/Kconfig
++++ b/arch/arm/plat-armada/Kconfig
+@@ -197,7 +197,7 @@ menu "Armada AMP options"
+ 
+ config MV_AMP_ENABLE
+         bool "Enable AMP support"
+-	depends on   (ARMADA_XP || (MV78XX0)) && (!ARMADA_XP_REV_Z1) && (SMP) && (!MV_ETH_BM)
++	depends on (ARMADA_XP || (MV78XX0)) && (!ARMADA_XP_REV_Z1) && (SMP) && (!MV_ETH_BM) && !(CPU_IDLE || SUSPEND)
+ 	default n
+ 
+ config MV_DRAM_BASE_G0
+diff --git a/arch/arm/vfp/vfpmodule.c b/arch/arm/vfp/vfpmodule.c
+index a5d3851..92b2763 100644
+--- a/arch/arm/vfp/vfpmodule.c
++++ b/arch/arm/vfp/vfpmodule.c
+@@ -561,6 +561,7 @@ static int vfp_hotplug(struct notifier_block *b, unsigned long action,
+ 	return NOTIFY_OK;
+ }
+ 
++#ifdef CONFIG_CPU_PM
+ void vfp_save(void)
+ {
+         /*
+@@ -575,6 +576,7 @@ void vfp_restore(void)
+         if (VFP_arch)
+                 vfp_pm_resume();
+ }
++#endif
+ 
+ 
+ /*
+-- 
+1.7.9.5
+

@@ -1,0 +1,142 @@
+From e93d031a973e04e60987b15e3d9172c41f32d553 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Sun, 4 Mar 2012 20:28:36 +0200
+Subject: [PATCH 061/609] DSMP adding CONFIG_SHEEVA_ERRATA_ARM_CPU_6075
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/include/asm/assembler.h |    8 ++++++++
+ arch/arm/include/asm/system.h    |    5 +++++
+ arch/arm/mm/Kconfig              |   23 +++++++++++++++++++++++
+ arch/arm/mm/cache-v7.S           |    8 ++++++++
+ arch/arm/mm/proc-macros.S        |    4 ++++
+ 5 files changed, 48 insertions(+)
+
+diff --git a/arch/arm/include/asm/assembler.h b/arch/arm/include/asm/assembler.h
+index 7bb8bf9..757f9cb 100644
+--- a/arch/arm/include/asm/assembler.h
++++ b/arch/arm/include/asm/assembler.h
+@@ -198,9 +198,17 @@
+ #ifdef CONFIG_SMP
+ #if __LINUX_ARM_ARCH__ >= 7
+ 	.ifeqs "\mode","arm"
++#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6075
++	ALT_SMP(dsb)
++#else
+ 	ALT_SMP(dmb)
++#endif
+ 	.else
++#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6075
++	ALT_SMP(W(dsb))
++#else
+ 	ALT_SMP(W(dmb))
++#endif
+ 	.endif
+ #elif __LINUX_ARM_ARCH__ == 6
+ 	ALT_SMP(mcr	p15, 0, r0, c7, c10, 5)	@ dmb
+diff --git a/arch/arm/include/asm/system.h b/arch/arm/include/asm/system.h
+index b4deeea..5b784d1 100644
+--- a/arch/arm/include/asm/system.h
++++ b/arch/arm/include/asm/system.h
+@@ -93,6 +93,7 @@ void hook_ifault_code(int nr, int (*fn)(unsigned long, unsigned int,
+ 
+ extern asmlinkage void c_backtrace(unsigned long fp, int pmode);
+ 
++
+ struct mm_struct;
+ extern void show_pte(struct mm_struct *mm, unsigned long addr);
+ extern void __show_regs(struct pt_regs *);
+@@ -127,7 +128,11 @@ extern unsigned int user_debug;
+ #if __LINUX_ARM_ARCH__ >= 7
+ #define isb() __asm__ __volatile__ ("isb" : : : "memory")
+ #define dsb() __asm__ __volatile__ ("dsb" : : : "memory")
++#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6075
++#define dmb() __asm__ __volatile__ ("dsb" : : : "memory")
++#else
+ #define dmb() __asm__ __volatile__ ("dmb" : : : "memory")
++#endif
+ #elif defined(CONFIG_CPU_XSC3) || __LINUX_ARM_ARCH__ == 6
+ #define isb() __asm__ __volatile__ ("mcr p15, 0, %0, c7, c5, 4" \
+ 				    : : "r" (0) : "memory")
+diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
+index fa941ca..cd80ba5 100644
+--- a/arch/arm/mm/Kconfig
++++ b/arch/arm/mm/Kconfig
+@@ -986,6 +986,29 @@ config SHEEVA_ERRATA_ARM_CPU_6043
+ 		Alternatively, if a DMB or DSB instruction is issued after completing a group of clean operations (before executing any
+ 		stores to the cleaned lines), the issue also cannot occur.
+ 
++config SHEEVA_ERRATA_ARM_CPU_6075
++
++        bool "Sheeva Errata 6075: clean operations can cause victim data to be written out of order"
++        depends on  CPU_SHEEVA_PJ4B_V7 && ARMADA_XP_REV_A0
++        default y
++        help
++	When a DMB or DSB is used, the architecture requires that the barrier order explicit memory accesses from before the
++	barrier to ones after the barrier.  Because non-cacheable accesses are permitted to pend to the memory buffers, there
++	exists a rare scenario where the prescribed ordering is not honored.  Consider the following multiprocessor example:
++	Processor 0:
++	STR Data
++	DMB
++	STR Flag
++	Processor 1:
++	LDR Unrelated
++	LDR Flag
++	DMB
++	LDR Data ; Data & Unrelated in same non-cacheable chunk
++	In the above scenario, the LDR Data happens to pend and return the stale (prior to Flag update by Processor 0)
++	version of data.
++	Workaround
++	This issue can be avoided by replacing a DMB with a DSB SYS.
++
+ config SHEEVA_ERRATA_ARM_CPU_PMU_RESET
+ 	bool "Sheeva Errata CPU Performance counters reset"
+ 	depends on CPU_SHEEVA_PJ4B_V6 || CPU_SHEEVA_PJ4B_V7
+diff --git a/arch/arm/mm/cache-v7.S b/arch/arm/mm/cache-v7.S
+index f66be7e..700d465 100644
+--- a/arch/arm/mm/cache-v7.S
++++ b/arch/arm/mm/cache-v7.S
+@@ -42,7 +42,11 @@ ENDPROC(v7_flush_icache_all)
+  *	- mm    - mm_struct describing address space
+  */
+ ENTRY(v7_flush_dcache_all)
++#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6075
++	dsb
++#else
+ 	dmb					@ ensure ordering with previous memory accesses
++#endif
+ 	mrc	p15, 1, r0, c0, c0, 1		@ read clidr
+ 	ands	r3, r0, #0x7000000		@ extract loc from clidr
+ 	mov	r3, r3, lsr #23			@ left align loc bit field
+@@ -285,8 +289,12 @@ v7_dma_inv_range:
+ 	mcrne	p15, 0, r1, c7, c14, 1		@ clean & invalidate D / U line
+ 1:
+ #if defined (CONFIG_SHEEVA_ERRATA_ARM_CPU_4413)
++#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6075
++	dsb
++#else
+ 	dmb
+ #endif
++#endif
+ 	mcr	p15, 0, r0, c7, c6, 1		@ invalidate D / U line
+ 	add	r0, r0, r2
+ 	cmp	r0, r1
+diff --git a/arch/arm/mm/proc-macros.S b/arch/arm/mm/proc-macros.S
+index 8650f61..09f09ce 100644
+--- a/arch/arm/mm/proc-macros.S
++++ b/arch/arm/mm/proc-macros.S
+@@ -206,7 +206,11 @@
+         orr     r3, r2, #PSR_F_BIT | PSR_I_BIT
+         msr     cpsr_c, r3                      @ Disable interrupts
+ #if __LINUX_ARM_ARCH__ >= 7
++#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6075
++	dsb
++#else
+ 	dmb					@ DMB for V7
++#endif
+ #elif __LINUX_ARM_ARCH__ == 6
+         mcr     p15, 0, r0, c7, c10, 5          @ DMB for V6
+ #endif
+-- 
+1.7.9.5
+

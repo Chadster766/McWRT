@@ -1,0 +1,26 @@
+From c6d12ac6f4341365b166bab069b5c2e51ba525ad Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Mon, 16 Jul 2012 18:31:48 +0300
+Subject: [PATCH 183/609] Neta: Fix unaligned access in NFP
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 1f5b604..f0698c6 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -169,7 +169,7 @@ __setup("mv_port3_config=", mv_eth_cmdline_port3_config);
+ struct mv_eth_nfp_ops *mv_eth_nfp_ops = NULL;
+ int mv_eth_nfp_register(mv_eth_nfp_func_t *func)
+ {
+-	mv_eth_nfp_ops = kmalloc(sizeof(struct nfpHookMgr *), GFP_ATOMIC);
++	mv_eth_nfp_ops = kmalloc(sizeof(struct mv_eth_nfp_ops), GFP_ATOMIC);
+ 	if (mv_eth_nfp_ops == NULL) {
+ 		printk(KERN_ERR "%s: Error allocating memory for mv_eth_nfp_ops\n", __func__);
+ 		return -ENOMEM;
+-- 
+1.7.9.5
+

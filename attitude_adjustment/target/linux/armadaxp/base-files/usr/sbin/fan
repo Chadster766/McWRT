@@ -1,0 +1,54 @@
+#!/bin/sh
+
+EXPECTED_ARGS=1
+E_BADARGS=65
+
+usage() {
+	echo "Usage: `basename $0` off|low|high"
+
+	exit $E_BADARGS
+}
+
+if [ $# -lt $EXPECTED_ARGS ]
+then
+	usage
+fi
+
+mode=$1
+
+do_fan() {
+	mode=$1
+
+	if [ ! -e "/sys/class/gpio/gpio24/" ] 
+	then
+		echo 24 > /sys/class/gpio/export
+	fi
+	
+	echo out > /sys/class/gpio/gpio24/direction
+
+	if [ $mode = "off" ]
+	then
+		# Disable blink register for GPIO24
+		/sbin/devmem 0xf1018108 32 0x00000000
+	elif [ $mode = "low" ]
+	then
+		# Enable blink register for GPIO24
+		/sbin/devmem 0xf1018108 32 0x01000000
+		#Set blink counter B for GPIO24
+		/sbin/devmem 0xf1018120 32 0x01000000
+		# Set ON & OFF duration for low speed
+		/sbin/devmem 0xf10181c8 32 0x00001770
+		/sbin/devmem 0xf10181cc 32 0x00000FA0
+	elif [ $mode = "high" ]
+	then
+		# Enable blink register for GPIO24
+		/sbin/devmem 0xf1018108 32 0x01000000
+		#Set blink counter B for GPIO24
+		/sbin/devmem 0xf1018120 32 0x01000000
+		# Set ON & OFF duration for high speed
+		/sbin/devmem 0xf10181c8 32 0x00002710
+		/sbin/devmem 0xf10181cc 32 0x00000001
+	fi
+}
+
+do_fan $1

@@ -1,0 +1,31 @@
+From dfedb5951fa47685e80429e1fba6d836087cf713 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Sun, 6 Jan 2013 11:08:22 +0200
+Subject: [PATCH 382/609] Fix: SATA support on GP board - BTS #206
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/boardEnv/mvBoardEnvSpec.h     |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
+index 4231351..6a0ec09 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
+@@ -517,11 +517,11 @@ MPP#	NAME			IN/OUT
+ 
+ */
+ #define RD_78460_GP_GPP_OUT_ENA_LOW	(~(BIT21 | BIT20))
+-#define RD_78460_GP_GPP_OUT_ENA_MID	(~(0x0))
++#define RD_78460_GP_GPP_OUT_ENA_MID (~(BIT26 | BIT27))
+ #define RD_78460_GP_GPP_OUT_ENA_HIGH	(~(0x0))
+ 
+ #define RD_78460_GP_GPP_OUT_VAL_LOW	(BIT21 | BIT20)
+-#define RD_78460_GP_GPP_OUT_VAL_MID	0x0
++#define RD_78460_GP_GPP_OUT_VAL_MID	(BIT26 | BIT27)
+ #define RD_78460_GP_GPP_OUT_VAL_HIGH	0x0
+ 
+ #define RD_78460_GP_GPP_POL_LOW		0x0
+-- 
+1.7.9.5
+

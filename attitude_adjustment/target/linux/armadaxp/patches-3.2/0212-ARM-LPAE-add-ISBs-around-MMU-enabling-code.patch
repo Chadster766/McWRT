@@ -1,0 +1,90 @@
+From 63afaac933a23d984a923a017d644dfbfa1e9e94 Mon Sep 17 00:00:00 2001
+From: Will Deacon <will.deacon@arm.com>
+Date: Thu, 7 Apr 2011 16:29:22 +0100
+Subject: [PATCH 212/609] ARM: LPAE: add ISBs around MMU enabling code
+
+Before we enable the MMU, we must ensure that the TTBR registers contain
+sane values. After the MMU has been enabled, we jump to the *virtual*
+address of the following function, so we also need to ensure that the
+SCTLR write has taken effect.
+
+This patch adds ISB instructions around the SCTLR write to ensure the
+visibility of the above.
+
+Signed-off-by: Will Deacon <will.deacon@arm.com>
+Signed-off-by: Catalin Marinas <catalin.marinas@arm.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/boot/compressed/head.S  |    1 +
+ arch/arm/include/asm/assembler.h |   11 +++++++++++
+ arch/arm/kernel/head.S           |    2 ++
+ arch/arm/kernel/sleep.S          |    2 ++
+ 4 files changed, 16 insertions(+)
+
+diff --git a/arch/arm/boot/compressed/head.S b/arch/arm/boot/compressed/head.S
+index 13eb723..fb74626 100644
+--- a/arch/arm/boot/compressed/head.S
++++ b/arch/arm/boot/compressed/head.S
+@@ -663,6 +663,7 @@ __armv7_mmu_cache_on:
+ 		mcrne	p15, 0, r3, c2, c0, 0	@ load page table pointer
+ 		mcrne	p15, 0, r1, c3, c0, 0	@ load domain access control
+ #endif
++		mcr     p15, 0, r0, c7, c5, 4   @ ISB
+ 		mcr	p15, 0, r0, c1, c0, 0	@ load control register
+ 		mrc	p15, 0, r0, c1, c0, 0	@ and read it back
+ 		mov	r0, #0
+diff --git a/arch/arm/include/asm/assembler.h b/arch/arm/include/asm/assembler.h
+index 757f9cb..3eae32e 100644
+--- a/arch/arm/include/asm/assembler.h
++++ b/arch/arm/include/asm/assembler.h
+@@ -192,6 +192,17 @@
+ #endif
+ 
+ /*
++ * Instruction barrier
++ */
++	.macro	instr_sync
++#if __LINUX_ARM_ARCH__ >= 7
++	isb
++#elif __LINUX_ARM_ARCH__ == 6
++	mcr	p15, 0, r0, c7, c5, 4
++#endif
++	.endm
++
++/*
+  * SMP data memory barrier
+  */
+ 	.macro	smp_dmb mode
+diff --git a/arch/arm/kernel/head.S b/arch/arm/kernel/head.S
+index f30a1a8..b108193 100644
+--- a/arch/arm/kernel/head.S
++++ b/arch/arm/kernel/head.S
+@@ -405,8 +405,10 @@ ENDPROC(__enable_mmu)
+ 	.align	5
+ __turn_mmu_on:
+ 	mov	r0, r0
++	instr_sync
+ 	mcr	p15, 0, r0, c1, c0, 0		@ write control reg
+ 	mrc	p15, 0, r3, c0, c0, 0		@ read id reg
++	instr_sync
+ 	mov	r3, r3
+ 	mov	r3, r13
+ 	mov	pc, r3
+diff --git a/arch/arm/kernel/sleep.S b/arch/arm/kernel/sleep.S
+index 020e99c..4ac45fe 100644
+--- a/arch/arm/kernel/sleep.S
++++ b/arch/arm/kernel/sleep.S
+@@ -56,8 +56,10 @@ ENDPROC(cpu_suspend_abort)
+ 	.align	5
+ ENTRY(cpu_resume_mmu)
+ 	ldr	r3, =cpu_resume_after_mmu
++	instr_sync
+ 	mcr	p15, 0, r0, c1, c0, 0	@ turn on MMU, I-cache, etc
+ 	mrc	p15, 0, r0, c0, c0, 0	@ read id reg
++	instr_sync
+ 	mov	r0, r0
+ 	mov	r0, r0
+ 	mov	pc, r3			@ jump to virtual address
+-- 
+1.7.9.5
+

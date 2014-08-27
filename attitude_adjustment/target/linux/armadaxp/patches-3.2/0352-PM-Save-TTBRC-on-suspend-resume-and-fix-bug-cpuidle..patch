@@ -1,0 +1,62 @@
+From dedeb3d041e3e1d14e7a2d7f48b032c3056ebfb4 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Sun, 2 Dec 2012 14:10:16 +0200
+Subject: [PATCH 352/609] PM: Save TTBRC on suspend/resume and fix bug
+ cpuidle.c
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/armada_suspend.S |    8 +++++---
+ arch/arm/plat-armada/cpuidle.c        |    2 +-
+ 2 files changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/plat-armada/armada_suspend.S b/arch/arm/plat-armada/armada_suspend.S
+index be6b75b..65dbd93 100644
+--- a/arch/arm/plat-armada/armada_suspend.S
++++ b/arch/arm/plat-armada/armada_suspend.S
+@@ -191,12 +191,13 @@ ENTRY(armadaxp_cpu_suspend)
+ 	mrc     p15, 0, r2, c1, c0, 0			@ save CP15 - CR
+ 	mrc     p15, 0, r3, c3, c0, 0			@ save CP15 - DACR
+ 	mrc     p15, 0, r4, c13, c0, 0			@ save CP15 - FCSE
+-        mrc     p15, 0, r5, c2, c0, 0           @ save CP15 - TTBR0
++	mrc     p15, 0, r5, c2, c0, 0           @ save CP15 - TTBR0
++	mrc     p15, 0, r10, c2, c0, 2           @ save CP15 - TTBRC
+ 	mrc     p15, 0, r6, c13, c0, 1			@ save CP15 - context ID
+ 	mrc     p15, 1, r7, c15, c1, 0			@ save CP15 - extra features
+ 	mrc     p15, 0, r8, c1, c0, 1			@ save CP15 - Aux CR
+ 	mov     r9, r13							@ save resume SP
+-	stmfd   sp!, {r2-r9}
++	stmfd   sp!, {r2-r10}
+ 	mrc     p15, 0, r2, c2, c0, 1           @ save CP15 - TTBR1
+ 	mrc	p15, 1, r3, c15, c2, 0				@ save CP15 - Aux Func Modes Ctrl 0
+ 	mrc	p15, 1, r4, c15, c1, 2				@ save CP15 - Aux Debug Modes Ctrl 2
+@@ -356,11 +357,12 @@ ENTRY(armadaxp_cpu_resume)
+ 	mcr     p15, 0, r6, c9, c14, 0          @ restore CP15 - PMC
+ 	mcr     p15, 0, r7, c10, c2, 0          @ restore CP15 - PRRR
+ 	mcr     p15, 0, r8, c10, c2, 1          @ restore CP15 - NMRR
+-	ldmfd   r0!, {r2-r9}
++	ldmfd   r0!, {r2-r10}
+ 	mcr	p15, 0, r8, c1, c0, 1		@ restore CP15 - Aux CR
+ 	mcr	p15, 1, r7, c15, c1, 0		@ restore CP15 - extra features
+ 	mcr	p15, 0, r4, c13, c0, 0		@ restore CP15 - FCSE
+ 	mcr	p15, 0, r3, c3, c0, 0		@ restore CP15 - DACR
++	mcr     p15, 0, r10, c2, c0, 2           @ restore CP15 - TTBRC
+ 
+ 	/* load identity page table */
+ 	ldr	r3, identity_page_table_phys
+diff --git a/arch/arm/plat-armada/cpuidle.c b/arch/arm/plat-armada/cpuidle.c
+index 4e8da4b..737a93f 100644
+--- a/arch/arm/plat-armada/cpuidle.c
++++ b/arch/arm/plat-armada/cpuidle.c
+@@ -82,7 +82,7 @@ static int build_identity_page_table(void)
+ 		identity_mapping_add(pgd, __pa(_stext), __pa(_etext));
+ 		identity_mapping_add(pgd, __pa(_sdata), __pa(_edata)); /* is this needed?*/
+ 	}
+-	identity_page_table_phys = virt_to_phys(*pgd);
++	identity_page_table_phys = virt_to_phys(pgd);
+ 	return 0;
+ }
+ 
+-- 
+1.7.9.5
+

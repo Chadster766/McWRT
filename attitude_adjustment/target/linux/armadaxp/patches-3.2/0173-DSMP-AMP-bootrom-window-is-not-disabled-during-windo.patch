@@ -1,0 +1,30 @@
+From a34b04f6a08663c432b0a1c29b3de3caf48dc5fd Mon Sep 17 00:00:00 2001
+From: Yehuda Y <yehuday@marvell.com>
+Date: Wed, 2 May 2012 16:58:14 +0300
+Subject: [PATCH 173/609] DSMP:AMP: bootrom window is not disabled during
+ window configuration
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/ctrlEnv/sys/mvCpuIf.c         |    5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
+index 9e5c6e7..f134b15 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
+@@ -180,6 +180,11 @@ MV_STATUS mvCpuIfInitForCpu(MV_U32 cpu, MV_CPU_DEC_WIN *cpuAddrWinMap)
+ 		if ((MV_TARGET_IS_DRAM(target)) || (target == INTER_REGS))
+ 			continue;
+ 
++#ifdef CONFIG_MV_AMP_ENABLE
++		if(target == BOOT_ROM_CS)
++			continue;
++#endif
++
+ #if defined(MV_MEM_OVER_PEX_WA) || defined(MV_UART_OVER_PEX_WA)
+ 		/* If the target PEX or PCI and memory is over PEX or PCI we don't touch this CPU windows */
+ 		if (MV_TARGET_IS_PEX(target))
+-- 
+1.7.9.5
+

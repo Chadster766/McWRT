@@ -1,0 +1,39 @@
+Index: libdlna-0.2.3/src/profiles.c
+===================================================================
+--- libdlna-0.2.3.orig/src/profiles.c	2011-10-10 13:00:12.000000000 +0200
++++ libdlna-0.2.3/src/profiles.c	2011-10-10 13:05:52.000000000 +0200
+@@ -205,13 +205,13 @@
+   for (i = 0; i < ctx->nb_streams; i++)
+   {
+     if (audio_stream == -1 &&
+-        ctx->streams[i]->codec->codec_type == CODEC_TYPE_AUDIO)
++        ctx->streams[i]->codec->codec_type == LIBDLNA_CODEC_TYPE_AUDIO)
+     {
+       audio_stream = i;
+       continue;
+     }
+     else if (video_stream == -1 &&
+-             ctx->streams[i]->codec->codec_type == CODEC_TYPE_VIDEO)
++             ctx->streams[i]->codec->codec_type == LIBDLNA_CODEC_TYPE_VIDEO)
+     {
+       video_stream = i;
+       continue;
+Index: libdlna-0.2.3/src/profiles.h
+===================================================================
+--- libdlna-0.2.3.orig/src/profiles.h	2011-10-10 13:00:26.000000000 +0200
++++ libdlna-0.2.3/src/profiles.h	2011-10-10 13:05:27.000000000 +0200
+@@ -25,6 +25,14 @@
+ #include <libavcodec/avcodec.h>
+ #include <libavformat/avformat.h>
+ 
++#if (LIBAVCODEC_VERSION_MAJOR > 52)
++# define LIBDLNA_CODEC_TYPE_AUDIO  (AVMEDIA_TYPE_AUDIO)
++# define LIBDLNA_CODEC_TYPE_VIDEO  (AVMEDIA_TYPE_VIDEO)
++#else
++# define LIBDLNA_CODEC_TYPE_AUDIO  (CODEC_TYPE_AUDIO)
++# define LIBDLNA_CODEC_TYPE_VIDEO  (CODEC_TYPE_VIDEO)
++#endif
++
+ #include "dlna_internals.h"
+ #include "containers.h"
+ 

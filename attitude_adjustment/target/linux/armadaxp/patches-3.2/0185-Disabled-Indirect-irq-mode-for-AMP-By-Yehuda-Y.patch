@@ -1,0 +1,28 @@
+From 957a9431a3dfd418c99111caa76e203b15e93ea3 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Tue, 26 Jun 2012 13:24:46 +0300
+Subject: [PATCH 185/609] Disabled Indirect irq mode for AMP ( By Yehuda Y.)
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/Kconfig |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/plat-armada/Kconfig b/arch/arm/plat-armada/Kconfig
+index 8def98e..518c35e 100644
+--- a/arch/arm/plat-armada/Kconfig
++++ b/arch/arm/plat-armada/Kconfig
+@@ -183,8 +183,8 @@ menu "Armada AMP options"
+ 
+ config MV_AMP_ENABLE
+         bool "Enable AMP support"
+-	depends on   (ARMADA_XP || (MV78XX0)) && (!ARMADA_XP_REV_Z1) && (SMP) && (!MV_ETH_BM)
+-        default n
++	epends on   (ARMADA_XP || (MV78XX0)) && (!ARMADA_XP_REV_Z1) && (SMP) && (!MV_ETH_BM) && (!ARMADAXP_USE_IRQ_INDIRECT_MODE)
++	default n
+ 
+ config MV_IPC_DRIVER
+         bool "Enable IPC basic driver"
+-- 
+1.7.9.5
+

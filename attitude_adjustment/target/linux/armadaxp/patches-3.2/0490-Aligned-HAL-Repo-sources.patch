@@ -1,0 +1,189 @@
+From e8b59e65c1132791237ddc86e1179669f98dfc3a Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 13 Jan 2013 14:14:47 +0200
+Subject: [PATCH 490/609] Aligned HAL Repo sources
+
+Change-Id: Iaf2f75d242f7496679f9d87a5a7a1543048c2d22
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c |    1 +
+ arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h    |    4 +++-
+ arch/arm/plat-armada/mv_hal/nfc/mvNfc.c        |   29 ++++--------------------
+ arch/arm/plat-armada/mv_hal/nfc/mvNfc.h        |    6 ++---
+ 4 files changed, 12 insertions(+), 28 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
+index 614e7d6..fc21ba0 100755
+--- a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
++++ b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
+@@ -1779,6 +1779,7 @@ MV_VOID mvEth1540A1PhyBasicInit(MV_U32 ethPortNum, MV_BOOL eeeEnable)
+ 	mvOsDelay(100);
+ }
+ 
++
+ MV_VOID mvEth1540A0PhyBasicInit(MV_U32 ethPortNum, MV_BOOL eeeEnable)
+ {
+ 	int i = ethphyHalData.phyAddr[ethPortNum];
+diff --git a/arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h b/arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h
+index 72c4ead..ea223c8 100755
+--- a/arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h
++++ b/arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h
+@@ -153,10 +153,12 @@ extern "C" {
+ #define GPP_INT_MASK_REG(grp)			(MV_GPP_REGS_BASE(grp) + 0x18)
+ #define GPP_INT_LVL_REG(grp)			(MV_GPP_REGS_BASE(grp) + 0x1C)
+ #define GPP_BLINK_SEL_REG(grp)			(MV_GPP_REGS_BASE(grp) + 0x20)
++
+ #define GPP_OUT_SET_REG(grp)			(GPP_OUT_SET_REG_BASE + ( (grp) * 0x40 ) )
+ #define GPP_64_66_DATA_OUT_SET_REG		(MV_GPP_REGS_BASE(0) + 0xA4)
+ #define GPP_OUT_CLEAR_REG(grp)			(GPP_OUT_CLEAR_REG_BASE + ((grp) * 0x40))
+-#define GPP_64_66_DATA_OUT_CLEAR_REG		(MV_GPP_REGS_BASE(0) + 0xB0)
++#define GPP_64_66_DATA_OUT_CLEAR_REG	(MV_GPP_REGS_BASE(0) + 0xB0)
++
+ #define GPP_FUNC_SELECT_REG			(MV_GPP_REGS_BASE(0) + 0x40)
+ 
+ /* Relevant for MV78XX0 */
+diff --git a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
+index 3058b69..d780c6d 100644
+--- a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
++++ b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
+@@ -67,7 +67,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #include "ctrlEnv/mvCtrlEnvSpec.h"
+ #include "mvSysNfcConfig.h"
+ #include "mvNfcRegs.h"
+-#ifdef CONFIG_MV_INCLUDE_PDMA
++#ifdef MV_INCLUDE_PDMA
+ #include "pdma/mvPdma.h"
+ #include "pdma/mvPdmaRegs.h"
+ #endif
+@@ -666,24 +666,17 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo, MV_NFC_CTRL *nfcCtrl)
+ 	/* Write registers before device detection */
+ 	MV_REG_WRITE(NFC_CONTROL_REG, ctrl_reg);
+ 
+-#ifdef CONFIG_MTD_NAND_NFC_INIT_RESET
++#ifdef MTD_NAND_NFC_INIT_RESET
+ 	/* reset the device */
+ 	ret = mvNfcReset();
+-
+ 	if (ret != MV_OK)
+-	{
+-		mvOsPrintf("mvNfcReset failed. Returned %d\n", ret);
+ 		return ret;
+-	}
+ #endif
+ 
+ 	/* Read the device ID */
+ 	ret = mvNfcReadIdNative(nfcCtrl->currCs, &read_id);
+ 	if (ret != MV_OK)
+-	{
+-		mvOsPrintf("mvNfcReadIdNative failed. Returned %d\n", ret);
+ 		return ret;
+-	}
+ 
+ 	/* Look for device ID in knwon device table */
+ 	for (i = 0; i < (sizeof(flashDeviceInfo) / sizeof(MV_NFC_FLASH_INFO)); i++) {
+@@ -699,10 +692,7 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo, MV_NFC_CTRL *nfcCtrl)
+ 	if (flashDeviceInfo[i].flags & NFC_FLAGS_ONFI_MODE_3_SET) {
+ 		ret = mvNfcDeviceModeSet(nfcCtrl, MV_NFC_ONFI_MODE_3);
+ 		if (ret != MV_OK)
+-		{
+-			mvOsPrintf("mvNfcDeviceModeSet failed. Returned %d\n", ret);
+ 			return ret;
+-		}
+ 	}
+ 
+ 	/* Critical Initialization done. Raise NFC clock if needed */
+@@ -720,10 +710,7 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo, MV_NFC_CTRL *nfcCtrl)
+ 	/* calculate Timing parameters */
+ 	ret = mvNfcTimingSet(nand_clock, &flashDeviceInfo[i]);
+ 	if (ret != MV_OK)
+-	{
+-		mvOsPrintf("mvNfcTimingSet failed. Returned %d\n", ret);
+ 		return ret;
+-	}
+ 
+ 	/* Configure the control register based on the device detected */
+ 	ctrl_reg = MV_REG_READ(NFC_CONTROL_REG);
+@@ -792,7 +779,7 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo, MV_NFC_CTRL *nfcCtrl)
+ 	/* Write the updated control register */
+ 	MV_REG_WRITE(NFC_CONTROL_REG, ctrl_reg);
+ 
+-#ifdef CONFIG_MV_INCLUDE_PDMA
++#ifdef MV_INCLUDE_PDMA
+ 	/* DMA resource allocation */
+ 	if (nfcInfo->ioMode == MV_NFC_PDMA_ACCESS) {
+ 		/* Allocate command buffer */
+@@ -855,7 +842,7 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo, MV_NFC_CTRL *nfcCtrl)
+ 	nfcCtrl->ifMode = nfcInfo->ifMode;
+ 	nfcCtrl->currCs = MV_NFC_CS_NONE;
+ 	nfcCtrl->regsPhysAddr = nfcInfo->regsPhysAddr;
+-#ifdef CONFIG_MV_INCLUDE_PDMA
++#ifdef MV_INCLUDE_PDMA
+ 	nfcCtrl->dataPdmaIntMask = nfcInfo->dataPdmaIntMask;
+ 	nfcCtrl->cmdPdmaIntMask = nfcInfo->cmdPdmaIntMask;
+ #endif
+@@ -2508,7 +2495,7 @@ static MV_STATUS mvNfcDeviceModeSet(MV_NFC_CTRL *nfcCtrl, MV_NFC_ONFI_MODE mode)
+ }
+ 
+ 
+-#ifdef CONFIG_MTD_NAND_NFC_INIT_RESET
++#ifdef MTD_NAND_NFC_INIT_RESET
+ MV_STATUS mvNfcReset(void)
+ {
+ 	MV_U32 reg;
+@@ -2527,10 +2514,7 @@ MV_STATUS mvNfcReset(void)
+ 	/* Wait for Command WRITE request */
+ 	errCode = mvDfcWait4Complete(NFC_SR_WRCMDREQ_MASK, 1);
+ 	if (errCode != MV_OK)
+-	{
+-		mvOsPrintf("%s() - Failed wait for NFC_SR_WRCMDREQ_MASK\n", __func__ );
+ 		goto Error_3;
+-	}
+ 
+ 	/* Send Command */
+ 	MV_REG_WRITE(NFC_COMMAND_BUFF_0_REG, 0x00A000FF);	/* DFC_NDCB0_RESET */
+@@ -2540,10 +2524,7 @@ MV_STATUS mvNfcReset(void)
+ 	/* Wait for Command completion */
+ 	errCode = mvDfcWait4Complete(NFC_SR_RDY0_MASK, 1000);
+ 	if (errCode != MV_OK)
+-	{
+-		mvOsPrintf("%s() - Failed wait for NFC_SR_RDY0_MASK\n", __func__ );
+ 		goto Error_3;
+-	}
+ 
+ 	/* Wait for ND_RUN bit to get cleared. */
+ 	while (timeout > 0) {
+diff --git a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.h b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.h
+index dbb318a..5d7e9e5 100644
+--- a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.h
++++ b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.h
+@@ -254,7 +254,7 @@ typedef struct {
+ 	MV_BOOL			readyBypass;
+ 	MV_VOID			*osHandle;
+ 	MV_U32			regsPhysAddr;
+-#ifdef CONFIG_MV_INCLUDE_PDMA
++#ifdef MV_INCLUDE_PDMA
+ 	MV_U32			dataPdmaIntMask;
+ 	MV_U32			cmdPdmaIntMask;
+ #endif
+@@ -328,7 +328,7 @@ typedef struct {
+ 	MV_NFC_ECC_MODE eccMode;
+ 	MV_NFC_IF_MODE 	ifMode;
+ 	MV_NFC_CHIP_SEL currCs;
+-#ifdef CONFIG_MV_INCLUDE_PDMA
++#ifdef MV_INCLUDE_PDMA
+ 	MV_PDMA_CHANNEL dataChanHndl;
+ 	MV_PDMA_CHANNEL cmdChanHndl;
+ #endif
+@@ -336,7 +336,7 @@ typedef struct {
+ 	MV_BUF_INFO	cmdDescBuff;
+ 	MV_BUF_INFO	dataDescBuff;
+ 	MV_U32		regsPhysAddr;
+-#ifdef CONFIG_MV_INCLUDE_PDMA
++#ifdef MV_INCLUDE_PDMA
+ 	MV_U32		dataPdmaIntMask;
+ 	MV_U32		cmdPdmaIntMask;
+ #endif
+-- 
+1.7.9.5
+

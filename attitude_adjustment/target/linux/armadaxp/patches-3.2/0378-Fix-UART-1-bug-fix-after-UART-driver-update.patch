@@ -1,0 +1,26 @@
+From eabe401ba7070374b0dcc1baa266a27a9a16188e Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Thu, 27 Dec 2012 15:59:47 +0200
+Subject: [PATCH 378/609] Fix: UART #1 bug fix after UART driver update
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/core.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index c096d84..a580abe 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -594,7 +594,7 @@ static struct plat_serial8250_port aurora_uart1_data[] = {
+ 	{
+ 		.mapbase	= (INTER_REGS_PHYS_BASE | MV_UART_REGS_OFFSET(1)),
+ 		.membase	= (char *)(INTER_REGS_BASE | MV_UART_REGS_OFFSET(1)),
+-		.irq		= IRQ_AURORA_UART0,
++		.irq		= IRQ_AURORA_UART1,
+ 		.flags		= UPF_FIXED_TYPE | UPF_SKIP_TEST | UPF_BOOT_AUTOCONF,
+ 		.iotype		= UPIO_DWAPB,
+ 		.private_data	= (void *) (INTER_REGS_BASE | MV_UART_REGS_OFFSET(1) | 0x7C),
+-- 
+1.7.9.5
+

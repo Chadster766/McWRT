@@ -1,0 +1,57 @@
+
+config 'multiwan' 'config'
+	# REMOVE THIS LINE OR PUT TO 1 TO ENABLE MULTIWAN
+	option 'enabled' '0'
+
+	option 'default_route' 'balancer'
+	# health_monitor below is defaulted to parallel, and can be set to
+	# serial to save system resources.
+	# option 'health_monitor' 'serial'
+	# option 'debug' '1'
+
+config 'interface' 'wan'
+	option 'weight' '10'
+	option 'health_interval' '10'
+	option 'icmp_hosts' 'dns'
+	# icmp_count is defaulted to 1, and can be increased to reduce
+	# false positives.
+	# option 'icmp_count' '3'
+	option 'timeout' '3'
+	option 'health_fail_retries' '3'
+	option 'health_recovery_retries' '5'
+	option 'failover_to' 'wan2'
+	option 'dns' 'auto'
+
+config 'interface' 'wan2'
+	option 'weight' '10'
+	option 'health_interval' '10'
+	option 'icmp_hosts' 'gateway'
+	option 'timeout' '3'
+	option 'health_fail_retries' '3'
+	option 'health_recovery_retries' '5'
+	option 'failover_to' 'balancer'
+	option 'dns' '208.67.222.222 208.67.220.220'
+
+config 'mwanfw'
+	option 'src' '192.168.1.0/24'
+	option 'dst' 'ftp.netlab7.com'
+	option 'proto' 'tcp'
+	option 'ports' '21'
+	option 'wanrule' 'wan2'
+
+# VoIP traffic goes through wan
+# config 'mwanfw'
+	# option 'src' '192.168.1.0/24'
+	# option 'proto' 'udp'
+	# option 'port_type' 'source-ports'
+	# option 'ports' '5060,16384:16482'
+	# option 'wanrule' 'wan'
+
+config 'mwanfw'
+	option 'src' '192.168.0.3'
+	option 'proto' 'icmp'
+	option 'wanrule' 'balancer'
+
+config 'mwanfw'
+	option 'dst' 'www.whatismyip.com'
+	option 'wanrule' 'fastbalancer'

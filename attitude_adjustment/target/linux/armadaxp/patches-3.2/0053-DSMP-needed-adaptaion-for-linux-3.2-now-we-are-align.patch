@@ -1,0 +1,107 @@
+From 1c0d1af805f223552099c91f46bc7f17708163de Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Thu, 1 Mar 2012 00:19:12 +0200
+Subject: [PATCH 053/609] DSMP - needed adaptaion for linux 3.2, now we are
+ aligned to ver 2.0.1 of the 3.0.6 branch
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/core.c                      |    5 ++---
+ arch/arm/mach-armadaxp/include/mach/armadaxp.h     |    1 +
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |    9 +++++----
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h     |    2 ++
+ 4 files changed, 10 insertions(+), 7 deletions(-)
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index 0898973..422ce8d 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -44,6 +44,7 @@
+ #include <linux/serial_8250.h>
+ #include <linux/serial_reg.h>
+ #include <linux/ata_platform.h>
++#include <linux/mv_neta.h>
+ #include <asm/serial.h>
+ #include <plat/cache-aurora-l2.h>
+ 
+@@ -1627,9 +1628,7 @@ static void __init axp_rd_nas_init(void)
+ 
+ MACHINE_START(ARMADA_XP_RD_NAS, "Marvell Armada XP RD NAS Board")
+ 	/* MAINTAINER("MARVELL") */
+-	//.phys_io	= INTER_REGS_PHYS_BASE,
+-	//.io_pg_offst	= ((INTER_REGS_BASE) >> 18) & 0xfffc,
+-	.boot_params	= 0x00000100,
++	.atag_offset	= 0x00000100,
+ 	.map_io		= axp_map_io,
+ 	.init_irq	= axp_init_irq,
+ 	.timer		= &axp_timer,
+diff --git a/arch/arm/mach-armadaxp/include/mach/armadaxp.h b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
+index bafc076..401718c 100644
+--- a/arch/arm/mach-armadaxp/include/mach/armadaxp.h
++++ b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
+@@ -219,4 +219,5 @@
+ #define AXP_CPU_RESET_REG(cpu)		(AXP_BRIDGE_VIRT_BASE | (0x800+(cpu)*8))
+ #define AXP_L2_CLEAN_WAY_REG		(INTER_REGS_BASE | 0x87BC) 
+ #define AXP_L2_MNTNC_STAT_REG		(INTER_REGS_BASE | 0x8704)
++#define AXP_SNOOP_FILTER_PHYS_REG	(INTER_REGS_PHYS_BASE | 0x21020)
+ #endif
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 81e6dc2..0e5f230 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -36,7 +36,7 @@ disclaimer.
+ #include <linux/mv_neta.h>
+ #include <net/ip.h>
+ #include <net/ipv6.h>
+-
++#include <linux/module.h>
+ #include "mvOs.h"
+ #include "mvDebug.h"
+ #include "dbg-trace.h"
+@@ -764,7 +764,8 @@ static const struct net_device_ops mv_eth_netdev_ops = {
+ 	.ndo_open = mv_eth_open,
+ 	.ndo_stop = mv_eth_stop,
+ 	.ndo_start_xmit = mv_eth_tx,
+-	.ndo_set_multicast_list = mv_eth_set_multicast_list,
++	/*TODO - this is a hack by Seif M. need to fix this to properly move to linux 3.2!!!
++	.ndo_set_multicast_list = mv_eth_set_multicast_list,*/
+ 	.ndo_set_mac_address = mv_eth_set_mac_addr,
+ 	.ndo_change_mtu = mv_eth_change_mtu,
+ 	.ndo_tx_timeout = mv_eth_tx_timeout,
+@@ -2099,7 +2100,7 @@ static void mv_eth_tx_frag_process(struct eth_port *pp, struct sk_buff *skb, str
+ 		/* NETA_TX_BM_ENABLE_MASK = 0 */
+ 		/* NETA_TX_PKT_OFFSET_MASK = 0 */
+ 		tx_desc->dataSize = frag->size;
+-		tx_desc->bufPhysAddr = mvOsCacheFlush(NULL, page_address(frag->page) + frag->page_offset,
++		tx_desc->bufPhysAddr = mvOsCacheFlush(NULL, page_address(frag->page.p) + frag->page_offset,
+ 						      tx_desc->dataSize);
+ 
+ 		if (i == (skb_shinfo(skb)->nr_frags - 1)) {
+@@ -2829,7 +2830,7 @@ static int mv_eth_probe(struct platform_device *pdev)
+ #endif
+ 
+ 	if (!mv_eth_initialized) {
+-		mvSysNetaInit(port_mask, cpu_mask); /* init MAC Unit */
++		mvSysNetaInit(); /* init MAC Unit */
+ 
+ 		mv_eth_ports_num = mvCtrlEthMaxPortGet();
+ 		if (mv_eth_ports_num > CONFIG_MV_ETH_PORTS_NUM)
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+old mode 100644
+new mode 100755
+index d4e8a0e..ec041fa
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+@@ -332,6 +332,8 @@ struct eth_port {
+ 					struct mv_eth_tx_spec *tx_spec_out);
+ #endif /* CONFIG_MV_ETH_TX_SPECIAL */
+ 	int napiCpuGroup[CONFIG_NR_CPUS];
++	MV_U32 cpuMask;
++	MV_U32 rx_indir_table[256];
+ };
+ 
+ struct eth_netdev {
+-- 
+1.7.9.5
+

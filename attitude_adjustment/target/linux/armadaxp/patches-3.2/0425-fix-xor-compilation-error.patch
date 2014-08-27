@@ -1,0 +1,28 @@
+From 2b0fe8009e5af0dcf8e6ac780fa9fe2283c118d0 Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Wed, 21 Nov 2012 17:12:18 +0200
+Subject: [PATCH 425/609] fix xor compilation error
+
+Change-Id: Iddfdba731112ed960bdcf0751784519d9174bd2e
+Signed-off-by: Neta Zur <neta@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/xor/mvXor.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/plat-armada/mv_hal/xor/mvXor.c b/arch/arm/plat-armada/mv_hal/xor/mvXor.c
+index aade40e..fe81f51 100755
+--- a/arch/arm/plat-armada/mv_hal/xor/mvXor.c
++++ b/arch/arm/plat-armada/mv_hal/xor/mvXor.c
+@@ -93,7 +93,7 @@ MV_VOID mvXorHalInit(MV_U32 xorChanNum)
+ 	/* Abort any XOR activity & set default configuration */
+ 	for (i = 0; i < xorChanNum; i++) {
+ 
+-		if(mvUnitMapIsMine(XOR0 + XOR_UNIT(i)) == FALSE)
++		if(mvUnitMapIsMine(XOR0 + XOR_UNIT(i)) == MV_FALSE)
+ 			continue;
+ 
+ 		mvXorCommandSet(i, MV_STOP);
+-- 
+1.7.9.5
+

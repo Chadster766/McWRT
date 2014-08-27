@@ -1,0 +1,66 @@
+From 26133be0f8488d2ebd1aeb257a0fecf714303622 Mon Sep 17 00:00:00 2001
+From: Matthew Fatheree <Matthew.Fatheree@belkin.com>
+Date: Sat, 10 May 2014 23:17:39 +0700
+Subject: [PATCH 05/31] Support the switch 88E6172
+
+Signed-off-by: Matthew Fatheree <Matthew.Fatheree@belkin.com>
+---
+ target/linux/armadaxp/config-3.2                   |   16 ++++++++++++++++
+ .../1005-fixed_up_the_pSwitchInfo_for_switch       |   15 +++++++++++++++
+ 2 files changed, 31 insertions(+)
+ create mode 100644 target/linux/armadaxp/patches-3.2/1005-fixed_up_the_pSwitchInfo_for_switch
+
+diff --git a/target/linux/armadaxp/config-3.2 b/target/linux/armadaxp/config-3.2
+index 944acc6..64e3c47 100644
+--- a/target/linux/armadaxp/config-3.2
++++ b/target/linux/armadaxp/config-3.2
+@@ -18,9 +18,25 @@ CONFIG_JFFS2_ZLIB=y
+ CONFIG_MACH_ARMADA_XP_RD_WIFI=y
+ CONFIG_MTD_ROOTFS_ROOT_DEV=y
+ CONFIG_MTD_ROOTFS_SPLIT=y
++CONFIG_MV_ETH_1_MACADDR="00:00:00:00:00:81"
++CONFIG_MV_ETH_1_MTU=1500
++CONFIG_MV_ETH_BM_PORT_1=y
++CONFIG_MV_ETH_BM_PORT_1_LONG_BUF_NUM=2048
++CONFIG_MV_ETH_BM_PORT_1_LONG_POOL=1
++CONFIG_MV_ETH_BM_PORT_1_SHORT_BUF_NUM=3072
++CONFIG_MV_ETH_BM_PORT_1_SHORT_POOL=3
++CONFIG_MV_ETH_GROUP1_CPU=0x0
++CONFIG_MV_ETH_GROUP1_RXQ=0x0
++CONFIG_MV_ETH_NAPI_GROUPS=2
++CONFIG_MV_ETH_PORTS_NUM=2
++# CONFIG_MV_ETH_SWITCH is not set
++CONFIG_MV_INCLUDE_PCI=y
++CONFIG_MV_INCLUDE_SWITCH=y
+ # CONFIG_MV_INCLUDE_USB is not set
+ # CONFIG_MV_PHONE is not set
+ # CONFIG_MV_PHONE_USE_SLIC_LIBS is not set
+ # CONFIG_OVERLAYFS_FS is not set
+ # CONFIG_PPP is not set
+ # CONFIG_TDM_DEV_TEST_SUPPORT is not set
++# CONFIG_USB_ETRON_HCD is not set
++# CONFIG_USB_UAS is not set
+diff --git a/target/linux/armadaxp/patches-3.2/1005-fixed_up_the_pSwitchInfo_for_switch b/target/linux/armadaxp/patches-3.2/1005-fixed_up_the_pSwitchInfo_for_switch
+new file mode 100644
+index 0000000..784b292
+--- /dev/null
++++ b/target/linux/armadaxp/patches-3.2/1005-fixed_up_the_pSwitchInfo_for_switch
+@@ -0,0 +1,15 @@
++diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
++index 0c69526..7e09881 100644
++--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
++@@ -1408,8 +1408,8 @@ MV_BOARD_INFO rd78460wifiInfo = {
++         .gppPolarityValHigh             = RD_78460_WIFI_GPP_POL_HIGH,
++ 
++         /* External Switch Configuration */
++-        .pSwitchInfo = NULL,
++-        .switchInfoNum = 0,
+++        .pSwitchInfo = rd78460gpBoardSwitchValue,
+++        .switchInfoNum = 1,
++ 
++         /* TDM configuration */
++         /* We hold a different configuration array for each possible slic that
+-- 
+1.7.9.5
+

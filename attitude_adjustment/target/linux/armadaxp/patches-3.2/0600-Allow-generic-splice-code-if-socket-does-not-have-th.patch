@@ -1,0 +1,32 @@
+From 57b5be2bf3a386c951a8bada9e310304c3aa5ad2 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Tue, 23 Apr 2013 16:07:44 +0300
+Subject: [PATCH 600/609] Allow generic splice code if socket does not have
+ the splice_from_socket function set.
+
+Change-Id: I27a5b24125aa8658504dc71e160ba8638d37bb7c
+Signed-off-by: Michal Mazur <arg@semihalf.com>
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1651
+Reviewed-by: Star_Automation <star@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ fs/splice.c |    1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/fs/splice.c b/fs/splice.c
+index 2700e55..47e47ff 100644
+--- a/fs/splice.c
++++ b/fs/splice.c
+@@ -2124,7 +2124,6 @@ done:
+ 		if(out)
+ 			fput_light(out, fput_out);
+ 		fput(sock->file);
+-		return error;
+ 	}
+ 
+ 	in = fget_light(fd_in, &fput_in);
+-- 
+1.7.9.5
+

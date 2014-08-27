@@ -1,0 +1,461 @@
+From 5ba8fb186c02f4facfe82747e16f41d248e7ff95 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 21 Oct 2012 13:16:53 +0200
+Subject: [PATCH 319/609] PM: Added SMP support for suspend to RAM
+
+	1. Modified SMP boot flow to enable resume of seconday CPUs
+	2. Added support for one shot mode in timer.c
+	3. Add resume routine for SMP functionalities
+
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/headsmp.S |   45 +++++++------
+ arch/arm/mach-armadaxp/irq.c     |    9 ++-
+ arch/arm/mach-armadaxp/platsmp.c |  129 +++++++++++++-------------------------
+ arch/arm/mach-armadaxp/time.c    |   12 ++--
+ arch/arm/plat-armada/hotplug.c   |    9 ---
+ arch/arm/plat-armada/suspend.c   |    3 +
+ 6 files changed, 85 insertions(+), 122 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/headsmp.S b/arch/arm/mach-armadaxp/headsmp.S
+index e58dd2d..fc65e70 100644
+--- a/arch/arm/mach-armadaxp/headsmp.S
++++ b/arch/arm/mach-armadaxp/headsmp.S
+@@ -9,7 +9,9 @@
+ #include <linux/init.h>
+ #include <asm/memory.h>
+ 
+-	__INIT
++
++#define AXP_COHERENCY_FABRIC_CTL_REG 0xD0020200
++#define AXP_COHERENCY_FABRIC_CFG_REG 0xD0020204
+ 
+ /*
+  * specific entry point for secondary CPUs.  This provides
+@@ -28,10 +30,27 @@ ENTRY(axp_secondary_startup)
+ #endif
+ 	mrc	p15, 0, r0, c0, c0, 5
+ 	and	r0, r0, #15
+-	adr	r4, 1f
+-	ldmia	r4, {r5, r6}
+-	sub	r4, r4, r5
+-	add	r6, r6, r4
++
++	/* Add CPU to coherency fabric */
++
++	/* Create bit by cpu index */
++	mov     r2,r0
++	add     r2,r2,#24
++	MOV     r3, #1
++	lsl     r3, r3, r2
++
++	/* Add CPU to SMP group - Atomic */
++	ldr     r0, = AXP_COHERENCY_FABRIC_CTL_REG
++	ldr     r10, [r0]
++	orr     r10 , r10, r3
++	str	r10,[r0]
++
++	/* Enable coherency on CPU - Atomic*/
++	ldr     r0, = AXP_COHERENCY_FABRIC_CFG_REG
++	ldr     r10, [r0]
++	orr     r10 , r10, r3
++	str     r10,[r0]
++
+ #ifndef CONFIG_SHEEVA_ERRATA_ARM_CPU_4948
+ 	/*
+ 	 * Disable L0 on secondary CPU if flag set
+@@ -64,24 +83,10 @@ l0_dis_skip:
+ 	mcr	p15, 1, r7, c15, c2, 0	
+ sp_ena_skip:
+ #endif
+-pen:
+-#if __LINUX_ARM_ARCH__ >= 7
+-	dsb
+-#else
+-	 mcr p15, 0, r0, c7, c10, 4
+-#endif
+-	ldr	r7, [r6]
+-	cmp	r7, r0
+-	bne	pen
+ 
+-	/*
+-	 * we've been released from the holding pen: secondary_stack
+-	 * should now contain the SVC stack for this core
+-	 */
+ 	b	secondary_startup
+ 
+-1:	.long	.
+-	.long	pen_release
++
+ #ifndef CONFIG_SHEEVA_ERRATA_ARM_CPU_4948
+ l0_disable_flag_addr:
+ 	.word	l0_disable_flag
+diff --git a/arch/arm/mach-armadaxp/irq.c b/arch/arm/mach-armadaxp/irq.c
+index e914ba0..7ab3f02 100644
+--- a/arch/arm/mach-armadaxp/irq.c
++++ b/arch/arm/mach-armadaxp/irq.c
+@@ -25,6 +25,7 @@
+ 
+ unsigned int  irq_int_type[NR_IRQS];
+ static DEFINE_SPINLOCK(irq_controller_lock);
++#define ENABLED_DOORBELS 	(0xF0FF)
+ 
+ int max_per_cpu_irq = 28; // not enabled, default.
+ static int __init per_cpu_irq_setup(char *__unused)
+@@ -240,12 +241,13 @@ int axp_set_affinity(struct irq_data *d, const struct cpumask *mask_val,bool for
+ #endif /* CONFIG_ARMADAXP_USE_IRQ_INDIRECT_MODE */
+ 
+ #ifdef CONFIG_SMP
+-void second_cpu_init(void)
++void axp_ipi_init(void)
+ {
+ 	struct irq_data *d = irq_get_irq_data(IRQ_AURORA_IN_DRBL_LOW);
+ 	unsigned long temp;
++
+ 	/* open IPI mask */
+-	temp = MV_REG_READ(AXP_IN_DRBEL_MSK) | 0xff;
++	temp = MV_REG_READ(AXP_IN_DRBEL_MSK) | ENABLED_DOORBELS;
+ 	MV_REG_WRITE(AXP_IN_DRBEL_MSK, temp);
+ 
+ 	axp_irq_unmask(d);
+@@ -306,13 +308,14 @@ void __init axp_init_irq(void)
+         	/* Set the default affinity to the boot cpu. */
+         	cpumask_clear(irq_default_affinity);
+         	cpumask_set_cpu(smp_processor_id(), irq_default_affinity);
++
+ 		/* open IPI mask */
+ 		/* this  register write does the job of axp_irq_unmask(IRQ_AURORA_IN_DRBL_LOW)
+ 		   i.e. enable / unmask the DRBL_LOW interrupt.
+ 		*/
+ 	        MV_REG_WRITE(CPU_INT_CLEAR_MASK_LOCAL_REG, 0);
+ 		addr = /*(void __iomem *)*/(AXP_IN_DRBEL_MSK);
+-		MV_REG_WRITE(addr, 0xf0ff); // only IPI 0
++		MV_REG_WRITE(addr, ENABLED_DOORBELS);
+ 	}
+ #endif
+ 
+diff --git a/arch/arm/mach-armadaxp/platsmp.c b/arch/arm/mach-armadaxp/platsmp.c
+index ce6ec1d..7fc3f42 100644
+--- a/arch/arm/mach-armadaxp/platsmp.c
++++ b/arch/arm/mach-armadaxp/platsmp.c
+@@ -23,7 +23,7 @@
+ #include "include/mach/smp.h"
+ 
+ extern void axp_secondary_startup(void);
+-extern void second_cpu_init(void);
++extern void axp_ipi_init(void);
+ extern void second_cpu_msi_init(void);
+ extern MV_CPU_DEC_WIN *mv_sys_map(void);
+ extern unsigned long mv_cpu_count;
+@@ -54,12 +54,6 @@ static inline unsigned int get_sample_at_reset_core_count(void)
+ 	return ((MV_REG_READ(SOC_COHERENCY_FABRIC_CFG_REG) & 0xF) + 1);
+ }
+ 
+-/*
+- * control for which core is the next to come out of the secondary
+- * boot "holding pen"
+- */
+-volatile int __cpuinitdata pen_release = -1;
+-
+ static unsigned int __init get_core_count(void)
+ {
+ #ifdef CONFIG_MACH_ARMADA_XP_FPGA
+@@ -80,11 +74,15 @@ void __init set_core_count(unsigned int cpu_count)
+ 	group_cpu_mask = ((1 << cpu_count) - 1) << (hard_smp_processor_id());
+ }
+ 
+-static DEFINE_SPINLOCK(boot_lock);
++/*
++ * Platform intialization routine for seconday CPUs
++ */
++
+ 
+-void __cpuinit platform_secondary_init(unsigned int cpu)
++void  platform_secondary_init(unsigned int cpu)
+ {
+ 	trace_hardirqs_off();
++
+ #ifndef CONFIG_ARMADA_XP_REV_Z1
+ #ifdef	CONFIG_SHEEVA_DEEP_IDLE
+ 	armadaxp_fabric_restore_deepIdle();
+@@ -96,70 +94,43 @@ void __cpuinit platform_secondary_init(unsigned int cpu)
+ 	 * core (e.g. timer irq), then they will not have been enabled
+ 	 * for us: do so
+ 	 */
+-	second_cpu_init();
++	axp_ipi_init();
+ #ifdef CONFIG_PCI_MSI
+ 	/* Support for MSI interrupts */
+ 	second_cpu_msi_init();
+ #endif
+-	/*
+-	 * let the primary processor know we're out of the
+-	 * pen, then head off into the C entry point
+-	 */
+-	pen_release = -1;
+-	smp_wmb();
+ 
+-	/*
+-	 * Synchronise with the boot thread.
+-	 */
+-	spin_lock(&boot_lock);
+-	spin_unlock(&boot_lock);
++	smp_wmb();
+ }
+ 
+-int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
++int  boot_secondary(unsigned int cpu, struct task_struct *idle)
+ {
+-	unsigned long timeout;
+ 
+-	/*
+-	 * set synchronisation state between this boot processor
+-	 * and the secondary one
+-	 */
+-	spin_lock(&boot_lock);
++	MV_U32 reg;
+ 
+-	/*
+-	 * The secondary processor is waiting to be released from
+-	 * the holding pen - release it, then wait for it to flag
+-	 * that it has been released by resetting pen_release.
+-	 *
+-	 * Note that "pen_release" is the hardware CPU ID, whereas
+-	 * "cpu" is Linux's internal ID.
+-	 */
+-	flush_cache_all();
+-	pen_release = get_hw_cpu_id(cpu);
+-	flush_cache_all();
++	cpu = get_hw_cpu_id(cpu);
+ 
+-	/* send ipi to wake cpu in case it in offline state */
+-	axp_smp_cross_call(cpumask_of(cpu), 0);
++	printk("SMP: CPU %d Waking up CPU %d\n", master_cpu_id, cpu);
+ 
+-	timeout = jiffies + (10 * HZ);
+-	while (time_before(jiffies, timeout)) {
+-		smp_rmb();
+-		if (pen_release == -1)
+-			break;
++	/* Set resume control and address */
++	MV_REG_WRITE(AXP_CPU_RESUME_CTRL_REG, 0x0);
++	MV_REG_WRITE(AXP_CPU_RESUME_ADDR_REG(cpu),
++			virt_to_phys(axp_secondary_startup));
+ 
+-		dmac_map_area((const void *)&pen_release, 32, DMA_BIDIRECTIONAL);
+-		udelay(10);
+-	}
++	dsb();
+ 
+-	/*
+-	 * now the secondary core is starting up let it run its
+-	 * calibrations, then wait for it to finish
+-	 */
+-	spin_unlock(&boot_lock);
++	/* Kick secondary CPUs */
++	reg = MV_REG_READ(AXP_CPU_RESET_REG(cpu));
++	reg = reg & ~(1 << AXP_CPU_RESET_OFFS);
++	MV_REG_WRITE(AXP_CPU_RESET_REG(cpu), reg);
++
++	mb();
++	udelay(10);
+ 
+-	return pen_release != -1 ? -ENOSYS : 0;
++	return 0;
+ }
+ 
+-static void __init wakeup_cpus(void)
++static void set_cpu_clocks(void)
+ {
+ 	MV_U32 val = 0;
+ 	MV_U32 ncores = get_core_count();
+@@ -171,6 +142,8 @@ static void __init wakeup_cpus(void)
+ 	MV_U32 divider = MV_REG_READ(CPU_DIV_CLK_CTRL3_RATIO_FULL1_REG);
+ 	divider = (divider & 0x3F);
+ 
++	pr_info("Setting Clocks for secondary CPUs\n");
++
+ 	for (cpu_id = master_cpu_id + 1; cpu_id < (master_cpu_id + ncores); cpu_id++) {
+ 		if (cpu_id == 1) {
+ 			val = MV_REG_READ(CPU_DIV_CLK_CTRL3_RATIO_FULL1_REG);
+@@ -190,7 +163,7 @@ static void __init wakeup_cpus(void)
+ 		}
+ 	}
+ #else /*CONFIG_ARMADA_XP_REV_Z1*/
+-       /* Scale up CPU#1 clock to max */
++	/* Scale up CPU#1 clock to max */
+ 	if (ncores > 1) {
+ 		val = MV_REG_READ(CPU_DIV_CLK_CTRL2_RATIO_FULL0_REG);
+ 		val &= ~(0xFF000000);   /* cpu1 clkdiv ratio; cpu0 based on SAR */
+@@ -240,35 +213,15 @@ static void __init wakeup_cpus(void)
+ #endif
+ #endif /*CONFIG_MACH_ARMADA_XP_FPGA*/
+ 
+-	/* Set resume control and address */
+-	MV_REG_WRITE(AXP_CPU_RESUME_CTRL_REG, 0x0);
+-
+-	for (cpu_id = master_cpu_id + 1; cpu_id < (master_cpu_id + ncores); cpu_id++)
+-		MV_REG_WRITE(AXP_CPU_RESUME_ADDR_REG(cpu_id), virt_to_phys(axp_secondary_startup));
+-
+-	/* nobody is to be released from the pen yet */
+-	pen_release = -1;
+-
+-	/* Kick secondary CPUs */
+-	for (cpu_id = master_cpu_id + 1; cpu_id < (master_cpu_id + ncores); cpu_id++) {
+-		/* TODO YY - check that the core is activated in coherency fabric */
+-		printk("SMP: CPU %d Waking up CPU %d\n", master_cpu_id, cpu_id);
+-		val = MV_REG_READ(AXP_CPU_RESET_REG(cpu_id)) & ~(1 << AXP_CPU_RESET_OFFS);
+-		MV_REG_WRITE(AXP_CPU_RESET_REG(cpu_id), val);
+-	}
+-
+-	mb();
+-	udelay(10);
+ }
+ 
+-static void __init initialize_bridge(void)
++static void init_coherency(void)
+ {
+ 	MV_U32 reg;
+-	MV_U32 ncores = get_core_count();
+ 	MV_U32 core_bits;
+ 
+-	/* Set 1 bits for cores in this group */
+-	core_bits = ((0x1 << ncores) - 1) << master_cpu_id;
++	/* Enable the boot CPU in coherency fabric */
++	core_bits = 1 << master_cpu_id;
+ 
+ #ifdef CONFIG_MV_AMP_ENABLE
+ 	mvSemaLock(MV_SEMA_BRIDGE);
+@@ -278,7 +231,7 @@ static void __init initialize_bridge(void)
+ 	reg |= (core_bits << 24);
+ 	MV_REG_WRITE(SOC_COHERENCY_FABRIC_CFG_REG, reg);
+ 
+-	/* enable Snooping on coherency fabric */
++	/* Enable Snooping on coherency fabric */
+ 	reg = MV_REG_READ(SOC_COHERENCY_FABRIC_CTRL_REG);
+ 	reg |= (core_bits << 24);
+ 	MV_REG_WRITE(SOC_COHERENCY_FABRIC_CTRL_REG, reg);
+@@ -307,12 +260,20 @@ void __init smp_init_cpus(void)
+ 		printk("Cpu Interface initialization failed.\n");
+ 		return;
+ 	}
+-	/*mvCpuIfAddDecShow();*/
+ 
+ 	for (i = 0; i < ncores; i++)
+ 		set_cpu_possible(i, true);
++
+ 	set_smp_cross_call(axp_smp_cross_call);
++}
++
++void smp_resume()
++{
++	if(mv_cpu_count > 1)
++		set_cpu_clocks();
++	init_coherency();
+ 
++	axp_ipi_init();
+ }
+ 
+ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
+@@ -370,7 +331,7 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
+ 	}
+ 	if (max_cpus > 1) {
+ 		flush_cache_all();
+-		wakeup_cpus();
++		set_cpu_clocks();
+ 	}
+-	initialize_bridge();
++	init_coherency();
+ }
+diff --git a/arch/arm/mach-armadaxp/time.c b/arch/arm/mach-armadaxp/time.c
+index 97e15ca..fdf089d 100644
+--- a/arch/arm/mach-armadaxp/time.c
++++ b/arch/arm/mach-armadaxp/time.c
+@@ -159,21 +159,22 @@ static void axp_clkevt_mode(enum clock_event_mode mode, struct clock_event_devic
+ 	u32 u;
+ 	local_irq_save(flags);
+ 
+-	if (mode == CLOCK_EVT_MODE_PERIODIC) {
++	if ((mode == CLOCK_EVT_MODE_PERIODIC) ||
++	    (mode == CLOCK_EVT_MODE_ONESHOT)) {
+ 		/* Setup timer to fire at 1/HZ intervals */
+ 		MV_REG_WRITE(LCL_TIMER0_RELOAD, (ticks_per_jiffy - 1));
+ 		MV_REG_WRITE(LCL_TIMER0_VAL, (ticks_per_jiffy - 1));
+ 
+-
+ 		/* Enable timer interrupt */
+-		/*axp_irq_unmask(IRQ_LOCALTIMER);*/
+ 		axp_irq_unmask(irq_get_irq_data(IRQ_LOCALTIMER));
+ 
+-
+ 		/* Enable timer */
+ 		u = MV_REG_READ(LCL_TIMER_CTRL);
+ #if !defined (CONFIG_ARMADA_XP_REV_Z1) && !defined (CONFIG_MACH_ARMADA_XP_FPGA)
+-		u |= (LCL_TIMER0_EN | LCL_TIMER0_RELOAD_EN | LCL_TIMER_TURN_25MHZ);
++		if(mode == CLOCK_EVT_MODE_PERIODIC)
++			u |= (LCL_TIMER0_EN | LCL_TIMER0_RELOAD_EN | LCL_TIMER_TURN_25MHZ);
++		else
++			u |= (LCL_TIMER0_EN | LCL_TIMER_TURN_25MHZ);
+ #else
+ 		u |= (LCL_TIMER0_EN | LCL_TIMER0_RELOAD_EN);
+ #endif
+@@ -193,7 +194,6 @@ static void axp_clkevt_mode(enum clock_event_mode mode, struct clock_event_devic
+ 		MV_REG_WRITE(LCL_TIMER_CAUSE, LCL_INT_TIMER0_CLR);
+ 	}
+ 
+-
+ 	local_irq_restore(flags);
+ }
+ 
+diff --git a/arch/arm/plat-armada/hotplug.c b/arch/arm/plat-armada/hotplug.c
+index 0598c5d..b26110a 100644
+--- a/arch/arm/plat-armada/hotplug.c
++++ b/arch/arm/plat-armada/hotplug.c
+@@ -27,7 +27,6 @@
+         })
+ 
+ 
+-extern volatile int pen_release;
+ 
+ static DECLARE_COMPLETION(cpu_killed);
+ 
+@@ -49,14 +48,6 @@ static inline void platform_do_lowpower(unsigned int cpu)
+ 
+ 		wfi();
+ 
+-		if (pen_release == cpu) {
+-			/*
+-			 * OK, proper wakeup, we're done
+-			 */
+-			printk("%s %d\n", __func__, __LINE__);
+-			break;
+-		}
+-
+ 		/*
+ 		 * getting here, means that we have come out of WFI without
+ 		 * having been woken up - this shouldn't happen
+diff --git a/arch/arm/plat-armada/suspend.c b/arch/arm/plat-armada/suspend.c
+index 4917164..d9ba64a 100644
+--- a/arch/arm/plat-armada/suspend.c
++++ b/arch/arm/plat-armada/suspend.c
+@@ -34,6 +34,7 @@
+ 
+ void armadaxp_powerdown(void);
+ void armadaxp_cpu_resume(void);
++void smp_resume(void);
+ 
+ /*
+  * Store boot information used by bin header
+@@ -96,6 +97,8 @@ void armadaxp_suspend()
+ 
+ 	aurora_l2_pm_exit();
+ 
++	smp_resume();
++
+ #if defined(CONFIG_VFP)
+ 	vfp_restore();
+ #endif
+-- 
+1.7.9.5
+

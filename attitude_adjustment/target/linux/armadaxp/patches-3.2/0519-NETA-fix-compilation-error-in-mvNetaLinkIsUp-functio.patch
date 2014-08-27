@@ -1,0 +1,48 @@
+From d8502ec57b987b344f8ebfaefc7c3aba287d31d8 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Tue, 29 Jan 2013 02:32:09 -0500
+Subject: [PATCH 519/609] NETA: fix compilation error in mvNetaLinkIsUp
+ function prototype Can be applied to all stable
+ branches
+
+Change-Id: I2884b4f94d32666f0ea581590f5843bf3a5084fd
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c |    6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
+index bef8101..6fb88b7 100755
+--- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
++++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
+@@ -916,7 +916,7 @@ MV_STATUS mvNetaPortDisable(int port)
+ 	return MV_OK;
+ }
+ 
+-MV_BOOL		mvNetaLinkIsUp(port)
++MV_BOOL mvNetaLinkIsUp(int port)
+ {
+ 	MV_U32	regVal;
+ 
+@@ -930,7 +930,7 @@ MV_BOOL		mvNetaLinkIsUp(port)
+ 	return MV_FALSE;
+ }
+ 
+-MV_STATUS	mvNetaLinkStatus(int port, MV_ETH_PORT_STATUS *pStatus)
++MV_STATUS mvNetaLinkStatus(int port, MV_ETH_PORT_STATUS *pStatus)
+ {
+ 	MV_U32 regVal;
+ 
+@@ -1387,7 +1387,7 @@ MV_STATUS mvNetaPortDisable(int port)
+ 	return MV_OK;
+ }
+ 
+-MV_BOOL		mvNetaLinkIsUp(port)
++MV_BOOL mvNetaLinkIsUp(int port)
+ {
+ 	MV_U32	regVal;
+ 
+-- 
+1.7.9.5
+

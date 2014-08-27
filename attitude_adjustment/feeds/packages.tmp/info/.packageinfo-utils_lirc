@@ -1,0 +1,89 @@
+Source-Makefile: feeds/packages/utils/lirc/Makefile
+Package: lirc
+Menu: 1
+Version: 0.8.7-1
+Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
+Menu-Depends: 
+Provides: 
+Section: utils
+Category: Utilities
+Title: LIRC - Linux Infrared Remote Control
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: lirc-0.8.7.tar.bz2
+Type: ipkg
+Description:   LIRC is a package that allows you to decode and send 
+  infra-red signals of many (but not all) commonly used 
+  remote controls.
+  
+  This package contains only lircd and lircd.conf!
+
+tested drivers
+--------------
+ok:
+userspace,accent,act200l,act220l,adaptec,alsa_usb,animax,asusdh,
+atilibusb,atiusb,audio_alsa,breakoutbox,bte,bw6130,cmdir,creative,
+creative_infracd,devinput,digimatrix,dsp,dvico,ea65,exaudiohauppauge,
+hauppauge_dvb,hercules_smarttv_stereo,i2cuser,igorplugusb,imon,
+imon_24g,imon_knob,imon_pad,imon_rsc,irdeo,irdeo_remote,it87,knc_one,
+leadtek_pvr2000,livedrive_midi,livedrive_seq,logitech,macmini,mceusb,
+mceusb2,mediafocusI,mouseremote,mouseremote_ps2,mp3anywhere,
+packard_bell,parallel,pcmak,pcmak_usb,pctv,pixelview_bt878,provideo,
+realmagic,remotemaster,sasem,sb0540,serial,silitek,sir,streamzap,tekram,
+tekram_bt829,tira,ttusbir,tuxbox,tvbox,udp,uirt2,uirt2_raw,usb_uirt_raw,
+usbx,serial
+
+nok:
+avermedia,avermedia_vdomate,avermedia98,bestbuy,bestbuy2,chronos,comX,
+cph06x,flyvideo,gvbctv5pci,irreal,kworld,leadtek_0007,leadtek_0010,lptX,
+nslu2,pixelview_pak,pixelview_pro,sa1100,
+
+unknown: 
+audio (no portaudio), caraca (no caraca package), iguanaIR (missing headers), 
+irman (no libirman)
+  
+http://lirc.org/
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+
+Package: lircdaemonadd
+Version: 0.8.7-1
+Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread lirc
+Menu-Depends: 
+Provides: 
+Section: utils
+Category: Utilities
+Title: Daemon Additional Files
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: lirc-0.8.7.tar.bz2
+Type: ipkg
+Description:   Contains those additional daemon-tools:
+   -irrecord
+   -lircmd
+http://lirc.org/
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+
+Package: lirctools
+Version: 0.8.7-1
+Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread lirc
+Menu-Depends: 
+Provides: 
+Section: utils
+Category: Utilities
+Title: LIRC tools
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: lirc-0.8.7.tar.bz2
+Type: ipkg
+Description:   This package contains those lirc-tools:
+   -ircat:   prints config strings to standard output, can be used to provide remote control input to scripts
+   -irexec:  execute programs according to the pressed remote control buttons
+   -irpty:   pseudo tty driver. Connects to lircd via socket to receive infra-red codes and converts them to key strokes
+   -irsend:  application for sending IR-codes via lirc
+   -irw:     watch the codes as lircd recognize them
+   -lircrcd: daemon that manages current mode for all applications
+   -mode2:   shows the pulse/space length of a remote button
+http://lirc.org/
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+
+

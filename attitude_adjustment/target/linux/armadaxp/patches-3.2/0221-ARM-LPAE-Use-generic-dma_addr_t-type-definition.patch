@@ -1,0 +1,44 @@
+From 61770be3a08e33b7d5be439d04bd764d5015c09c Mon Sep 17 00:00:00 2001
+From: Will Deacon <will.deacon@arm.com>
+Date: Mon, 31 Jan 2011 13:50:45 +0000
+Subject: [PATCH 221/609] ARM: LPAE: Use generic dma_addr_t type definition
+
+This patch uses the types.h implementation in asm-generic to define the
+dma_addr_t type as the same width as phys_addr_t.
+
+NOTE: this is a temporary patch until the corresponding patches unifying
+the dma_addr_t and removing the dma64_addr_t are merged into mainline.
+
+Signed-off-by: Will Deacon <will.deacon@arm.com>
+Signed-off-by: Catalin Marinas <catalin.marinas@arm.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/include/asm/types.h |   11 +----------
+ 1 file changed, 1 insertion(+), 10 deletions(-)
+
+diff --git a/arch/arm/include/asm/types.h b/arch/arm/include/asm/types.h
+index 48192ac..dc1bdbb 100644
+--- a/arch/arm/include/asm/types.h
++++ b/arch/arm/include/asm/types.h
+@@ -1,17 +1,8 @@
+ #ifndef __ASM_ARM_TYPES_H
+ #define __ASM_ARM_TYPES_H
+ 
+-#include <asm-generic/int-ll64.h>
++#include <asm-generic/types.h>
+ 
+-#ifndef __ASSEMBLY__
+-
+-typedef unsigned short umode_t;
+-
+-#endif /* __ASSEMBLY__ */
+-
+-/*
+- * These aren't exported outside the kernel to avoid name space clashes
+- */
+ #ifdef __KERNEL__
+ 
+ #define BITS_PER_LONG 32
+-- 
+1.7.9.5
+

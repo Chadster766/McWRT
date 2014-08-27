@@ -1,0 +1,79 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2012 OpenWrt.org
+
+START=50
+
+SERVICE_DAEMONIZE=1
+SERVICE_WRITE_PID=1
+
+append_bool() {
+	local var="$1"
+	local section="$2"
+	local option="$3"
+	local value="$4"
+	local _val
+	config_get_bool _val "$section" "$option" 0
+	[ $_val -gt 0 ] && append "$var" "$value"
+}
+
+append_string() {
+	local var="$1"
+	local section="$2"
+	local option="$3"
+	local val="$4"
+	local _val
+	config_get _val "$section" "$option"
+	[ -n "$_val" ] && append "$var" "$val $_val"
+}
+
+section_enabled() {
+	local enabled
+	config_get_bool enabled "$1" 'enabled' 0
+	[ $enabled -gt 0 ]
+}
+
+start_instance() {
+	local section="$1"
+	local if
+	local dev
+	local args
+
+	section_enabled "$section" || return 1
+
+	config_get if "$section" 'interface' 'lan'
+	network_get_device dev "$if" && {
+		args="-n -i $if"
+		append_string args "$section" 'ethers' '-e'
+		append_bool args "$section" 'verbose' '-v'
+
+		SERVICE_PID_FILE="/var/run/rarpd-${if}.pid"
+		service_start /usr/sbin/rarpd $args
+	}
+}
+
+stop_instance() {
+	local section="$1"
+	local id
+	local if
+	local dev
+
+	section_enabled "$section" || return 1
+
+	config_get if "$section" 'interface' 'lan'
+	network_get_device dev "$if"
+
+	SERVICE_PID_FILE="/var/run/rarpd-${if}.pid"
+	service_stop /usr/sbin/rarpd
+}
+
+start() {
+	. /lib/functions/network.sh
+	config_load 'rarpd'
+	config_foreach start_instance 'rarpd'
+}
+
+stop() {
+	. /lib/functions/network.sh
+	config_load 'rarpd'
+	config_foreach stop_instance 'rarpd'
+}

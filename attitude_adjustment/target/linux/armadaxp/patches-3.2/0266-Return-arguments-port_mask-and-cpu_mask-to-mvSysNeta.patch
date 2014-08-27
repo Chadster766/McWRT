@@ -1,0 +1,96 @@
+From 44c577ba24a4089982cd39c298a3ea8c679676e1 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Thu, 23 Aug 2012 09:02:14 -0400
+Subject: [PATCH 266/609] Return arguments "port_mask" and "cpu_mask" to
+ mvSysNetaInit() prototype wq
+
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/mv_hal_if/mvSysNeta.c       |   11 ++++++++---
+ arch/arm/mach-armadaxp/mv_hal_if/mvSysNetaApi.h    |   10 +++++-----
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |    2 +-
+ 3 files changed, 14 insertions(+), 9 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/mv_hal_if/mvSysNeta.c b/arch/arm/mach-armadaxp/mv_hal_if/mvSysNeta.c
+index 4eadde2..d5f1c39 100644
+--- a/arch/arm/mach-armadaxp/mv_hal_if/mvSysNeta.c
++++ b/arch/arm/mach-armadaxp/mv_hal_if/mvSysNeta.c
+@@ -83,7 +83,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *       None
+ *
+ *******************************************************************************/
+-void 	mvSysNetaInit(void)
++void 	mvSysNetaInit(MV_U32 portMask, MV_U32 cpuMask)
+ {
+ 	MV_NETA_HAL_DATA halData;
+ 	MV_U32 port;
+@@ -109,9 +109,11 @@ void 	mvSysNetaInit(void)
+ 		}
+ #endif
+ 		mvOsPrintf("%d - Base 0x%08x , Size = 0x%08llx.\n", i,
+-                                addrWinMap[i].addrWin.baseLow,
+-                                addrWinMap[i].addrWin.size);
++						addrWinMap[i].addrWin.baseLow, addrWinMap[i].addrWin.size);
+ 	}
++
++	halData.portMask = portMask;
++	halData.cpuMask  = cpuMask;
+ 	halData.maxPort = mvCtrlEthMaxPortGet();
+ 	halData.pClk = mvCpuPclkGet();
+ 	halData.tClk = mvBoardTclkGet();
+@@ -130,6 +132,9 @@ void 	mvSysNetaInit(void)
+ #endif /* CONFIG_MV_ETH_PNC */
+ 
+ 	for (port = 0; port < halData.maxPort; port++) {
++		if (!(MV_BIT_CHECK(portMask, port)))
++			continue;
++
+ 		if (mvCtrlPwrClckGet(ETH_GIG_UNIT_ID, port) == MV_FALSE)
+ 			continue;
+ 
+diff --git a/arch/arm/mach-armadaxp/mv_hal_if/mvSysNetaApi.h b/arch/arm/mach-armadaxp/mv_hal_if/mvSysNetaApi.h
+index d7b56f8..be0aaa0 100644
+--- a/arch/arm/mach-armadaxp/mv_hal_if/mvSysNetaApi.h
++++ b/arch/arm/mach-armadaxp/mv_hal_if/mvSysNetaApi.h
+@@ -42,12 +42,12 @@ are permitted provided that the following conditions are met:
+ 	    this list of conditions and the following disclaimer.
+ 
+     *   Redistributions in binary form must reproduce the above copyright
+-        notice, this list of conditions and the following disclaimer in the
+-        documentation and/or other materials provided with the distribution.
++	notice, this list of conditions and the following disclaimer in the
++	documentation and/or other materials provided with the distribution.
+ 
+     *   Neither the name of Marvell nor the names of its contributors may be
+-        used to endorse or promote products derived from this software without
+-        specific prior written permission.
++	used to endorse or promote products derived from this software without
++	specific prior written permission.
+ 
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+@@ -66,6 +66,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define __MV_SYS_NETA_API_H__
+ 
+ 
+-void mvSysNetaInit(void);
++void mvSysNetaInit(MV_U32 portMask, MV_U32 cpuMask);
+ 
+ #endif /* __MV_SYS_NETA_API_H__ */
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 82728af..d4320cc 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -3249,7 +3249,7 @@ static int mv_eth_probe(struct platform_device *pdev)
+ #endif
+ 
+ 	if (!mv_eth_initialized) {
+-		mvSysNetaInit(); /* init MAC Unit */
++		mvSysNetaInit(port_mask, cpu_mask); /* init MAC Unit */
+ 
+ 		mv_eth_ports_num = mvCtrlEthMaxPortGet();
+ 		if (mv_eth_ports_num > CONFIG_MV_ETH_PORTS_NUM)
+-- 
+1.7.9.5
+

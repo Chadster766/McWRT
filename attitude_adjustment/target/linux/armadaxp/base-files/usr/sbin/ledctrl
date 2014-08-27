@@ -1,0 +1,128 @@
+#!/bin/sh
+
+EXPECTED_ARGS=2
+E_BADARGS=65
+
+usage() {
+	echo "Usage: `basename $0` <led_name> <on|off|brightness_value> [delay_on] [delay_off]"
+	echo "       `basename $0` <led_2g> 100 500 500"
+	echo "       `basename $0` all on|off"
+	echo "		led name: led_2g | led_5g | led_esata | led_usb2"
+	echo "          	  led_usb31 | led_usb32 | wan_amber | wan_white"
+	echo "          	  wps_amber | wps_white | power"
+	echo "		brightness_value: 0..255"
+	echo "		delay_on/delay_off: 0..5000"
+
+	exit $E_BADARGS
+}
+
+if [ $# -lt $EXPECTED_ARGS ]
+then
+	usage
+fi
+
+led_name=$1
+value=$2
+blink="na"
+
+if [ $# -ge 4 ]
+then
+	blink="ok"
+	delay_on=$3
+	delay_off=$4
+fi
+
+check_number() {
+	case $1 in
+	*[!0-9]* )
+		usage
+		;;
+	esac
+}
+
+do_power() {
+	sval=$1
+	sblink=$2
+	sdelay_on=$3
+	sdelay_off=$4
+
+	if [ $sblink = "ok" ]
+	then
+		echo power $sval $delay_on $delay_off > /proc/mamba_led
+	else
+		echo power $sval > /proc/mamba_led
+	fi
+}
+
+led_list="led_2g led_5g led_esata led_usb2 led_usb31 led_usb32 wan_amber wan_white wps_amber wps_white power"
+
+led_perf() {
+
+	# Check if the led_name is valid
+	found=0
+	for x in $led_list
+	do
+		if [ $led_name = $x ] 
+		then
+			found=1
+		fi
+	done
+	
+	if [ $found -eq 0 ] 
+	then 
+		if [ $led_name != "all" ] 
+		then 	
+			usage
+		fi
+	fi
+
+	# Check if the value is valid
+	case $value in
+	"on")
+		value=255
+		;;
+	"off")
+		value=0
+		;;
+	*)	
+		check_number $value
+		if [ $value -gt 255 ]
+		then
+			value=255
+		elif [ $value -lt 0 ] 
+		then
+			value=0
+		fi
+		
+		;;
+	esac
+
+	if [ $led_name = "all" ] 
+	then
+		for x in $led_list
+		do
+			path_led=/sys/class/leds/tlc59116:$x
+			echo $value > $path_led/brightness
+			#cat $path_led/brightness
+			sleep 1
+		done
+	elif [ $led_name = "power" ]
+	then
+		#echo "Do Led Power"
+		do_power $value $blink $delay_on $delay_off
+		exit
+	else
+		path_led=/sys/class/leds/tlc59116:$led_name
+		echo $value > $path_led/brightness
+	fi
+
+	if [ $blink = "ok" ]
+	then
+		echo timer > $path_led/trigger
+		echo $value > $path_led/brightness
+		echo $delay_on > $path_led/delay_on
+		echo $delay_off > $path_led/delay_off
+	fi
+}
+
+led_perf

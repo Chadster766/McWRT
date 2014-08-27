@@ -1,0 +1,21 @@
+#!/bin/sh /etc/rc.common
+
+START=90
+
+start() {
+. /lib/config/uci.sh
+. /usr/lib/webif/functions.sh
+	uci_load "webif"
+	config_get enabled firewall log
+	if [ "$enabled" = "1" ]; then
+		iptables -A input_rule -j LOG --log-prefix "input_rule:DROP "
+		iptables -A forwarding_rule -j LOG --log-prefix "forwarding_rule:DROP "
+		iptables -A output_rule -j LOG --log-prefix "output_rule:DROP "
+	fi
+}
+
+stop() {
+	iptables -D input_rule -j LOG --log-prefix "input_rule:DROP "
+	iptables -D forwarding_rule -j LOG --log-prefix "forwarding_rule:DROP "
+	iptables -D output_rule -j LOG --log-prefix "output_rule:DROP "
+}

@@ -1,0 +1,26 @@
+From 72876ebbc6f37bb0f799e9f7f233e4a42a97b1ad Mon Sep 17 00:00:00 2001
+From: Rami Rosen <rosenr@marvell.com>
+Date: Wed, 4 Jan 2012 08:41:56 +0200
+Subject: [PATCH 065/609] DSMP: fix mtu error message
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 0e5f230..2f003ac 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -4031,7 +4031,7 @@ error:
+ int mv_eth_check_mtu_valid(struct net_device *dev, int mtu)
+ {
+ 	if (mtu < 68) {
+-		printk(KERN_INFO "MTU must be at least 64, change mtu failed\n");
++		printk(KERN_INFO "MTU must be at least 68, change mtu failed\n");
+ 		return -EINVAL;
+ 	}
+ 	if (mtu > 9676 /* 9700 - 20 and rounding to 8 */) {
+-- 
+1.7.9.5
+

@@ -1,0 +1,24 @@
+--- a/bind/Makefile
++++ b/bind/Makefile
+@@ -61,9 +61,12 @@ all:
+ 		echo Bind export libraries already installed ;               \
+ 	else                                                                 \
+ 		echo Building BIND Export libraries - this takes some time. ;\
++		(cd ${bindsrcdir}/lib/export/dns ;                           \
++		  echo building gen using ${BUILD_CC} in `pwd` ;             \
++		  $(MAKE) CC=${BUILD_CC} CFLAGS="-O2" LIBS="" gen) ;         \
+ 		(cd ${bindsrcdir}/lib/export ;                               \
+ 		  echo building in `pwd` ;                                   \
+-		  MAKE=${GMAKE} ${GMAKE} > ${binddir}/build.log) ;           \
++		  $(MAKE) DESTDIR="" install > ${binddir}/build.log) ;       \
+                                                                              \
+ 		echo Installing BIND Export libraries to ${binddir}. ;       \
+ 		(cd ${bindsrcdir}/lib/export ;                               \
+@@ -77,6 +80,7 @@ clean:
+ 
+ # Include the following so that this Makefile is happy when the parent
+ # tries to use them.
++install-exec:
+ 
+ distdir:
+ 

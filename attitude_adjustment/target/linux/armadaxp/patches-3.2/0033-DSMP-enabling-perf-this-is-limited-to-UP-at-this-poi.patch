@@ -1,0 +1,120 @@
+From 40921772207e923d85ee8d6f15c4fad92d1b4673 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Sun, 26 Feb 2012 12:52:23 +0200
+Subject: [PATCH 033/609] DSMP: enabling perf; this is limited to UP at this
+ point
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/kernel/hw_breakpoint.c   |    2 +-
+ arch/arm/kernel/perf_event.c      |   12 ++++++------
+ arch/arm/kernel/perf_event_pj4b.c |    7 ++++---
+ arch/arm/mach-armadaxp/irq.c      |    1 +
+ 4 files changed, 12 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm/kernel/hw_breakpoint.c b/arch/arm/kernel/hw_breakpoint.c
+index 2bc1a8e..f6c6f47 100644
+--- a/arch/arm/kernel/hw_breakpoint.c
++++ b/arch/arm/kernel/hw_breakpoint.c
+@@ -1050,7 +1050,7 @@ static int __init arch_hw_breakpoint_init(void)
+ 	register_cpu_notifier(&dbg_reset_nb);
+ 	return 0;
+ }
+-arch_initcall(arch_hw_breakpoint_init);
++//arch_initcall(arch_hw_breakpoint_init);
+ 
+ void hw_breakpoint_pmu_read(struct perf_event *bp)
+ {
+diff --git a/arch/arm/kernel/perf_event.c b/arch/arm/kernel/perf_event.c
+index f5e530c..8775b32 100644
+--- a/arch/arm/kernel/perf_event.c
++++ b/arch/arm/kernel/perf_event.c
+@@ -387,7 +387,11 @@ armpmu_release_hardware(struct arm_pmu *armpmu)
+ 			continue;
+ 		irq = platform_get_irq(pmu_device, i);
+ 		if (irq >= 0)
++#ifdef CONFIG_ARCH_ARMADA_XP
++			pmu_free_irq(irq);
++#else
+ 			free_irq(irq, armpmu);
++#endif
+ 	}
+ 
+ 	release_pmu(armpmu->type);
+@@ -440,7 +444,7 @@ armpmu_reserve_hardware(struct arm_pmu *armpmu)
+ 		}
+ 
+ #ifdef CONFIG_ARCH_ARMADA_XP
+-               err = pmu_request_irq(irq, armpmu->handle_irq);
++               err = pmu_request_irq(irq, handle_irq);
+ #else
+ 		err = request_irq(irq, handle_irq,
+ 				  IRQF_DISABLED | IRQF_NOBALANCING,
+@@ -566,7 +570,6 @@ static int armpmu_event_init(struct perf_event *event)
+ 
+ 	if (err)
+ 		return err;
+-
+ 	err = __hw_perf_event_init(event);
+ 	if (err)
+ 		hw_perf_event_destroy(event);
+@@ -752,11 +755,8 @@ init_hw_perf_events(void)
+ 		case 0x581:
+ 		case 0x584:
+ 			printk(KERN_INFO "Armada-XP Performance Monitor Unit detected (Marvell ID)!!!\n");
++			mrvl_pj4b_read_reset_pmnc();
+ 			armpmu=mrvl_pj4b_pmu_init();
+-			/*armpmu = &mrvl_pj4b_pmu;
+-			memcpy(armpmu_perf_cache_map, mrvl_pj4b_perf_cache_map,
+-					sizeof(mrvl_pj4b_perf_cache_map));
+-			perf_max_events	= mrvl_pj4b_pmu.num_events;*/
+ 			break;
+ 		}
+ 	}
+diff --git a/arch/arm/kernel/perf_event_pj4b.c b/arch/arm/kernel/perf_event_pj4b.c
+index 8f92487..3539532 100644
+--- a/arch/arm/kernel/perf_event_pj4b.c
++++ b/arch/arm/kernel/perf_event_pj4b.c
+@@ -296,7 +296,7 @@ static inline int mrvl_pj4b_pmu_counter_has_overflowed(unsigned long val,
+ 				  enum pj4b_pmu_counters counter)
+ {
+ 	int ret = 0;
+-	
++
+ 	if (counter == MRVL_PJ4B_CCNT)
+ 		ret = (val & (1 << MRVL_PJ4B_CCNT_BIT_OFFSET));
+ 	else if (counter < MRVL_PJ4B_MAX_COUNTERS)
+@@ -451,6 +451,7 @@ static irqreturn_t mrvl_pj4b_pmu_handle_irq(int irq, void *arg)
+ 	struct perf_sample_data data;	
+ 	struct cpu_hw_events *cpuc;	
+ 	u32 pmnc;
++
+ 	pmnc = mrvl_pj4b_read_pmnc();	
+ 	pmnc &= ~MRVL_PJ4B_PMU_ENABLE;
+ 	mrvl_pj4b_write_pmnc(pmnc);	
+@@ -588,8 +589,8 @@ static const struct arm_pmu mrvl_pj4b_pmu = {
+ 	.read_counter	= mrvl_pj4b_pmu_read_counter, /*v*/
+ 	.write_counter	= mrvl_pj4b_pmu_write_counter, /*v*/
+ 	.get_event_idx	= mrvl_pj4b_pmu_get_event_idx,/*v*/
+-	.cache_map		= mrvl_pj4b_perf_cache_map,
+-	.event_map		= mrvl_pj4b_pmu_event_map, /*v*/
++	.cache_map		= &mrvl_pj4b_perf_cache_map,
++	.event_map		= &mrvl_pj4b_perf_map, //mrvl_pj4b_pmu_event_map, /*v*/
+ 	.handle_irq		= mrvl_pj4b_pmu_handle_irq, /*v*/
+ 	.reset 			= mrvl_pj4b_pmu_reset,
+ 	/*.raw_event		= mrvl_pj4b_pmu_raw_event,*/
+diff --git a/arch/arm/mach-armadaxp/irq.c b/arch/arm/mach-armadaxp/irq.c
+index f024b70..e07c4c2 100644
+--- a/arch/arm/mach-armadaxp/irq.c
++++ b/arch/arm/mach-armadaxp/irq.c
+@@ -298,6 +298,7 @@ void __init axp_init_irq(void)
+ int pmu_request_irq(int irq, irq_handler_t handler)
+ {
+ 	int i;
++	struct irq_data *d = irq_get_irq_data(irq);
+ 	int ret = request_irq(irq, handler, IRQF_DISABLED | IRQF_NOBALANCING, "armpmu", NULL);
+ 	if (!ret) {
+ 		for_each_online_cpu(i) {
+-- 
+1.7.9.5
+

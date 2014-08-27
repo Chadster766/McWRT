@@ -1,0 +1,126 @@
+--- a/configure
++++ b/configure
+@@ -21552,56 +21552,56 @@ _ACEOF
+ fi
+ rm -f conftest*
+ 
+-
+-{ echo "$as_me:$LINENO: **************************************** PTY device files" >&5
+-echo "$as_me: **************************************** PTY device files" >&6;}
+-{ echo "$as_me:$LINENO: checking for \"/dev/ptmx\"" >&5
+-echo $ECHO_N "checking for \"/dev/ptmx\"... $ECHO_C" >&6; }
+-if test "${ac_cv_file___dev_ptmx_+set}" = set; then
+-  echo $ECHO_N "(cached) $ECHO_C" >&6
+-else
+-  test "$cross_compiling" = yes &&
+-  { { echo "$as_me:$LINENO: error: cannot check for file existence when cross compiling" >&5
+-echo "$as_me: error: cannot check for file existence when cross compiling" >&2;}
+-   { (exit 1); exit 1; }; }
+-if test -r ""/dev/ptmx""; then
+-  ac_cv_file___dev_ptmx_=yes
+-else
+-  ac_cv_file___dev_ptmx_=no
+-fi
+-fi
+-{ echo "$as_me:$LINENO: result: $ac_cv_file___dev_ptmx_" >&5
+-echo "${ECHO_T}$ac_cv_file___dev_ptmx_" >&6; }
+-if test $ac_cv_file___dev_ptmx_ = yes; then
++#
++#{ echo "$as_me:$LINENO: **************************************** PTY device files" >&5
++#echo "$as_me: **************************************** PTY device files" >&6;}
++#{ echo "$as_me:$LINENO: checking for \"/dev/ptmx\"" >&5
++#echo $ECHO_N "checking for \"/dev/ptmx\"... $ECHO_C" >&6; }
++#if test "${ac_cv_file___dev_ptmx_+set}" = set; then
++#  echo $ECHO_N "(cached) $ECHO_C" >&6
++#else
++#  test "$cross_compiling" = yes &&
++#  { { echo "$as_me:$LINENO: error: cannot check for file existence when cross compiling" >&5
++#echo "$as_me: error: cannot check for file existence when cross compiling" >&2;}
++#   { (exit 1); exit 1; }; }
++#if test -r ""/dev/ptmx""; then
++#  ac_cv_file___dev_ptmx_=yes
++#else
++#  ac_cv_file___dev_ptmx_=no
++#fi
++#fi
++#{ echo "$as_me:$LINENO: result: $ac_cv_file___dev_ptmx_" >&5
++#echo "${ECHO_T}$ac_cv_file___dev_ptmx_" >&6; }
++#if test $ac_cv_file___dev_ptmx_ = yes; then
+   cat >>confdefs.h <<\_ACEOF
+-#define HAVE_DEV_PTMX 1
++#define HAVE_DEV_PTMX 0
+ _ACEOF
+ 
+-fi
++#fi
+ 
+-{ echo "$as_me:$LINENO: checking for \"/dev/ptc\"" >&5
+-echo $ECHO_N "checking for \"/dev/ptc\"... $ECHO_C" >&6; }
+-if test "${ac_cv_file___dev_ptc_+set}" = set; then
+-  echo $ECHO_N "(cached) $ECHO_C" >&6
+-else
+-  test "$cross_compiling" = yes &&
+-  { { echo "$as_me:$LINENO: error: cannot check for file existence when cross compiling" >&5
+-echo "$as_me: error: cannot check for file existence when cross compiling" >&2;}
+-   { (exit 1); exit 1; }; }
+-if test -r ""/dev/ptc""; then
+-  ac_cv_file___dev_ptc_=yes
+-else
+-  ac_cv_file___dev_ptc_=no
+-fi
+-fi
+-{ echo "$as_me:$LINENO: result: $ac_cv_file___dev_ptc_" >&5
+-echo "${ECHO_T}$ac_cv_file___dev_ptc_" >&6; }
+-if test $ac_cv_file___dev_ptc_ = yes; then
++#{ echo "$as_me:$LINENO: checking for \"/dev/ptc\"" >&5
++#echo $ECHO_N "checking for \"/dev/ptc\"... $ECHO_C" >&6; }
++#if test "${ac_cv_file___dev_ptc_+set}" = set; then
++#  echo $ECHO_N "(cached) $ECHO_C" >&6
++#else
++#  test "$cross_compiling" = yes &&
++#  { { echo "$as_me:$LINENO: error: cannot check for file existence when cross compiling" >&5
++#echo "$as_me: error: cannot check for file existence when cross compiling" >&2;}
++#   { (exit 1); exit 1; }; }
++#if test -r ""/dev/ptc""; then
++#  ac_cv_file___dev_ptc_=yes
++#else
++#  ac_cv_file___dev_ptc_=no
++#fi
++#fi
++#{ echo "$as_me:$LINENO: result: $ac_cv_file___dev_ptc_" >&5
++#echo "${ECHO_T}$ac_cv_file___dev_ptc_" >&6; }
++#if test $ac_cv_file___dev_ptc_ = yes; then
+   cat >>confdefs.h <<\_ACEOF
+-#define HAVE_DEV_PTS_AND_PTC 1
++#define HAVE_DEV_PTS_AND_PTC 0
+ _ACEOF
+ 
+-fi
++#fi
+ 
+ 
+ { echo "$as_me:$LINENO: **************************************** entropy" >&5
+@@ -24049,8 +24049,8 @@ _ACEOF
+ 
+ 
+ # Add SSL includes and libraries
+-CFLAGS="$CFLAGS -I$ssldir/include"
+-LIBS="$LIBS -L$ssldir/lib -lssl -lcrypto"
++CFLAGS="$CFLAGS"
++LIBS="$LIBS -lssl -lcrypto"
+ 
+ # Check for obsolete RSAref library
+ { echo "$as_me:$LINENO: checking for obsolete RSAref library" >&5
+--- a/configure.ac
++++ b/configure.ac
+@@ -44,10 +44,6 @@ AC_EGREP_HEADER(socklen_t, sys/socket.h,
+     AC_MSG_RESULT([no (defined as int)])
+     AC_DEFINE(socklen_t, int))
+ 
+-AC_MSG_NOTICE([**************************************** PTY device files])
+-AC_CHECK_FILE("/dev/ptmx", AC_DEFINE(HAVE_DEV_PTMX))
+-AC_CHECK_FILE("/dev/ptc", AC_DEFINE(HAVE_DEV_PTS_AND_PTC))
+-
+ AC_MSG_NOTICE([**************************************** entropy])
+ 
+ AC_ARG_WITH(egd-socket,

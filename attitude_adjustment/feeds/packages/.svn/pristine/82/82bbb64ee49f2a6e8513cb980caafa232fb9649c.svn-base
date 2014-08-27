@@ -1,0 +1,22 @@
+--- a/l2tp_config_token.l
++++ b/l2tp_config_token.l
+@@ -23,6 +23,8 @@ static int resolveip(const char *val, st
+ int lineno;
+ int command;
+ 
++int yywrap(void) { return 1; }
++
+ %}
+ 
+ /* common section */
+--- a/Makefile
++++ b/Makefile
+@@ -204,7 +204,7 @@ ifeq ($(L2TP_FEATURE_LOCAL_CONF_FILE),y)
+ # Config file parser
+ LEX=			flex
+ YACC=			bison
+-LDFLAGS.l2tpd+=		-lfl
++LDFLAGS.l2tpd+=
+ %.c:	%.l
+ 			$(LEX) -o$@ $<
+ 

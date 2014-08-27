@@ -1,0 +1,31 @@
+From 5c75afc7ec22ecba7a8ed2f661a7f44a03019d88 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Wed, 22 Aug 2012 16:20:57 +0300
+Subject: [PATCH 256/609] GP Board - Fix sata power GPIO
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/boardEnv/mvBoardEnvSpec.h     |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
+index 12e7c50..4231351 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
+@@ -516,11 +516,11 @@ MPP#	NAME			IN/OUT
+ 66      SW_BRD connected        IN
+ 
+ */
+-#define RD_78460_GP_GPP_OUT_ENA_LOW	(~(BIT21))
++#define RD_78460_GP_GPP_OUT_ENA_LOW	(~(BIT21 | BIT20))
+ #define RD_78460_GP_GPP_OUT_ENA_MID	(~(0x0))
+ #define RD_78460_GP_GPP_OUT_ENA_HIGH	(~(0x0))
+ 
+-#define RD_78460_GP_GPP_OUT_VAL_LOW	(BIT21)
++#define RD_78460_GP_GPP_OUT_VAL_LOW	(BIT21 | BIT20)
+ #define RD_78460_GP_GPP_OUT_VAL_MID	0x0
+ #define RD_78460_GP_GPP_OUT_VAL_HIGH	0x0
+ 
+-- 
+1.7.9.5
+

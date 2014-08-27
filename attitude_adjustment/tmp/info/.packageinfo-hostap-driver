@@ -1,0 +1,89 @@
+Source-Makefile: package/hostap-driver/Makefile
+Package: kmod-hostap
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>--2
+Depends: @PCI_SUPPORT||PCMCIA_SUPPORT +kmod-lib80211 +wireless-tools
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Host AP support for Prism2/2.5/3
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: hostap-driver-0.4.9.tar.gz
+Type: ipkg
+Kernel-Config: CONFIG_HOSTAP CONFIG_HOSTAP_FIRMWARE=y CONFIG_HOSTAP_FIRMWARE_NVRAM=y
+Description:  Host AP is a driver for 802.11b wireless cards based on Intersil 
+ Prism2/2.5/3 chipset. It supports so called Host AP mode that allows the 
+ card to act as an IEEE 802.11 access point.
+ This package contains the base Host AP driver code that is shared by 
+ different hardware models. You will also need to enable support for 
+ PLX/PCI/CS version of the driver to actually use the driver.
+http://hostap.epitest.fi/
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+
+Package: kmod-hostap-cs
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>--2
+Depends: @PCMCIA_SUPPORT +kmod-hostap +kmod-pcmcia-core
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Host AP driver for PCMCIA adaptors
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: hostap-driver-0.4.9.tar.gz
+Type: ipkg
+Kernel-Config: CONFIG_HOSTAP_CS
+Description:  Host AP is a driver for 802.11b wireless cards based on Intersil 
+ Prism2/2.5/3 chipset. It supports so called Host AP mode that allows the 
+ card to act as an IEEE 802.11 access point.
+ This package contains the Host AP driver for Prism2/2.5/3 PC cards.
+http://hostap.epitest.fi/
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+
+Package: kmod-hostap-pci
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>--2
+Depends: @PCI_SUPPORT +kmod-hostap
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Host AP driver for PCI adaptors
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: hostap-driver-0.4.9.tar.gz
+Type: ipkg
+Kernel-Config: CONFIG_HOSTAP_PCI
+Description:  Host AP is a driver for 802.11b wireless cards based on Intersil 
+ Prism2/2.5/3 chipset. It supports so called Host AP mode that allows the 
+ card to act as an IEEE 802.11 access point.
+ This package contains the Host AP driver for Prism2.5 PCI adaptors.
+http://hostap.epitest.fi/
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+
+Package: kmod-hostap-plx
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>--2
+Depends: @PCI_SUPPORT +kmod-hostap
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Host AP driver for PLX9052 based PCI adaptors
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: hostap-driver-0.4.9.tar.gz
+Type: ipkg
+Kernel-Config: CONFIG_HOSTAP_PLX
+Description:  Host AP is a driver for 802.11b wireless cards based on Intersil 
+ Prism2/2.5/3 chipset. It supports so called Host AP mode that allows the 
+ card to act as an IEEE 802.11 access point.
+ This package contains the Host AP driver for Prism2/2.5/3 in PLX9052 
+ based PCI adaptors.
+http://hostap.epitest.fi/
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+
+

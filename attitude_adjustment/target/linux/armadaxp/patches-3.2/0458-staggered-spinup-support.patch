@@ -1,0 +1,963 @@
+From 473e56123b93f77710348997c0ffb7b6e35b77d5 Mon Sep 17 00:00:00 2001
+From: Lior Amsalem <alior@marvell.com>
+Date: Mon, 17 Dec 2012 13:20:45 +0200
+Subject: [PATCH 458/609] staggered spinup support
+
+Change-Id: Ie5878102211190a5036bb6f0e6baf150c4c27f70
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ Documentation/scsi/staggered_spinup.txt |   26 +++
+ drivers/ata/sata_mv.c                   |    2 +
+ drivers/scsi/Kconfig                    |   18 ++
+ drivers/scsi/Makefile                   |    1 +
+ drivers/scsi/scsi.c                     |   65 ++++++
+ drivers/scsi/scsi_lib.c                 |  113 +++++++++-
+ drivers/scsi/scsi_priv.h                |   44 ++++
+ drivers/scsi/scsi_scan.c                |   18 ++
+ drivers/scsi/scsi_spinup.c              |  374 +++++++++++++++++++++++++++++++
+ drivers/scsi/scsi_sysfs.c               |   20 ++
+ include/scsi/scsi_device.h              |   13 ++
+ include/scsi/scsi_host.h                |    5 +
+ include/scsi/scsi_spinup.h              |   42 ++++
+ 13 files changed, 740 insertions(+), 1 deletion(-)
+ create mode 100644 Documentation/scsi/staggered_spinup.txt
+ create mode 100644 drivers/scsi/scsi_spinup.c
+ create mode 100644 include/scsi/scsi_spinup.h
+
+diff --git a/Documentation/scsi/staggered_spinup.txt b/Documentation/scsi/staggered_spinup.txt
+new file mode 100644
+index 0000000..46cbf21
+--- /dev/null
++++ b/Documentation/scsi/staggered_spinup.txt
+@@ -0,0 +1,26 @@
++CSI staggered spin-up support
++Overview
++Hard drive spin-up was always the highest power consuming stage. Embedded devices mostly use low power suppliers that sometimes needs to drive numerous hard drives.
++This feature developed in order to prevent the power supply’s overloading when numerous hard drives spin-up.
++
++Usage
++Apply the staggered spin-up kernel patch.
++Compile the kernel with the config CONFIG_MV_STAGGERED_SPINUP enabled.
++
++Pass the following parameter in the kernel line:
++spinup_config=<spinup_max>,<spinup_timeout>
++For example: spinup_config=2,6 will config the module for 2 maximum disks spinning-up with 6 seconds timeout.
++Parameters explanation:
++	1.	<spinup_max> - The maximum spinning-up disks(can be between 1 and 8)  will be like this:
++		a.	0 = feature off.
++		b.	1 – 8 = number of disks
++		c.	<0,>8 = invalid parameter (will behave like feature off)
++	2.	<spinup_timeout> - The spin-up timeout (can be between 1 and 6) will be like this:
++		a.	0 = feature off.
++		b.	1 – 6 = in seconds
++		c.	<0,>6 = invalid parameter (will behave like feature off)
++
++Any parsing error will cause an invalid parameters print and will behave as feature off.
++
++EXPERIMANTAL kernel config:
++CONFIG_MV_DISKS_POWERUP_TO_STANDBY – on boot initialization all hard drives will assume to be in standby.
+diff --git a/drivers/ata/sata_mv.c b/drivers/ata/sata_mv.c
+index 3f5b612..2bb11cc 100644
+--- a/drivers/ata/sata_mv.c
++++ b/drivers/ata/sata_mv.c
+@@ -654,6 +654,7 @@ static struct scsi_host_template mv5_sht = {
+ 	ATA_BASE_SHT(DRV_NAME),
+ 	.sg_tablesize		= MV_MAX_SG_CT / 2,
+ 	.dma_boundary		= MV_DMA_BOUNDARY,
++	.support_staggered_spinup = 1,
+ };
+ 
+ static struct scsi_host_template mv6_sht = {
+@@ -661,6 +662,7 @@ static struct scsi_host_template mv6_sht = {
+ 	.can_queue		= MV_MAX_Q_DEPTH - 1,
+ 	.sg_tablesize		= MV_MAX_SG_CT / 2,
+ 	.dma_boundary		= MV_DMA_BOUNDARY,
++	.support_staggered_spinup = 1,
+ };
+ 
+ static struct ata_port_operations mv5_ops = {
+diff --git a/drivers/scsi/Kconfig b/drivers/scsi/Kconfig
+index f94ecf1..81a4fd1 100644
+--- a/drivers/scsi/Kconfig
++++ b/drivers/scsi/Kconfig
+@@ -280,6 +280,24 @@ config SCSI_WAIT_SCAN
+ # disabling it, whereas people who accidentally switch it off may wonder why
+ # their mkinitrd gets into trouble.
+ 
++config MV_STAGGERED_SPINUP
++        bool "Lock disk spinup"
++        default n
++        help
++          Take care about the power supply health. Prevent to many disks
++          to spinup at the same time.
++
++          If in doubt, say N.
++
++config MV_DISKS_POWERUP_TO_STANDBY
++        depends on MV_STAGGERED_SPINUP
++        bool "Disk powerup to standby"
++        default n
++        help
++          Support for disk power-up in standby mode.
++
++          If in doubt, use N.
++
+ menu "SCSI Transports"
+ 	depends on SCSI
+ 
+diff --git a/drivers/scsi/Makefile b/drivers/scsi/Makefile
+index 8c84a4e..da1ff4c 100644
+--- a/drivers/scsi/Makefile
++++ b/drivers/scsi/Makefile
+@@ -166,6 +166,7 @@ scsi_mod-y			+= scsi.o hosts.o scsi_ioctl.o constants.o \
+ scsi_mod-$(CONFIG_SCSI_DMA)	+= scsi_lib_dma.o
+ scsi_mod-y			+= scsi_scan.o scsi_sysfs.o scsi_devinfo.o
+ scsi_mod-$(CONFIG_SCSI_NETLINK)	+= scsi_netlink.o
++scsi_mod-$(CONFIG_MV_STAGGERED_SPINUP)  += scsi_spinup.o
+ scsi_mod-$(CONFIG_SYSCTL)	+= scsi_sysctl.o
+ scsi_mod-$(CONFIG_SCSI_PROC_FS)	+= scsi_proc.o
+ scsi_mod-y			+= scsi_trace.o
+diff --git a/drivers/scsi/scsi.c b/drivers/scsi/scsi.c
+index 831db24..a09bac6 100644
+--- a/drivers/scsi/scsi.c
++++ b/drivers/scsi/scsi.c
+@@ -63,6 +63,10 @@
+ #include <scsi/scsi_eh.h>
+ #include <scsi/scsi_host.h>
+ #include <scsi/scsi_tcq.h>
++#ifdef CONFIG_MV_STAGGERED_SPINUP
++#include <scsi/scsi_spinup.h>
++#endif
++#include <linux/proc_fs.h>
+ 
+ #include "scsi_priv.h"
+ #include "scsi_logging.h"
+@@ -762,6 +766,7 @@ int scsi_dispatch_cmd(struct scsi_cmnd *cmd)
+ 	SCSI_LOG_MLQUEUE(3, printk("leaving scsi_dispatch_cmnd()\n"));
+ 	return rtn;
+ }
++int ss_stats[128];
+ 
+ /**
+  * scsi_done - Enqueue the finished SCSI command into the done queue.
+@@ -778,6 +783,36 @@ int scsi_dispatch_cmd(struct scsi_cmnd *cmd)
+  */
+ static void scsi_done(struct scsi_cmnd *cmd)
+ {
++        unsigned long flags = 0;
++
++#ifdef CONFIG_MV_STAGGERED_SPINUP
++        /*
++	 * TODO: add support to verify failed commands that didn't woke up the drive.
++	 */
++        if (scsi_spinup_enabled())
++        {
++                spin_lock_irqsave(cmd->device->host->host_lock, flags);
++                if (cmd->device->sdev_power_state == SDEV_PW_SPINNING_UP)
++                {
++                        if (cmd->device->standby_timeout_secs > 0)
++                        {
++                                /* had a timer before spinup, restarting the timer again */
++                                cmd->device->sdev_power_state = SDEV_PW_STANDBY_TIMEOUT_WAIT;
++				ss_stats[cmd->device->ss_id] = cmd->device->sdev_power_state;
++                                standby_add_timer(cmd->device, cmd->device->standby_timeout_secs, standby_times_out);
++				//printk("\nDisk [%d] done spinup, resetting timer...\n", cmd->device->ss_id);
++                        }
++                        else
++			{
++                                cmd->device->sdev_power_state = SDEV_PW_ON;
++				ss_stats[cmd->device->ss_id] = cmd->device->sdev_power_state;
++			}
++			scsi_internal_device_unblock(cmd->device);
++                }
++		spin_unlock_irqrestore(cmd->device->host->host_lock, flags);
++        }
++#endif
++
+ 	trace_scsi_dispatch_cmd_done(cmd);
+ 	blk_complete_request(cmd->request);
+ }
+@@ -1310,10 +1345,40 @@ MODULE_LICENSE("GPL");
+ module_param(scsi_logging_level, int, S_IRUGO|S_IWUSR);
+ MODULE_PARM_DESC(scsi_logging_level, "a bit mask of logging levels");
+ 
++struct proc_dir_entry *ss_info;
++
++int ss_info_read(char *buffer, char **buffer_location, off_t offset, int buffer_length, int *zero, void *ptr)
++{
++	int count = 0, i;
++
++	if (offset > 0)
++		return 0;
++	count += sprintf(buffer, "SS Engine statistics:\n");
++	for (i = 0; i < 128; i++) {
++		if (ss_stats[i] == 0)
++			continue;
++		count += sprintf(buffer + count, "%d - %d.\n", i, ss_stats[i]);
++	}
++
++	return count;
++}
++
+ static int __init init_scsi(void)
+ {
+ 	int error;
+ 
++#ifdef CONFIG_MV_STAGGERED_SPINUP
++        /* init will parse the kernel line for the spinup param */
++        error = scsi_spinup_init();
++        if (error)
++                return error;
++	struct proc_dir_entry *parent = NULL;
++	ss_info = create_proc_entry("ss_info", 0666, parent);
++	ss_info->read_proc = ss_info_read;
++	ss_info->write_proc = NULL;
++	ss_info->nlink = 1;
++#endif
++
+ 	error = scsi_init_queue();
+ 	if (error)
+ 		return error;
+diff --git a/drivers/scsi/scsi_lib.c b/drivers/scsi/scsi_lib.c
+index 6c4b620..4db9b40 100644
+--- a/drivers/scsi/scsi_lib.c
++++ b/drivers/scsi/scsi_lib.c
+@@ -32,7 +32,10 @@
+ #include "scsi_priv.h"
+ #include "scsi_logging.h"
+ 
+-
++#ifdef CONFIG_MV_STAGGERED_SPINUP
++#include <scsi/scsi_spinup.h>
++#endif
++extern int ss_stats[128];
+ #define SG_MEMPOOL_NR		ARRAY_SIZE(scsi_sg_pools)
+ #define SG_MEMPOOL_SIZE		2
+ 
+@@ -1548,6 +1551,114 @@ static void scsi_request_fn(struct request_queue *q)
+ 		}
+ 		spin_lock(shost->host_lock);
+ 
++#ifdef CONFIG_MV_STAGGERED_SPINUP
++		if ((cmd->device->host->hostt->support_staggered_spinup == 1) && /*the flag is requaired in order to support the staggered spinup*/
++		    (scsi_spinup_enabled()))        /*kernel line parsed ok?*/
++		{
++			switch (cmd->cmnd[0])
++			{
++                        case START_STOP:
++                                switch (cmd->cmnd[4] & START_STOP_BIT)
++                                {
++				case 0x0: /* STOP command */
++					/* drive is going to sleep */
++					//printk("\n Disk [%d] going to standby...\n", cmd->device->ss_id);
++					cmd->device->sdev_power_state = SDEV_PW_STANDBY;
++					ss_stats[cmd->device->ss_id] = cmd->device->sdev_power_state;
++                                        break;
++				case 0x1: /* START command */
++					/* drive is going to spin up, checking if possible */
++					if (scsi_spinup_device(cmd) == 1) {
++						/* not possible: drive queued for spinup in side scsi_spinup_device(), device queue is blocked and the current command is requeued */
++						scsi_internal_device_block(cmd->device);
++						goto not_ready;
++					}
++					/* drive was able to get the semaphore, will spinup now */
++                                        break;
++				default:
++                                        break;
++                                }
++				break;
++                        case READ_6:
++                        case WRITE_6:
++                        case READ_10:
++                        case WRITE_10:
++                        case SEEK_10:
++                        case VERIFY_10:
++                        case VERIFY:
++                        case READ_16:
++                        case WRITE_16:
++                        case VERIFY_16:
++                        case SYNCHRONIZE_CACHE:
++                                /* drive is going to spin up, checking if possible */
++                                if (scsi_spinup_device(cmd) == 1) {
++                                        /* not possible: drive queued for spinup in side scsi_spinup_device(), device queue is blocked and the current command is requeued */
++                                        scsi_internal_device_block(cmd->device);
++                                        goto not_ready;
++                                }
++                                /* drive was able to get the semaphore, will spinup now */
++				break;
++                        case ATA_16:
++                                switch (cmd->cmnd[14])
++                                {
++				case STANDBY_IMMEDIATE:
++					/* drive is going to sleep */
++					//printk("\n Disk [%d] going to standby...\n", cmd->device->ss_id);
++					cmd->device->sdev_power_state = SDEV_PW_STANDBY;
++					ss_stats[cmd->device->ss_id] = cmd->device->sdev_power_state;
++                                        break;
++				case STANDBY_TIMEOUT:
++					if (cmd->cmnd[6] == 0) {
++						/* resetting the timeout standby value of 0 means remove standby timeout */
++						cmd->device->sdev_power_state = SDEV_PW_ON;
++						ss_stats[cmd->device->ss_id] = cmd->device->sdev_power_state;
++						cmd->device->standby_timeout_secs = 0;
++					} else {
++						/*setting the timeout standby and starting the timer*/
++						//printk("\n Disk [%d] going to timeout standby with value [%d]...\n", cmd->device->ss_id, (int) cmd->cmnd[6]);
++						cmd->device->sdev_power_state = SDEV_PW_STANDBY_TIMEOUT_WAIT;
++						ss_stats[cmd->device->ss_id] = cmd->device->sdev_power_state;
++						standby_add_timer(cmd->device, timeout_to_jiffies((int) cmd->cmnd[6]), standby_times_out);
++					}
++                                        break;
++				default:
++                                        break;
++                                }
++				break;
++                        case ATA_12:
++                                switch (cmd->cmnd[9])
++                                {
++				case STANDBY_IMMEDIATE:
++					/* drive is going to sleep */
++					//printk("\n Disk [%d] going to standby...\n", cmd->device->ss_id);
++					cmd->device->sdev_power_state = SDEV_PW_STANDBY;
++					ss_stats[cmd->device->ss_id] = cmd->device->sdev_power_state;
++                                        break;
++				case STANDBY_TIMEOUT:
++					if (cmd->cmnd[4] == 0) {
++						/* resetting the timeout standby value of 0 means remove standby timeout */
++						cmd->device->sdev_power_state = SDEV_PW_ON;
++						ss_stats[cmd->device->ss_id] = cmd->device->sdev_power_state;
++						cmd->device->standby_timeout_secs = 0;
++					} else {
++						/*setting the timeout standby and starting the timer*/
++						//printk("\n Disk [%d] going to timeout standby with value [%d]...\n", cmd->device->ss_id, (int) cmd->cmnd[4]);
++						cmd->device->sdev_power_state = SDEV_PW_STANDBY_TIMEOUT_WAIT;
++						ss_stats[cmd->device->ss_id] = cmd->device->sdev_power_state;
++						standby_add_timer(cmd->device, timeout_to_jiffies((int) cmd->cmnd[4]), standby_times_out);
++					}
++                                        break;
++				default:
++                                        break;
++                                }
++				break;
++                        default:
++				break;
++			}
++
++		}
++#endif
++
+ 		/*
+ 		 * We hit this when the driver is using a host wide
+ 		 * tag map. For device level tag maps the queue_depth check
+diff --git a/drivers/scsi/scsi_priv.h b/drivers/scsi/scsi_priv.h
+index d58adca..4462def 100644
+--- a/drivers/scsi/scsi_priv.h
++++ b/drivers/scsi/scsi_priv.h
+@@ -147,6 +147,50 @@ static inline void scsi_netlink_init(void) {}
+ static inline void scsi_netlink_exit(void) {}
+ #endif
+ 
++/* scsi_spinup.c */
++#ifdef CONFIG_MV_STAGGERED_SPINUP
++extern void standby_add_timer(struct scsi_device *, int,
++			      void (*)(struct scsi_device *));
++extern int standby_delete_timer(struct scsi_device *);
++extern void standby_times_out(struct scsi_device *);
++
++extern void spinup_add_timer(struct scsi_device *, int,
++			     void (*)(struct scsi_device *));
++extern int spinup_delete_timer(struct scsi_device *);
++extern void spinup_times_out(struct scsi_device *);
++extern int timeout_to_jiffies(int);
++extern int scsi_parse_spinup_max(char *);
++extern int scsi_parse_spinup_timeout(char *);
++extern int  scsi_spinup_down();
++extern int  scsi_spinup_up();
++extern int  scsi_spinup_enabled();
++extern int scsi_spinup_get_timeout();
++extern int __init scsi_spinup_init(void);
++extern int  scsi_spinup_device(struct scsi_cmnd *);
++extern void scsi_spinup_device_queue(struct scsi_device *);
++extern int  scsi_spinup_device_dequeue_next(void);
++#else
++/* only factive declerations for the compiler */
++static inline void scsi_spinup_init(void) {}
++static inline void standby_add_timer(void) {}
++static inline void standby_delete_timer(void) {}
++static inline void standby_times_out(void) {}
++static inline void spinup_add_timer(void) {}
++static inline void spinup_delete_timer(void) {}
++static inline void spinup_times_out(void) {}
++static inline void timeout_to_jiffies(void) {}
++static inline void scsi_parse_spinup_max(void) {}
++static inline void scsi_parse_spinup_timeout(void) {}
++static inline void scsi_spinup_down(void) {}
++static inline void scsi_spinup_up(void) {}
++static inline void scsi_spinup_enabled(void) {}
++static inline void scsi_spinup_get_timeout(void) {}
++static inline void scsi_spinup_device(void) {}
++static inline void scsi_spinup_device_queue(void ) {}
++static inline void scsi_spinup_device_dequeue_next(void) {}
++//static inline void scsi_spinup_exit(void) {}
++#endif
++
+ /* scsi_pm.c */
+ #ifdef CONFIG_PM
+ extern const struct dev_pm_ops scsi_bus_pm_ops;
+diff --git a/drivers/scsi/scsi_scan.c b/drivers/scsi/scsi_scan.c
+index c6c80c9..6bfdf5e 100644
+--- a/drivers/scsi/scsi_scan.c
++++ b/drivers/scsi/scsi_scan.c
+@@ -47,6 +47,8 @@
+ #include "scsi_priv.h"
+ #include "scsi_logging.h"
+ 
++extern int ss_stats[128];
++
+ #define ALLOC_FAILURE_MSG	KERN_ERR "%s: Allocation failure during" \
+ 	" SCSI scanning, some SCSI devices might not be configured\n"
+ 
+@@ -235,6 +237,7 @@ static void scsi_unlock_floptical(struct scsi_device *sdev,
+  * Return value:
+  *     scsi_Device pointer, or NULL on failure.
+  **/
++static int ss_id = 0;
+ static struct scsi_device *scsi_alloc_sdev(struct scsi_target *starget,
+ 					   unsigned int lun, void *hostdata)
+ {
+@@ -258,6 +261,21 @@ static struct scsi_device *scsi_alloc_sdev(struct scsi_target *starget,
+ 	sdev->lun = lun;
+ 	sdev->channel = starget->channel;
+ 	sdev->sdev_state = SDEV_CREATED;
++
++#ifdef CONFIG_MV_STAGGERED_SPINUP
++	sdev->ss_id = ss_id;
++	ss_id++;
++#ifdef CONFIG_MV_DISKS_POWERUP_TO_STANDBY
++        sdev->sdev_power_state = SDEV_PW_STANDBY;
++#else
++        sdev->sdev_power_state = SDEV_PW_ON;
++#endif
++	ss_stats[sdev->ss_id] = sdev->sdev_power_state;
++        init_timer(&sdev->standby_timeout);
++        init_timer(&sdev->spinup_timeout);
++        sdev->standby_timeout_secs = 0;
++#endif
++
+ 	INIT_LIST_HEAD(&sdev->siblings);
+ 	INIT_LIST_HEAD(&sdev->same_target_siblings);
+ 	INIT_LIST_HEAD(&sdev->cmd_list);
+diff --git a/drivers/scsi/scsi_spinup.c b/drivers/scsi/scsi_spinup.c
+new file mode 100644
+index 0000000..24dfba9
+--- /dev/null
++++ b/drivers/scsi/scsi_spinup.c
+@@ -0,0 +1,374 @@
++/*
++ *  SCSI Spinup specific structures and functions.
++ *
++ *  Copyright (c) 2009 Marvell,  All rights reserved.
++ *
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ */
++
++#include <linux/sched.h>
++#include <linux/timer.h>
++#include <linux/string.h>
++#include <linux/kernel.h>
++#include <linux/delay.h>
++#include <linux/list.h>
++
++#include <scsi/scsi.h>
++#include <scsi/scsi_cmnd.h>
++#include <scsi/scsi_device.h>
++#include <scsi/scsi_host.h>
++#include <scsi/scsi_spinup.h>
++
++#include "scsi_priv.h"
++#include "scsi_logging.h"
++
++extern int ss_stats[128];
++/*structure: spinup_config=<spinup_max>,<spinup_timout> example: spinup_config=2,6 (two max spinup disks, 6 seconds timeout) */
++static char *cmdline = NULL;
++
++/* Required to get the configuration string from the Kernel Command Line */
++int spinup_cmdline_config(char *s);
++__setup("spinup_config=", spinup_cmdline_config);
++
++int spinup_cmdline_config(char *s)
++{
++    cmdline = s;
++    return 1;
++}
++
++static int spinup_timeout = 0;
++static int spinup_max = 0;
++static int spinup_enabled = 0;
++
++static atomic_t spinup_now;
++struct spinup_node {
++	struct list_head list;
++	struct scsi_device *sdev;
++};
++static struct list_head spinup_list;
++
++int scsi_parse_spinup_max(char *p_config)
++{
++	/* the max spinup value is constructed as follows: */
++	/* <spinup_max>,<spinup_timout>                    */
++	unsigned int _spinup_max;
++	int syntax_err = 0;
++
++	_spinup_max = 0;
++	if (p_config == NULL)
++	    return 0;
++	while((*p_config >= '0') && (*p_config <= '9'))	{
++		_spinup_max = (_spinup_max * 10) + (*p_config - '0');
++		p_config++;
++	}
++	if ((*p_config != ',') || (_spinup_max == 0)) {
++		printk("Syntax error while parsing spinup_max value from command line\n");
++		syntax_err = 1;
++	}
++	if ((_spinup_max < 0)||(_spinup_max > 8)) {
++		printk("Syntax error while parsing spinup_max value from command line. (value must between 1 to 8\n");
++		syntax_err = 1;
++	}
++	if(syntax_err == 0) {
++		printk("  o Maximum Disk Spinup set to: %d.\n", _spinup_max);
++		return _spinup_max;
++	}
++	return 0;
++}
++
++int scsi_parse_spinup_timeout(char *p_config)
++{
++	/* the  spinup timeout value is constructed as follows: */
++	/* <spinup_max>,<spinup_timout>                         */
++	unsigned int _spinup_timout;
++	int syntax_err = 0;
++
++	_spinup_timout = 0;
++	if (p_config == NULL)
++	    return 0;
++	while((*p_config != ',') && (*p_config != '\0'))
++		p_config++;
++
++	p_config++;
++	while((*p_config >= '0') && (*p_config <= '9'))	{
++		_spinup_timout = (_spinup_timout * 10) + (*p_config - '0');
++		p_config++;
++	}
++	if ((*p_config != '\0') || (_spinup_timout == 0)) {
++		printk("Syntax error while parsing spinup_timout value from command line\n");
++		syntax_err = 1;
++	}
++	if ((_spinup_timout < 0) || (_spinup_timout > 6)) {
++		printk("Syntax error while parsing spinup_timout value from command line (spinup_timeout must be between 1 to 6) \n");
++		syntax_err = 1;
++	}
++	if(syntax_err == 0) {
++		printk("  o Disk Spinup timeout set to: %d.\n", _spinup_timout);
++		return _spinup_timout;
++	}
++	return 0;
++}
++
++/* function convertd timeout value got from the user to jiffies */
++int timeout_to_jiffies (int timeout)
++{
++	unsigned int secs=0;
++
++	switch(timeout) {
++		case 0:		//printf("off");
++			break;
++		case 252:	//printf("21 minutes");
++			secs = 21 * 60;
++			break;
++		case 253:	//printf("vendor-specific");
++			break;
++		case 254:	//printf("reserved");
++			break;
++		case 255:	//printf("21 minutes + 15 seconds");
++			secs = 21 * 60 + 15;
++			break;
++		default:
++			if (timeout <= 240) {
++				secs = timeout * 5;
++			} else if (timeout <= 251) {
++				secs = ((timeout - 240) * 30) * 60;
++			} else
++				printk("illegal value");
++			break;
++	}
++	return msecs_to_jiffies ((secs-1) * 1000);
++}
++
++
++void standby_add_timer(struct scsi_device *sdev, int timeout,
++		    void (*complete)(struct scsi_device *))
++{
++	/*
++	 * If the clock was already running for this device, then
++	 * first delete the timer.  The timer handling code gets rather
++	 * confused if we don't do this.
++	 */
++	if (sdev->standby_timeout.function)
++		del_timer(&sdev->standby_timeout);
++
++	sdev->standby_timeout.data = (unsigned long)sdev;
++	sdev->standby_timeout_secs = timeout;
++
++	sdev->standby_timeout.expires = timeout + jiffies ;
++	sdev->standby_timeout.function = (void (*)(unsigned long)) complete;
++
++	SCSI_LOG_ERROR_RECOVERY(5, printk("%s: scmd: %p, time:"
++					  " %d, (%p)\n", __FUNCTION__,
++					  sdev, timeout, complete));
++
++	add_timer(&sdev->standby_timeout);
++}
++
++
++int standby_delete_timer(struct scsi_device *sdev)
++{
++	int rtn;
++
++	rtn = del_timer(&sdev->standby_timeout);
++
++	SCSI_LOG_ERROR_RECOVERY(5, printk("%s: scmd: %p,"
++					 " rtn: %d\n", __FUNCTION__,
++					 sdev, rtn));
++
++	sdev->standby_timeout.data = (unsigned long)NULL;
++	sdev->standby_timeout.function = NULL;
++
++	return rtn;
++}
++
++
++void standby_times_out(struct scsi_device *sdev)
++{
++	unsigned long flags = 0;
++
++	//printk("\nDisk [%d] timeout done, going to sleep...\n",sdev->ss_id);
++	sdev->sdev_power_state = SDEV_PW_STANDBY_TIMEOUT_PASSED;
++	ss_stats[sdev->ss_id] = sdev->sdev_power_state;
++	standby_delete_timer(sdev);
++}
++
++void spinup_add_timer(struct scsi_device *sdev, int timeout,
++		    void (*complete)(struct scsi_device *))
++{
++	/*
++	 * If the clock was already running for this device, then
++	 * first delete the timer.  The timer handling code gets rather
++	 * confused if we don't do this.
++	 */
++	if (sdev->spinup_timeout.function)
++		del_timer(&sdev->spinup_timeout);
++
++
++	sdev->spinup_timeout.data = (unsigned long)sdev;
++
++	sdev->spinup_timeout.expires = jiffies + msecs_to_jiffies (timeout * 1000);
++	sdev->spinup_timeout.function = (void (*)(unsigned long)) complete;
++
++	SCSI_LOG_ERROR_RECOVERY(5, printk("%s: scmd: %p, time:"
++					  " %d, (%p)\n", __FUNCTION__,
++					  sdev, timeout, complete));
++	add_timer(&sdev->spinup_timeout);
++
++}
++
++int spinup_delete_timer(struct scsi_device *sdev)
++{
++	int rtn;
++
++	rtn = del_timer(&sdev->spinup_timeout);
++
++	SCSI_LOG_ERROR_RECOVERY(5, printk("%s: scmd: %p,"
++					 " rtn: %d\n", __FUNCTION__,
++					 sdev, rtn));
++
++	sdev->spinup_timeout.data = (unsigned long)NULL;
++	sdev->spinup_timeout.function = NULL;
++
++	return rtn;
++}
++void spinup_times_out(struct scsi_device *sdev)
++{
++	//printk("\nDisk [%d] finished spinup...\n",sdev->ss_id);
++	scsi_spinup_up();
++	spinup_delete_timer(sdev);
++	scsi_spinup_device_dequeue_next();
++}
++
++
++
++int scsi_spinup_enabled(void)
++{
++	return spinup_enabled;
++}
++
++int scsi_spinup_get_timeout(void)
++{
++	return spinup_timeout;
++}
++
++/* __setup kernel line parsing and setting up the spinup feature */
++int __init scsi_spinup_init(void)
++{
++	printk("SCSI Staggered Spinup:\n");
++	spinup_max = scsi_parse_spinup_max(cmdline);
++	spinup_timeout = scsi_parse_spinup_timeout(cmdline);
++	if ((spinup_max == 0) || (spinup_timeout == 0)){
++		spinup_enabled = 0;
++		printk("SCSI Staggered Spinup Feature Status: Disabled\n");
++	}else{
++		spinup_enabled = 1;
++		atomic_set(&spinup_now,spinup_max);
++		printk("SCSI Staggered Spinup Feature Status: Enabled\n");
++	}
++	INIT_LIST_HEAD(&spinup_list);
++	return 0;
++}
++
++void scsi_spinup_device_queue(struct scsi_device *sdev)
++{
++	struct list_head *ptr;
++	struct spinup_node *entry;
++	struct spinup_node *new = (struct spinup_node *) kmalloc(sizeof(struct spinup_node), GFP_KERNEL);
++
++	new->sdev = sdev;
++	list_add_tail(&new->list, &spinup_list);
++
++	//printk("\n");
++	//list_for_each(ptr, &spinup_list) {
++	//	entry = list_entry(ptr, struct spinup_node, list);
++	//	printk("[%d] ->",entry->sdev->ss_id);
++	//}
++	//printk("[EOD]\n");
++}
++
++int scsi_spinup_device(struct scsi_cmnd *cmd)
++{
++	switch (cmd->device->sdev_power_state) {
++		case SDEV_PW_STANDBY:
++		case SDEV_PW_STANDBY_TIMEOUT_PASSED:
++			cmd->device->sdev_power_state = SDEV_PW_WAIT_FOR_SPIN_UP;
++			ss_stats[cmd->device->ss_id] = cmd->device->sdev_power_state;
++			/* disk will wait here to his turn to spinup */
++			//printk("\nDisk [%d] waiting to spinup...\n",cmd->device->ss_id);
++			if (!scsi_spinup_down())
++			{
++				//printk("\Disk [%d] queued up for spinup!\n", cmd->device->ss_id);
++				scsi_spinup_device_queue(cmd->device);
++				return 1;
++			}
++			cmd->device->sdev_power_state = SDEV_PW_SPINNING_UP;
++			ss_stats[cmd->device->ss_id] = cmd->device->sdev_power_state;
++			/* starting timer for the spinup process */
++			//printk("\nDisk [%d] spinning up...\n",cmd->device->ss_id);
++			spinup_add_timer(cmd->device, scsi_spinup_get_timeout(), spinup_times_out);
++		break;
++		case SDEV_PW_STANDBY_TIMEOUT_WAIT:
++			standby_add_timer(cmd->device, cmd->device->standby_timeout_secs, standby_times_out);
++		break;
++		default:
++		break;
++	}
++	return 0;
++}
++int scsi_spinup_down(void)
++{
++	if (atomic_read(&spinup_now) > 0) {
++		atomic_dec(&spinup_now);
++		//printk("\nDown we go!! [%d] \n",(int) atomic_read(&spinup_now) );
++		return 1;
++	}
++	return 0;
++}
++int scsi_spinup_up(void)
++{
++	atomic_inc(&spinup_now);
++	//printk("\nUP we go!! [%d] \n",(int) atomic_read(&spinup_now) );
++
++	return 0;
++}
++int scsi_spinup_device_dequeue_next(void)
++{
++	struct list_head *ptr;
++	struct spinup_node *entry;
++
++	if(!list_empty(&spinup_list))
++	{
++		ptr = spinup_list.next;
++		entry = list_entry(ptr, struct spinup_node, list);
++		//printk("\nNext Disk is entry: [%d] power state [%d]\n",entry->sdev->ss_id ,entry->sdev->sdev_power_state);
++
++		if (scsi_spinup_down())
++		{
++			entry->sdev->sdev_power_state = SDEV_PW_SPINNING_UP;
++			ss_stats[entry->sdev->ss_id] = entry->sdev->sdev_power_state;
++
++			spinup_add_timer(entry->sdev, scsi_spinup_get_timeout(), spinup_times_out);
++			scsi_internal_device_unblock(entry->sdev);
++			list_del(ptr);
++		}
++	}
++	//printk("\n");
++	//list_for_each(ptr, &spinup_list) {
++	//	entry = list_entry(ptr, struct spinup_node, list);
++	//	printk("[%d] ->",entry->sdev->ss_id);
++	//}
++	//printk("[EOD]\n");
++	return 0;
++}
+diff --git a/drivers/scsi/scsi_sysfs.c b/drivers/scsi/scsi_sysfs.c
+index 72ca515..37fc76a 100644
+--- a/drivers/scsi/scsi_sysfs.c
++++ b/drivers/scsi/scsi_sysfs.c
+@@ -949,10 +949,30 @@ int scsi_sysfs_add_sdev(struct scsi_device *sdev)
+ 	return error;
+ }
+ 
++extern int ss_stats[128];
++
+ void __scsi_remove_device(struct scsi_device *sdev)
+ {
+ 	struct device *dev = &sdev->sdev_gendev;
+ 
++#ifdef CONFIG_MV_STAGGERED_SPINUP
++        if (scsi_spinup_enabled()) {
++                if (sdev->standby_timeout_secs > 0) {
++                        /* if the device had any standby timer */
++			//printk("Device removed, canceling standby timer...\n");
++                        standby_delete_timer(sdev);
++                }
++                if (sdev->spinup_timeout.function) {
++                        /* deleting any spinup timer thats may be still there and freeing the semaphore */
++			//printk("Device removed, canceling spinup timer...\n");
++                        spinup_delete_timer(sdev);
++                        scsi_spinup_up();
++                }
++		sdev->sdev_power_state = SDEV_PW_UNKNOWN;
++		ss_stats[sdev->ss_id] = sdev->sdev_power_state;
++        }
++#endif
++
+ 	if (sdev->is_visible) {
+ 		if (scsi_device_set_state(sdev, SDEV_CANCEL) != 0)
+ 			return;
+diff --git a/include/scsi/scsi_device.h b/include/scsi/scsi_device.h
+index 5591ed5..fd54471 100644
+--- a/include/scsi/scsi_device.h
++++ b/include/scsi/scsi_device.h
+@@ -9,6 +9,10 @@
+ #include <scsi/scsi.h>
+ #include <linux/atomic.h>
+ 
++#ifdef CONFIG_MV_STAGGERED_SPINUP
++#include <scsi/scsi_spinup.h>
++#endif
++
+ struct request_queue;
+ struct scsi_cmnd;
+ struct scsi_lun;
+@@ -173,6 +177,15 @@ struct scsi_device {
+ 
+ 	struct scsi_dh_data	*scsi_dh_data;
+ 	enum scsi_device_state sdev_state;
++
++#ifdef CONFIG_MV_STAGGERED_SPINUP
++	int ss_id;
++        enum scsi_device_power_state sdev_power_state;  /*Used to save the disk current power state*/
++        struct timer_list spinup_timeout;       /* Used to time out the spinup process when done. */
++        unsigned int standby_timeout_secs;
++        struct timer_list standby_timeout;      /* Used to time out the standby timeout command. */
++#endif
++
+ 	unsigned long		sdev_data[0];
+ } __attribute__((aligned(sizeof(unsigned long))));
+ 
+diff --git a/include/scsi/scsi_host.h b/include/scsi/scsi_host.h
+index 50266c9..31d28a6 100644
+--- a/include/scsi/scsi_host.h
++++ b/include/scsi/scsi_host.h
+@@ -53,6 +53,11 @@ struct scsi_host_template {
+ 	struct module *module;
+ 	const char *name;
+ 
++        /*
++	 * support to staggered spinup in various drivers
++	 */
++        unsigned char support_staggered_spinup;
++
+ 	/*
+ 	 * Used to initialize old-style drivers.  For new-style drivers
+ 	 * just perform all work in your module initialization function.
+diff --git a/include/scsi/scsi_spinup.h b/include/scsi/scsi_spinup.h
+new file mode 100644
+index 0000000..340ba57
+--- /dev/null
++++ b/include/scsi/scsi_spinup.h
+@@ -0,0 +1,42 @@
++/*
++ *  SCSI Spinup specific attributes.
++ *
++ *  Copyright (c) 2009 Marvell,  All rights reserved.
++ *
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ */
++#ifndef SCSI_SPINUP_H
++#define SCSI_SPINUP_H
++
++/*
++ * more defines of SCSI / ATA commands that are not defined by default
++ */
++#define STANDBY_IMMEDIATE     0xe0
++#define SLEEP                 0xe6
++#define STANDBY_TIMEOUT       0xe3
++#define VERIFY_10             0x13
++#define START_STOP_BIT        0x00000001
++
++enum scsi_device_power_state {
++	SDEV_PW_UNKNOWN = 0,		//0
++	SDEV_PW_STANDBY,	        //1
++	SDEV_PW_STANDBY_TIMEOUT_WAIT,	//2
++	SDEV_PW_STANDBY_TIMEOUT_PASSED,	//3
++	SDEV_PW_SPINNING_UP,	        //4
++	SDEV_PW_WAIT_FOR_SPIN_UP,	//5
++	SDEV_PW_ON,			//6
++};
++
++#endif /* SCSI_SPINUP_H */
+-- 
+1.7.9.5
+

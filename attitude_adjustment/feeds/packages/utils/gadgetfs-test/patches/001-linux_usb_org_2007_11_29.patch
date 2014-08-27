@@ -1,0 +1,214 @@
+diff -Nur gadgetfs-test.orig/usb.c gadgetfs-test.2007-11-29/usb.c
+--- gadgetfs-test.orig/usb.c	2007-06-21 16:36:32.000000000 +0200
++++ gadgetfs-test.2007-11-29/usb.c	2007-09-25 09:01:48.000000000 +0200
+@@ -34,8 +34,8 @@
+ #include <asm/byteorder.h>
+ 
+ #include <linux/types.h>
+-#include <linux/usb_gadgetfs.h>
+-#include <linux/usb_ch9.h>
++#include <linux/usb/gadgetfs.h>
++#include <linux/usb/ch9.h>
+ 
+ #ifdef	AIO
+ /* this aio code works with libaio-0.3.106 */
+@@ -402,6 +402,26 @@
+ 		fs_status_desc.bEndpointAddress = USB_DIR_IN | 3;
+ 		EP_STATUS_NAME = "ep3in-int";
+ 
++	/* Atmel AT32AP700x processors, high/full speed */
++	} else if (stat (DEVNAME = "atmel_usba_udc", &statb) == 0) {
++		HIGHSPEED = 1;
++		device_desc.bcdDevice = __constant_cpu_to_le16 (0x0108);
++
++		fs_source_desc.bEndpointAddress
++			= hs_source_desc.bEndpointAddress
++			= USB_DIR_IN | 1;
++		EP_IN_NAME = "ep1in-bulk";
++		fs_sink_desc.bEndpointAddress
++			= hs_sink_desc.bEndpointAddress
++			= USB_DIR_OUT | 2;
++		EP_OUT_NAME = "ep2out-bulk";
++
++		source_sink_intf.bNumEndpoints = 3;
++		fs_status_desc.bEndpointAddress
++			= hs_status_desc.bEndpointAddress
++			= USB_DIR_IN | 3;
++		EP_STATUS_NAME = "ep3in-int";
++
+ 	} else {
+ 		DEVNAME = 0;
+ 		return -ENODEV;
+@@ -597,18 +617,58 @@
+ 		fs_status_desc.bEndpointAddress = USB_DIR_IN | 3;
+ 		EP_STATUS_NAME = "ep3-int";
+ 
++	/* Atmel AT32AP700x processors, high/full speed */
++	} else if (stat (DEVNAME = "atmel_usba_udc", &statb) == 0){
++		HIGHSPEED = 1;
++
++		device_desc.bcdDevice = __constant_cpu_to_le16 (0x0105);
++
++		fs_source_desc.bEndpointAddress
++			= hs_source_desc.bEndpointAddress
++			= USB_DIR_IN | 5;
++		fs_source_desc.bmAttributes
++			= hs_source_desc.bmAttributes
++			= USB_ENDPOINT_XFER_ISOC;
++		fs_source_desc.wMaxPacketSize
++			= hs_source_desc.wMaxPacketSize
++			= __cpu_to_le16(min (bufsize, 1024));
++		fs_source_desc.bInterval
++			= hs_source_desc.bInterval
++			= interval;
++		EP_IN_NAME = "ep5in-iso";
++
++		fs_sink_desc.bEndpointAddress
++			= hs_sink_desc.bEndpointAddress
++			= USB_DIR_OUT | 6;
++		fs_sink_desc.bmAttributes
++			= hs_sink_desc.bmAttributes
++			= USB_ENDPOINT_XFER_ISOC;
++		fs_sink_desc.wMaxPacketSize
++			= hs_sink_desc.wMaxPacketSize
++			= __cpu_to_le16(min (bufsize, 1024));
++		fs_sink_desc.bInterval
++			= hs_sink_desc.bInterval
++			= interval;
++		EP_OUT_NAME = "ep6out-iso";
++
++		source_sink_intf.bNumEndpoints = 3;
++		fs_status_desc.bEndpointAddress
++			= hs_status_desc.bEndpointAddress
++			= USB_DIR_IN | 3;
++		EP_STATUS_NAME = "ep3in-int";
++
+ 	} else {
+ 		DEVNAME = 0;
+ 		return -ENODEV;
+ 	}
+ 	if (verbose) {
+ 		fprintf (stderr, "iso fs wMaxPacket %04x bInterval %02x\n",
+-			fs_sink_desc.wMaxPacketSize,
++			__le16_to_cpu(fs_sink_desc.wMaxPacketSize),
+ 			fs_sink_desc.bInterval);
+ 		if (HIGHSPEED)
+ 			fprintf (stderr,
+ 				"iso hs wMaxPacket %04x bInterval %02x\n",
+-				hs_sink_desc.wMaxPacketSize,
++				__le16_to_cpu(hs_sink_desc.wMaxPacketSize),
+ 				hs_sink_desc.bInterval);
+ 	}
+ 	return 0;
+@@ -1285,13 +1345,17 @@
+ {
+ 	int		status, tmp;
+ 	__u8		buf [256];
++	__u16		value, index, length;
++
++	value = __le16_to_cpu(setup->wValue);
++	index = __le16_to_cpu(setup->wIndex);
++	length = __le16_to_cpu(setup->wLength);
+ 
+ 	if (verbose)
+ 		fprintf (stderr, "SETUP %02x.%02x "
+ 				"v%04x i%04x %d\n",
+ 			setup->bRequestType, setup->bRequest,
+-			setup->wValue, setup->wIndex,
+-			setup->wLength);
++			value, index, length);
+ 
+ 	/*
+ 	if ((setup->bRequestType & USB_TYPE_MASK) != USB_TYPE_STANDARD)
+@@ -1302,21 +1366,21 @@
+ 	case USB_REQ_GET_DESCRIPTOR:
+ 		if (setup->bRequestType != USB_DIR_IN)
+ 			goto stall;
+-		switch (setup->wValue >> 8) {
++		switch (value >> 8) {
+ 		case USB_DT_STRING:
+-			tmp = setup->wValue & 0x0ff;
++			tmp = value & 0x0ff;
+ 			if (verbose > 1)
+ 				fprintf (stderr,
+ 					"... get string %d lang %04x\n",
+-					tmp, setup->wIndex);
+-			if (tmp != 0 && setup->wIndex != strings.language)
++					tmp, index);
++			if (tmp != 0 && index != strings.language)
+ 				goto stall;
+ 			status = usb_gadget_get_string (&strings, tmp, buf);
+ 			if (status < 0)
+ 				goto stall;
+ 			tmp = status;
+-			if (setup->wLength < tmp)
+-				tmp = setup->wLength;
++			if (length < tmp)
++				tmp = length;
+ 			status = write (fd, buf, tmp);
+ 			if (status < 0) {
+ 				if (errno == EIDRM)
+@@ -1336,7 +1400,7 @@
+ 		if (setup->bRequestType != USB_DIR_OUT)
+ 			goto stall;
+ 		if (verbose)
+-			fprintf (stderr, "CONFIG #%d\n", setup->wValue);
++			fprintf (stderr, "CONFIG #%d\n", value);
+ 
+ 		/* Kernel is normally waiting for us to finish reconfiguring
+ 		 * the device.
+@@ -1349,7 +1413,7 @@
+ 		 * the endpoints always active and don't rely on seeing any
+ 		 * config change events, either this or SET_INTERFACE.
+ 		 */
+-		switch (setup->wValue) {
++		switch (value) {
+ 		case CONFIG_VALUE:
+ 			start_io ();
+ 			break;
+@@ -1369,27 +1433,27 @@
+ 		return;
+ 	case USB_REQ_GET_INTERFACE:
+ 		if (setup->bRequestType != (USB_DIR_IN|USB_RECIP_INTERFACE)
+-				|| setup->wIndex != 0
+-				|| setup->wLength > 1)
++				|| index != 0
++				|| length > 1)
+ 			goto stall;
+ 
+ 		/* only one altsetting in this driver */
+ 		buf [0] = 0;
+-		status = write (fd, buf, setup->wLength);
++		status = write (fd, buf, length);
+ 		if (status < 0) {
+ 			if (errno == EIDRM)
+ 				fprintf (stderr, "GET_INTERFACE timeout\n");
+ 			else
+ 				perror ("write GET_INTERFACE data");
+-		} else if (status != setup->wLength) {
++		} else if (status != length) {
+ 			fprintf (stderr, "short GET_INTERFACE write, %d\n",
+ 				status);
+ 		}
+ 		return;
+ 	case USB_REQ_SET_INTERFACE:
+ 		if (setup->bRequestType != USB_RECIP_INTERFACE
+-				|| setup->wIndex != 0
+-				|| setup->wValue != 0)
++				|| index != 0
++				|| value != 0)
+ 			goto stall;
+ 
+ 		/* just reset toggle/halt for the interface's endpoints */
+diff -Nur gadgetfs-test.orig/usbstring.c gadgetfs-test.2007-11-29/usbstring.c
+--- gadgetfs-test.orig/usbstring.c	2007-06-21 16:36:32.000000000 +0200
++++ gadgetfs-test.2007-11-29/usbstring.c	2007-09-25 09:01:48.000000000 +0200
+@@ -11,7 +11,7 @@
+ #include <string.h>
+ 
+ #include <linux/types.h>
+-#include <linux/usb_ch9.h>
++#include <linux/usb/ch9.h>
+ 
+ #include "usbstring.h"
+ 

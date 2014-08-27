@@ -1,0 +1,28 @@
+Source-Makefile: target/linux/cns21xx/Makefile
+Target: cns21xx
+Target-Board: cns21xx
+Target-Name: Cavium Networks Econa CNS21xx
+Target-Path: /home/chad/WRT1900AC/Mamba/attitude_adjustment
+Target-Arch: arm
+Target-Arch-Packages: cns21xx
+Target-Features: broken gpio squashfs usb
+Target-Depends: 
+Target-Optimization: -Os -pipe -march=armv4 -mtune=fa526 -fno-caller-saves
+Linux-Version: 3.3.8
+Linux-Release: 1
+Linux-Kernel-Arch: arm
+Target-Description:
+ Build firmware images for Cavium Networks CNS21XX based boards.
+@@
+Default-Packages: base-files libc libgcc busybox dropbear mtd uci opkg hotplug2 netifd dnsmasq iptables ppp ppp-mod-pppoe kmod-ipt-nathelper firewall kmod-leds-gpio kmod-input-core kmod-input-gpio-keys kmod-button-hotplug
+Target-Profile: Default
+Target-Profile-Name: Default Profile (all drivers)
+Target-Profile-Packages: kmod-usb-core kmod-usb-ohci kmod-usb2 kmod-ledtrig-usbdev
+Target-Profile-Config: 
+
+@@
+Target-Profile-Description:
+	Default package set compatible with most boards.
+@@
+
+

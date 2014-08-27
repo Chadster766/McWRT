@@ -1,0 +1,21 @@
+--- a/libteredo/maintain.c
++++ b/libteredo/maintain.c
+@@ -59,7 +59,7 @@
+ 
+ static inline void gettime (struct timespec *now)
+ {
+-#if (_POSIX_CLOCK_SELECTION - 0 >= 0) && (_POSIX_MONOTONIC_CLOCK - 0 >= 0)
++#if (_POSIX_CLOCK_SELECTION - 0 >= 0) && (_POSIX_MONOTONIC_CLOCK - 0 >= 0) && !defined(__UCLIBC__)
+ 	if (clock_gettime (CLOCK_MONOTONIC, now) == 0)
+ 		return;
+ #else
+--- a/libteredo/tunnel.h
++++ b/libteredo/tunnel.h
+@@ -32,6 +32,7 @@
+ # define LIBTEREDO_TUNNEL_H
+ 
+ # include <stdbool.h>
++# include <ctype.h>
+ 
+ # ifdef __cplusplus
+ extern "C" {

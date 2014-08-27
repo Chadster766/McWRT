@@ -1,0 +1,17 @@
+--- a/configure
++++ b/configure
+@@ -6694,11 +6694,9 @@
+ 
+ 						echo ""
+ 			echo "*** Generating DH Parameters for SSL/TLS ***"
+-			if test -f "$ssldir/sbin/openssl"; then
+-				sslbin=$ssldir/sbin/openssl
+-			else
+-				sslbin=$ssldir/bin/openssl
+-			fi
++			# Use host openssl as it just generates some random stuff,
++			# nothing machine-specific
++			sslbin=/usr/bin/openssl
+ 			# awk to strip off meta data at bottom of dhparam output
+ 			$sslbin dhparam -C 512 | awk '/^-----/ {exit} {print}' > include/dh.h
+ 		fi

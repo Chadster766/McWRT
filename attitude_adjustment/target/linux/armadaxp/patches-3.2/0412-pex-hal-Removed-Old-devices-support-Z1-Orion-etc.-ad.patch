@@ -1,0 +1,176 @@
+From 0ce798906071910307cc3d0040cee9f85ab6dd2d Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Tue, 23 Oct 2012 10:49:51 +0200
+Subject: [PATCH 412/609] - pex hal : Removed Old devices support (Z1, Orion,
+ etc..) - added KW40 pex Support
+
+Change-Id: I0b7f0ccbd01a8f6c4b19757dd38094e3905733e1
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/pex/mvPex.c |  141 +++++++------------------------
+ 1 file changed, 31 insertions(+), 110 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPex.c b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
+index 05dd51a..7fecd05 100755
+--- a/arch/arm/plat-armada/mv_hal/pex/mvPex.c
++++ b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
+@@ -88,111 +88,7 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+ 	MV_U16 ctrlModel, phyRegVal = 0;
+ 
+ 	mvOsMemcpy(&pexHalData[pexIf], halData, sizeof(MV_PEX_HAL_DATA));
+-
+-	/* First implement Guideline (GL# PCI Express-2) Wrong Default Value    */
+-	/* to Transmitter Output Current (TXAMP) Relevant for: 88F5181-A1/B0/B1 */
+-	/* and 88F5281-B0 and above, 88F5182, 88F5082, 88F5181L, 88F6082/L      */
+ 	ctrlModel = pexHalData[pexIf].ctrlModel;
+-	if ((ctrlModel != MV_1281_DEV_ID) &&
+-			(ctrlModel != MV_6281_DEV_ID) &&
+-			(ctrlModel != MV_6282_DEV_ID) &&
+-			(ctrlModel != MV_6280_DEV_ID) &&
+-			(ctrlModel != MV_6192_DEV_ID) &&
+-			(ctrlModel != MV_6190_DEV_ID) &&
+-			(ctrlModel != MV_6180_DEV_ID) &&
+-			(ctrlModel != MV_6183_DEV_ID) &&
+-			(ctrlModel != MV_6183L_DEV_ID) &&
+-			(ctrlModel != MV_78100_DEV_ID) &&
+-			(ctrlModel != MV_78200_DEV_ID) &&
+-			(ctrlModel != MV_76100_DEV_ID) &&
+-			(ctrlModel != MV_6323_DEV_ID) &&
+-			(ctrlModel != MV_6322_DEV_ID) &&
+-			(ctrlModel != MV_6321_DEV_ID) &&
+-			(ctrlModel != MV_78XX0_DEV_ID) &&
+-			(ctrlModel != MV_6510_DEV_ID) &&
+-			(ctrlModel != MV_6530_DEV_ID) &&
+-			(ctrlModel != MV_6550_DEV_ID) &&
+-			(ctrlModel != MV_6560_DEV_ID) &&
+-			(ctrlModel != MV_6710_DEV_ID) &&
+-			(ctrlModel != MV_78130_DEV_ID) &&
+-			(ctrlModel != MV_78160_DEV_ID) &&
+-			(ctrlModel != MV_78230_DEV_ID) &&
+-			(ctrlModel != MV_78260_DEV_ID) &&
+-			(ctrlModel != MV_78460_DEV_ID) &&
+-			(ctrlModel != MV_78000_DEV_ID)) {
+-		/* Read current value of TXAMP */
+-		MV_REG_WRITE(PEX_PHY_ACCESS_REG(pexIf), 0x80820000);	/* Write the read command   */
+-		regVal = MV_REG_READ(PEX_PHY_ACCESS_REG(pexIf));	/* Extract the data         */
+-
+-		/* Prepare new data for write */
+-		regVal &= ~0x7;	/* Clear bits [2:0]         */
+-		regVal |= 0x4;	/* Set the new value        */
+-		regVal &= ~0x80000000;	/* Set "write" command      */
+-		MV_REG_WRITE(PEX_PHY_ACCESS_REG(pexIf), regVal);	/* Write the write command  */
+-
+-#ifndef MV88F78X60_Z1
+-		/* in DSMP A0 we should enable the target link width */
+-		/* Read current value of Dynamic width management register 0x1A30*/
+-		regVal = MV_REG_READ(PEX_DYNMC_WIDTH_MNG_REG(pexIf));	/* Read the dynamic width management register */
+-		regVal &= ~0x3;	/* Clear bits [1:0]         */
+-		regVal |= 0x3;	/* Set the new value '11'   */
+-		MV_REG_WRITE(PEX_DYNMC_WIDTH_MNG_REG(pexIf), regVal);	/* Write the new value */
+-
+-		/* Enabling the SSPL message */
+-		regVal = MV_REG_READ(PEX_ROOT_CMPLX_SSPL_REG(pexIf));	/* Read the PEX root complex SSPL register */
+-		regVal &= ~0x10000;	/* Clear bit [16]         */
+-		regVal |= 0x10000;	/* Set the new value  '1' */
+-		MV_REG_WRITE(PEX_ROOT_CMPLX_SSPL_REG(pexIf), regVal);	/* Write the new value */
+-
+-		/* Setting dynamic speed*/
+-		regVal = MV_REG_READ(PEX_CTRL_REG(pexIf));	/* Read the PEX control register */
+-		regVal &= ~0x400;	/* Clear bit [10]         */
+-		regVal |= 0x400;	/* Set the new value '11'   */
+-		MV_REG_WRITE(PEX_CTRL_REG(pexIf), regVal);	/* Write the new value */
+-#endif
+-	} else {
+-		/* Implement 1.0V termination GL for 88F1281 device only */
+-		/* BIT0 - Common mode feedback */
+-		/* BIT3 - TxBuf, extra drive for 1.0V termination */
+-		if (ctrlModel == MV_1281_DEV_ID) {
+-			MV_REG_WRITE(PEX_PHY_ACCESS_REG(pexIf), 0x80860000);	/* Write the read command   */
+-			regVal = MV_REG_READ(0x41b00);	/* Extract the data         */
+-			regVal |= (BIT0 | BIT3);
+-			regVal &= ~0x80000000;	/* Set "write" command      */
+-			MV_REG_WRITE(PEX_PHY_ACCESS_REG(pexIf), regVal);	/* Write the write command  */
+-			MV_REG_WRITE(0x31b00, 0x80860000);	/* Write the read command   */
+-			regVal = MV_REG_READ(0x31b00);	/* Extract the data         */
+-			regVal |= (BIT0 | BIT3);
+-			regVal &= ~0x80000000;	/* Set "write" command      */
+-			MV_REG_WRITE(0x31b00, regVal);	/* Write the write command  */
+-		}
+-	}
+-	if ((ctrlModel == MV_6281_DEV_ID) ||
+-			(ctrlModel == MV_6282_DEV_ID) ||
+-			(ctrlModel == MV_6280_DEV_ID) ||
+-			(ctrlModel == MV_6192_DEV_ID) ||
+-			(ctrlModel == MV_6190_DEV_ID) ||
+-			(ctrlModel == MV_6180_DEV_ID)) {
+-		regVal = MV_REG_READ(0x100e4);	/* This register currently doesn't appear in the FS */
+-		regVal |= 0x3 << 25;
+-		MV_REG_WRITE(0x100e4, regVal);
+-	}
+-
+-	if (ctrlModel == MV_6282_DEV_ID) {
+-		mvPexPhyRegRead(pexIf, 0x92, &phyRegVal);
+-		phyRegVal &= ~(0x80F0);
+-		phyRegVal |= 0x8080;
+-		mvPexPhyRegWrite(pexIf, 0x92, phyRegVal);
+-	} else if ((ctrlModel == MV_6510_DEV_ID) ||
+-			(ctrlModel == MV_6530_DEV_ID) || (ctrlModel == MV_6550_DEV_ID) || (ctrlModel == MV_6560_DEV_ID)) {
+-		regVal = MV_REG_READ(0x100e4);	/* This register currently doesn't appear in the FS */
+-		regVal |= 0x3 << 25;
+-		MV_REG_WRITE(0x100e4, regVal);
+-		mvPexPhyRegRead(pexIf, 0x92, &phyRegVal);
+-		phyRegVal &= ~(0x80F0);
+-		phyRegVal |= 0x8080;
+-		mvPexPhyRegWrite(pexIf, 0x92, phyRegVal);
+-	}
+ 
+ 	if (mvPexModeGet(pexIf, &pexMode) != MV_OK) {
+ 		mvOsPrintf("PEX init ERR. mvPexModeGet failed (pexType=%d)\n", pexMode.pexType);
+@@ -220,12 +116,37 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+ 		status = MV_REG_READ(PEX_CFG_DIRECT_ACCESS(pexIf, PEX_STATUS_AND_COMMAND));
+ 		status |= PXSAC_INT_DIS;
+ 		MV_REG_WRITE(PEX_CFG_DIRECT_ACCESS(pexIf, PEX_STATUS_AND_COMMAND), status);
+-	} else {
+-		/* TODO: added by NadavH 14/12/10 - requested by CV to support EP Compliance */
+-		regVal = MV_REG_READ(PEX_DBG_CTRL_REG(pexIf));
+-		regVal &= ~(BIT16 | BIT19);
+-		MV_REG_WRITE(PEX_DBG_CTRL_REG(pexIf), regVal);
+-
++		if ((ctrlModel == MV_6710_DEV_ID) ||
++			(ctrlModel == MV_6W11_DEV_ID) ||
++			(ctrlModel == MV_6707_DEV_ID)) {
++			/* PEX capability */
++			regVal = MV_REG_READ(PEX_CFG_DIRECT_ACCESS(pexIf, PEX_LINK_CAPABILITY_REG)) & 0xF;
++			if (regVal == 0x2) {
++				/* KW40 set to Gen 2.0 - conf_auto_speed_change */
++				/* when bit is set, link will issue link speed change to the max link speed possible */
++				regVal = MV_REG_READ(PEX_CTRL_REG(pexIf)) | (1<<10);
++				MV_REG_WRITE(PEX_CTRL_REG(pexIf), regVal);
++			}
++		}
++	} else { /* if (MV_PEX_ROOT_COMPLEX != pexType) */
++		if ((ctrlModel == MV_6710_DEV_ID) ||
++			(ctrlModel == MV_6W11_DEV_ID) ||
++			(ctrlModel == MV_6707_DEV_ID)) {
++			/* TODO: 14/12/10 - requested by CV to support EP Compliance */
++			MV_REG_WRITE(PEX_DBG_CTRL_REG(pexIf), 0x0F62F0C0);
++
++			MV_REG_WRITE(PEX_PHY_ACCESS_REG(pexIf), (0x80C2 << 16));
++			regVal = MV_REG_READ(PEX_PHY_ACCESS_REG(pexIf)) & 0xFFFF;
++			MV_REG_WRITE(PEX_PHY_ACCESS_REG(pexIf), (0xC2 << 16) | regVal | (1 << 2));
++
++			MV_REG_WRITE(PEX_PHY_ACCESS_REG(pexIf), (0x8080 << 16));
++			regVal = MV_REG_READ(PEX_PHY_ACCESS_REG(pexIf)) & 0xFFFF;
++			MV_REG_WRITE(PEX_PHY_ACCESS_REG(pexIf), (0x80 << 16) | regVal | (0x2 << 1));
++		} else {  /* if Armada-XP : */
++			regVal = MV_REG_READ(PEX_DBG_CTRL_REG(pexIf));
++			regVal &= ~(BIT16 | BIT19);
++			MV_REG_WRITE(PEX_DBG_CTRL_REG(pexIf), regVal);
++		}
+ 	}
+ 	/* now wait 1ms to be sure the link is valid */
+ 	mvOsDelay(1);
+-- 
+1.7.9.5
+

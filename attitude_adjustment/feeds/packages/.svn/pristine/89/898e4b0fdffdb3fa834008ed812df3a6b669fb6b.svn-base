@@ -1,0 +1,18 @@
+diff -urN avrusbboot.2006-06-25/software/Makefile avrusbboot.2006-06-25.new/software/Makefile
+--- avrusbboot.2006-06-25/software/Makefile	2006-06-25 11:09:03.000000000 +0200
++++ avrusbboot.2006-06-25.new/software/Makefile	2008-05-20 12:54:22.000000000 +0200
+@@ -1,6 +1,5 @@
+-LIBUSB_CONFIG   = libusb-config
+-CFLAGS+=-g -Wall -pedantic `$(LIBUSB_CONFIG) --cflags`
+-LFLAGS+=`$(LIBUSB_CONFIG) --libs` -lusb
++CFLAGS=-I$(STAGING_DIR)/usr/include
++LFLAGS=-L$(STAGING_DIR)/usr/lib -lusb
+ 
+ all:
+ 	make avrusbboot
+@@ -10,4 +9,4 @@
+ 	rm avrusbboot
+ 
+ avrusbboot: main.cpp cflashmem.o cpage.o cbootloader.o
+-	g++ $(CFLAGS) main.cpp cflashmem.o cpage.o cbootloader.o -o avrusbboot $(LFLAGS)
++	$(CXX) $(CFLAGS) main.cpp cflashmem.o cpage.o cbootloader.o -o avrusbboot $(LFLAGS)

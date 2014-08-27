@@ -1,0 +1,113 @@
+From a30d2a54907606b1fe079547844a604ebff61fd4 Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Thu, 22 Mar 2012 14:38:46 +0200
+Subject: [PATCH 125/609] NAS: Update nas initialization script
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ tools/nas/nas_init.sh |   54 +++++++++++++++++++++++++++++++++++++++++--------
+ 1 file changed, 46 insertions(+), 8 deletions(-)
+
+diff --git a/tools/nas/nas_init.sh b/tools/nas/nas_init.sh
+index bc37dce..096a52e 100755
+--- a/tools/nas/nas_init.sh
++++ b/tools/nas/nas_init.sh
+@@ -38,8 +38,8 @@ echo " * Version: 3.0"
+ PREPARE_HDD="no"
+ ZAP_ROOTFS="no"
+ MKFS="no"
+-TOPOLOGY="sd"
+-HDD_NUM="1"
++TOPOLOGY="rd5"
++HDD_NUM="4"
+ ARCH=`uname -m`
+ FS="ext4"
+ NFS="no"
+@@ -218,9 +218,9 @@ fi
+ 
+ sleep 2
+ 
+-if [ `mount | grep $MNT_DIR | grep -v grep | wc -l` != 0 ]; then
+-    do_error "Unable to unmount $MNT_DIR"
+-fi
++#if [ `mount | grep mnt | grep -v grep | wc -l` != 0 ]; then
++#    do_error "Unable to unmount /mnt"
++#fi
+ echo -ne "[Done]\n"
+ 
+ #[ -e /dev/md_d0 ] && mdadm --manage --stop /dev/md_d0
+@@ -306,6 +306,40 @@ if [ "$ZAP_ROOTFS" == "yes" ]; then
+     umount $MNT_DIR
+     sleep 2
+ fi
++echo -ne " * Network setup:              "
++if [ "$LINK_NUM" == "2" ]; then
++    set -o verbose
++    ifconfig eth0 0.0.0.0 down
++    ifconfig eth1 0.0.0.0 down
++
++    ifconfig bond0 192.168.0.5 netmask 255.255.255.0 up
++    ifenslave bond0 eth0 eth1
++
++    ifconfig bond0 down
++    echo balance-alb > /sys/class/net/bond0/bonding/mode
++    ifconfig bond0 up
++    set +o verbose
++elif [ "$LINK_NUM" == "4" ]; then
++    set -o verbose
++    ifconfig eth0 0.0.0.0 down
++    ifconfig eth1 0.0.0.0 down
++    ifconfig eth2 0.0.0.0 down
++    ifconfig eth3 0.0.0.0 down
++
++    ifconfig bond0 192.168.0.5 netmask 255.255.255.0 up
++    ifenslave bond0 eth0 eth1 eth2 eth3
++
++    ifconfig bond0 down
++    echo balance-alb > /sys/class/net/bond0/bonding/mode
++    ifconfig bond0 up
++    set +o verbose
++elif [ "$LINK_NUM" == "1" ]; then
++    set -o verbose
++    ifconfig eth0 192.168.0.5 netmask 255.255.255.0 up
++    set +o verbose
++fi
++echo -ne "[Done]\n"
++
+ echo -ne " * Network optimization:       "
+ 
+ if [ "$ARCH" == "armv5tel" ]; then
+@@ -668,7 +702,9 @@ if [[ "$ARCH" == "armv6l" || "$ARCH" == "armv7l" ]]; then
+ 
+ 		# XOR Engines
+ 	echo 1 > /proc/irq/51/smp_affinity
+-	echo 1 > /proc/irq/52/smp_affinity
++	echo 2 > /proc/irq/52/smp_affinity
++	echo 4 > /proc/irq/94/smp_affinity
++	echo 8 > /proc/irq/95/smp_affinity
+ 
+ 		# ETH
+ 	echo 1 > /proc/irq/8/smp_affinity
+@@ -679,7 +715,7 @@ if [[ "$ARCH" == "armv6l" || "$ARCH" == "armv7l" ]]; then
+ 		# SATA
+ 	echo 2 > /proc/irq/55/smp_affinity
+ 
+-		# PCI-E SATA controller
++	# PCI-E SATA controller
+ 	echo 4 > /proc/irq/99/smp_affinity
+ 	echo 8 > /proc/irq/103/smp_affinity
+ 
+@@ -689,7 +725,9 @@ if [[ "$ARCH" == "armv6l" || "$ARCH" == "armv7l" ]]; then
+ 
+ 		# XOR Engines
+ 	echo 1 > /proc/irq/51/smp_affinity
+-	echo 1 > /proc/irq/52/smp_affinity
++	echo 2 > /proc/irq/52/smp_affinity
++	echo 1 > /proc/irq/94/smp_affinity
++	echo 2 > /proc/irq/95/smp_affinity
+ 
+ 		# ETH
+ 	echo 1 > /proc/irq/8/smp_affinity
+-- 
+1.7.9.5
+

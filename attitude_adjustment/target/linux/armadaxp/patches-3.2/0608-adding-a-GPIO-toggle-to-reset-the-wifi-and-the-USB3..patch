@@ -1,0 +1,46 @@
+From 2cd4dd97943b8d7fc8d395d130bbc1dc290b02ce Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Thu, 20 Jun 2013 15:47:40 -0700
+Subject: [PATCH 608/609] adding a GPIO toggle to reset the wifi, and the
+ USB3.0 when the board is resetsed - Linux
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/boardEnv/mvBoardEnvLib.c      |    7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+index 166ffbe..47daca9 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+@@ -680,6 +680,7 @@ MV_32 mvBoarGpioPinNumGet(MV_BOARD_GPP_CLASS gppClass, MV_U32 index)
+ MV_VOID mvBoardReset(MV_VOID)
+ {
+ 	MV_32 resetPin;
++                MV_U32 val=0;
+ 
+ 	/* Get gpp reset pin if define */
+ 	resetPin = mvBoardResetGpioPinGet();
+@@ -687,6 +688,10 @@ MV_VOID mvBoardReset(MV_VOID)
+ 		MV_REG_BIT_RESET(GPP_DATA_OUT_REG((int)(resetPin/32)), (1 << (resetPin % 32)));
+ 	else
+ 	{
++		val = MV_REG_READ(GPP_DATA_OUT_REG(1));
++		MV_REG_WRITE(GPP_DATA_OUT_REG(1), val & ~(BIT11 | BIT10));
++		mvOsDelay(50);
++		MV_REG_WRITE(GPP_DATA_OUT_REG(1), val | (BIT11 | BIT10));
+ 		/* No gpp reset pin was found, try to reset using system reset out */
+ 		MV_REG_BIT_SET( CPU_RSTOUTN_MASK_REG , BIT0);
+ 		MV_REG_BIT_SET( CPU_SYS_SOFT_RST_REG , BIT0);
+@@ -1788,7 +1793,7 @@ MV_U8 mvBoardBootDevWidthGet(MV_VOID)
+ 	sar = mvBoardTwsiSatRGet(0, 0);
+ 	if ((MV_8)MV_ERROR == (MV_8)sar)
+ 		return MV_ERROR;
+-	if (DB_784MP_GP_ID == boardId)
++	if (DB_784MP_GP_ID == boardId) 
+ 		return (sar & 1);
+ 
+ 	return (sar & 0x18) >> 3;
+-- 
+1.7.9.5
+

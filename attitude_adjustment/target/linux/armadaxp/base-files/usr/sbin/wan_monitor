@@ -1,0 +1,99 @@
+#!/bin/sh
+
+START=0
+WANPORT=/sys/class/neta-switch/port4/carrier
+DELAY=2
+
+CNT_CONN=0
+DELAY_CONN=16
+
+LINKPING=heartbeat.belkin.com
+PING_TIMEOUT=5000 #5s
+
+OUTLOG=/tmp/wan_log
+
+blinking_amber() {
+	/usr/sbin/ledctrl wan_amber 255 500 500
+}
+
+wan_amber() {
+	/usr/sbin/ledctrl wan_amber $1
+}
+
+blinking_white() {
+	/usr/sbin/ledctrl wan_white 255 700 700
+}
+
+wan_white() {
+	/usr/sbin/ledctrl wan_white $1
+}
+
+WAN_IF=eth1
+obtain_wan_ip() {
+	while true
+	do
+		#echo "obtain_wan_ip"
+		wanip=`ifconfig $WAN_IF | awk -F':' '/inet addr/&&!/127.0.0.1/{split($2,_," ");print _[1]}'`
+	
+		if [ -z $wanip ]	# WAN IP address is NULL
+		then
+			wan_amber on
+			/usr/bin/logger "Get WAN IP address..."
+			sleep 1
+		else
+			#echo $wanip
+			START=1
+			break
+		fi	
+	done
+}
+
+conn_type_dynamic() {
+
+	#echo "conn_type_dynamic"
+
+	if [ $START -eq 0 ]; then 
+		wan_amber off
+		wan_white off
+		obtain_wan_ip
+	fi
+
+	if [ $START -eq 1 ]; then
+		/bin/ping $LINKPING -c 3 -w ${PING_TIMEOUT} > $OUTLOG
+		ping_status=$?
+		if [ $ping_status -ne 0 ]
+		then
+			wan_amber on
+			#echo "PING FAILED:" $LINKPING $ping_status
+			/usr/bin/logger "PING FAILED"
+		else
+			wan_white on
+			#echo "PING OK:" $LINKPING $ping_status
+		fi
+	fi
+}
+
+echo "WAN LED MONITOR"
+while true
+do
+	x=`cat $WANPORT`
+	#echo "Wan physical status" $x
+
+	#echo $CNT_CONN
+	if [ $x = "Up" ]; then
+		if [ $START -eq 0 -o $CNT_CONN -gt $DELAY_CONN ]; then
+			conn_type_dynamic
+			CNT_CONN=0
+		fi
+	elif [ $x = "Down" ]; then
+		/usr/bin/logger "No physical WAN cable"
+		wan_amber off
+		wan_white off
+		blinking_amber 
+		START=0
+		CNT_CONN=0
+	fi
+	CNT_CONN=$((CNT_CONN+1))
+	sleep $DELAY
+done
+

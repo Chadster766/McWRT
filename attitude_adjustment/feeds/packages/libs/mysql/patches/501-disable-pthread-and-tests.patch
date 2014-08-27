@@ -1,0 +1,117 @@
+--- a/sql/Makefile.am
++++ b/sql/Makefile.am
+@@ -41,7 +41,6 @@ mysqld_DEPENDENCIES=	@mysql_plugin_libs@
+ LDADD = $(SUPPORTING_LIBS) @ZLIB_LIBS@ @NDB_SCI_LIBS@
+ mysqld_LDADD =		libndb.la \
+ 			@MYSQLD_EXTRA_LDFLAGS@ \
+-			@pstack_libs@ \
+ 			@mysql_plugin_libs@ \
+ 			$(LDADD)  $(CXXLDFLAGS) $(WRAPLIBS) @LIBDL@ \
+ 			$(yassl_libs) $(openssl_libs) @MYSQLD_EXTRA_LIBS@
+@@ -174,10 +173,10 @@ link_sources:
+ # This generates lex_hash.h
+ # NOTE Built sources should depend on their sources not the tool
+ # this avoid the rebuild of the built files in a source dist
+-lex_hash.h:	gen_lex_hash.cc lex.h
+-		$(MAKE) $(AM_MAKEFLAGS) gen_lex_hash$(EXEEXT)
+-		./gen_lex_hash$(EXEEXT) > $@-t
+-		$(MV) $@-t $@
++#lex_hash.h:	gen_lex_hash.cc lex.h
++#		$(MAKE) $(AM_MAKEFLAGS) gen_lex_hash$(EXEEXT)
++#		./gen_lex_hash$(EXEEXT) > $@-t
++#		$(MV) $@-t $@
+ 
+ # For testing of udf_example.so
+ udf_example_la_SOURCES= udf_example.c
+--- a/sql/Makefile.in
++++ b/sql/Makefile.in
+@@ -486,8 +486,6 @@ plugin_partition_static_target = @plugin
+ prefix = @prefix@
+ program_transform_name = @program_transform_name@
+ psdir = @psdir@
+-pstack_dir = @pstack_dir@
+-pstack_libs = @pstack_libs@
+ readline_basedir = @readline_basedir@
+ readline_dir = @readline_dir@
+ readline_h_ln_cmd = @readline_h_ln_cmd@
+@@ -541,7 +539,6 @@ mysqld_DEPENDENCIES = @mysql_plugin_libs
+ LDADD = $(SUPPORTING_LIBS) @ZLIB_LIBS@ @NDB_SCI_LIBS@
+ mysqld_LDADD = libndb.la \
+ 			@MYSQLD_EXTRA_LDFLAGS@ \
+-			@pstack_libs@ \
+ 			@mysql_plugin_libs@ \
+ 			$(LDADD)  $(CXXLDFLAGS) $(WRAPLIBS) @LIBDL@ \
+ 			$(yassl_libs) $(openssl_libs) @MYSQLD_EXTRA_LIBS@
+@@ -1308,10 +1305,10 @@ link_sources:
+ # This generates lex_hash.h
+ # NOTE Built sources should depend on their sources not the tool
+ # this avoid the rebuild of the built files in a source dist
+-lex_hash.h:	gen_lex_hash.cc lex.h
+-		$(MAKE) $(AM_MAKEFLAGS) gen_lex_hash$(EXEEXT)
+-		./gen_lex_hash$(EXEEXT) > $@-t
+-		$(MV) $@-t $@
++#lex_hash.h:	gen_lex_hash.cc lex.h
++#		$(MAKE) $(AM_MAKEFLAGS) gen_lex_hash$(EXEEXT)
++#		./gen_lex_hash$(EXEEXT) > $@-t
++#		$(MV) $@-t $@
+ 
+ # We might have some stuff not built in this build, but that we want to install
+ install-exec-hook:
+--- a/extra/Makefile.am
++++ b/extra/Makefile.am
+@@ -29,16 +29,16 @@ DIST_SUBDIRS =		yassl
+ # This will build mysqld_error.h, mysqld_ername.h and sql_state.h
+ # NOTE Built files should depend on their sources to avoid
+ # the built files being rebuilt in source dist
+-$(top_builddir)/include/mysqld_error.h: comp_err.c \
+-			$(top_srcdir)/sql/share/errmsg.txt
+-	$(MAKE) $(AM_MAKEFLAGS) comp_err$(EXEEXT)
+-	$(top_builddir)/extra/comp_err$(EXEEXT) \
+-	--charset=$(top_srcdir)/sql/share/charsets \
+-	--out-dir=$(top_builddir)/sql/share/ \
+-	--header_file=$(top_builddir)/include/mysqld_error.h \
+-	--name_file=$(top_builddir)/include/mysqld_ername.h \
+-	--state_file=$(top_builddir)/include/sql_state.h \
+-	--in_file=$(top_srcdir)/sql/share/errmsg.txt
++#$(top_builddir)/include/mysqld_error.h: comp_err.c \
++#			$(top_srcdir)/sql/share/errmsg.txt
++#	$(MAKE) $(AM_MAKEFLAGS) comp_err$(EXEEXT)
++#	$(top_builddir)/extra/comp_err$(EXEEXT) \
++#	--charset=$(top_srcdir)/sql/share/charsets \
++#	--out-dir=$(top_builddir)/sql/share/ \
++#	--header_file=$(top_builddir)/include/mysqld_error.h \
++#	--name_file=$(top_builddir)/include/mysqld_ername.h \
++#	--state_file=$(top_builddir)/include/sql_state.h \
++#	--in_file=$(top_srcdir)/sql/share/errmsg.txt
+ $(top_builddir)/include/mysqld_ername.h: $(top_builddir)/include/mysqld_error.h
+ $(top_builddir)/include/sql_state.h: $(top_builddir)/include/mysqld_error.h
+ 
+--- a/extra/Makefile.in
++++ b/extra/Makefile.in
+@@ -938,16 +938,16 @@ uninstall-am: uninstall-binPROGRAMS unin
+ # This will build mysqld_error.h, mysqld_ername.h and sql_state.h
+ # NOTE Built files should depend on their sources to avoid
+ # the built files being rebuilt in source dist
+-$(top_builddir)/include/mysqld_error.h: comp_err.c \
+-			$(top_srcdir)/sql/share/errmsg.txt
+-	$(MAKE) $(AM_MAKEFLAGS) comp_err$(EXEEXT)
+-	$(top_builddir)/extra/comp_err$(EXEEXT) \
+-	--charset=$(top_srcdir)/sql/share/charsets \
+-	--out-dir=$(top_builddir)/sql/share/ \
+-	--header_file=$(top_builddir)/include/mysqld_error.h \
+-	--name_file=$(top_builddir)/include/mysqld_ername.h \
+-	--state_file=$(top_builddir)/include/sql_state.h \
+-	--in_file=$(top_srcdir)/sql/share/errmsg.txt
++#$(top_builddir)/include/mysqld_error.h: comp_err.c \
++#			$(top_srcdir)/sql/share/errmsg.txt
++#	$(MAKE) $(AM_MAKEFLAGS) comp_err$(EXEEXT)
++#	$(top_builddir)/extra/comp_err$(EXEEXT) \
++#	--charset=$(top_srcdir)/sql/share/charsets \
++#	--out-dir=$(top_builddir)/sql/share/ \
++#	--header_file=$(top_builddir)/include/mysqld_error.h \
++#	--name_file=$(top_builddir)/include/mysqld_ername.h \
++#	--state_file=$(top_builddir)/include/sql_state.h \
++#	--in_file=$(top_srcdir)/sql/share/errmsg.txt
+ $(top_builddir)/include/mysqld_ername.h: $(top_builddir)/include/mysqld_error.h
+ $(top_builddir)/include/sql_state.h: $(top_builddir)/include/mysqld_error.h
+ 

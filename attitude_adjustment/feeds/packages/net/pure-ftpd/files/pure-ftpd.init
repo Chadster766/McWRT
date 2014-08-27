@@ -1,0 +1,107 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2011 OpenWrt.org
+
+START=50
+
+# TODO: allow multiple instance to run with different pid-files
+
+# XXX: pure-ftpd changes it's name to 'pure-ftpd (SERVER) ...'
+SERVICE_MATCH_EXEC=
+SERVICE_MATCH_NAME=1
+SERVICE_USE_PID=1
+
+append_bool() {
+	local section="$1"
+	local option="$2"
+	local value="$3"
+	local _val
+	config_get_bool _val "$section" "$option" '0'
+	[ "$_val" -gt 0 ] && append args "$3"
+}
+
+append_string() {
+	local section="$1"
+	local option="$2"
+	local value="$3"
+	local _val
+	config_get _val "$section" "$option"
+	[ -n "$_val" ] && append args "$3 $_val"
+}
+
+start_instance() {
+	local section="$1"
+
+	config_get_bool enabled "$section" 'enabled' '1'
+	[ $enabled -gt 0 ] || return 1
+
+	args=""
+	append_string "$section" trustedgid "-a"
+	append_string "$section" syslogfacility "-f"
+	append_string "$section" fortunesfile "-F"
+	append_string "$section" maxidletime "-I"
+	append_string "$section" maxdiskusagepct "-k"
+	append_string "$section" limitrecursion "-L"
+	append_string "$section" anonymouscancreate "-M"
+	append_string "$section" maxload "-m"
+	append_string "$section" quota "-n"
+	append_string "$section" altlog "-O"
+	append_string "$section" passiveportrange "-p"
+	append_string "$section" forcepassiveip "-P"
+	append_string "$section" anonymousratio "-q"
+	append_string "$section" userratio "-Q"
+	append_string "$section" anonymousbandwidth "-t"
+	append_string "$section" userbandwidth "-T"
+	append_string "$section" minuid "-u"
+	append_string "$section" trustedip "-V"
+	append_string "$section" tls "-Y"
+	append_string "$section" tlsciphersuite "-J"
+
+	append_bool "$section" uploadscript "-o"
+	append_bool "$section" natmode "-N"
+	append_bool "$section" autorename "-r"
+	append_bool "$section" nochmod "-R"
+	append_bool "$section" antiwarez "-s"
+	append_bool "$section" allowuserfxp "-w"
+	append_bool "$section" allowanonymousfxp "-W"
+	append_bool "$section" prohibitdotfileswrite "-x"
+	append_bool "$section" prohibitdotfilesread "-X"
+	append_bool "$section" allowdotfiles "-z"
+	append_bool "$section" customerproof "-Z"
+	append_bool "$section" anonymouscantupload "-i"
+	append_bool "$section" createhomedir "-j"
+	append_bool "$section" keepallfiles "-K"
+	append_bool "$section" norename "-G"
+	append_bool "$section" dontresolve "-H"
+	append_bool "$section" verboselog "-d"
+	append_bool "$section" displaydotfiles "-D"
+	append_bool "$section" anonymousonly "-e"
+	append_bool "$section" brokenclientscompatibility "-b"
+	append_bool "$section" notruncate "-0"
+	append_bool "$section" logpid "-1"
+	append_bool "$section" ipv4only "-4"
+	append_bool "$section" ipv6only "-6"
+
+	append_string "$section" bind "-S"
+	append_string "$section" login "-l"
+
+	append_bool "$section" noanonymous "-E"
+	append_bool "$section" chrooteveryone "-A"
+	append_string "$section" maxclientsperip "-c"
+	append_string "$section" maxclientsnumber "-C"
+	append_string "$section" peruserlimits "-y"
+	append_string "$section" umask "-U"
+
+	append_string "$section" port "-S"
+	append_string "$section" authentication "-l"
+
+	service_start /usr/sbin/pure-ftpd -B $args
+}
+
+start() {
+	config_load "pure-ftpd"
+	config_foreach start_instance "pure-ftpd"
+}
+
+stop() {
+	service_stop /usr/sbin/pure-ftpd
+}

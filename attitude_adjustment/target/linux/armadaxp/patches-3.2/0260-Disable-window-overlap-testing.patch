@@ -1,0 +1,41 @@
+From a9148174b240403ab84a6349bb7c2c2146351fac Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Thu, 23 Aug 2012 10:34:00 +0300
+Subject: [PATCH 260/609] Disable window overlap testing
+
+This is not needed as we use IO window bypass registers to access IO.
+And this will cause overlap test to always fail.
+
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/common/mvCommon.c |    8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/plat-armada/common/mvCommon.c b/arch/arm/plat-armada/common/mvCommon.c
+index e2a6e10..698e47c 100755
+--- a/arch/arm/plat-armada/common/mvCommon.c
++++ b/arch/arm/plat-armada/common/mvCommon.c
+@@ -301,13 +301,15 @@ MV_U32 mvLog2(MV_U32 num)
+ *******************************************************************************/
+ MV_STATUS mvWinOverlapTest(MV_ADDR_WIN *pAddrWin1, MV_ADDR_WIN *pAddrWin2)
+ {
+-#ifdef ARM_LPAE_SUPPORT
+-	/* Need to cancel overlap testing when in LPAE mode, because we use the
++	/* Need to cancel overlap testing, because we use the
+ 	** MBUS Bridge Windows to access IO windows, and thus there will be
+ 	** always an overlap between the IO & DRAM windows.
+ 	*/
+ 	return MV_FALSE;
+-#else
++#if 0
++	/* this code can only be enabled if physical DRAM size is smaller
++	** or equal to 3GB for debug purposes.\
++	*/
+ 	MV_U32 winBase1, winBase2;
+ 	MV_U32 winTop1, winTop2;
+ 
+-- 
+1.7.9.5
+

@@ -1,0 +1,100 @@
+From 56bdee94c4cee6c67bd6caa7e409b7aeec6dec2d Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Wed, 13 Mar 2013 12:21:02 -0400
+Subject: [PATCH 562/609] NETA: Fix Networking BTSs - BTS 138: page allocation
+ failure after changing MTU under traffic - BTS 133:
+ change message Note: Applicable to earler releases
+
+Change-Id: I7d1ca513381cc76e6dd189bb8a5ac6065643dae3
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1266
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Tested-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |   17 ++++++++---------
+ 1 file changed, 8 insertions(+), 9 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 2e35b91..6cacee9 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -1352,11 +1352,11 @@ EXPORT_SYMBOL(mv_eth_skb_recycle);
+ 
+ #endif /* CONFIG_NET_SKB_RECYCLE */
+ 
+-static struct sk_buff *mv_eth_skb_alloc(struct bm_pool *pool, struct eth_pbuf *pkt)
++static struct sk_buff *mv_eth_skb_alloc(struct bm_pool *pool, struct eth_pbuf *pkt, gfp_t gfp_mask)
+ {
+ 	struct sk_buff *skb;
+ 
+-	skb = dev_alloc_skb(pool->pkt_size);
++	skb = __dev_alloc_skb(pool->pkt_size, gfp_mask);
+ 	if (!skb) {
+ 		STAT_ERR(pool->stats.skb_alloc_oom++);
+ 		return NULL;
+@@ -1467,7 +1467,7 @@ inline struct eth_pbuf *mv_eth_pool_get(struct bm_pool *pool)
+ 	/* Try to allocate new pkt + skb */
+ 	pkt = mvOsMalloc(sizeof(struct eth_pbuf));
+ 	if (pkt) {
+-		skb = mv_eth_skb_alloc(pool, pkt);
++		skb = mv_eth_skb_alloc(pool, pkt, GFP_ATOMIC);
+ 		if (!skb) {
+ 			mvOsFree(pkt);
+ 			pkt = NULL;
+@@ -1488,7 +1488,7 @@ inline int mv_eth_refill(struct eth_port *pp, int rxq,
+ 		struct sk_buff *skb;
+ 
+ 		/* No recycle -  alloc new skb */
+-		skb = mv_eth_skb_alloc(pool, pkt);
++		skb = mv_eth_skb_alloc(pool, pkt, GFP_ATOMIC);
+ 		if (!skb) {
+ 			mvOsFree(pkt);
+ 			pool->missed++;
+@@ -2570,7 +2570,7 @@ static int mv_eth_pool_add(int pool, int buf_num)
+ 			break;
+ 		}
+ 
+-		skb = mv_eth_skb_alloc(bm_pool, pkt);
++		skb = mv_eth_skb_alloc(bm_pool, pkt, GFP_KERNEL);
+ 		if (!skb) {
+ 			kfree(pkt);
+ 			break;
+@@ -2646,7 +2646,6 @@ void	*mv_eth_bm_pool_create(int pool, int capacity, MV_ULONG *pPhysAddr)
+ static MV_STATUS mv_eth_pool_create(int pool, int capacity)
+ {
+ 	struct bm_pool *bm_pool;
+-	MV_ULONG    physAddr;
+ 
+ 	if ((pool < 0) || (pool >= MV_ETH_BM_POOLS)) {
+ 		printk(KERN_ERR "%s: pool=%d is out of range\n", __func__, pool);
+@@ -2657,7 +2656,7 @@ static MV_STATUS mv_eth_pool_create(int pool, int capacity)
+ 	memset(bm_pool, 0, sizeof(struct bm_pool));
+ 
+ #ifdef CONFIG_MV_ETH_BM_CPU
+-	bm_pool->bm_pool = mv_eth_bm_pool_create(pool, capacity, &physAddr/*NULL*/);
++	bm_pool->bm_pool = mv_eth_bm_pool_create(pool, capacity, &bm_pool->physAddr);
+ 	if (bm_pool->bm_pool == NULL)
+ 		return MV_FAIL;
+ #endif /* CONFIG_MV_ETH_BM_CPU */
+@@ -2674,7 +2673,6 @@ static MV_STATUS mv_eth_pool_create(int pool, int capacity)
+ 	bm_pool->capacity = capacity;
+ 	bm_pool->pkt_size = 0;
+ 	bm_pool->buf_num = 0;
+-	bm_pool->physAddr = physAddr;
+ 	spin_lock_init(&bm_pool->lock);
+ 
+ 	return MV_OK;
+@@ -2708,7 +2706,8 @@ irqreturn_t mv_eth_isr(int irq, void *dev_id)
+ 	} else {
+ 		STAT_INFO(pp->stats.irq_err++);
+ #ifdef CONFIG_MV_ETH_DEBUG_CODE
+-		printk(KERN_ERR "mv_eth_isr ERROR: port=%d, cpu=%d\n", pp->port, smp_processor_id());
++		printk(KERN_ERR "%s: IRQ=%d, port=%d, cpu=%d - NAPI already scheduled\n",
++			__func__, irq, pp->port, smp_processor_id());
+ #endif /* CONFIG_MV_ETH_DEBUG_CODE */
+ 	}
+ 	return IRQ_HANDLED;
+-- 
+1.7.9.5
+

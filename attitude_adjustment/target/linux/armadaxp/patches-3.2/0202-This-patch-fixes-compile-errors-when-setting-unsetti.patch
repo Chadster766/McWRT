@@ -1,0 +1,107 @@
+From 3c95179c7234ed271d36b22867519b16976506c2 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Wed, 27 Jun 2012 19:17:32 +0300
+Subject: [PATCH 202/609] This patch fixes compile errors when setting
+ /unsetting these options on top of
+ armada_xp_defconfig: turn off CONFIG_EMBEDDED turn
+ on CONFIG_PERF_EVENTS turn on CONFIG_BLK_DEV_DM
+ turn on CONFIG_INPUT_UINPUT turn on
+ CONFIG_PRINTK_TIME
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/core.c                  |    2 +-
+ arch/arm/mach-armadaxp/headsmp.S               |    5 ++---
+ arch/arm/mach-armadaxp/include/mach/hardware.h |    7 -------
+ arch/arm/mach-armadaxp/include/mach/memory.h   |    4 ++--
+ arch/arm/plat-armada/Makefile                  |    2 +-
+ 5 files changed, 6 insertions(+), 14 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index afb64b1..7c85baa 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -1606,7 +1606,7 @@ void __init axp_tag_fixup_mem32(struct machine_desc *mdesc, struct tag *t,
+ 
+ MACHINE_START(ARMADA_XP_DB, "Marvell Armada XP Development Board")
+ 	/* MAINTAINER("MARVELL") */
+-	.atag_offset	= (PHYS_OFFSET + 0x100),
++	.atag_offset	= (PLAT_PHYS_OFFSET + 0x100),
+ 	.map_io		= axp_map_io,
+ 	.init_irq	= axp_init_irq,
+ 	.timer		= &axp_timer,
+diff --git a/arch/arm/mach-armadaxp/headsmp.S b/arch/arm/mach-armadaxp/headsmp.S
+index f184a5c..e58dd2d 100644
+--- a/arch/arm/mach-armadaxp/headsmp.S
++++ b/arch/arm/mach-armadaxp/headsmp.S
+@@ -8,7 +8,6 @@
+ #include <linux/linkage.h>
+ #include <linux/init.h>
+ #include <asm/memory.h>
+-#include <include/mach/memory.h>
+ 
+ 	__INIT
+ 
+@@ -39,7 +38,7 @@ ENTRY(axp_secondary_startup)
+ 	 */
+ 	adr	r7, l0_disable_flag_addr
+ 	ldr	r7, [r7]
+-	sub	r7, r7, #(PAGE_OFFSET - PHYS_OFFSET)
++	sub	r7, r7, #(PAGE_OFFSET - PLAT_PHYS_OFFSET)
+ 	ldr	r7, [r7]
+ 	cmp	r7, #0
+ 	beq	l0_dis_skip
+@@ -56,7 +55,7 @@ l0_dis_skip:
+ 	 */
+ 	adr	r7, sp_enable_flag_addr
+ 	ldr	r7, [r7]
+-	sub	r7, r7, #(PAGE_OFFSET - PHYS_OFFSET)
++	sub	r7, r7, #(PAGE_OFFSET - PLAT_PHYS_OFFSET)
+ 	ldr	r7, [r7]
+ 	cmp	r7, #0
+ 	beq	sp_ena_skip
+diff --git a/arch/arm/mach-armadaxp/include/mach/hardware.h b/arch/arm/mach-armadaxp/include/mach/hardware.h
+index f7c66e4..6c1ce4e 100644
+--- a/arch/arm/mach-armadaxp/include/mach/hardware.h
++++ b/arch/arm/mach-armadaxp/include/mach/hardware.h
+@@ -11,11 +11,4 @@
+ 
+ #include "armadaxp.h"
+ 
+-//#define pcibios_assign_all_busses()	1
+-
+-#define PCIBIOS_MIN_IO			0x1000
+-#define PCIBIOS_MIN_MEM			0x01000000
+-#define PCIMEM_BASE			PEX0_MEM_PHYS_BASE /* mem base for VGA */
+-
+-
+ #endif
+diff --git a/arch/arm/mach-armadaxp/include/mach/memory.h b/arch/arm/mach-armadaxp/include/mach/memory.h
+index fbd93c2..61f84a0 100644
+--- a/arch/arm/mach-armadaxp/include/mach/memory.h
++++ b/arch/arm/mach-armadaxp/include/mach/memory.h
+@@ -6,9 +6,9 @@
+ #define __ASM_ARCH_MEMORY_H
+ 
+ #ifdef CONFIG_MV_DRAM_BASE
+-#define PHYS_OFFSET		UL(CONFIG_MV_DRAM_BASE)
++#define PLAT_PHYS_OFFSET		UL(CONFIG_MV_DRAM_BASE)
+ #else
+-#define PHYS_OFFSET		UL(0x00000000)
++#define PLAT_PHYS_OFFSET		UL(0x00000000)
+ #endif
+ 
+ /* #define __virt_to_bus(x)	__virt_to_phys(x) */
+diff --git a/arch/arm/plat-armada/Makefile b/arch/arm/plat-armada/Makefile
+index e0e58c9..91e4e7c 100644
+--- a/arch/arm/plat-armada/Makefile
++++ b/arch/arm/plat-armada/Makefile
+@@ -13,4 +13,4 @@ obj-$(CONFIG_SHEEVA_DEEP_IDLE)		+= cpuidle.o armadaxp_suspend.o
+ obj-$(CONFIG_HOTPLUG_CPU)               += hotplug.o
+ obj-$(CONFIG_ARCH_ARMADA_XP)		+= pmu.o
+ obj-$(CONFIG_PCI_MSI)			+= msi.o
+-obj-$(CONFIG_ERROR_HANDLIG)		+=error_handling.o
++#obj-$(CONFIG_ERROR_HANDLIG)		+=error_handling.o
+-- 
+1.7.9.5
+

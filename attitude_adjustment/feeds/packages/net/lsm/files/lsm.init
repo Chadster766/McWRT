@@ -1,0 +1,19 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2010-2011 OpenWrt.org
+
+START=45
+
+SERVICE_USE_PID=1
+SERVICE_PID_FILE=/var/run/lsm.pid
+
+start() {
+	service_start /usr/sbin/lsm /etc/lsm/lsm.conf $SERVICE_PID_FILE
+}
+
+stop() {
+	service_stop /usr/sbin/lsm
+}
+
+reload() {
+	service_reload /usr/sbin/lsm
+}

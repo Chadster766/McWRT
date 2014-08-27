@@ -1,0 +1,628 @@
+From 492c67255ed4b872eee2fc2f9cf3a4405511b7b0 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Sun, 19 Aug 2012 13:14:02 +0300
+Subject: [PATCH 243/609] DSMP RD Server support patch
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/boardEnv/mvBoardEnvLib.c      |  138 ++++++++++++++------
+ .../armada_xp_family/boardEnv/mvBoardEnvLib.h      |    9 +-
+ .../armada_xp_family/boardEnv/mvBoardEnvSpec.h     |   53 +++++++-
+ arch/arm/mach-armadaxp/core.c                      |   22 ++--
+ 4 files changed, 172 insertions(+), 50 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+index d300b66..169716a 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+@@ -161,16 +161,7 @@ MV_VOID mvBoardEnvInit(MV_VOID)
+ 	mvGppTypeSet(0, 0xFFFFFFFF, BOARD_INFO(boardId)->gppOutEnValLow);
+ 	mvGppTypeSet(1, 0xFFFFFFFF, BOARD_INFO(boardId)->gppOutEnValMid);
+ 	mvGppTypeSet(2, 0xFFFFFFFF, BOARD_INFO(boardId)->gppOutEnValHigh);
+-
+-	/* TODO FIXME */
+-#if 0
+-	reg = MV_REG_READ(0x184e0);
+-	reg &= ~0x3;
+-	MV_REG_WRITE(0x184e0, reg);
+-#endif
+-
+ }
+-
+ /*******************************************************************************
+ * mvBoardModelGet - Get Board model
+ *
+@@ -193,7 +184,6 @@ MV_U16 mvBoardModelGet(MV_VOID)
+ {
+ 	return (mvBoardIdGet() >> 16);
+ }
+-
+ /*******************************************************************************
+ * mbBoardRevlGet - Get Board revision
+ *
+@@ -218,7 +208,6 @@ MV_U16 mvBoardRevGet(MV_VOID)
+ {
+ 	return (mvBoardIdGet() & 0xFFFF);
+ }
+-
+ /*******************************************************************************
+ * mvBoardNameGet - Get Board name
+ *
+@@ -252,7 +241,6 @@ MV_STATUS mvBoardNameGet(char *pNameBuff)
+ 
+ 	return MV_OK;
+ }
+-
+ /*******************************************************************************
+ * mvBoardIsPortInSgmii -
+ *
+@@ -288,11 +276,13 @@ MV_BOOL mvBoardIsPortInSgmii(MV_U32 ethPortNum)
+ 			return MV_TRUE;
+ 		break;
+ 	case RD_78460_SERVER_ID:
++	case RD_78460_SERVER_REV2_ID:
+ 		if (ethPortNum > 0)
+ 			return MV_TRUE;
+ 		break;
+ 	case DB_78X60_PCAC_ID:
+ 	case RD_78460_NAS_ID:
++	case RD_78460_CUSTOMER_ID:
+ 	case DB_78X60_PCAC_REV2_ID:
+ 		return MV_TRUE;
+ 		break;
+@@ -304,7 +294,6 @@ MV_BOOL mvBoardIsPortInSgmii(MV_U32 ethPortNum)
+ 
+ 	return MV_FALSE;
+ }
+-
+ /*******************************************************************************
+ * mvBoardIsPortInSgmii -
+ *
+@@ -327,7 +316,7 @@ MV_BOOL mvBoardIsPortInGmii(MV_U32 ethPortNum)
+ {
+ 	if (mvBoardIsGMIIModuleConnected() && (ethPortNum ==0))
+ 		return MV_TRUE;
+-	else 
++	else
+ 		return MV_FALSE;
+ }
+ 
+@@ -418,7 +407,6 @@ MV_BOARD_MAC_SPEED mvBoardMacSpeedGet(MV_U32 ethPortNum)
+ 		if (mvBoardIsSwitchModuleConnected())
+ 			return BOARD_MAC_SPEED_1000M;
+ 	}
+-
+ 	return BOARD_INFO(boardId)->pBoardMacInfo[ethPortNum].boardMacSpeed;
+ }
+ 
+@@ -984,7 +972,9 @@ MV_VOID mvBoardOtherModuleTypePrint(MV_VOID)
+ 	/* Pex Module */
+ 	if (mvBoardIsPexModuleConnected())
+ 		mvOsOutput("       PEX module.\n");
+-
++	/* SETM Module */
++	if (mvBoardIsSetmModuleConnected())
++		mvOsOutput("       SETM module.\n");
+ 	/* LVDS Module */
+ 	if (mvBoardIsLvdsModuleConnected())
+ 		mvOsOutput("       LVDS module.\n");
+@@ -1022,7 +1012,7 @@ MV_BOOL mvBoardIsGbEPortConnected(MV_U32 ethPortNum)
+ 			return MV_FALSE;
+ 		break;
+ 	case 2:
+-		if (mvBoardIsPexModuleConnected())
++		if ( (mvBoardIsPexModuleConnected()) || (mvBoardIsSetmModuleConnected()) )
+ 			return MV_FALSE;
+ 		break;
+ 	case 3:
+@@ -1405,6 +1395,8 @@ MV_VOID mvBoardIdSet(MV_VOID)
+ 		gBoardId = DB_88F78XX0_BP_ID;
+ #elif defined(RD_88F78460_SERVER)
+ 		gBoardId = RD_78460_SERVER_ID;
++#elif defined(RD_78460_SERVER_REV2)
++		gBoardId = RD_78460_SERVER_REV2_ID;
+ #elif defined(DB_78X60_PCAC)
+ 		gBoardId = DB_78X60_PCAC_ID;
+ #elif defined(DB_88F78X60_REV2)
+@@ -1415,6 +1407,8 @@ MV_VOID mvBoardIdSet(MV_VOID)
+ 		gBoardId = DB_78X60_AMC_ID;
+ #elif defined(DB_78X60_PCAC_REV2)
+ 		gBoardId = DB_78X60_PCAC_REV2_ID;
++#elif defined(RD_78460_CUSTOMER)
++		gBoardId = RD_78460_CUSTOMER_ID;
+ #else
+ 		mvOsPrintf("mvBoardIdSet: Board ID must be defined!\n");
+ 		while (1) {
+@@ -1554,6 +1548,7 @@ MV_U8 mvBoardFabFreqGet(MV_VOID)
+ 	sar0 = mvBoardTwsiSatRGet(2, 0);
+ 	if ((MV_8)MV_ERROR == (MV_8)sar0)
+ 		return MV_ERROR;
++
+ 	sar1 = mvBoardTwsiSatRGet(3, 0);
+ 	if ((MV_8)MV_ERROR == (MV_8)sar1)
+ 		return MV_ERROR;
+@@ -1576,6 +1571,7 @@ MV_STATUS mvBoardFabFreqSet(MV_U8 freqVal)
+ 		DB1(mvOsPrintf("Board: Write FreqOpt S@R fail\n"));
+ 		return MV_ERROR;
+ 	}
++
+ 	sar0 = mvBoardTwsiSatRGet(3, 0);
+ 	if ((MV_8)MV_ERROR == (MV_8)sar0)
+ 		return MV_ERROR;
+@@ -1586,6 +1582,7 @@ MV_STATUS mvBoardFabFreqSet(MV_U8 freqVal)
+ 		DB1(mvOsPrintf("Board: Write FreqOpt S@R fail\n"));
+ 		return MV_ERROR;
+ 	}
++
+ 	DB(mvOsPrintf("Board: Write FreqOpt S@R succeeded\n"));
+ 	return MV_OK;
+ }
+@@ -1664,6 +1661,7 @@ MV_U8 mvBoardCpuFreqGet(MV_VOID)
+ 	sarMsb = mvBoardTwsiSatRGet(2, 0);
+ 	if ((MV_8)MV_ERROR == (MV_8)sar)
+ 		return MV_ERROR;
++
+ 	return (  ((sarMsb & 0x1) << 3) | ((sar & 0x1C) >> 2));
+ }
+ 
+@@ -1692,6 +1690,17 @@ MV_STATUS mvBoardCpuFreqSet(MV_U8 freqVal)
+ 		return MV_ERROR;
+ 	}
+ 
++	sar = mvBoardTwsiSatRGet(2, 0);
++	if ((MV_8)MV_ERROR == (MV_8)sar)
++		return MV_ERROR;
++
++	sar &= ~(0x1);
++	sar |= ( (freqVal >> 3) & 0x1);
++	if (MV_OK != mvBoardTwsiSatRSet(2, 0, sar)) {
++		DB1(mvOsPrintf("Board: Write CpuFreq S@R fail\n"));
++		return MV_ERROR;
++	}
++
+ 	DB(mvOsPrintf("Board: Write CpuFreq S@R succeeded\n"));
+ 	return MV_OK;
+ }
+@@ -1707,7 +1716,6 @@ MV_U8 mvBoardBootDevGet(MV_VOID)
+ 
+ 	return (sar & 0x7);
+ }
+-
+ /*******************************************************************************/
+ MV_STATUS mvBoardBootDevSet(MV_U8 val)
+ {
+@@ -1727,7 +1735,6 @@ MV_STATUS mvBoardBootDevSet(MV_U8 val)
+ 	DB(mvOsPrintf("Board: Write BootDev S@R succeeded\n"));
+ 	return MV_OK;
+ }
+-
+ /*******************************************************************************/
+ MV_U8 mvBoardBootDevWidthGet(MV_VOID)
+ {
+@@ -1739,7 +1746,6 @@ MV_U8 mvBoardBootDevWidthGet(MV_VOID)
+ 
+ 	return (sar & 0x18) >> 3;
+ }
+-
+ /*******************************************************************************/
+ MV_STATUS mvBoardBootDevWidthSet(MV_U8 val)
+ {
+@@ -1759,7 +1765,6 @@ MV_STATUS mvBoardBootDevWidthSet(MV_U8 val)
+ 	DB(mvOsPrintf("Board: Write BootDevWidth S@R succeeded\n"));
+ 	return MV_OK;
+ }
+-
+ /*******************************************************************************/
+ #ifdef MV88F78X60_Z1
+ MV_U8 mvBoardCpu0CoreModeGet(MV_VOID)
+@@ -1778,7 +1783,6 @@ MV_U8 mvBoardCpu0EndianessGet(MV_VOID)
+ 	return (sar & 0x08) >> 3;
+ #endif
+ }
+-
+ /*******************************************************************************/
+ #ifdef MV88F78X60_Z1
+ MV_STATUS mvBoardCpu0CoreModeSet(MV_U8 val)
+@@ -1806,7 +1810,6 @@ MV_STATUS mvBoardCpu0EndianessSet(MV_U8 val)
+ 	DB(mvOsPrintf("Board: Write Cpu0CoreMode S@R succeeded\n"));
+ 	return MV_OK;
+ }
+-
+ /*******************************************************************************/
+ MV_U8 mvBoardL2SizeGet(MV_VOID)
+ {
+@@ -1818,7 +1821,6 @@ MV_U8 mvBoardL2SizeGet(MV_VOID)
+ 
+ 	return (sar & 0x3);
+ }
+-
+ /*******************************************************************************/
+ MV_STATUS mvBoardL2SizeSet(MV_U8 val)
+ {
+@@ -1838,7 +1840,6 @@ MV_STATUS mvBoardL2SizeSet(MV_U8 val)
+ 	DB(mvOsPrintf("Board: Write L2Size S@R succeeded\n"));
+ 	return MV_OK;
+ }
+-
+ /*******************************************************************************/
+ MV_U8 mvBoardCpuCoresNumGet(MV_VOID)
+ {
+@@ -1855,7 +1856,6 @@ MV_U8 mvBoardCpuCoresNumGet(MV_VOID)
+ 		sar =1;
+ 	return sar;
+ }
+-
+ /*******************************************************************************/
+ MV_STATUS mvBoardCpuCoresNumSet(MV_U8 val)
+ {
+@@ -1879,7 +1879,6 @@ MV_STATUS mvBoardCpuCoresNumSet(MV_U8 val)
+ 	DB(mvOsPrintf("Board: Write CpuCoreNum S@R succeeded\n"));
+ 	return MV_OK;
+ }
+-
+ /*******************************************************************************/
+ MV_STATUS mvBoardConfIdSet(MV_U16 conf)
+ {
+@@ -1922,32 +1921,38 @@ MV_STATUS mvBoardPexCapabilitySet(MV_U16 conf)
+ 	DB(mvOsPrintf("Board: Write confID S@R succeeded\n"));
+ 	return MV_OK;
+ }
+-
+ /*******************************************************************************/
++MV_U16 gPexCap = 0;
+ MV_U16 mvBoardPexCapabilityGet(MV_VOID)
+ {
+ 	MV_U8 sar;
+-	MV_U32 boardId = mvBoardIdGet();
++	MV_U32 boardId;
++
++	if (gPexCap)
++		return gPexCap;
+ 
++	boardId = mvBoardIdGet();
+ 	switch (boardId) {
+ 	case DB_78X60_PCAC_ID:
+ 	case RD_78460_NAS_ID:
++	case RD_78460_CUSTOMER_ID:
+ 	case DB_78X60_AMC_ID:
+ 	case DB_78X60_PCAC_REV2_ID:
++	case RD_78460_SERVER_ID:
++	case RD_78460_SERVER_REV2_ID:
+ 		sar = 0x1; /* Gen2 */
+ 		break;
+ 	case DB_88F78XX0_BP_ID:
+-	case RD_78460_SERVER_ID:
+ 	case FPGA_88F78XX0_ID:
+ 	case DB_88F78XX0_BP_REV2_ID:
+ 	default:
+ 		sar = mvBoardTwsiSatRGet(1, 1);
+ 		break;
+ 	}
+-
+-	return (sar & 0x1);
++	gPexCap = sar & 0x1;
++	
++	return (gPexCap);
+ }
+-
+ /*******************************************************************************/
+ MV_STATUS mvBoardPexModeSet(MV_U16 conf)
+ {
+@@ -1967,7 +1972,6 @@ MV_STATUS mvBoardPexModeSet(MV_U16 conf)
+ 	DB(mvOsPrintf("Board: Write confID S@R succeeded\n"));
+ 	return MV_OK;
+ }
+-
+ /*******************************************************************************/
+ MV_U16 mvBoardPexModeGet(MV_VOID)
+ {
+@@ -1980,17 +1984,17 @@ MV_U16 mvBoardPexModeGet(MV_VOID)
+ 	return (sar & 0x6) >> 1;
+ 
+ }
+-
+ /*******************************************************************************/
+-
+ MV_STATUS mvBoardDramEccSet(MV_U16 conf)
+ {
+ 	MV_U8 sar;
+ 	sar = mvBoardTwsiSatRGet(3, 1);
+ 	if ((MV_8)MV_ERROR == (MV_8)sar)
+ 		return MV_ERROR;
++
+ 	sar &= ~(0x2);
+ 	sar |= ((conf & 0x1) << 1);
++
+ 	if (MV_OK != mvBoardTwsiSatRSet(3, 1, sar)) {
+ 		DB(mvOsPrintf("Board: Write confID S@R fail\n"));
+ 		return MV_ERROR;
+@@ -2016,8 +2020,10 @@ MV_STATUS mvBoardDramBusWidthSet(MV_U16 conf)
+ 	sar = mvBoardTwsiSatRGet(3, 1);
+ 	if ((MV_8)MV_ERROR == (MV_8)sar)
+ 		return MV_ERROR;
++
+ 	sar &= ~(0x1);
+ 	sar |= (conf & 0x1);
++
+ 	if (MV_OK != mvBoardTwsiSatRSet(3, 1, sar)) {
+ 		DB(mvOsPrintf("Board: Write confID S@R fail\n"));
+ 		return MV_ERROR;
+@@ -2036,14 +2042,18 @@ MV_U16 mvBoardDramBusWidthGet(MV_VOID)
+ 	return (sar & 0x1);
+ }
+ 
++/*******************************************************************************/
+ MV_U8 mvBoardAltFabFreqGet(MV_VOID)
+ {
+ 	MV_U8 sar0;
++
+ 	sar0 = mvBoardTwsiSatRGet(2, 1);
+ 	if ((MV_8)MV_ERROR == (MV_8)sar0)
+ 		return MV_ERROR;
++
+ 	return (sar0 & 0x1F);
+ }
++/*******************************************************************************/
+ MV_STATUS mvBoardAltFabFreqSet(MV_U8 freqVal)
+ {
+ 	if (MV_OK != mvBoardTwsiSatRSet(2, 1, freqVal)) {
+@@ -2141,6 +2151,7 @@ MV_STATUS mvBoardOtherModulesScan(void)
+ {
+ 	MV_U8 regVal;
+ 	MV_TWSI_SLAVE twsiSlave;
++	MV_TWSI_ADDR slave;
+ 	MV_U32 boardId = mvBoardIdGet();
+ 
+ 	/* Perform scan only for DB board */
+@@ -2148,7 +2159,12 @@ MV_STATUS mvBoardOtherModulesScan(void)
+ 		/* reset modules flags */
+ 		BOARD_INFO(boardId)->pBoardModTypeValue->boardOtherMod |= MV_BOARD_NONE;
+ 
+-		/* SERDES module (only PEX moduel is supported now) */
++        /* TWSI init */
++        slave.type = ADDR7_BIT;
++        slave.address = 0;
++        mvTwsiInit(0, TWSI_SPEED , mvBoardTclkGet(), &slave, 0);
++
++ 		/* SERDES module (PEX module and SETM module are supported now) */
+ 		twsiSlave.slaveAddr.address = MV_BOARD_PEX_MODULE_ADDR;
+ 		twsiSlave.slaveAddr.type = MV_BOARD_PEX_MODULE_ADDR_TYPE;
+ 		twsiSlave.validOffset = MV_TRUE;
+@@ -2164,6 +2180,22 @@ MV_STATUS mvBoardOtherModulesScan(void)
+ 			}
+ 		}
+ 
++		/* SERDES module (PEX module and SETM module are supported now) */
++		twsiSlave.slaveAddr.address = MV_BOARD_SETM_MODULE_ADDR;
++		twsiSlave.slaveAddr.type = MV_BOARD_SETM_MODULE_ADDR_TYPE;
++		twsiSlave.validOffset = MV_TRUE;
++		twsiSlave.offset = 0;
++		twsiSlave.moreThen256 = MV_FALSE;
++		if (mvTwsiRead(0, &twsiSlave, &regVal, 1) == MV_OK) {
++			if (regVal == MV_BOARD_SETM_MODULE_ID) {
++				DB(mvOsPrintf("mvBoardOtherModulesScan: " "SETM module DETECTED!\n"));
++				BOARD_INFO(boardId)->pBoardModTypeValue->boardOtherMod |= MV_BOARD_SETM;
++			} else {
++				DB(mvOsPrintf("mvBoardOtherModulesScan: " "Unknown ID @ PEX module address!\n"));
++				BOARD_INFO(boardId)->pBoardModTypeValue->boardOtherMod |= MV_BOARD_UNKNOWN;
++			}
++		}
++
+ 		/* LVDS (LCD) module */
+ 		twsiSlave.slaveAddr.address = MV_BOARD_LVDS_MODULE_ADDR;
+ 		twsiSlave.slaveAddr.type = MV_BOARD_LVDS_MODULE_ADDR_TYPE;
+@@ -2213,6 +2245,33 @@ MV_BOOL mvBoardIsPexModuleConnected(void)
+ 
+ 	return MV_FALSE;
+ }
++
++/*******************************************************************************
++* mvBoardIsSetmModuleConnected
++*
++* DESCRIPTION:
++*	Check if SETM module is connected to the board.
++*
++* INPUT:
++*	None.
++*
++* OUTPUT:
++*	None
++*
++* RETURN:
++*       MV_TRUE / MV_FALSE
++*
++*******************************************************************************/
++MV_BOOL mvBoardIsSetmModuleConnected(void)
++{
++	MV_U32 boardId = mvBoardIdGet();
++
++	if ( (boardId != DB_88F78XX0_BP_ID) && (boardId != DB_88F78XX0_BP_REV2_ID) )
++		DB(mvOsPrintf("mvBoardIsSetmModuleConnected: Unsupported board!\n"));
++	else if (BOARD_INFO(boardId)->pBoardModTypeValue->boardOtherMod & MV_BOARD_SETM)
++		return MV_TRUE;
++	return MV_FALSE;
++}
+ /*******************************************************************************
+ * mvBoardIsPexModuleConnected
+ *
+@@ -2542,13 +2601,14 @@ MV_SERDES_CFG *mvBoardSerdesCfgGet(void)
+ 
+ 	switch (boardId) {
+ 	case DB_88F78XX0_BP_ID:
+-		if (mvBoardIsPexModuleConnected())
++		if (moduleConnected)
+ 			serdesCfg = 1;
+ 		/* If backword compatability for Z1A is needed */
+ 		if (gSerdesZ1AMode)
+ 			serdesCfg += 2;
+ 		break;
+ 	case RD_78460_SERVER_ID:
++	case RD_78460_SERVER_REV2_ID:
+ 		if (mvBoardSledCpuNumGet() > 0)
+ 			serdesCfg = 1;
+ 		break;
+@@ -2597,10 +2657,12 @@ MV_BOARD_PEX_INFO *mvBoardPexInfoGet(void)
+ 	switch (boardId) {
+ 	case DB_88F78XX0_BP_ID:
+ 	case RD_78460_SERVER_ID:
++	case RD_78460_SERVER_REV2_ID:
+ 	case DB_78X60_PCAC_ID:
+ 	case FPGA_88F78XX0_ID:
+ 	case DB_88F78XX0_BP_REV2_ID:
+ 	case RD_78460_NAS_ID:
++	case RD_78460_CUSTOMER_ID:
+ 	case DB_78X60_AMC_ID:
+ 	case DB_78X60_PCAC_REV2_ID:
+ 		return &BOARD_INFO(boardId)->boardPexInfo;
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
+index 566d283..fd3611c 100755
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
+@@ -106,6 +106,10 @@ extern "C" {
+ #define MV_BOARD_LVDS_MODULE_ADDR_TYPE		ADDR7_BIT
+ #define MV_BOARD_LVDS_MODULE_ID			0
+ 
++#define MV_BOARD_SETM_MODULE_ADDR		0x23
++#define MV_BOARD_SETM_MODULE_ADDR_TYPE		ADDR7_BIT
++#define MV_BOARD_SETM_MODULE_ID			1
++
+ #define MV_BOARD_MPP_MODULE_ADDR		0x20
+ #define MV_BOARD_MPP_MODULE_ADDR_TYPE		ADDR7_BIT
+ #define MV_BOARD_LCD_DVI_MODULE_ID		0
+@@ -148,6 +152,7 @@ typedef enum _devBoardOtherTypeClass {
+ 	MV_BOARD_LVDS    = 0x00000001,
+ 	MV_BOARD_PEX     = 0x00000002,
+ 	MV_BOARD_SWITCH  = 0x00000004,
++	MV_BOARD_SETM 	 = 0x00000008,
+ 	MV_BOARD_UNKNOWN = 0x80000000
+ } MV_BOARD_OTHER_TYPE_CLASS;
+ 
+@@ -414,10 +419,12 @@ MV_STATUS mvBoardDramEccSet(MV_U16 conf);
+ MV_U16 mvBoardDramEccGet(MV_VOID);
+ MV_STATUS mvBoardDramBusWidthSet(MV_U16 conf);
+ MV_U16 mvBoardDramBusWidthGet(MV_VOID);
+-
++MV_U8 mvBoardAltFabFreqGet(MV_VOID);
++MV_STATUS mvBoardAltFabFreqSet(MV_U8 freqVal);
+ MV_STATUS mvBoardMppModulesScan(void);
+ MV_STATUS mvBoardOtherModulesScan(void);
+ MV_BOOL mvBoardIsPexModuleConnected(void);
++MV_BOOL mvBoardIsSetmModuleConnected(void);
+ MV_BOOL mvBoardIsSwitchModuleConnected(void);
+ MV_BOOL mvBoardIsLvdsModuleConnected(void);
+ MV_BOOL mvBoardIsLcdDviModuleConnected(void);
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
+index b1ecfda..c2eabfa 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
+@@ -97,7 +97,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define RD_78460_NAS_ID                         (DB_88F78XX0_BP_REV2_ID + 1)
+ #define DB_78X60_AMC_ID				(RD_78460_NAS_ID + 1)
+ #define DB_78X60_PCAC_REV2_ID			(DB_78X60_AMC_ID + 1)
+-#define RD_78460_CUSTOMER_ID			(DB_78X60_PCAC_REV2_ID + 1)
++#define RD_78460_SERVER_REV2_ID			(DB_78X60_PCAC_REV2_ID + 1)
++#define RD_78460_CUSTOMER_ID			(RD_78460_SERVER_REV2_ID + 1)
+ #define MV_MAX_BOARD_ID				(RD_78460_CUSTOMER_ID + 1)
+ #define INVALID_BAORD_ID			0xFFFFFFFF
+ 
+@@ -265,6 +266,56 @@ MPP#	NAME		IN/OUT
+ #define RD_78460_GPP_POL_MID			0x0
+ #define RD_78460_GPP_POL_HIGH			0x0
+ 
++/************************/
++/* RD-78460-SERVER-REV2 */
++/************************/
++#define RD_78460_SERVER_REV2_MPP0_7				0x00000000
++#define RD_78460_SERVER_REV2_MPP8_15			0x00000000
++#define RD_78460_SERVER_REV2_MPP16_23			0x00000000
++#define RD_78460_SERVER_REV2_MPP24_31			0x00000000
++#define RD_78460_SERVER_REV2_MPP32_39			0x11110000
++#define RD_78460_SERVER_REV2_MPP40_47			0x00000000
++#define RD_78460_SERVER_REV2_MPP48_55			0x00000000
++#define RD_78460_SERVER_REV2_MPP56_63			0x00000000
++#define RD_78460_SERVER_REV2_MPP64_67			0x00000000
++
++/* GPPs
++MPP#	NAME		IN/OUT
++----------------------------------------------
++16		CPU ID		IN
++17		CPU ID		IN
++18		CPU ID		IN
++19		CPU ID		IN
++23		USER LED	OUT
++25		Touch SG/ MII Int#	IN
++28		RESET GPIO FOR OTHER DEVICES
++29		RESET GPIO FOR OTHER DEVICES
++30		RESET GPIO FOR OTHER DEVICES
++31		RESET GPIO FOR OTHER DEVICES
++32		RESET GPIO FOR OTHER DEVICES
++33		RESET GPIO FOR OTHER DEVICES
++
++40		GPIOs TO SLED CONNECTOR(CPU0 ONLY)
++41		GPIOs TO SLED CONNECTOR(CPU0 ONLY)
++42		GPIOs TO SLED CONNECTOR(CPU0 ONLY)
++43		GPIOs TO SLED CONNECTOR(CPU0 ONLY)
++44		GPIOs TO SLED CONNECTOR(CPU0 ONLY)
++
++*/
++
++#define RD_78460_SERVER_REV2_GPP_OUT_ENA_LOW		(~(BIT23 | BIT28 | BIT29 | BIT30 | BIT31))
++#define RD_78460_SERVER_REV2_GPP_OUT_ENA_MID		(~(BIT0 | BIT1 | BIT2 | BIT8 | BIT9 | BIT10 | BIT11 | BIT12))
++#define RD_78460_SERVER_REV2_GPP_OUT_ENA_HIGH		(~(0x0))
++
++#define RD_78460_SERVER_REV2_GPP_OUT_VAL_LOW		(BIT28 | BIT29 | BIT30 | BIT31)
++#define RD_78460_SERVER_REV2_GPP_OUT_VAL_MID		(BIT0)
++#define RD_78460_SERVER_REV2_GPP_OUT_VAL_HIGH		0x0
++
++#define RD_78460_SERVER_REV2_GPP_POL_LOW			0x0
++/* (BIT16 | BIT17 | BIT18 | BIT19) */
++#define RD_78460_SERVER_REV2_GPP_POL_MID			0x0
++#define RD_78460_SERVER_REV2_GPP_POL_HIGH			0x0
++
+ 
+ /********************/
+ /* DB-88F78XX0-PCAC */
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index 023a86f..eecdcb5 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -1765,7 +1765,11 @@ static void __init axp_rdsrv_init(void)
+ 	cpu_fabric_common_init();
+ 
+ 	/* Select appropriate Board ID for Machine */
++#if defined(CONFIG_ARMADA_XP_REV_A0) || defined(CONFIG_ARMADA_XP_REV_B0)
++	gBoardId = RD_78460_SERVER_ID;
++#else
+ 	gBoardId = RD_78460_SERVER_ID;
++#endif
+ 	/* Bypass serdes reconfiguration since already done at bootloader */
+         mvBoardSerdesConfigurationEnableSet(MV_FALSE);
+ 
+@@ -1850,16 +1854,14 @@ static void __init axp_rdsrv_init(void)
+ 	return;
+ }
+ 
+-/*MACHINE_START(ARMADA_XP_RDSRV, "Marvell Armada XP Server Board")
+-		/ MAINTAINER("MARVELL") 
+-		.phys_io	= INTER_REGS_PHYS_BASE,
+-  .io_pg_offst	= ((INTER_REGS_BASE) >> 18) & 0xfffc,
+-					.boot_params	= 0x00000100,
+-	 .map_io		= axp_map_io,
+-  .init_irq	= axp_init_irq,
+-  .timer		= &axp_timer,
+-  .init_machine	= axp_rdsrv_init,
+-  MACHINE_END */
++MACHINE_START(ARMADA_XP_RDSRV, "Marvell Armada XP Server Board")
++		/* MAINTAINER("MARVELL") */
++	.atag_offset	= BOOT_PARAMS_OFFSET,
++	 .map_io	= axp_map_io,
++  	.init_irq	= axp_init_irq,
++  	.timer		= &axp_timer,
++  	.init_machine	= axp_rdsrv_init,
++  MACHINE_END
+ 
+ /*****************************************************************************
+  * FPGA BOARD: Main Initialization
+-- 
+1.7.9.5
+

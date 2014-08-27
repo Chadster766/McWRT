@@ -1,0 +1,302 @@
+diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
+index 5664696..b96fd4c 100644
+--- a/drivers/misc/Kconfig
++++ b/drivers/misc/Kconfig
+@@ -500,6 +500,12 @@ config USB_SWITCH_FSA9480
+ 	  stereo and mono audio, video, microphone and UART data to use
+ 	  a common connector port.
+ 
++config MAMBA_LED 
++	tristate "Mamba LED Module"
++	depends on ARCH_ARMADA_XP
++	help
++	  This driver control the LED on Mamba board 
++
+ source "drivers/misc/c2port/Kconfig"
+ source "drivers/misc/eeprom/Kconfig"
+ source "drivers/misc/cb710/Kconfig"
+diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
+index b26495a..2f85c70 100644
+--- a/drivers/misc/Makefile
++++ b/drivers/misc/Makefile
+@@ -48,3 +48,4 @@ obj-y				+= lis3lv02d/
+ obj-y				+= carma/
+ obj-$(CONFIG_USB_SWITCH_FSA9480) += fsa9480.o
+ obj-$(CONFIG_ALTERA_STAPL)	+=altera-stapl/
++obj-$(CONFIG_MAMBA_LED)		+= mamba_led.o
+diff --git a/drivers/misc/mamba_led.c b/drivers/misc/mamba_led.c
+new file mode 100644
+index 0000000..9063131
+--- /dev/null
++++ b/drivers/misc/mamba_led.c
+@@ -0,0 +1,270 @@
++
++/*
++ * mamba_led.c - Utility driver to control Mamba LEDs 
++ *
++ * Copyright (C) 2013 Belkin Inc.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; version 2 of the License.
++ *
++ *
++ */
++#include <linux/module.h>
++#include <linux/kernel.h>
++#include <asm/uaccess.h>
++#include <linux/cdev.h>
++#include <linux/proc_fs.h>
++#include <linux/mutex.h>
++#include <linux/sched.h>
++#include <linux/kthread.h>
++#include <linux/time.h>   // for using jiffies  
++#include <linux/delay.h>
++#include <linux/kmod.h>
++#include <linux/gpio.h>
++#include <asm/io.h>
++#include <linux/seq_file.h>
++
++#define MAX_PROC_SIZE 100
++#define MAX_LED_NAME_LEN 20
++#define LED_ON 255
++#define LED_OFF 0
++#define GPIO_OUT_DIR 0
++#define GPIO_IN_DIR 1
++
++struct mamba_led_t {
++	char name[MAX_LED_NAME_LEN];
++	unsigned int brightness;
++	unsigned char blink;
++	int delay_on;
++	int delay_off;
++	int gpio;
++	unsigned char default_gpio_dir;
++	int (*led_handler)(struct mamba_led_t *led);
++};
++
++#define MAMBA_LED_BASE_ADDR 0xf1018000
++#define MAMBA_LED_MAP_SIZE 0x1000
++#define MAMBA_POWER_LED_ENABLE_BLINK_ADDR	0x148
++#define MAMBA_POWER_LED_COUNTER_A_ADDR		0x160
++#define MAMBA_POWER_LED_ON_DURATION_ADDR	0x1c0
++#define MAMBA_POWER_LED_OFF_DURATION_ADDR	0x1c4
++#define MAMBA_POWER_LED_CTRL_GPIO 40
++
++int power_led_handler(struct mamba_led_t *led);
++
++static struct mamba_led_t mamba_leds[] = {
++	{"power", 0, 0, 0, 0, 40, GPIO_IN_DIR, power_led_handler}
++};
++
++static DEFINE_MUTEX(mutex);
++static char proc_data[MAX_PROC_SIZE];
++static struct proc_dir_entry *mamba_led_proc_entry;
++
++void __iomem *base_reg = NULL;
++
++int power_led_handler(struct mamba_led_t *led)
++{
++	if (base_reg == NULL)
++		return -1;
++
++	if (led->brightness == 0) {
++		gpio_direction_input(led->gpio);
++	}
++	else {
++		gpio_direction_output(led->gpio, led->brightness ? 1 : 0);
++		if (led->blink) {
++			// Enable blink register
++			writel(0x00000100,
++				base_reg + MAMBA_POWER_LED_ENABLE_BLINK_ADDR);
++			// Set blink counter A for GPIO40 
++			writel(0x00000000,
++				base_reg + MAMBA_POWER_LED_COUNTER_A_ADDR);
++			// On durration
++			writel(led->delay_on*250*1000,
++				base_reg + MAMBA_POWER_LED_ON_DURATION_ADDR);
++			// Off duration
++			writel(led->delay_off*250*1000,
++				base_reg + MAMBA_POWER_LED_OFF_DURATION_ADDR);
++		}
++		else {
++			// Disable blink register
++			writel(0x00000000,
++				base_reg + MAMBA_POWER_LED_ENABLE_BLINK_ADDR);
++		}
++	}
++	return 0;
++}
++
++static int mamba_led_proc_show(struct seq_file *m, void *v)
++{
++	int i = 0;
++	struct mamba_led_t *led = NULL; 
++
++	seq_printf(m, "%12s%12s%7s%10s%11s%6s\n", "led_name", "brightness","blink",
++		"delay_on", "delay_off","gpio");
++	for (i = 0; i < sizeof(mamba_leds)/sizeof(struct mamba_led_t); i++) {
++		led = &mamba_leds[i];
++		seq_printf(m, "%12s", led->name);
++		seq_printf(m, "%12d", led->brightness);
++		seq_printf(m, "%7d", led->blink);
++		seq_printf(m, "%10d", led->delay_on);
++		seq_printf(m, "%11d", led->delay_off);
++		seq_printf(m, "%6d\n", led->gpio);
++	}
++	seq_printf(m, "echo <led_name> <on|off|brightness_value> [<delay_on>"
++		" <delay_off>] > /proc/mamba_led\n");
++
++	return 0;
++}
++
++static struct mamba_led_t *check_led_valid(char *led_name) {
++	int i = 0;
++	struct mamba_led_t *led = NULL;
++	for (i = 0; i < sizeof(mamba_leds)/sizeof(struct mamba_led_t); i++) {
++		led = &mamba_leds[i];
++		if(!strncmp(led_name, led->name, strlen(led->name))) {
++			return led;
++		}
++	}
++	return NULL;
++}
++
++static int check_brightness_valid(char *brightness_s,
++		unsigned char *brightness) {
++	int ret = 0;
++	int tmp = 0;
++	if (!strncmp(brightness_s, "on", 2)) {
++		*brightness = 255;
++	}
++	else if (!strncmp(brightness_s, "off", 3)) {
++		*brightness = 0;
++	}
++	else {
++		ret = sscanf(brightness_s, "%d\n", &tmp);
++		if (ret == 1) {
++			*brightness = tmp & 0xff;
++		}
++		else {
++			return -1;
++		}
++	}
++	return 0;
++}
++
++static int mamba_led_write_proc(struct file *filp, const char *buf,
++		size_t count, loff_t *offp)
++{
++	int ret = 0;
++	char led_name[32];
++	char brightness_s[32];
++	struct mamba_led_t *target_led = NULL;
++	unsigned char brightness = 0;
++	int delay_on, delay_off;
++
++	if (!count) {
++		printk("echo <led_name> <on|off|brightness_value> [<delay_on>"
++				" <delay_off>] > /proc/mamba_led\n");
++		goto err;
++	}
++	if(count > MAX_PROC_SIZE)
++		count = MAX_PROC_SIZE;
++
++	memset(proc_data, 0, sizeof(proc_data));
++	if(copy_from_user(proc_data, buf, count)) {
++		goto err;
++	}
++
++	ret = sscanf(proc_data, "%s %s %d %d\n", 
++			led_name, brightness_s, &delay_on, &delay_off);
++	if (ret < 2 || (ret > 2 && ret != 4)
++		|| (target_led = check_led_valid(led_name)) == NULL
++		|| check_brightness_valid(brightness_s, &brightness) != 0) {
++		goto err;
++	}
++
++	mutex_lock(&mutex);
++	target_led->brightness = brightness;
++	if (ret > 2) {
++		target_led->blink = 1;
++		target_led->delay_on = delay_on;
++		target_led->delay_off = delay_off;
++	}
++	else {
++		target_led->blink = 0;
++	}
++
++	if (target_led->led_handler)
++		target_led->led_handler(target_led);
++
++	mutex_unlock(&mutex);
++
++	return count;
++err:
++	return -EFAULT;
++}
++
++static int mamba_led_proc_open(struct inode *inode, struct file *file)
++{
++	return single_open(file, mamba_led_proc_show, inode->i_private);
++}
++
++static struct file_operations proc_fops = {
++	.owner		= THIS_MODULE,
++	.open		= mamba_led_proc_open,
++	.read		= seq_read,
++	.llseek		= seq_lseek,
++	.release	= single_release,
++	.write		= mamba_led_write_proc,
++};
++
++int mamba_led_init (void) {
++	int i = 0;
++	struct mamba_led_t *led = NULL;
++
++	mamba_led_proc_entry = proc_create("mamba_led", 0, NULL, &proc_fops);
++	if(!mamba_led_proc_entry)
++	{
++		printk("%s: Error creating proc entry\n", __FUNCTION__);
++		return -ENOMEM;
++	}
++
++	base_reg = ioremap(MAMBA_LED_BASE_ADDR, MAMBA_LED_MAP_SIZE);
++	if (base_reg == NULL)
++		goto ioremap_failed;
++
++	for (i = 0; i < sizeof(mamba_leds)/sizeof(struct mamba_led_t); i++) {
++		led = &mamba_leds[i];
++		if(gpio_request(led->gpio, led->name) != 0) {
++			printk("failed to request gpio for %s led\n",
++				led->name);
++			goto gpio_request_failed;
++		}
++		if (led->default_gpio_dir == GPIO_OUT_DIR)
++			gpio_direction_output(led->gpio, 0);
++		else
++			gpio_direction_input(led->gpio);
++	}
++
++	printk("Mamba LED init done\n");
++	return 0;
++
++gpio_request_failed:
++	if (base_reg)
++		iounmap(base_reg);
++ioremap_failed:
++	remove_proc_entry("mamba_led",NULL);
++	return -1;
++}
++
++void mamba_led_cleanup(void) {
++	if (base_reg)
++		iounmap(base_reg);
++	remove_proc_entry("mamba_led",NULL);
++}
++MODULE_AUTHOR("Belkin Inc.");
++MODULE_LICENSE("GPL");
++MODULE_DESCRIPTION("mamba led driver");
++
++module_init(mamba_led_init);
++module_exit(mamba_led_cleanup);

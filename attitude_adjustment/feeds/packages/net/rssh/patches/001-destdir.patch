@@ -1,0 +1,22 @@
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -16,7 +16,7 @@ base=`echo @PACKAGE_STRING@|tr " " "-"`
+ 	$(CC) -c $(DEFS) $(ourdefs) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $<
+ 
+ install-exec-hook:
+-	chmod u+s $(libexecdir)/rssh_chroot_helper
++	chmod u+s $(DESTDIR)$(libexecdir)/rssh_chroot_helper
+ 
+ rpm:	dist
+ 	rpmbuild -ta --sign $(base).tar.gz
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -830,7 +830,7 @@ uninstall-man: uninstall-man1 uninstall-
+ 	$(CC) -c $(DEFS) $(ourdefs) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $<
+ 
+ install-exec-hook:
+-	chmod u+s $(libexecdir)/rssh_chroot_helper
++	chmod u+s $(DESTDIR)$(libexecdir)/rssh_chroot_helper
+ 
+ rpm:	dist
+ 	rpmbuild -ta --sign $(base).tar.gz

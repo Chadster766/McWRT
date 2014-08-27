@@ -1,0 +1,14 @@
+NAME=updatedd
+CONFIG=/etc/config/$NAME
+COMMAND=/usr/bin/$NAME
+
+[ "$ACTION" = "ifup" ] && {
+	[ -x $COMMAND ] && [ -r $CONFIG ] && {
+		. /lib/functions/network.sh
+
+		local device
+		network_get_device device wan && {
+			/etc/init.d/updatedd restart
+		}
+	} &
+}

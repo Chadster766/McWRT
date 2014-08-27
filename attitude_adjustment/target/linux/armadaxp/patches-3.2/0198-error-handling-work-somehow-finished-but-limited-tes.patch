@@ -1,0 +1,292 @@
+From 795bab486b82551b449c0176ddb93289cbc0fe11 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Tue, 10 Jul 2012 01:30:56 -0400
+Subject: [PATCH 198/609] error handling work - somehow finished but limited
+ testing and had to add it to the 2.1.1 release
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/kernel/perf_event.c          |    4 +-
+ arch/arm/kernel/perf_event_pj4b.c     |    3 +
+ arch/arm/plat-armada/Kconfig          |    8 ++
+ arch/arm/plat-armada/Makefile         |    1 +
+ arch/arm/plat-armada/error_handling.c |  203 +++++++++++++++++++++++++++++++++
+ 5 files changed, 217 insertions(+), 2 deletions(-)
+ create mode 100644 arch/arm/plat-armada/error_handling.c
+
+diff --git a/arch/arm/kernel/perf_event.c b/arch/arm/kernel/perf_event.c
+index 499dbda..2a31232 100755
+--- a/arch/arm/kernel/perf_event.c
++++ b/arch/arm/kernel/perf_event.c
+@@ -435,8 +435,8 @@ armpmu_reserve_hardware(struct arm_pmu *armpmu)
+ 		}
+ 
+ 		err = request_irq(irq, handle_irq,
+-				  IRQF_DISABLED | IRQF_NOBALANCING,
+-				  "arm-pmu", armpmu);
++				IRQF_NOBALANCING | IRQF_SHARED,
++				"armpmu", handle_irq);
+ 		if (err) {
+ 			pr_err("unable to request IRQ%d for ARM PMU counters\n",
+ 				irq);
+diff --git a/arch/arm/kernel/perf_event_pj4b.c b/arch/arm/kernel/perf_event_pj4b.c
+index 037ee29..3946c7c 100644
+--- a/arch/arm/kernel/perf_event_pj4b.c
++++ b/arch/arm/kernel/perf_event_pj4b.c
+@@ -3,6 +3,7 @@
+  */
+ 
+ #ifdef CONFIG_ARCH_ARMADA_XP 
++#include <asm/io.h>
+ 
+ #define	MRVL_PJ4B_PMU_ENABLE	0x001	/* Enable counters */
+ #define MRVL_PJ4B_PMN_RESET	0x002	/* Reset event counters */
+@@ -470,6 +471,8 @@ static irqreturn_t mrvl_pj4b_pmu_handle_irq(int irq, void *arg)
+ 	struct pmu_hw_events *cpuc;
+ 	u32 pmnc;
+ 
++	if(!(readl(INTER_REGS_BASE| 0x20260)&&0xF))
++		return IRQ_NONE;
+ 	pmnc = mrvl_pj4b_read_pmnc();	
+ 	pmnc &= ~MRVL_PJ4B_PMU_ENABLE;
+ 	mrvl_pj4b_write_pmnc(pmnc);	
+diff --git a/arch/arm/plat-armada/Kconfig b/arch/arm/plat-armada/Kconfig
+index 518c35e..8375296 100644
+--- a/arch/arm/plat-armada/Kconfig
++++ b/arch/arm/plat-armada/Kconfig
+@@ -428,6 +428,14 @@ config  MV_CPU_L2_PERF_CNTRS
+         ---help---
+         Choosing this option will enable you to use CPU L2 Performance counters
+ 
++config	ERROR_HANDLIG
++	bool "Error handling notification support"
++        default n
++        ---help---
++        Choosing this option will enable error notification
++
++
++
+ menu "Soc DMA accelerations"
+ 
+ source arch/arm/plat-armada/mv_drivers_lsp/mv_xor/Kconfig
+diff --git a/arch/arm/plat-armada/Makefile b/arch/arm/plat-armada/Makefile
+index 290a6bb..e0e58c9 100644
+--- a/arch/arm/plat-armada/Makefile
++++ b/arch/arm/plat-armada/Makefile
+@@ -13,3 +13,4 @@ obj-$(CONFIG_SHEEVA_DEEP_IDLE)		+= cpuidle.o armadaxp_suspend.o
+ obj-$(CONFIG_HOTPLUG_CPU)               += hotplug.o
+ obj-$(CONFIG_ARCH_ARMADA_XP)		+= pmu.o
+ obj-$(CONFIG_PCI_MSI)			+= msi.o
++obj-$(CONFIG_ERROR_HANDLIG)		+=error_handling.o
+diff --git a/arch/arm/plat-armada/error_handling.c b/arch/arm/plat-armada/error_handling.c
+new file mode 100644
+index 0000000..54f0d9b
+--- /dev/null
++++ b/arch/arm/plat-armada/error_handling.c
+@@ -0,0 +1,203 @@
++/*
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ */
++
++#include <linux/irq.h>
++#include <linux/notifier.h>
++#include <linux/module.h>
++#include <asm/io.h>
++#include <linux/interrupt.h>
++#include <linux/list.h>
++#include <linux/slab.h>
++#include <linux/workqueue.h>
++
++
++#define COHERENCY_FBRIC_ERROR_MASK 0x2025c
++#define COHERENCY_FBRIC_ERROR_CAUSE 0x20258
++#define COHERENCY_FBRIC_LOCAL_CAUSE 0x20260
++#define SOC_MAIN_INTR_ERROR_CAUSE 0x20a20
++
++struct error_notification{
++	bool    mbus_error;
++        u32     cause_register;
++};
++
++struct error_info {
++       struct work_struct error_handling_work;
++	bool	mbus_error;
++        u32	cause_register;
++};
++
++struct error_info axp_error_info;
++
++
++struct unit_error{
++	/*the reg_add and mask values represent
++        the register and the maks that are responsible
++	for enabling / masking the interrupt, it's also used
++	for acking the the interrupt when it's received */
++	u32 reg_addr;
++	u32 mask;
++	/*the place in the casue register
++	are represnted with the error value */
++	u32 error_val;
++	struct list_head list; /* kernel's list structure */
++};
++
++struct unit_error mbusunit_error_list;
++BLOCKING_NOTIFIER_HEAD(armadaxp_error_notifier_chain);
++EXPORT_SYMBOL(armadaxp_error_notifier_chain);
++static struct workqueue_struct * error_workqueue;
++
++
++
++static void error_notifier(struct work_struct *work)
++{
++	struct error_notification nt;
++	struct error_info *temp_error=container_of(work, struct error_info, error_handling_work);
++	nt.mbus_error = temp_error->mbus_error;
++	nt.cause_register = temp_error->cause_register;
++	 printk("function %s is reading error ID =%X and it's %s \n",__func__,temp_error->cause_register,temp_error->mbus_error==1?"MBUS error":"not MBUS error");
++	  printk("function %s is reading error ID =%X and it's %s \n",__func__,nt.cause_register,nt.mbus_error==1?"MBUS error":"not MBUS error");
++
++	blocking_notifier_call_chain(&armadaxp_error_notifier_chain,0,&nt);
++	return;
++}
++
++
++/*
++this function was added to provide a helper function
++to handle the Mbus unit error without having to
++modify the unit driver.
++each driver (or even any other module), can
++pass a reg, mask and an error ID.
++the mask will be writen to the  register add to enabled
++the dersired error in the unit level.
++
++the ID will represet the error ID in the Main interrupt
++error casue.
++in case of an ISR, the mask will be used to ack the interrupt
++in the unit level
++
++*/
++
++int IO_error_register(u32 mask,u32 reg_addr,int error_val){
++
++	struct unit_error *new_error;
++	new_error = kmalloc(sizeof(struct unit_error),GFP_KERNEL);
++	new_error->reg_addr=reg_addr;
++	new_error->mask=mask;
++	new_error->error_val=error_val;
++	INIT_LIST_HEAD(&new_error->list);
++	list_add(&new_error->list,&mbusunit_error_list.list);
++
++	/*write the mask to the reg passed by the unit
++	 assuming that this will unmaks the desired errors*/
++	writel(mask,INTER_REGS_BASE | reg_addr);
++	return 0;
++}
++EXPORT_SYMBOL(IO_error_register);
++
++
++
++static irqreturn_t armadaxp_mbusunit_error_isr(int irq, void *arg){
++
++	u32 error_cause;
++	struct unit_error* entry;
++	error_cause=readl(INTER_REGS_BASE | SOC_MAIN_INTR_ERROR_CAUSE);
++	list_for_each_entry(entry,&mbusunit_error_list.list,list){
++		/*will have to pass the type of error to
++		  differentiate MBUs and "system" errors
++		*/
++		if(error_cause == entry->error_val){
++			axp_error_info.cause_register=error_cause;
++			axp_error_info.mbus_error=1;
++			/*the actual ack*/
++			writel(~(entry->mask),INTER_REGS_BASE | entry->reg_addr);
++			queue_work(error_workqueue, (struct work_struct *)&axp_error_info );
++		}
++	}
++		return IRQ_HANDLED;
++}
++
++
++static irqreturn_t armadaxp_error_event_isr(int irq, void *arg)
++{
++	u32 error_cause;
++        error_cause=readl(INTER_REGS_BASE | COHERENCY_FBRIC_LOCAL_CAUSE);
++	if(error_cause & 0x8000000){
++		error_cause=readl(INTER_REGS_BASE | COHERENCY_FBRIC_ERROR_CAUSE);
++		axp_error_info.cause_register=error_cause;
++		axp_error_info.mbus_error=0;
++		writel(~(error_cause) ,INTER_REGS_BASE | COHERENCY_FBRIC_ERROR_CAUSE);
++		queue_work(error_workqueue, (struct work_struct *)&axp_error_info );
++		return IRQ_HANDLED;
++	}
++	return IRQ_NONE;
++}
++
++static int armadaxp_error_event(struct notifier_block *this, unsigned long event,
++         void *ptr)
++{
++
++	struct error_info *info= (struct error_info *)ptr;
++	printk("function %s is reading error ID =%X and it's %s \n",__func__,(*info).cause_register,(*info).mbus_error==1?"MBUS error":"not MBUS error");
++        return NOTIFY_DONE;
++
++}
++
++static struct notifier_block error_handling_block = {
++        .notifier_call  = armadaxp_error_event,
++};
++
++static int __init errorhandling_notification_setup(void)
++{
++	int err;
++	/*
++		nothing specal is need to enabling error handling first
++	*/
++	err = request_irq(IRQ_AURORA_MP, armadaxp_error_event_isr,IRQF_SHARED , "Armada Error Handler", armadaxp_error_event_isr );
++	if(err)
++	{
++		printk("opps: request_irq failed to requestin IRQ# %d, returning now ! \n", IRQ_AURORA_MP);
++		return err;
++	}
++	/*clear the error casue register, and unmask interrupt
++	   to trigger the coherency fabric error interrupt */
++	writel(0x0,INTER_REGS_BASE | COHERENCY_FBRIC_ERROR_CAUSE);
++	writel(0xFFFFFFFF ,INTER_REGS_BASE |COHERENCY_FBRIC_ERROR_MASK);
++
++		/* the MBUS units part of the error handling setup*/
++	INIT_LIST_HEAD(&mbusunit_error_list.list);
++	err = request_irq(IRQ_AURORA_SOC_ERROR, armadaxp_mbusunit_error_isr,IRQF_DISABLED , "Armada MBUS unit Error Handler", NULL );
++        if(err)
++        {
++		 printk("opps: request_irq failed to requestin IRQ# %d, returning now ! \n", IRQ_AURORA_SOC_ERROR);
++                return err;
++        }
++
++	  /* Setup notifier */
++        blocking_notifier_chain_register(&armadaxp_error_notifier_chain, &error_handling_block);
++	error_workqueue=create_workqueue("error handling");
++	INIT_WORK((struct work_struct *)&axp_error_info,error_notifier);
++
++
++	IO_error_register(0x7f,0x908cc,0x1);
++	armadaxp_error_event_isr(3,NULL);
++//	armadaxp_mbusunit_error_isr(4,NULL);
++	printk("ARMADA XP error handling module was loaded \n");
++        return 0;
++}
++postcore_initcall(errorhandling_notification_setup);
+-- 
+1.7.9.5
+

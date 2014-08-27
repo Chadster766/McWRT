@@ -1,0 +1,32 @@
+From 6f9a4a399709e93378099258fb7c9e833c82dd5e Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Tue, 27 Dec 2011 17:44:48 +0200
+Subject: [PATCH 052/609] FIX XOR ID in V6smp in Z1
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/include/mach/armadaxp.h |    6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/arch/arm/mach-armadaxp/include/mach/armadaxp.h b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
+index 22439b2..bafc076 100644
+--- a/arch/arm/mach-armadaxp/include/mach/armadaxp.h
++++ b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
+@@ -158,8 +158,14 @@
+ #define CRYPT_ENG_VIRT_BASE(chan)	((chan == 0) ? 0xFEB00000 : 0xFEB10000)
+ #define CRYPT_ENG_SIZE			_64K
+ 
++
++#ifdef CONFIG_ARMADA_XP_REV_Z1
++#define XOR0_PHYS_BASE                 (INTER_REGS_PHYS_BASE | 0x60800)
++#define XOR1_PHYS_BASE                 (INTER_REGS_PHYS_BASE | 0x60900)
++#else
+ #define XOR0_PHYS_BASE			(INTER_REGS_PHYS_BASE | 0x60900)
+ #define XOR1_PHYS_BASE			(INTER_REGS_PHYS_BASE | 0xF0900)
++#endif
+ #define XOR0_HIGH_PHYS_BASE		(INTER_REGS_PHYS_BASE | 0x60B00)
+ #define XOR1_HIGH_PHYS_BASE		(INTER_REGS_PHYS_BASE | 0xF0B00)
+ 
+-- 
+1.7.9.5
+

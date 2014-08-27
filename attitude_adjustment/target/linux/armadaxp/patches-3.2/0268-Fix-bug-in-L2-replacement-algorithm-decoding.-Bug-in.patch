@@ -1,0 +1,33 @@
+From b18d63c174a5f82bcd11bd5507f0e7640ddb6533 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@yk-lxl0031.il.marvell.com>
+Date: Tue, 28 Aug 2012 11:44:08 +0300
+Subject: [PATCH 268/609] Fix bug in L2 replacement algorithm decoding. Bug
+ introduced in the commit ID:
+ bc0fbc5014847a499a24547339e54134235ff150
+
+Signed-off-by: Hanna Hawa <hannah@yk-lxl0031.il.marvell.com>
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../arm/plat-armada/include/plat/cache-aurora-l2.h |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/plat-armada/include/plat/cache-aurora-l2.h b/arch/arm/plat-armada/include/plat/cache-aurora-l2.h
+index c44b117..c365a19 100644
+--- a/arch/arm/plat-armada/include/plat/cache-aurora-l2.h
++++ b/arch/arm/plat-armada/include/plat/cache-aurora-l2.h
+@@ -150,9 +150,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define L2ACR_REPLACEMENT_TYPE_WAYRR	(0 << L2ACR_REPLACEMENT_OFFSET)
+ #define L2ACR_REPLACEMENT_TYPE_LFSR	(1 << L2ACR_REPLACEMENT_OFFSET)
+ #ifdef CONFIG_ARMADA_XP_REV_Z1
+-#define L2ACR_REPLACEMENT_TYPE_SEMIPLRU	(3 << L2ACR_REPLACEMENT_OFFSET)
+-#else
+ #define L2ACR_REPLACEMENT_TYPE_SEMIPLRU	(2 << L2ACR_REPLACEMENT_OFFSET)
++#else
++#define L2ACR_REPLACEMENT_TYPE_SEMIPLRU	(3 << L2ACR_REPLACEMENT_OFFSET)
+ #endif
+ 
+ /* L2_CNTR_CTRL_REG (L2CCR) */
+-- 
+1.7.9.5
+

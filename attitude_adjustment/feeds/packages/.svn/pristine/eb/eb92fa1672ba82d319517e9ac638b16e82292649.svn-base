@@ -1,0 +1,37 @@
+--- a/include/resolv.h
++++ b/include/resolv.h
+@@ -60,7 +60,7 @@
+ #if ((__GNU_LIBRARY__ == 6) && (__GLIBC__ >= 2) && (__GLIBC_MINOR__ >= 3))
+ # define MAXRESOLVSORT		10	/* number of net to sort on */
+ 
+-struct __res_state {
++struct state {
+ 	int	retrans;	 	/* retransmition time interval */
+ 	int	retry;			/* number of times to retransmit */
+ 	u_long	options;		/* option flags - see below. */
+@@ -79,12 +79,9 @@ struct __res_state {
+ 		struct in_addr	addr;
+ 		u_int32_t	mask;
+ 	} sort_list[MAXRESOLVSORT];
++    unsigned short order[MAXSERVICES + 1];	/* search service order */
+ };
+ 
+-typedef struct __res_state *res_state;
+-
+-extern struct __res_state *__res_state(void) __attribute__ ((__const__));
+-#define _res (*__res_state())
+ 
+ #else
+ 
+@@ -101,9 +98,10 @@ struct state {
+     unsigned short order[MAXSERVICES + 1];	/* search service order */
+ };
+ 
+-extern struct state _res;
+ #endif
+ 
++extern struct state _res;
++
+ extern char *p_cdname(), *p_rr(), *p_type(), *p_class(), *p_time();
+ 
+ #if ((__GNU_LIBRARY__ == 6) && (__GLIBC__ >=2) && (__GLIBC_MINOR__ >= 2))

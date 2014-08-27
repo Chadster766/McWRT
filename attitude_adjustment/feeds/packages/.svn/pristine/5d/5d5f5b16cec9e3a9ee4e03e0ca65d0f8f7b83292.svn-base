@@ -1,0 +1,31 @@
+diff -ru NoCatAuth-nightly/libexec/iptables/initialize.fw NoCatAuth-patched/libexec/iptables/initialize.fw
+--- NoCatAuth-nightly/libexec/iptables/initialize.fw	2003-03-26 19:21:04.000000000 -0800
++++ NoCatAuth-patched/libexec/iptables/initialize.fw	2009-03-19 19:24:31.000000000 -0700
+@@ -26,18 +26,6 @@
+     #
+     echo "1" > /proc/sys/net/ipv4/ip_forward
+     echo "1" > /proc/sys/net/ipv4/conf/all/rp_filter
+-
+-    # Load alllll the kernel modules we need.
+-    #
+-    rmmod ipchains > /dev/null 2>&1 # for RH 7.1 users.
+-
+-    for module in ip_tables ipt_REDIRECT ipt_MASQUERADE ipt_MARK ipt_REJECT  \
+-	ipt_TOS ipt_LOG iptable_mangle iptable_filter iptable_nat ip_nat_ftp \
+-	ip_conntrack ip_conntrack_ftp ip_conntrack_irc \
+-	ip_nat_irc ipt_mac ipt_state ipt_mark; do
+-
+-	modprobe $module
+-    done
+ fi
+ 
+ # Flush all user-defined chains
+@@ -241,6 +229,8 @@
+ # Add any other local firewall rules below.
+ ##
+ 
++iptables -t nat -I POSTROUTING -o $ExternalDevice -j MASQUERADE
++
+ ##
+ # Uncomment the following to permit all 10/8 traffic *before* auth
+ ##

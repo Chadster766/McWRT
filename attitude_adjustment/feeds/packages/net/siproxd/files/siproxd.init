@@ -1,0 +1,235 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2008 Alina Friedrichsen
+# Copyright (C) 2011 OpenWrt.org
+
+START=50
+
+SERVICE_USE_PID=1
+
+siproxd_bin="/usr/sbin/siproxd"
+siproxd_conf_dir="/var/etc"
+siproxd_conf_prefix="$siproxd_conf_dir/siproxd-"
+siproxd_registration_dir="/var/lib/siproxd"
+siproxd_pid_dir="/var/run/siproxd"
+
+deal_with_lists () {
+	echo "$2" = "$1" >> "$siproxd_conf_prefix$cfg"
+}
+
+start_instance() {
+	local cfg="$1"
+
+	config_get if_inbound "$cfg" if_inbound
+	config_get if_outbound "$cfg" if_outbound
+	config_get host_outbound "$cfg" host_outbound
+	config_get hosts_allow_reg "$cfg" hosts_allow_reg
+	config_get hosts_allow_sip "$cfg" hosts_allow_sip
+	config_get hosts_deny_sip "$cfg" hosts_deny_sip
+	config_get sip_listen_port "$cfg" sip_listen_port 5060
+	config_get_bool daemonize "$cfg" daemonize 1
+	config_get silence_log "$cfg" silence_log 4
+	config_get user "$cfg" user nobody
+	config_get chrootjail "$cfg" chrootjail
+	config_get registration_file "$cfg" registration_file "$siproxd_registration_dir/siproxd_registrations-$cfg"
+	config_get autosave_registrations "$cfg" autosave_registrations 300
+	config_get pid_file "$cfg" pid_file "$siproxd_pid_dir/siproxd-$cfg.pid"
+	config_get_bool rtp_proxy_enable "$cfg" rtp_proxy_enable 1
+	config_get rtp_port_low "$cfg" rtp_port_low 7070
+	config_get rtp_port_high "$cfg" rtp_port_high 7089
+	config_get rtp_timeout "$cfg" rtp_timeout 300
+	config_get rtp_dscp "$cfg" rtp_dscp 46
+	config_get sip_dscp "$cfg" sip_dscp 0
+	config_get rtp_input_dejitter "$cfg" rtp_input_dejitter 0
+	config_get rtp_output_dejitter "$cfg" rtp_output_dejitter 0
+	config_get tcp_timeout "$cfg" tcp_timeout 600
+	config_get tcp_connect_timeout "$cfg" tcp_connect_timeout 500
+	config_get tcp_keepalive "$cfg" tcp_keepalive 20
+	config_get default_expires "$cfg" default_expires 600
+	config_get proxy_auth_realm "$cfg" proxy_auth_realm
+	config_get proxy_auth_passwd "$cfg" proxy_auth_passwd
+	config_get proxy_auth_pwfile "$cfg" proxy_auth_pwfile
+	config_get debug_level "$cfg" debug_level 0x00000000
+	config_get debug_port "$cfg" debug_port 0
+	config_get mask_host "$cfg" mask_host
+	config_get masked_host "$cfg" masked_host
+	config_get ua_string "$cfg" ua_string Siproxd-UA
+	config_get use_rport "$cfg" use_rport 0
+	config_get outbound_proxy_host "$cfg" outbound_proxy_host
+	config_get outbound_proxy_port "$cfg" outbound_proxy_port
+	config_get outbound_domain_name "$cfg" outbound_domain_name
+	config_get outbound_domain_host "$cfg" outbound_domain_host
+	config_get outbound_domain_port "$cfg" outbound_domain_port
+
+	if [ -f "$siproxd_conf_prefix$cfg" ]; then
+		rm "$siproxd_conf_prefix$cfg"
+	fi
+	if [ -n "$if_inbound" ]; then
+		echo if_inbound = "$if_inbound" >> "$siproxd_conf_prefix$cfg"
+	fi
+	if [ -n "$if_outbound" ]; then
+		echo if_outbound = "$if_outbound" >> "$siproxd_conf_prefix$cfg"
+	fi
+	if [ -n "$host_outbound" ]; then
+		echo host_outbound = "$host_outbound" >> "$siproxd_conf_prefix$cfg"
+	fi
+	if [ -n "$hosts_allow_reg" ]; then
+		echo hosts_allow_reg = "$hosts_allow_reg" >> "$siproxd_conf_prefix$cfg"
+	fi
+	if [ -n "$hosts_allow_sip" ]; then
+		echo hosts_allow_sip = "$hosts_allow_sip" >> "$siproxd_conf_prefix$cfg"
+	fi
+	if [ -n "$hosts_deny_sip" ]; then
+		echo hosts_deny_sip = "$hosts_deny_sip" >> "$siproxd_conf_prefix$cfg"
+	fi
+	echo sip_listen_port = "$sip_listen_port" >> "$siproxd_conf_prefix$cfg"
+	echo daemonize = "$daemonize" >> "$siproxd_conf_prefix$cfg"
+	echo silence_log = "$silence_log" >> "$siproxd_conf_prefix$cfg"
+	echo user = "$user" >> "$siproxd_conf_prefix$cfg"
+	if [ -n "$chrootjail" ]; then
+		if [ ! -d "$chrootjail" ]; then
+			mkdir -p "$chrootjail"
+			chmod 0755 "$chrootjail"
+		fi
+		echo chrootjail = "$chrootjail" >> "$siproxd_conf_prefix$cfg"
+	fi
+	echo registration_file = "$registration_file" >> "$siproxd_conf_prefix$cfg"
+	echo autosave_registrations = "$autosave_registrations" >> "$siproxd_conf_prefix$cfg"
+
+	echo pid_file = "$pid_file" >> "$siproxd_conf_prefix$cfg"
+	echo rtp_proxy_enable = "$rtp_proxy_enable" >> "$siproxd_conf_prefix$cfg"
+	echo rtp_port_low = "$rtp_port_low" >> "$siproxd_conf_prefix$cfg"
+	echo rtp_port_high = "$rtp_port_high" >> "$siproxd_conf_prefix$cfg"
+	echo rtp_timeout = "$rtp_timeout" >> "$siproxd_conf_prefix$cfg"
+	echo rtp_dscp = "$rtp_dscp" >> "$siproxd_conf_prefix$cfg"
+	echo sip_dscp = "$sip_dscp" >> "$siproxd_conf_prefix$cfg"
+	echo rtp_input_dejitter = "$rtp_input_dejitter" >> "$siproxd_conf_prefix$cfg"
+	echo rtp_output_dejitter = "$rtp_output_dejitter" >> "$siproxd_conf_prefix$cfg"
+	echo tcp_timeout = "$tcp_timeout" >> "$siproxd_conf_prefix$cfg"
+	echo tcp_connect_timeout = "$tcp_connect_timeout" >> "$siproxd_conf_prefix$cfg"
+	echo tcp_keepalive = "$tcp_keepalive" >> "$siproxd_conf_prefix$cfg"
+	echo default_expires = "$default_expires" >> "$siproxd_conf_prefix$cfg"
+	if [ -n "$proxy_auth_realm" ]; then
+		echo proxy_auth_realm = "$proxy_auth_realm" >> "$siproxd_conf_prefix$cfg"
+	fi
+	if [ -n "$proxy_auth_passwd" ]; then
+		echo proxy_auth_passwd = "$proxy_auth_passwd" >> "$siproxd_conf_prefix$cfg"
+	fi
+	if [ -n "$proxy_auth_pwfile" ]; then
+		echo proxy_auth_pwfile = "$proxy_auth_pwfile" >> "$siproxd_conf_prefix$cfg"
+	fi
+	echo debug_level = "$debug_level" >> "$siproxd_conf_prefix$cfg"
+	echo debug_port = "$debug_port" >> "$siproxd_conf_prefix$cfg"
+	if [ -n "$mask_host" ]; then
+		echo mask_host = "$mask_host" >> "$siproxd_conf_prefix$cfg"
+	fi
+	if [ -n "$masked_host" ]; then
+		echo masked_host = "$masked_host" >> "$siproxd_conf_prefix$cfg"
+	fi
+	echo ua_string = "$ua_string" >> "$siproxd_conf_prefix$cfg"
+	echo use_rport = "$use_rport" >> "$siproxd_conf_prefix$cfg"
+	if [ -n "$outbound_proxy_host" ]; then
+		echo outbound_proxy_host = "$outbound_proxy_host" >> "$siproxd_conf_prefix$cfg"
+	fi
+	if [ -n "$outbound_proxy_port" ]; then
+		echo outbound_proxy_port = "$outbound_proxy_port" >> "$siproxd_conf_prefix$cfg"
+	fi
+	if [ -n "$outbound_domain_name" ]; then
+		echo outbound_domain_name = "$outbound_domain_name" >> "$siproxd_conf_prefix$cfg"
+	fi
+	if [ -n "$outbound_domain_host" ]; then
+		echo outbound_domain_host = "$outbound_domain_host" >> "$siproxd_conf_prefix$cfg"
+	fi
+	if [ -n "$outbound_domain_port" ]; then
+		echo outbound_domain_port = "$outbound_domain_port" >> "$siproxd_conf_prefix$cfg"
+	fi
+
+	# handle plugins
+	config_get plugindir "$cfg" plugindir "/usr/lib/siproxd/"
+	echo plugindir = "$plugindir" >> "$siproxd_conf_prefix$cfg"
+
+	config_list_foreach "$cfg" 'load_plugin' deal_with_lists "load_plugin"
+
+	# plugin_demo.so
+	config_get plugin_demo_string "$cfg" plugin_demo_string
+	if [ -n "$plugin_demo_string" ]; then
+		echo plugin_demo_string = "$plugin_demo_string" >> "$siproxd_conf_prefix$cfg"
+	fi
+
+	# plugin_shortdial.so
+	config_get plugin_shortdial_akey "$cfg" plugin_shortdial_akey
+	if [ -n "$plugin_shortdial_akey" ]; then
+		echo plugin_shortdial_akey = "$plugin_shortdial_akey" >> "$siproxd_conf_prefix$cfg"
+	fi
+	config_list_foreach "$cfg" 'plugin_shortdial_entry' deal_with_lists "plugin_shortdial_entry"
+
+	# plugin_defaulttarget.so
+	config_get_bool plugin_defaulttarget_log "$cfg" plugin_defaulttarget_log
+	if [ -n "$plugin_defaulttarget_log" ]; then
+		echo plugin_defaulttarget_log = "$plugin_defaulttarget_log" >> "$siproxd_conf_prefix$cfg"
+	fi
+	config_get plugin_defaulttarget_target "$cfg" plugin_defaulttarget_target
+	if [ -n "$plugin_defaulttarget_target" ]; then
+		echo plugin_defaulttarget_target = "$plugin_defaulttarget_target" >> "$siproxd_conf_prefix$cfg"
+	fi
+
+	# plugin_fix_bogus_via.so
+	config_get plugin_fix_bogus_via_networks "$cfg" plugin_fix_bogus_via_networks
+	if [ -n "$plugin_fix_bogus_via_networks" ]; then
+		echo plugin_fix_bogus_via_networks = "$plugin_fix_bogus_via_networks" >> "$siproxd_conf_prefix$cfg"
+	fi
+
+	# plugin_stun.so
+	config_get plugin_stun_server "$cfg" plugin_stun_server
+	if [ -n "$plugin_stun_server" ]; then
+		echo plugin_stun_server = "$plugin_stun_server" >> "$siproxd_conf_prefix$cfg"
+	fi
+	config_get plugin_stun_port "$cfg" plugin_stun_port
+	if [ -n "$plugin_stun_port" ]; then
+		echo plugin_stun_port = "$plugin_stun_port" >> "$siproxd_conf_prefix$cfg"
+	fi
+	config_get plugin_stun_period "$cfg" plugin_stun_period
+	if [ -n "$plugin_stun_period" ]; then
+		echo plugin_stun_period = "$plugin_stun_period" >> "$siproxd_conf_prefix$cfg"
+	fi
+
+	# plugin_prefix.so
+	config_get plugin_prefix_akey "$cfg" plugin_prefix_akey
+	if [ -n "$plugin_prefix_akey" ]; then
+		echo plugin_prefix_akey = "$plugin_prefix_akey" >> "$siproxd_conf_prefix$cfg"
+	fi
+
+	# plugin_regex.so
+	config_list_foreach "$cfg" 'plugin_regex_desc' deal_with_lists "plugin_regex_desc"
+	config_list_foreach "$cfg" 'plugin_regex_pattern' deal_with_lists "plugin_regex_pattern"
+	config_list_foreach "$cfg" 'plugin_regex_replace' deal_with_lists "plugin_regex_replace"
+
+	SERVICE_PID_FILE="$pid_file" \
+	service_start $siproxd_bin --config "$siproxd_conf_prefix$cfg"
+}
+
+stop_instance() {
+	local cfg="$1"
+
+	config_get pid_file "$cfg" pid_file "$siproxd_pid_dir/siproxd-$cfg.pid"
+
+	SERVICE_PID_FILE="$pid_file" \
+	service_stop $siproxd_bin
+}
+
+start() {
+	mkdir -m 0755 -p "$siproxd_conf_dir"
+	mkdir -m 0755 -p "$siproxd_registration_dir"
+	[ -d "$siproxd_pid_dir" ] || {
+		mkdir -m 0755 -p "$siproxd_pid_dir"
+		chmod 0750 "$siproxd_pid_dir"
+		chown nobody:nogroup "$siproxd_pid_dir"
+	}
+
+	config_load 'siproxd'
+	config_foreach start_instance 'siproxd'
+}
+
+stop() {
+	config_load 'siproxd'
+	config_foreach stop_instance 'siproxd'
+}

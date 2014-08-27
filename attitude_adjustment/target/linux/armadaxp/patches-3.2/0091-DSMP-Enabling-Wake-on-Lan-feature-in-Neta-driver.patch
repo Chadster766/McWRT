@@ -1,0 +1,66 @@
+From f7142982a51fbd9282edf1fbd2cd45595a74bb43 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Wed, 25 Jan 2012 15:28:49 +0200
+Subject: [PATCH 091/609] DSMP: Enabling Wake on Lan feature in Neta driver
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/pm.c |   14 ++++++++------
+ 1 file changed, 8 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/pm.c b/arch/arm/mach-armadaxp/pm.c
+index 63b98e3..86faefd 100644
+--- a/arch/arm/mach-armadaxp/pm.c
++++ b/arch/arm/mach-armadaxp/pm.c
+@@ -42,7 +42,8 @@ static int armadaxp_pm_valid(suspend_state_t state)
+  */
+ static int armadaxp_pm_enter(suspend_state_t state)
+ {
+-	unsigned int reg;
++
++	MV_U32 reg;
+ 
+ 	switch (state)	{
+ 	case PM_SUSPEND_STANDBY:
+@@ -58,7 +59,8 @@ static int armadaxp_pm_enter(suspend_state_t state)
+ 		reg &= ~0x1;
+ 		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_IN_DRBL_LOW), reg);
+ 
+-#if 0
++#ifdef CONFIG_MV_ETH_PNC_WOL
++
+ 		printk(KERN_INFO "Entering Wol Mode (Neta IRQs 8,10,12,14 are enabled now)...\n");
+ 
+ 		/* Reenable the NETA IRQ in order to wake from it */
+@@ -77,7 +79,8 @@ static int armadaxp_pm_enter(suspend_state_t state)
+ 		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE3_FIC));
+ 		reg |= 0x1;
+ 		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE3_FIC), reg);
+-#endif
++#endif /* CONFIG_MV_ETH_PNC_WOL */
++
+ 		armadaxp_deepidle(SNOOZE);
+ 
+ 		/* Enable IPI IRQs - return to original state */
+@@ -89,8 +92,7 @@ static int armadaxp_pm_enter(suspend_state_t state)
+ 		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0));
+ 		reg &= ~0x1;
+ 		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0), reg);
+-
+-#if 0
++#ifdef CONFIG_MV_ETH_PNC_WOL
+ 		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE0_FIC));
+ 		reg &= ~0x1;
+ 		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE0_FIC), reg);
+@@ -108,7 +110,7 @@ static int armadaxp_pm_enter(suspend_state_t state)
+ 		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE3_FIC), reg);
+ 
+ 		printk(KERN_INFO "Exiting Wol Mode (Neta IRQs 8,10,12,14 are disabled now)...\n");
+-#endif
++#endif /* CONFIG_MV_ETH_PNC_WOL */
+ 		break;
+ 	default:
+ 		return -EINVAL;
+-- 
+1.7.9.5
+

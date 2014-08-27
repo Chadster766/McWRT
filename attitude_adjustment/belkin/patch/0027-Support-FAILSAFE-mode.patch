@@ -1,0 +1,176 @@
+From 4ee1aa2f213d738b4bf8b2b2b3e43cf50f5f25a1 Mon Sep 17 00:00:00 2001
+From: Matthew Fatheree <Matthew.Fatheree@belkin.com>
+Date: Thu, 15 May 2014 19:57:00 +0700
+Subject: [PATCH 27/31] Support FAILSAFE mode
+
+Press Reset button while bootup to enter FAILSAFE mode
+
+Signed-off-by: Matthew Fatheree <Matthew.Fatheree@belkin.com>
+---
+ .../base-files/lib/preinit/11_handler_reset_button |   10 +++
+ .../base-files/lib/preinit/30_failsafe_wait        |   85 ++++++++++++++++++++
+ .../base-files/lib/preinit/99_10_failsafe_login    |   19 +++++
+ .../linux/armadaxp/base-files/usr/sbin/check_reset |   16 ++++
+ 4 files changed, 130 insertions(+)
+ create mode 100644 target/linux/armadaxp/base-files/lib/preinit/11_handler_reset_button
+ create mode 100644 target/linux/armadaxp/base-files/lib/preinit/30_failsafe_wait
+ create mode 100644 target/linux/armadaxp/base-files/lib/preinit/99_10_failsafe_login
+ create mode 100755 target/linux/armadaxp/base-files/usr/sbin/check_reset
+
+diff --git a/target/linux/armadaxp/base-files/lib/preinit/11_handler_reset_button b/target/linux/armadaxp/base-files/lib/preinit/11_handler_reset_button
+new file mode 100644
+index 0000000..34c6d31
+--- /dev/null
++++ b/target/linux/armadaxp/base-files/lib/preinit/11_handler_reset_button
+@@ -0,0 +1,10 @@
++#!/bin/sh 
++# Copyright (C) 2006 OpenWrt.org
++# Copyright (C) 2010 Vertical Communications
++
++do_handler_reset() {
++	/usr/sbin/check_reset
++	source /tmp/enter_failsafe
++}
++
++boot_hook_add preinit_essential do_handler_reset
+diff --git a/target/linux/armadaxp/base-files/lib/preinit/30_failsafe_wait b/target/linux/armadaxp/base-files/lib/preinit/30_failsafe_wait
+new file mode 100644
+index 0000000..5ff1436
+--- /dev/null
++++ b/target/linux/armadaxp/base-files/lib/preinit/30_failsafe_wait
+@@ -0,0 +1,85 @@
++#!/bin/sh
++# Copyright (C) 2006-2010 OpenWrt.org
++# Copyright (C) 2010 Vertical Communications
++
++fs_wait_for_key () {
++    local timeout=$3
++    local timer
++    local do_failsafe
++    local keypress_true="$(mktemp)"
++    local keypress_wait="$(mktemp)"
++    local keypress_sec="$(mktemp)"
++    if [ -z "$keypress_wait" ]; then
++	keypress_wait=/tmp/.keypress_wait
++	touch $keypress_wait
++    fi
++    if [ -z "$keypress_true" ]; then
++	keypress_true=/tmp/.keypress_true
++	touch $keypress_true
++    fi
++    if [ -z "$keypress_sec" ]; then
++	keypress_sec=/tmp/.keypress_sec
++	touch $keypress_sec
++    fi
++
++    trap "echo 'true' >$keypress_true; lock -u $keypress_wait ; rm -f $keypress_wait" INT
++    trap "echo 'true' >$keypress_true; lock -u $keypress_wait ; rm -f $keypress_wait" USR1
++
++    [ -n "$timeout" ] || timeout=1
++    [ $timeout -ge 1 ] || timeout=1
++    timer=$timeout
++    lock $keypress_wait
++    {
++	while [ $timer -gt 0 ]; do
++            echo "$timer" >$keypress_sec
++	    timer=$(($timer - 1))
++	    sleep 1
++	done
++	lock -u $keypress_wait
++	rm -f $keypress_wait
++    } &
++
++    echo "Press the [$1] key and hit [enter] $2"
++    # if we're on the console we wait for input
++    { 
++	while [ -r $keypress_wait ]; do
++	    timer="$(cat $keypress_sec)"
++
++	    [ -n "$timer" ] || timer=1
++	    timer="${timer%%\ *}"
++	    [ $timer -ge 1 ] || timer=1
++	    do_failsafe=""
++	    {
++		read -t "$timer" do_failsafe
++		if [ "$do_failsafe" = "$1" ]; then
++		    echo "true" >$keypress_true
++		    lock -u $keypress_wait
++		    rm -f $keypress_wait
++ 		fi
++	    }
++	done
++    }
++    lock -w $keypress_wait
++
++    trap - INT
++    trap - USR1
++
++    keypressed=1
++    [ "$(cat $keypress_true)" = "true" ] && keypressed=0
++    rm -f $keypress_true
++    rm -f $keypress_wait
++    rm -f $keypress_sec
++    
++    return $keypressed
++}
++
++failsafe_wait() {
++    #FAILSAFE=
++    pi_failsafe_net_message=true
++    preinit_net_echo "Please press button now to enter failsafe"
++    pi_failsafe_net_message=false
++    fs_wait_for_key f 'to enter failsafe mode' $fs_failsafe_wait_timeout && FAILSAFE=true && export FAILSAFE
++}
++
++boot_hook_add preinit_main failsafe_wait
++
+diff --git a/target/linux/armadaxp/base-files/lib/preinit/99_10_failsafe_login b/target/linux/armadaxp/base-files/lib/preinit/99_10_failsafe_login
+new file mode 100644
+index 0000000..9b93bdd
+--- /dev/null
++++ b/target/linux/armadaxp/base-files/lib/preinit/99_10_failsafe_login
+@@ -0,0 +1,19 @@
++#!/bin/sh
++# Copyright (C) 2006 OpenWrt.org
++# Copyright (C) 2010 Vertical Communications
++
++failsafe_netlogin () {
++    telnetd -l /bin/login.sh <> /dev/null 2>&1    
++}
++
++failsafe_shell() {
++    lock /tmp/.failsafe
++    ash --login
++    echo "Please reboot system when done with failsafe network logins"
++    /usr/sbin/ledctrl power 255 500 500
++}
++
++
++boot_hook_add failsafe failsafe_netlogin
++boot_hook_add failsafe failsafe_shell
++
+diff --git a/target/linux/armadaxp/base-files/usr/sbin/check_reset b/target/linux/armadaxp/base-files/usr/sbin/check_reset
+new file mode 100755
+index 0000000..5c9d431
+--- /dev/null
++++ b/target/linux/armadaxp/base-files/usr/sbin/check_reset
+@@ -0,0 +1,16 @@
++#!/bin/sh
++
++GPIO_RESET=33
++
++echo $GPIO_RESET > /sys/class/gpio/export
++
++value=`cat /sys/class/gpio/gpio33/value`
++
++if [ $value -le 0 ]
++then
++	echo 40 > /sys/class/gpio/export
++    	/usr/sbin/ledctrl power 255 250 250
++	echo "export FAILSAFE=true" > /tmp/enter_failsafe
++else
++	echo "export FAILSAFE=" > /tmp/enter_failsafe
++fi
+-- 
+1.7.9.5
+

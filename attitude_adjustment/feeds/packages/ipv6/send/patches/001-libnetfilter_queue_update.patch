@@ -1,0 +1,388 @@
+# Update sendd to:
+#
+# - use $DESTDIR for prefix (Debian interest)
+# - use libnetfilter_queue instead of deprecated libipq
+#
+# Under GPLv2 - Copyright (C) 2008 - EADS - Arnaud Ebalard <arno@natisbad.org>
+--- a/Makefile.config
++++ b/Makefile.config
+@@ -19,7 +19,7 @@ OS=linux
+ #CC=gcc-4.0
+ 
+ # Where to install
+-prefix=/usr
++prefix=$(DESTDIR)/usr
+ 
+ # Set to "y" to build MT versions of sendd and cgatool
+ USE_THREADS=n
+--- a/README
++++ b/README
+@@ -20,7 +20,7 @@ Linux:
+   o CONFIG_NETFILTER, CONFIG_IPV6, CONFIG_IP6_NF_QUEUE, CONFIG_IP6_NF_IPTABLES,
+     CONFIG_IP6_NF_FILTER enabled in your kernel config.
+   o netfilter ip6tables command
+-  o netfilter libipq development library and headers
++  o netfilter libnetfilter_queue development library and headers
+ 
+ FreeBSD:
+   o NETGRAPH, NETGRAPH_BPF, NETGRAPH_ETHER, NETGRAPH_SOCKET enabled in
+--- a/cgatool/Makefile
++++ b/cgatool/Makefile
+@@ -25,7 +25,7 @@ endif
+ 
+ ifeq ($(USE_CONSOLE),y)
+ ifeq ($(USE_READLINE),y)
+-LDLIBS += -lreadline -lncurses
++LDLIBS += -lreadline
+ endif
+ endif
+ 
+--- a/sendd/Makefile
++++ b/sendd/Makefile
+@@ -37,7 +37,7 @@ endif
+ 
+ ifeq ($(USE_CONSOLE),y)
+ ifeq ($(USE_READLINE),y)
+-LDLIBS += -lreadline -lncurses
++LDLIBS += -lreadline
+ endif
+ endif
+ 
+--- a/sendd/os-linux/Makefile
++++ b/sendd/os-linux/Makefile
+@@ -1,23 +1,5 @@
+ 
+ OBJS += os/addr.o os/ipq.o os/rand.o os/snd_linux.o
+-OSLIBS= -ldl -lipq
++OSLIBS= -lnetfilter_queue
+ 
+-OSEXTRA= os/sendd os/snd_upd_fw
+-
+-ETCINIT= /etc/init.d
+-EXTRAINSTALL= $(ETCINIT)/sendd $(ETCINIT)/snd_upd_fw $(ETCINIT)/snd_fw_functions.sh
+-EXTRAUNINSTALL=$(EXTRAINSTALL)
+-EXTRACLEAN= os/sendd os/snd_upd_fw os/snd_fw_functions.sh
+-
+-$(ETCINIT)/%: os/%
+-	install $< $@
+-
+-os/%: os/%.in
+-	sed "s/@etcinit@/\/etc\/init.d/g" $< > $@
+-
+-os/%: os/%.in2
+-	@./os/find_ip6tables.sh
+-
+-# Sometimes libipq.h is installed in include/libipq.h, other times it is
+-# installed in include/libipq/libipq.h. This rule helps cpp to find it.
+-os/ipq.o: CPPFLAGS += -I/usr/include/libipq -I/usr/local/include/libipq
++os/ipq.o: CPPFLAGS += -I/usr/include/libnetfilter_queue
+--- a/sendd/os-linux/ipq.c
++++ b/sendd/os-linux/ipq.c
+@@ -32,8 +32,9 @@
+ 
+ #include <sys/select.h>
+ #include <netinet/in.h>
++#include <linux/types.h>
+ #include <linux/netfilter.h>
+-#include <libipq.h>
++#include <libnetfilter_queue.h>
+ 
+ #include "config.h"
+ #include <applog.h>
+@@ -42,122 +43,170 @@
+ #include "../sendd_local.h"
+ #include "snd_linux.h"
+ 
+-static struct ipq_handle *qh;
+-
+ extern unsigned if_nametoindex(const char *);
+ 
+-static inline void
+-process_pkt(ipq_packet_msg_t *pkt, struct sbuff *b)
+-{
++struct nfq_handle *h = NULL;
++struct nfq_q_handle *qh = NULL;
++
++/* This is the default queue number used in our init script */
++#define SND_DEFAULT_NFQUEUE_NUMBER 13
++
++/* The sbuff is must be made available to the callback function that will
++   handle the packet */
++struct callback_data {
++	struct sbuff *b;
++};
++
++struct callback_data process_pkt_data;
++
++/* nfqueue callback */
++static int process_pkt(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,
++		       struct nfq_data *nfa, void *data)
++{
++	struct callback_data * d = (struct callback_data *)data;
++	struct nfqnl_msg_packet_hdr *ph;
++	struct sbuff *b = d->b;
++	char *pkt_data;
+ 	int in, ifidx;
+ 
+-	b->data = pkt->payload;
+-	b->len = pkt->data_len;
++	b->len = nfq_get_payload(nfa, &pkt_data);
++	if (b->len == -1) {
++		applog(LOG_ERR, "%s: nfq_get_payload() failed.", __FUNCTION__);
++		return 0;
++	}
++	b->data = (unsigned char *)pkt_data;
+ 
+-	if (*(pkt->indev_name)) {
++	if ((ifidx = nfq_get_indev(nfa)) && ifidx != 0)
+ 		in = 1;
+-		ifidx = if_nametoindex(pkt->indev_name);
+-	} else if (*(pkt->outdev_name)) {
++	else if ((ifidx = nfq_get_outdev(nfa)) && ifidx != 0)
+ 		in = 0;
+-		ifidx = if_nametoindex(pkt->outdev_name);
+-	} else {
++	else {
+ 		applog(LOG_ERR, "%s: pkt has neither indev nor outdev",
+ 		       __FUNCTION__);
+ 		snd_put_buf(b);
+-		return;
++		return 0;
+ 	}
+ 
+-	snd_recv_pkt(b, ifidx, in, pkt);
+-}
++	/* Grab packet header to get its id later */
++	ph = nfq_get_msg_packet_hdr(nfa); /* FIXME Check return value */
+ 
+-static void
+-ipq_recv_pkt(void)
+-{
+-	int r;
+-	struct sbuff *b = snd_get_buf();
++	snd_recv_pkt(b, ifidx, in, (void *)ph);
+ 
+-	if (b == NULL) {
+-		return;
+-	}
+-	if ((r = ipq_read(qh, b->head, b->rem, -1)) < 0) {
+-		applog(LOG_ERR, "%s: ipq_read(): %s", __FUNCTION__,
+-		       ipq_errstr());
+-		goto fail;
+-	} else if (r == 0) {
+-		/* timeout */
+-		goto fail;
+-	}
+-
+-	switch ((r = ipq_message_type(b->head))) {
+-	case NLMSG_ERROR:
+-		applog(LOG_ERR, "%s: nlmsg error: %s", __FUNCTION__,
+-		       strerror(ipq_get_msgerr(b->head)));
+-		goto fail;
+-	case IPQM_PACKET:
+-		process_pkt(ipq_get_packet(b->head), b);
+-		return;
+-	default:
+-		break;
+-	}
+-
+-fail:
+-	snd_put_buf(b);
++	return 1;
+ }
+ 
+ void
+-linux_ipq_add_fds(fd_set *fds, int *maxfd)
++linux_nfq_add_fds(fd_set *fds, int *maxfd)
+ {
+-	FD_SET(qh->fd, fds);
+-	*maxfd = sendd_max(*maxfd, qh->fd);
++	int fd = nfnl_fd(nfq_nfnlh(h));
++
++	FD_SET(fd, fds);
++	*maxfd = sendd_max(*maxfd, fd);
+ }
+ 
+ void
+-linux_ipq_dispatch_fds(fd_set *fds)
++linux_nfq_dispatch_fds(fd_set *fds)
+ {
+-	if (FD_ISSET(qh->fd, fds)) {
+-		ipq_recv_pkt();
++	int fd = nfnl_fd(nfq_nfnlh(h));
++	int r;
++
++	if (FD_ISSET(fd, fds)) {
++		struct sbuff *b = snd_get_buf();
++
++		if (b == NULL) {
++			return;
++		}
++
++		if ((r = recv(fd, b->head, b->rem, 0)) && r <= 0) {
++			if (r < 0) /* not a timeout */
++				applog(LOG_ERR, "%s: recv failed.",
++				       __FUNCTION__);
++			snd_put_buf(b);
++			return;
++		}
++
++		process_pkt_data.b = b; /* make sbuff available to
++					   callback function */
++		nfq_handle_packet(h, (char *)b->head, r);
+ 	}
+ }
+ 
+ void
+ os_specific_deliver_pkt(void *p, struct sbuff *b, int drop, int changed)
+ {
+-	ipq_packet_msg_t *pkt = p;
+-	void *newpkt = NULL;
++	struct nfqnl_msg_packet_hdr *ph = (struct nfqnl_msg_packet_hdr *)p;
++	unsigned char *newpkt = NULL;
+ 	int plen = 0;
++	uint32_t id = 0;
++
++	if (ph)
++		id = ntohl(ph->packet_id);
+ 
+ 	if (changed && !drop) {
+-		newpkt = sbuff_data(b);
++		newpkt = (unsigned char *)b->data;
+ 		plen = b->len;
+ 	}
+ 
+-	ipq_set_verdict(qh, pkt->packet_id, drop ? NF_DROP : NF_ACCEPT,
+-			plen, newpkt);
++	nfq_set_verdict(qh, id, drop ? NF_DROP : NF_ACCEPT, plen, newpkt);
+ 	snd_put_buf(b);
+ }
+ 
+ int
+-linux_ipq_init(void)
++linux_nfq_init(void)
+ {
+-	if ((qh = ipq_create_handle(0, PF_INET6)) == NULL) {
+-		applog(LOG_ERR, "%s: ipq_create_handle() failed: %s",
+-		       __FUNCTION__, ipq_errstr());
+-		return (-1);
+-	}
+-	if (ipq_set_mode(qh, IPQ_COPY_PACKET, SND_MAX_PKT) < 0) {
+-		applog(LOG_ERR, "%s: ipq_set_mode() failed: %s",
+-		       __FUNCTION__, ipq_errstr());
+-		if (errno == ECONNREFUSED) {
+-			applog(LOG_ERR, "%s: perhaps you need to modprobe "
+-			       "ip6_queue?", __FUNCTION__);
+-		}
+-		return (-1);
++	struct nfnl_handle *nh;
++	u_int16_t nfqueue_num = SND_DEFAULT_NFQUEUE_NUMBER;
++
++	/* Get netfilter queue connection handle */
++	h = nfq_open();
++	if (!h) {
++		applog(LOG_ERR, "%s: nfq_open() failed.", __FUNCTION__);
++		return -1;
++	}
++
++	/* Unbinding existing nfqueue handlers for AF_INET6. We ignore the
++	   return value: http://www.spinics.net/lists/netfilter/msg42063.html.
++	   Note that this call is required, otherwise, nfq_bind_pf() fails. */
++	nfq_unbind_pf(h, PF_INET6);
++
++	if (nfq_bind_pf(h, PF_INET6) < 0) {
++		applog(LOG_ERR, "%s: nfq_bind_pf failed.\n", __FUNCTION__);
++		return -1;
++	}
++
++	/* Binding this socket to queue number nfqueue_num and installing
++	   our packet handler */
++	qh = nfq_create_queue(h, nfqueue_num,
++			      (nfq_callback *) &process_pkt,
++			      (void *)&process_pkt_data);
++	if (!qh) {
++		applog(LOG_ERR, "%s: nfq_create_queue() failed.\n",
++		       __FUNCTION__);
++		return -1;
++	}
++
++	/* Asking for entire copy of queued packets */
++	if (nfq_set_mode(qh, NFQNL_COPY_PACKET, 0xffff) < 0) { /* XXX was SND_MAX_PKT */
++		fprintf(stderr, "nfq_set_mode() failed.\n");
++		return -1;
+ 	}
+-	return (0);
++
++	/* XXX - Check if we have an interest in setting queue length */
++
++	/* The netlink handle associated with our queue connection handle */
++	nh = nfq_nfnlh(h);
++
++	return 0;
+ }
+ 
+ void
+-linux_ipq_fini(void)
++linux_nfq_fini(void)
+ {
+-	ipq_destroy_handle(qh);
++	/* Remove the binding for our queue handler*/
++	if (qh != NULL)
++		nfq_destroy_queue(qh);
++
++	/* Close connection associated with our connection handler */
++	if (h != NULL)
++		nfq_close(h);
+ }
+--- a/sendd/os-linux/snd_linux.c
++++ b/sendd/os-linux/snd_linux.c
+@@ -40,13 +40,13 @@
+ void
+ os_specific_add_fds(fd_set *fds, int *maxfd)
+ {
+-	linux_ipq_add_fds(fds, maxfd);
++	linux_nfq_add_fds(fds, maxfd);
+ }
+ 
+ void
+ os_specific_dispatch_fds(fd_set *fds)
+ {
+-	linux_ipq_dispatch_fds(fds);
++	linux_nfq_dispatch_fds(fds);
+ }
+ 
+ int
+@@ -59,7 +59,7 @@ int
+ os_specific_init(void)
+ {
+ 	if (linux_rand_init() < 0 ||
+-	    linux_ipq_init() < 0) {
++	    linux_nfq_init() < 0) {
+ 		return (-1);
+ 	}
+ 	return (0);
+@@ -68,6 +68,6 @@ os_specific_init(void)
+ void
+ os_specific_fini(void)
+ {
+-	linux_ipq_fini();
++	linux_nfq_fini();
+ 	linux_rand_fini();
+ }
+--- a/sendd/os-linux/snd_linux.h
++++ b/sendd/os-linux/snd_linux.h
+@@ -33,10 +33,10 @@
+ #ifndef	_SEND_LINUX_H
+ #define	_SEND_LINUX_H
+ 
+-extern void linux_ipq_add_fds(fd_set *, int *);
+-extern void linux_ipq_dispatch_fds(fd_set *);
+-extern int linux_ipq_init(void);
+-extern void linux_ipq_fini(void);
++extern void linux_nfq_add_fds(fd_set *, int *);
++extern void linux_nfq_dispatch_fds(fd_set *);
++extern int linux_nfq_init(void);
++extern void linux_nfq_fini(void);
+ 
+ extern void linux_rand_fini(void);
+ extern int linux_rand_init(void);

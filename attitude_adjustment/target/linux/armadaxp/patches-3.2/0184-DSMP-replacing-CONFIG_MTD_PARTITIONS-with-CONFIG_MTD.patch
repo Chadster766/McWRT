@@ -1,0 +1,100 @@
+From 9f5405ed75ed0b689d15ee7e7ca729813350f9c2 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Tue, 15 May 2012 10:27:09 +0300
+Subject: [PATCH 184/609] DSMP: replacing CONFIG_MTD_PARTITIONS with
+ CONFIG_MTD_CMDLINE_PARTS ( due to kernel changes )
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/flashmap.c                  |    7 ++++---
+ .../plat-armada/mv_drivers_lsp/mv_mtd/nand_lnc.c   |    4 ++--
+ .../plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.c   |    9 ++++-----
+ 3 files changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/flashmap.c b/arch/arm/mach-armadaxp/flashmap.c
+index 1169ee3..d3569ef 100644
+--- a/arch/arm/mach-armadaxp/flashmap.c
++++ b/arch/arm/mach-armadaxp/flashmap.c
+@@ -38,6 +38,7 @@ disclaimer.
+ #include <linux/init.h>
+ #include <linux/mtd/mtd.h>
+ #include <linux/mtd/map.h>
++#include <drivers/mtd/mtdcore.h>
+ #include <linux/mtd/partitions.h>
+ #include <linux/version.h>
+ #include "mvSysHwConfig.h"
+@@ -77,11 +78,11 @@ static char * sflashDev = "spi_flash";
+ static char * sflashMtdList[] = {"sflash", NULL};
+ #endif
+ 
+-#ifdef CONFIG_MTD_PARTITIONS
++#ifdef CONFIG_MTD_CMDLINE_PARTS
+ static struct mtd_partition *mtd_parts;
+ static int                   mtd_parts_nb;
+ static const char *part_probes[] __initdata = {"cmdlinepart", NULL};
+-#endif /* CONFIG_MTD_PARTITIONS */
++#endif /* CONFIG_MTD_CMDLINE_PARTS */
+ 
+ static int flashInfoFill(void)
+ {
+@@ -179,7 +180,7 @@ static int __init flashProbe(char ** mtdDrv, struct map_info * map, struct mtd_i
+ 			/*map->size = (*mtd)->size;*/
+ 			(*mtd)->owner = THIS_MODULE;
+ 
+-#ifdef CONFIG_MTD_PARTITIONS
++#ifdef CONFIG_MTD_CMDLINE_PARTS
+ 			mtd_parts_nb = parse_mtd_partitions(*mtd, part_probes, &mtd_parts, 0);
+ 
+ 			if (mtd_parts_nb > 0) {
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_lnc.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_lnc.c
+index b52c38d..d8180d1 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_lnc.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_lnc.c
+@@ -23,7 +23,7 @@ static unsigned long baseaddr;
+ 
+ unsigned int mv_nand_ecc;
+ 
+-#ifdef CONFIG_MTD_PARTITIONS
++#ifdef	CONFIG_MTD_CMDLINE_PARTS
+ #define MV_NUM_OF_NAND_PARTS 3
+ static struct mtd_partition parts_info[] = {
+ 	{ .name = "u-boot",
+@@ -165,7 +165,7 @@ int __init mv_nand_init(void)
+ 		goto out_ior;
+ 	}
+ 
+-#ifdef CONFIG_MTD_PARTITIONS
++#ifdef	CONFIG_MTD_CMDLINE_PARTS
+         mv_mtd->name = "nand_mtd";
+         num_of_parts = parse_mtd_partitions(mv_mtd, part_probes, &mtd_parts, 0);
+         if(num_of_parts > 0)
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.c
+index 8606d8f..66a6140 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.c
+@@ -1665,10 +1665,6 @@ static int orion_nfc_remove(struct platform_device *pdev)
+ 	platform_set_drvdata(pdev, NULL);
+ 
+ 	/*del_mtd_device(mtd);*/
+-	 mtd_device_unregister(mtd);
+-#ifdef CONFIG_MTD_PARTITIONS
+-	del_mtd_partitions(mtd);
+-#endif
+ 	free_irq(IRQ_AURORA_NFC, info);
+ 	if (info->use_dma) {
+ 		dma_free_writecombine(&pdev->dev, info->data_buff_size,
+@@ -1679,7 +1675,10 @@ static int orion_nfc_remove(struct platform_device *pdev)
+ 	clk_disable(info->clk);
+ 	clk_put(info->clk);
+ #endif
+-	kfree(mtd);
++	if (mtd) {
++		mtd_device_unregister(mtd);
++		kfree(mtd);
++	}
+ 	return 0;
+ }
+ 
+-- 
+1.7.9.5
+

@@ -1,0 +1,67 @@
+From f17e3ab93c9ab827da7f0db35565f594db5ec2ac Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Sun, 7 Apr 2013 10:10:09 +0300
+Subject: [PATCH 589/609] axp,cesa: Fix packet fragmentation in int coalescing
+ mode.
+
+Fragmentation of packets larger than 1600B was not supported in
+interrupt coalescing mode. This patch enables a piece of code
+responsible for the fragmentation from chain mode.
+
+Bug fix for BTS #283: Openssl crashes the AXP board
+
+Change-Id: I1a6b738c65a1392776ff9338ac0f3ee663485099
+Signed-off-by: Michal Mazur <arg@semihalf.com>
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1437
+Reviewed-by: Eran Ben-Avi <benavi@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/cesa/mvCesa.c |   10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_hal/cesa/mvCesa.c b/arch/arm/plat-armada/mv_hal/cesa/mvCesa.c
+index 4838b16..74532e9 100644
+--- a/arch/arm/plat-armada/mv_hal/cesa/mvCesa.c
++++ b/arch/arm/plat-armada/mv_hal/cesa/mvCesa.c
+@@ -960,13 +960,13 @@ MV_STATUS mvCesaAction(MV_U8 chan, MV_CESA_COMMAND *pCmd)
+ 			}
+ 			status = mvCesaFragReqProcess(chan, pReq, frag);
+ 			if (status == MV_OK) {
+-#ifdef MV_CESA_CHAIN_MODE
++#if defined(MV_CESA_CHAIN_MODE) || defined(MV_CESA_INT_COALESCING_SUPPORT)
+ 				if (frag) {
+ 					pReq->dma[frag - 1].pDmaLast->phyNextDescPtr =
+ 					    MV_32BIT_LE(mvCesaVirtToPhys(&pReq->dmaDescBuf, pReq->dma[frag].pDmaFirst));
+ 					mvOsCacheFlush(NULL, pReq->dma[frag - 1].pDmaLast, sizeof(MV_DMA_DESC));
+ 				}
+-#endif /* MV_CESA_CHAIN_MODE */
++#endif /* MV_CESA_CHAIN_MODE || MV_CESA_INT_COALESCING_SUPPORT */
+ 				frag++;
+ 			}
+ 		}
+@@ -1158,10 +1158,10 @@ MV_STATUS mvCesaReadyGet(MV_U8 chan, MV_CESA_RESULT *pResult)
+ 		MV_U8 *pNewDigest;
+ 		int frag;
+ 
+-#ifdef MV_CESA_CHAIN_MODE
++#if defined(MV_CESA_CHAIN_MODE) || defined(MV_CESA_INT_COALESCING_SUPPORT)
+ 		pReq->frags.nextFrag = 1;
+ 		while (pReq->frags.nextFrag <= pReq->frags.numFrag) {
+-#endif /* MV_CESA_CHAIN_MODE */
++#endif
+ 
+ 			frag = (pReq->frags.nextFrag - 1);
+ 
+@@ -1204,7 +1204,7 @@ MV_STATUS mvCesaReadyGet(MV_U8 chan, MV_CESA_RESULT *pResult)
+ 				}
+ 				readyStatus = MV_OK;
+ 			}
+-#ifdef MV_CESA_CHAIN_MODE
++#if defined(MV_CESA_CHAIN_MODE) || defined(MV_CESA_INT_COALESCING_SUPPORT)
+ 			pReq->frags.nextFrag++;
+ 		}
+ #endif
+-- 
+1.7.9.5
+

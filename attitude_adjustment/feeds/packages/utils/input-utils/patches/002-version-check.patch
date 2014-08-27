@@ -1,0 +1,34 @@
+From d99f056745e53cd2518ca169af474f8c45c1436d Mon Sep 17 00:00:00 2001
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Wed, 26 Jan 2011 21:01:05 +0100
+Subject: [PATCH] remove version check
+
+---
+ input.c |   11 -----------
+ 1 files changed, 0 insertions(+), 11 deletions(-)
+
+diff --git a/input.c b/input.c
+index a9bd5e8..9a6a810 100644
+--- a/input.c
++++ b/input.c
+@@ -96,17 +96,6 @@ int device_open(int nr, int verbose)
+ 	if (verbose)
+ 		fprintf(stderr,"%s\n",filename);
+ 
+-	if (-1 == ioctl(fd,EVIOCGVERSION,&version)) {
+-		perror("ioctl EVIOCGVERSION");
+-		close(fd);
+-		return -1;
+-	}
+-	if (EV_VERSION > version) {
+-		fprintf(stderr, "protocol version mismatch (expected >= %d, got %d)\n",
+-			EV_VERSION, version);
+-		close(fd);
+-		return -1;
+-	}
+ 	return fd;
+ }
+ 
+-- 
+1.7.2.3
+

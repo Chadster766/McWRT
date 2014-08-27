@@ -1,0 +1,18 @@
+--- a/ezusb.c
++++ b/ezusb.c
+@@ -30,8 +30,14 @@
+ # include  <sys/ioctl.h>
+ 
+ # include  <linux/version.h>
+-# include  <linux/usb/ch9.h>
++typedef unsigned long kernel_ulong_t;
++
++#ifndef BITS_PER_LONG
++#define BITS_PER_LONG 32
++#endif
++
+ # include  <linux/usbdevice_fs.h>
++# include  <linux/usb/ch9.h>
+ 
+ # include "ezusb.h"
+ 

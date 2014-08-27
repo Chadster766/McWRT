@@ -1,0 +1,20 @@
+--- a/ezxml.h
++++ b/ezxml.h
+@@ -175,6 +175,17 @@ ezxml_t ezxml_insert(ezxml_t xml, ezxml_
+ // removes a tag along with all its subtags
+ #define ezxml_remove(xml) ezxml_free(ezxml_cut(xml))
+ 
++static inline char const * ezxml_child_txt( ezxml_t node, char const *child )
++{
++	return ezxml_txt( ezxml_child( node, child ) );
++}
++
++static inline ezxml_t ezxml_child_set_txt_d( ezxml_t node, char const *child,
++					char const *value )
++{
++	return ezxml_set_txt_d( ezxml_child( node, child ), value );
++}
++
+ #ifdef __cplusplus
+ }
+ #endif

@@ -1,0 +1,68 @@
+#!/bin/sh
+
+EXPECTED_ARGS=2
+usage() {
+        echo "Usage: `basename $0` start <program_name>"
+        echo "Usage: `basename $0` signal <program_name> <USR1|USR2>"
+        exit 0
+}
+
+if [ $# -lt $EXPECTED_ARGS ]
+then
+        usage
+fi
+
+mode=$1
+name=$2
+sig=$3
+logname=app_reset.pid
+
+if [ $mode = "start" ]
+then
+	${name} &
+
+	if [ -f /tmp/${logname} ] 
+	then
+		rm -rf /tmp/${logname}
+	fi
+	echo "$!" > /tmp/${logname}
+
+	pid=`cat /tmp/${logname}`
+	echo "START:" ${name} "running" ${pid}
+elif [ $mode = "signal" ]
+then
+	if [ $# -lt 3 ]
+	then
+        	usage
+	fi
+
+	echo "signal"
+	if [ -f /tmp/${logname} ] 
+	then
+		pid=`cat /tmp/${logname}`
+	else
+		usage
+	fi
+	echo "SIGNAL:" ${name} "running" ${pid}
+
+	echo ${sig}
+	#Send signal to star/stop timer
+	if [ ${sig} = "USR1" ]
+	then
+		kill -${sig} ${pid}
+	elif [ ${sig} = "USR2" ] #Send signal to change LED blink mode
+	then
+		kill -${sig} ${pid}
+	elif [ ${sig} = "KILL" ] #Send signal to change LED blink mode
+	then
+		kill -${sig} ${pid}
+	else
+		echo "LED activity process is not running"
+		logger "LED activity process is not running"
+		usage
+	fi
+else
+	echo "LED activity process is not running"
+	logger "LED activity process is not running"
+	usage
+fi

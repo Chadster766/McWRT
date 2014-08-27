@@ -1,0 +1,139 @@
+From 47dcb48f7c3b7519c76e06b1509928e669795f0b Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Thu, 20 Dec 2012 16:08:03 +0200
+Subject: [PATCH 371/609] Fix UART driver for ArmadaXP
+
+	Replace UART driver "dw-apb-uart" with "serial8250" - 16550A
+	The default configuration of the "dw-apb-uart" driver does not use the UART's FIFOs.
+	This causes UART failures when PM is enabled
+	Align the code with Armada370
+
+Change-Id: I72bdd91f49388f0b64bcfbd7474be1b3dd861896
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/core.c    |   24 +++++++++++++++++++-----
+ drivers/tty/serial/8250.c        |    4 ++--
+ drivers/tty/serial/serial_core.c |    4 ++--
+ include/linux/serial_core.h      |    2 +-
+ 4 files changed, 24 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index 85fe103..c096d84 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -552,9 +552,16 @@ static struct platform_device axp_i2c1 = {
+  **********/
+ static struct plat_serial8250_port aurora_uart0_data[] = {
+ 	{
+-		.iotype		= UPIO_MEM32,
++		.mapbase	= (INTER_REGS_PHYS_BASE | MV_UART_REGS_OFFSET(0)),
++		.membase	= (char *)(INTER_REGS_BASE | MV_UART_REGS_OFFSET(0)),
++		.irq		= IRQ_AURORA_UART0,
++		.flags		= UPF_FIXED_TYPE | UPF_SKIP_TEST | UPF_BOOT_AUTOCONF,
++		.iotype		= UPIO_DWAPB,
++		.private_data	= (void *) (INTER_REGS_BASE | MV_UART_REGS_OFFSET(0) | 0x7C),
++		.type		= PORT_16550A,
+ 		.regshift	= 2,
+ 		.uartclk	= 0,
++	}, {
+ 	},
+ };
+ 
+@@ -571,7 +578,7 @@ static struct resource aurora_uart0_resources[] = {
+ };
+ 
+ static struct platform_device aurora_uart0 = {
+-	.name			= "dw-apb-uart",
++	.name			= "serial8250",
+ 	.id			= 0,
+ 	.dev			= {
+ 		.platform_data	= aurora_uart0_data,
+@@ -583,11 +590,18 @@ static struct platform_device aurora_uart0 = {
+ /**********
+  * UART-1 *
+  **********/
+- static struct plat_serial8250_port aurora_uart1_data[] = {
++static struct plat_serial8250_port aurora_uart1_data[] = {
+ 	{
+-		.iotype		= UPIO_MEM32,
++		.mapbase	= (INTER_REGS_PHYS_BASE | MV_UART_REGS_OFFSET(1)),
++		.membase	= (char *)(INTER_REGS_BASE | MV_UART_REGS_OFFSET(1)),
++		.irq		= IRQ_AURORA_UART0,
++		.flags		= UPF_FIXED_TYPE | UPF_SKIP_TEST | UPF_BOOT_AUTOCONF,
++		.iotype		= UPIO_DWAPB,
++		.private_data	= (void *) (INTER_REGS_BASE | MV_UART_REGS_OFFSET(1) | 0x7C),
++		.type		= PORT_16550A,
+ 		.regshift	= 2,
+ 		.uartclk	= 0,
++	}, {
+ 	},
+ };
+ 
+@@ -604,7 +618,7 @@ static struct resource aurora_uart1_resources[] = {
+ };
+ 
+ static struct platform_device aurora_uart1 = {
+-	.name			= "dw-apb-uart",
++	.name			= "serial8250",
+ 	.id			= 0,
+ 	.dev			= {
+ 		.platform_data	= aurora_uart1_data,
+diff --git a/drivers/tty/serial/8250.c b/drivers/tty/serial/8250.c
+index 46b004d..3d29593 100644
+--- a/drivers/tty/serial/8250.c
++++ b/drivers/tty/serial/8250.c
+@@ -1624,13 +1624,13 @@ static irqreturn_t serial8250_interrupt(int irq, void *dev_id)
+ 		up = list_entry(l, struct uart_8250_port, list);
+ 		port = &up->port;
+ 
+-#if !defined(CONFIG_ARCH_ARMADA370)
++#if !defined(CONFIG_ARCH_ARMADA370) || !defined(CONFIG_ARCH_ARMADA_XP)
+ 		if (port->handle_irq(port)) {
+ 			handled = 1;
+ 			end = NULL;
+ 		}
+ #endif
+-#if defined(CONFIG_ARCH_ARMADA370)
++#if defined(CONFIG_ARCH_ARMADA370) || defined(CONFIG_ARCH_ARMADA_XP)
+ 
+ 		iir = serial_in(up, UART_IIR);
+ 		if (!(iir & UART_IIR_NO_INT)) {
+diff --git a/drivers/tty/serial/serial_core.c b/drivers/tty/serial/serial_core.c
+index 9f4fcf2..ca87ea1 100644
+--- a/drivers/tty/serial/serial_core.c
++++ b/drivers/tty/serial/serial_core.c
+@@ -2062,7 +2062,7 @@ uart_report_port(struct uart_driver *drv, struct uart_port *port)
+ 	case UPIO_MEM32:
+ 	case UPIO_AU:
+ 	case UPIO_TSI:
+-#if defined(CONFIG_ARCH_ARMADA370)
++#if defined(CONFIG_ARCH_ARMADA370) || defined(CONFIG_ARCH_ARMADA_XP)
+ 	case UPIO_DWAPB:
+ #endif
+ 		snprintf(address, sizeof(address),
+@@ -2478,7 +2478,7 @@ int uart_match_port(struct uart_port *port1, struct uart_port *port2)
+ 	case UPIO_MEM32:
+ 	case UPIO_AU:
+ 	case UPIO_TSI:
+-#if defined(CONFIG_ARCH_ARMADA370)
++#if defined(CONFIG_ARCH_ARMADA370) || defined(CONFIG_ARCH_ARMADA_XP)
+ 	case UPIO_DWAPB:
+ #endif
+ 		return (port1->mapbase == port2->mapbase);
+diff --git a/include/linux/serial_core.h b/include/linux/serial_core.h
+index 0914cfb..1975ede 100644
+--- a/include/linux/serial_core.h
++++ b/include/linux/serial_core.h
+@@ -320,7 +320,7 @@ struct uart_port {
+ #define UPIO_AU			(4)			/* Au1x00 type IO */
+ #define UPIO_TSI		(5)			/* Tsi108/109 type IO */
+ 
+-#if defined (CONFIG_ARCH_ARMADA370)
++#if defined(CONFIG_ARCH_ARMADA370) || defined(CONFIG_ARCH_ARMADA_XP)
+ #define UPIO_DWAPB		(6)
+ #define UPIO_DWAPB32		(7)
+ #endif
+-- 
+1.7.9.5
+

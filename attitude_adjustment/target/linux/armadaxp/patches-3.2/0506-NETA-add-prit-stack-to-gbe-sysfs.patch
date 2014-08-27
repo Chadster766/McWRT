@@ -1,0 +1,97 @@
+From b343bb703de16741b74481c102fd1ed5d2f9eed5 Mon Sep 17 00:00:00 2001
+From: Uri Eliyahu <uriel@marvell.com>
+Date: Thu, 10 Jan 2013 11:54:01 +0200
+Subject: [PATCH 506/609] NETA-add-prit-stack-to-gbe-sysfs
+
+Change-Id: I8fbec140629da3c58c58b0c8da1731745cead72a
+Signed-off-by: Uri Eliyahu <uriel@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/957
+Reviewed-by: Tawfik Bayouk <tawfik@marvell.com>
+Tested-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c  |    5 +++++
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |    9 +++++++--
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h     |    1 +
+ 3 files changed, 13 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
+index a984470..147e484 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
+@@ -45,6 +45,7 @@ static ssize_t mv_eth_help(char *buf)
+ 	off += mvOsSPrintf(buf+off, "\n");
+ 
+ 	off += sprintf(buf+off, "cat                ports           - show all ports info\n");
++	off += sprintf(buf+off, "echo p             > stack         - show all stack elements\n");
+ 	off += sprintf(buf+off, "echo p             > port          - show a port info\n");
+ 	off += sprintf(buf+off, "echo p             > stats         - show a port statistics\n");
+ 	off += sprintf(buf+off, "echo p txp         > cntrs         - show a port counters\n");
+@@ -217,6 +218,8 @@ static ssize_t mv_eth_port_store(struct device *dev,
+ 		mv_eth_status_print();
+ 		mvNetaPortStatus(p);
+ 		mv_eth_port_status_print(p);
++	} else if (!strcmp(name, "stack")) {
++		mv_eth_stack_print(p);
+ 	} else if (!strcmp(name, "stats")) {
+ 		mv_eth_port_stats_print(p);
+ 	} else if (!strcmp(name, "tos")) {
+@@ -463,6 +466,7 @@ static DEVICE_ATTR(debug,       S_IWUSR, mv_eth_show, mv_eth_port_store);
+ static DEVICE_ATTR(wrr_regs,    S_IWUSR, mv_eth_show, mv_eth_4_store);
+ static DEVICE_ATTR(cntrs,       S_IWUSR, mv_eth_show, mv_eth_4_store);
+ static DEVICE_ATTR(port,        S_IWUSR, mv_eth_show, mv_eth_port_store);
++static DEVICE_ATTR(stack,        S_IWUSR, mv_eth_show, mv_eth_port_store);
+ static DEVICE_ATTR(rxq_regs,    S_IWUSR, mv_eth_show, mv_eth_3_store);
+ static DEVICE_ATTR(txq_regs,    S_IWUSR, mv_eth_show, mv_eth_4_store);
+ static DEVICE_ATTR(mac,         S_IWUSR, mv_eth_show, mv_eth_port_store);
+@@ -519,6 +523,7 @@ static struct attribute *mv_eth_attrs[] = {
+ 	&dev_attr_rxq_regs.attr,
+ 	&dev_attr_txq_regs.attr,
+ 	&dev_attr_port.attr,
++	&dev_attr_stack.attr,
+ 	&dev_attr_stats.attr,
+ 	&dev_attr_cntrs.attr,
+ 	&dev_attr_ports.attr,
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 06b97d5..994a35e 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -190,6 +190,12 @@ int mv_eth_cmdline_port3_config(char *s)
+ 	port3_config_str = s;
+ 	return 1;
+ }
++void mv_eth_stack_print(int port)
++{
++	struct eth_port *pp = mv_eth_port_by_id(port);
++	mvStackStatus(pp->pool_long->stack, 1);
++}
++
+ 
+ void set_cpu_affinity(struct eth_port *pp, MV_U32 cpuAffinity, int group)
+ {
+@@ -1911,9 +1917,8 @@ out:
+ 	}
+ #endif /* CONFIG_MV_ETH_TXDONE_ISR */
+ 
+-	if (txq_ctrl) {
++	if (txq_ctrl)
+ 		mv_eth_unlock(txq_ctrl, flags);
+-	}
+ 
+ 	return NETDEV_TX_OK;
+ }
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+index 809ae64..25499be 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+@@ -478,6 +478,7 @@ int mv_eth_bm_config_long_buf_num_get(int port);
+ void mv_eth_bm_config_print(void);
+ #endif /* CONFIG_MV_ETH_BM */
+ 
++void mv_eth_stack_print(int port);
+ extern struct bm_pool mv_eth_pool[MV_ETH_BM_POOLS];
+ extern struct eth_port **mv_eth_ports;
+ 
+-- 
+1.7.9.5
+

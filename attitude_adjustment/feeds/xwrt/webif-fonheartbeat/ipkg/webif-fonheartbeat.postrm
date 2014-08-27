@@ -1,0 +1,13 @@
+#!/bin/sh
+#
+# Webif post-removal script.
+#
+
+echo "+ removing entry from cron"
+sed -e '/fonheartbeat/d' -i /etc/crontabs/root
+
+echo "+ restarting cron"
+/etc/init.d/cron restart
+
+echo "+ removing download.fon.com from knownhosts"
+sed -e '/download.fon.com/d' -i /root/.ssh/known_hosts

@@ -1,0 +1,640 @@
+From b6d9a9c1035a451fc709c9626a92afa654d6d5cb Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Tue, 19 Feb 2013 10:15:26 +0200
+Subject: [PATCH 532/609] Revert " PCIe: Use seondary bus number for indexing
+ instead of local bus number. This enables the
+ virtual bridge support for EP devices working with
+ device number zero only. Local bus number is hard
+ coded to 0xFF (Last Bus number)"
+
+This reverts commit 4ff2de9af6bb8197719aa476537be7b2cf6afdd1.
+
+Change-Id: I0190c3d42ca2268497f95e34531f4bea7c5403f7
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/Makefile                    |    3 +-
+ .../armada_xp_family/ctrlEnv/sys/mvCpuIf.c         |   60 +++++++
+ .../armada_xp_family/ctrlEnv/sys/mvCpuIf.h         |    2 +
+ arch/arm/mach-armadaxp/pex.c                       |   14 +-
+ arch/arm/plat-armada/mv_hal/pci-if/mvPciIfRegs.h   |    2 +-
+ .../mv_hal/pci-if/pci_util/mvPciUtils.c            |    7 +-
+ arch/arm/plat-armada/mv_hal/pex/mvPex.c            |  186 +++++++++-----------
+ arch/arm/plat-armada/mv_hal/pex/mvPex.h            |    6 -
+ arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h        |   24 +--
+ arch/arm/plat-armada/mv_hal/pex/mvVrtBrgPex.c      |    4 +-
+ 12 files changed, 173 insertions(+), 139 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
+index 8a1bb8b..83cafbd 100644
+--- a/arch/arm/mach-armadaxp/Makefile
++++ b/arch/arm/mach-armadaxp/Makefile
+@@ -61,8 +61,7 @@ armadaxp-$(CONFIG_MV_INCLUDE_SDIO) 	+= $(HAL_SDMMC_DIR)/mvSdmmcAddrDec.o
+ armadaxp-$(CONFIG_MV_INCLUDE_XOR) 	+= $(HAL_XOR_DIR)/mvXor.o $(HAL_XOR_DIR)/mvXorAddrDec.o		\
+ 					   $(HAL_IF_DIR)/mvSysXor.o
+ armadaxp-$(CONFIG_MV_INCLUDE_PEX) 	+= $(HAL_PEX_DIR)/mvPex.o					\
+-					   $(HAL_IF_DIR)/mvSysPex.o $(HAL_PEX_DIR)/mvPexAddrDec.o	\
+-					   $(HAL_PEX_DIR)/mvVrtBrgPex.o
++					   $(HAL_IF_DIR)/mvSysPex.o $(HAL_PEX_DIR)/mvPexAddrDec.o
+ armadaxp-$(CONFIG_MV_INCLUDE_PCI) 	+= $(HAL_PCI_DIR)/mvPci.o $(HAL_IF_DIR)/mvSysPci.o
+ armadaxp-$(CONFIG_MV_INCLUDE_USB) 	+= $(HAL_USB_DIR)/mvUsb.o $(HAL_USB_DIR)/mvUsbAddrDec.o		\
+ 					   $(HAL_IF_DIR)/mvSysUsb.o
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
+index dbd355b..3a406be 100755
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
+@@ -932,6 +932,66 @@ MV_VOID mvCpuIfAddDecShow(MV_VOID)
+ 	}
+ }
+ 
++#if defined(MV_INCLUDE_PEX)
++/*******************************************************************************
++* mvCpuIfEnablePex - Enable PCI Express unit.
++*
++* DESCRIPTION:
++*	This function enables PCI Express access to the device address
++*	space.
++*
++* INPUT:
++*	pexUnit	- PEX unit (0 - 3).
++*
++* OUTPUT:
++*       None.
++*
++* RETURN:
++*       None.
++*
++*******************************************************************************/
++MV_VOID mvCpuIfEnablePex(MV_U32 pexUnit)
++{
++	MV_U32 socMaxPexUnit = mvCtrlPexMaxUnitGet();
++
++	if (pexUnit > socMaxPexUnit) {
++		DB(mvOsPrintf("mvCpuIfEnablePex: Bad PEX unit ID (%x)\n", pexUnit));
++		return;
++	}
++
++	/* SOC config register Pex enable */
++	MV_REG_BIT_SET(SOC_CTRL_REG, SCR_PEX_ENA_MASK(pexUnit));
++}
++
++/*******************************************************************************
++* mvCpuIfPex4x1Enable - Enable/Disable the 4x1 mode on PCI Express unit.
++*
++* DESCRIPTION:
++*	This function enables/disables 4x1 mode on PCI Express unit 0 or 1
++*
++* INPUT:
++*	pexUnit	- PEX unit (0 or 1).
++*	enable	- enable (MV_TRUE) or disable (MV_FALSE) 4x1 mode
++*
++* OUTPUT:
++*       None.
++*
++* RETURN:
++*       None.
++*
++*******************************************************************************/
++MV_VOID mvCpuIfPex4x1Enable(MV_U32 pexUnit, MV_BOOL enable)
++{
++	if (pexUnit == 0)
++		MV_REG_BIT_SET(SOC_CTRL_REG, SCR_PEX0_4BY1_MASK);
++	else if (pexUnit == 1)
++		MV_REG_BIT_SET(SOC_CTRL_REG, SCR_PEX1_4BY1_MASK);
++	else
++		DB(mvOsPrintf("mvCpuIfPex4x1Enable: Bad PEX unit ID (%x)\n", pexUnit));
++}
++
++#endif
++
+ /*******************************************************************************
+ * mvCpuIfLvdsPadsEnable
+ *
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.h
+index f5ed71f..41ff25c 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.h
+@@ -107,6 +107,8 @@ MV_TARGET mvCpuIfTargetOfBaseAddressGet(MV_U32 baseAddress);
+ MV_STATUS mvCpuIfSramWinDisable(MV_VOID);
+ #if defined(MV_INCLUDE_PEX)
+ MV_U32    mvCpuIfPexRemap(MV_TARGET pexTarget, MV_ADDR_WIN *pAddrDecWin);
++MV_VOID   mvCpuIfEnablePex(MV_U32 pexUnit);
++MV_VOID   mvCpuIfPex4x1Enable(MV_U32 pexUnit, MV_BOOL enable);
+ #endif
+ #if defined(MV_INCLUDE_PCI)
+ MV_U32 	  mvCpuIfPciRemap(MV_TARGET pciTarget, MV_ADDR_WIN *pAddrDecWin);
+diff --git a/arch/arm/mach-armadaxp/pex.c b/arch/arm/mach-armadaxp/pex.c
+index 5b64b26..70ebe9e 100644
+--- a/arch/arm/mach-armadaxp/pex.c
++++ b/arch/arm/mach-armadaxp/pex.c
+@@ -126,8 +126,7 @@ void __init mv_pex_preinit(void)
+ 		printk("Enabled - Link UP\n");
+ 		/* Assign bus number 0 to first active/available bus */
+ 		if (pex0flg == 0) {
+-			mvPexLocalBusNumSet(pexHWInf, 0xFF);
+-			mvPexSecondaryBusNumSet(pexHWInf, 0x0);
++	       		mvPexLocalBusNumSet(pexHWInf, 0x0);
+ 	       		pex0flg = 1;
+ 		}
+ 
+@@ -209,9 +208,13 @@ static int mv_pci_read_config(struct pci_bus *bus,
+ 	bus_num = bus->number;
+ 	dev_no = PCI_SLOT(devfn);
+ 
+-	/* Only one device (0) is possible per interface (secondary bus enabled) */
+-	if (dev_no != 0)
++	/* don't return for our device */
++	localBus = mvPexLocalBusNumGet(pciIf);
++	if ((dev_no == 0) && ( bus_num == localBus))
++	{
++		DB(printk("PCI %d read from our own dev return 0xffffffff \n", pciIf));
+ 		return 0xffffffff;
++	}
+ 
+ 	func = PCI_FUNC(devfn); 
+ 	regOff = (MV_U32)where & (PXCAR_REG_NUM_MASK | PXCAR_REAL_EXT_REG_NUM_MASK); /* total of 12 bits: 8 legacy + 4 extended */
+@@ -381,8 +384,7 @@ struct pci_bus *mv_pex_scan_bus(int nr, struct pci_sys_data *sys)
+ 			continue;
+ 
+ 		if (MV_TRUE == mvCtrlPwrClckGet(PEX_UNIT_ID, pexNextHWInf)) {
+-			mvPexLocalBusNumSet(pexNextHWInf, 0xFF);
+-			mvPexSecondaryBusNumSet(pexNextHWInf, (bus->subordinate + 1));
++			mvPexLocalBusNumSet(pexNextHWInf, (bus->subordinate + 1));
+ 			break;
+ 		}
+ 	}
+diff --git a/arch/arm/plat-armada/mv_hal/pci-if/mvPciIfRegs.h b/arch/arm/plat-armada/mv_hal/pci-if/mvPciIfRegs.h
+index 1c96628..668d75b 100644
+--- a/arch/arm/plat-armada/mv_hal/pci-if/mvPciIfRegs.h
++++ b/arch/arm/plat-armada/mv_hal/pci-if/mvPciIfRegs.h
+@@ -66,7 +66,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define __INCPCIIFREGSH
+ 
+ /* defines */
+-#define MAX_PCI_DEVICES         1
++#define MAX_PCI_DEVICES         32
+ #define MAX_PCI_FUNCS           8
+ #define MAX_PCI_BUSSES          128
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/pci-if/pci_util/mvPciUtils.c b/arch/arm/plat-armada/mv_hal/pci-if/pci_util/mvPciUtils.c
+index ddf653a..31463e7 100644
+--- a/arch/arm/plat-armada/mv_hal/pci-if/pci_util/mvPciUtils.c
++++ b/arch/arm/plat-armada/mv_hal/pci-if/pci_util/mvPciUtils.c
+@@ -140,17 +140,14 @@ MV_STATUS mvPciScan(MV_U32 pciIf, MV_PCI_DEVICE *pPciAgents, MV_U32 * pPciAgents
+ 	DB(mvOsPrintf("mvPciScan: PCI interface num scan%d\n", pciIf));
+ 
+ 	/* go through all busses */
+-	for (busIndex = localBus; busIndex <= MAX_PCI_BUSSES; busIndex++) {
++	for (busIndex = localBus; busIndex < MAX_PCI_BUSSES; busIndex++) {
+ 		/* go through all possible devices on the local bus */
+ 		for (devIndex = 0; devIndex < MAX_PCI_DEVICES; devIndex++) {
+ 			/* always start with function equal to zero */
+ 			funcIndex = 0;
+-			/* We need to scan the local bus 0xFF as well */
+-			if (busIndex == MAX_PCI_BUSSES)
+-				busIndex = 0xFF;
+ 
+ 			pPciDevice = &pPciAgents[detectedDevNum];
+-			DB(mvOsPrintf("mvPciScan: PCI%d interface num scan %d:%d\n", pciIf, busIndex, devIndex));
++			DB(mvOsPrintf("mvPciScan: PCI interface num scan%d:%d\n", busIndex, devIndex));
+ 
+ 			if (MV_ERROR == pciDetectDevice(pciIf, busIndex, devIndex, funcIndex, pPciDevice)) {
+ 				/* no device detected , try the next address */
+diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPex.c b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
+index c1257c1..82629fa 100755
+--- a/arch/arm/plat-armada/mv_hal/pex/mvPex.c
++++ b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
+@@ -70,7 +70,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #include "mvPexRegs.h"
+ /* #include "pci-if/mvPciIf.h" */
+ #include "mvPex.h"
+-#include "mvVrtBrgPex.h"
+ 
+ /* #define MV_DEBUG */
+ /* defines  */
+@@ -87,13 +86,16 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+ 	MV_PEX_MODE pexMode;
+ 	MV_U32 regVal;
+ 	MV_U32 status;
++	MV_U32 ctrlFamily;
+ 
+ 	mvOsMemcpy(&pexHalData[pexIf], halData, sizeof(MV_PEX_HAL_DATA));
++	ctrlFamily=pexHalData[pexIf].ctrlFamily;
+ 
+ 	if (mvPexModeGet(pexIf, &pexMode) != MV_OK) {
+ 		mvOsPrintf("PEX init ERR. mvPexModeGet failed (pexType=%d)\n", pexMode.pexType);
+ 		return MV_ERROR;
+ 	}
++
+ 	if (pexMode.pexLinkUp == MV_FALSE) {
+ 		/*  interface detected no Link. */
+ 		return MV_NO_SUCH;
+@@ -115,24 +117,20 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+ 		mvPexMasterEnable(pexIf, MV_TRUE);
+ 
+ 		/* Local device slave Enable */
+-		mvPexSlaveEnable(pexIf, 0xFF, mvPexLocalDevNumGet(pexIf), MV_TRUE);
++		mvPexSlaveEnable(pexIf, mvPexLocalBusNumGet(pexIf), mvPexLocalDevNumGet(pexIf), MV_TRUE);
+ 		/* Interrupt disable */
+ 		status = MV_REG_READ(PEX_CFG_DIRECT_ACCESS(pexIf, PEX_STATUS_AND_COMMAND));
+ 		status |= PXSAC_INT_DIS;
+ 		MV_REG_WRITE(PEX_CFG_DIRECT_ACCESS(pexIf, PEX_STATUS_AND_COMMAND), status);
+-	} else { /* if (MV_PEX_ROOT_COMPLEX != pexType) */
++	} else {
+ 			regVal = MV_REG_READ(PEX_DBG_CTRL_REG(pexIf));
+ 			regVal &= ~(BIT16 | BIT19);
+ 			MV_REG_WRITE(PEX_DBG_CTRL_REG(pexIf), regVal);
+-	}
+ 
+-	/* Check if we have link */
+-	if (pexMode.pexLinkUp == MV_FALSE) {
+-		/*  interface detected no Link. */
+-		return MV_NO_SUCH;
+ 	}
+-
++#ifdef PCIE_VIRTUAL_BRIDGE_SUPPORT
+ 	mvPexVrtBrgInit(pexIf);
++#endif
+ 	return MV_OK;
+ }
+ 
+@@ -220,12 +218,16 @@ MV_U32 mvPexModeGet(MV_U32 pexIf, MV_PEX_MODE *pexMode)
+ *******************************************************************************/
+ MV_U32 mvPexConfigRead(MV_U32 pexIf, MV_U32 bus, MV_U32 dev, MV_U32 func, MV_U32 regOff)
+ {
++#if defined(PCIE_VIRTUAL_BRIDGE_SUPPORT)
+ 	return mvPexVrtBrgConfigRead(pexIf, bus, dev, func, regOff);
+ }
+ 
+ MV_U32 mvPexHwConfigRead(MV_U32 pexIf, MV_U32 bus, MV_U32 dev, MV_U32 func, MV_U32 regOff)
+ {
++#endif
+ 	MV_U32 pexData = 0;
++	MV_U32 localDev, localBus;
++
+ 	if (pexIf >= MV_PEX_MAX_IF)
+ 		return 0xFFFFFFFF;
+ 
+@@ -255,9 +257,35 @@ MV_U32 mvPexHwConfigRead(MV_U32 pexIf, MV_U32 bus, MV_U32 dev, MV_U32 func, MV_U
+ 	DB(mvOsPrintf("mvPexConfigRead: pexIf %d, bus %d, dev %d, func %d, regOff 0x%x\n",
+ 		      pexIf, bus, dev, func, regOff));
+ 
+-	if (dev != 0)
++	localDev = mvPexLocalDevNumGet(pexIf);
++	localBus = mvPexLocalBusNumGet(pexIf);
++
++	/* Speed up the process. In case on no link, return MV_ERROR */
++	if ((dev != localDev) || (bus != localBus)) {
++		pexData = MV_REG_READ(PEX_STATUS_REG(pexIf));
++
++		if ((pexData & PXSR_DL_DOWN))
++			return MV_ERROR;
++	}
++
++	/* in PCI Express we have only one device number */
++	/* and this number is the first number we encounter
++	   else that the localDev */
++	/* spec pex define return on config read/write on any device */
++	if (bus == localBus) {
++		if (localDev == 0) {
++			/* if local dev is 0 then the first number we encounter
++			   after 0 is 1 */
++			if ((dev != 1) && (dev != localDev))
+ 				return MV_ERROR;
++		} else {
++			/* if local dev is not 0 then the first number we encounter
++			   is 0 */
+ 
++			if ((dev != 0) && (dev != localDev))
++				return MV_ERROR;
++		}
++	}
+ 	/* Creating PEX address to be passed */
+ 	pexData = (bus << PXCAR_BUS_NUM_OFFS);
+ 	pexData |= (dev << PXCAR_DEVICE_NUM_OFFS);
+@@ -316,12 +344,15 @@ MV_U32 mvPexHwConfigRead(MV_U32 pexIf, MV_U32 bus, MV_U32 dev, MV_U32 func, MV_U
+ *******************************************************************************/
+ MV_STATUS mvPexConfigWrite(MV_U32 pexIf, MV_U32 bus, MV_U32 dev, MV_U32 func, MV_U32 regOff, MV_U32 data)
+ {
++#if defined(PCIE_VIRTUAL_BRIDGE_SUPPORT)
+ 	return mvPexVrtBrgConfigWrite(pexIf, bus, dev, func, regOff, data);
+ }
+ 
+ MV_STATUS mvPexHwConfigWrite(MV_U32 pexIf, MV_U32 bus, MV_U32 dev, MV_U32 func, MV_U32 regOff, MV_U32 data)
+ {
++#endif
+ 	MV_U32 pexData = 0;
++	MV_U32 localDev, localBus;
+ 
+ 	if (pexIf >= MV_PEX_MAX_IF)
+ 		return MV_BAD_PARAM;
+@@ -329,29 +360,60 @@ MV_STATUS mvPexHwConfigWrite(MV_U32 pexIf, MV_U32 bus, MV_U32 dev, MV_U32 func,
+ 	/* Parameter checking   */
+ 	if (PEX_DEFAULT_IF != pexIf) {
+ 		if (pexIf >= pexHalData[pexIf].maxPexIf) {
+-			DB(mvOsPrintf("mvPexConfigWrite: ERR. Invalid PEX interface %d\n", pexIf);)
++			mvOsPrintf("mvPexConfigWrite: ERR. Invalid PEX interface %d\n", pexIf);
+ 			return MV_ERROR;
+ 		}
+ 	}
+ 
+ 	if (dev >= MAX_PEX_DEVICES) {
+-		DB(mvOsPrintf("mvPexConfigWrite: ERR. device number illigal %d\n", dev);)
++		mvOsPrintf("mvPexConfigWrite: ERR. device number illigal %d\n", dev);
+ 		return MV_BAD_PARAM;
+ 	}
+ 
+ 	if (func >= MAX_PEX_FUNCS) {
+-		DB(mvOsPrintf("mvPexConfigWrite: ERR. function number illigal %d\n", func);)
++		mvOsPrintf("mvPexConfigWrite: ERR. function number illigal %d\n", func);
+ 		return MV_ERROR;
+ 	}
+ 
+ 	if (bus >= MAX_PEX_BUSSES) {
+-		DB(mvOsPrintf("mvPexConfigWrite: ERR. bus number illigal %d\n", bus);)
++		mvOsPrintf("mvPexConfigWrite: ERR. bus number illigal %d\n", bus);
+ 		return MV_ERROR;
+ 	}
+ 
++	localDev = mvPexLocalDevNumGet(pexIf);
++	localBus = mvPexLocalBusNumGet(pexIf);
++
++	/* in PCI Express we have only one device number other than ourselves */
++	/* and this number is the first number we encounter
++	   else than the localDev that can be any valid dev number */
++	/* pex spec define return on config read/write on any device */
++	if (bus == localBus) {
++		if (localDev == 0) {
++			/* if local dev is 0 then the first number we encounter
++			   after 0 is 1 */
++			if ((dev != 1) && (dev != localDev))
++				return MV_ERROR;
++		} else {
++			/* if local dev is not 0 then the first number we encounter
++			   is 0 */
++
++			if ((dev != 0) && (dev != localDev))
++				return MV_ERROR;
++		}
++
++	}
++
+ 	/* if we are not accessing ourselves , then check the link */
+-	if (dev != 0)
++	if ((dev != localDev) || (bus != localBus)) {
++		/* workarround */
++		/* when no link return MV_ERROR */
++
++		pexData = MV_REG_READ(PEX_STATUS_REG(pexIf));
++
++		if ((pexData & PXSR_DL_DOWN))
+ 			return MV_ERROR;
++	}
++
+ 	pexData = 0;
+ 
+ 	/* Creating PEX address to be passed */
+@@ -459,7 +521,7 @@ MV_STATUS mvPexSlaveEnable(MV_U32 pexIf, MV_U32 bus, MV_U32 dev, MV_BOOL enable)
+ 		return MV_BAD_PARAM;
+ 	}
+ 	if (dev >= MAX_PEX_DEVICES) {
+-		DB(mvOsPrintf("mvPexLocalDevNumSet: ERR. device number illigal %d\n", dev));
++		mvOsPrintf("mvPexLocalDevNumSet: ERR. device number illigal %d\n", dev);
+ 		return MV_BAD_PARAM;
+ 
+ 	}
+@@ -478,85 +540,8 @@ MV_STATUS mvPexSlaveEnable(MV_U32 pexIf, MV_U32 bus, MV_U32 dev, MV_BOOL enable)
+ 	return MV_OK;
+ 
+ }
+-/*******************************************************************************
+-* mvPexSecondaryBusNumGet - Get PEX interface local bus number.
+-*
+-* DESCRIPTION:
+-*       This function gets the secondary bus number of a given PEX interface.
+-*
+-* INPUT:
+-*       pexIf  - PEX interface number.
+-*
+-* OUTPUT:
+-*       None.
+-*
+-* RETURN:
+-*       Local bus number.0xffffffff on Error
+-*
+-*******************************************************************************/
+-MV_U32 mvPexSecondaryBusNumGet(MV_U32 pexIf)
+-{
+-	MV_U32 pexSecondary;
+-
+-	if (pexIf >= MV_PEX_MAX_IF)
+-		return 0xFFFFFFFF;
+-
+-	/* Parameter checking   */
+-	if (PEX_DEFAULT_IF != pexIf) {
+-		if (pexIf >= pexHalData[pexIf].maxPexIf) {
+-			mvOsPrintf("mvPexLocalBusNumGet: ERR. Invalid PEX interface %d\n", pexIf);
+-			return 0xFFFFFFFF;
+-		}
+-	}
+-
+-	pexSecondary = MV_REG_READ(PEX_SECONDARY_BUS_REG(pexIf));
+-
+-	pexSecondary &= SECONDARY_BUS_NUMBER_MASK;
+-
+-	return (pexSecondary >> SECONDARY_BUS_NUMBER_OFFS);
+-}
+ 
+ /*******************************************************************************
+-* mvPexSecondaryBusNumSet - Set PEX interface secondary bus number.
+-*
+-* DESCRIPTION:
+-*       This function sets given PEX interface its secondary bus number.
+-*       Note: In case the PEX interface is PEX-X, the information is read-only.
+-*
+-* INPUT:
+-*       pexIf  - PEX interface number.
+-*       busNum - secondary bus number.
+-*
+-* OUTPUT:
+-*       None.
+-
+-* RETURN:
+-*       MV_NOT_ALLOWED in case PEX interface is PEX-X.
+-*		MV_BAD_PARAM on bad parameters ,
+-*       otherwise MV_OK
+-*
+-********************************************************************************/
+-MV_STATUS mvPexSecondaryBusNumSet(MV_U32 pexIf, MV_U32 busNum)
+-{
+-	MV_U32 secondaryBus = 0;
+-
+-	/* Parameter checking   */
+-	if (pexIf >= pexHalData[pexIf].maxPexIf) {
+-		mvOsPrintf("mvPexSecondaryBusNumSet: ERR. Invalid PEX interface %d\n", pexIf);
+-		return MV_BAD_PARAM;
+-	}
+-	if (busNum >= MAX_PEX_BUSSES) {
+-		mvOsPrintf("mvPexSecondaryBusNumSet: ERR. bus number illigal %d\n", busNum);
+-		return MV_ERROR;
+-	}
+-
+-	secondaryBus = 0x100 | busNum;
+-
+-	MV_REG_WRITE(PEX_SECONDARY_BUS_REG(pexIf), secondaryBus);
+-
+-	return MV_OK;
+-}
+-/*******************************************************************************
+ * mvPexLocalBusNumSet - Set PEX interface local bus number.
+ *
+ * DESCRIPTION:
+@@ -576,7 +561,6 @@ MV_STATUS mvPexSecondaryBusNumSet(MV_U32 pexIf, MV_U32 busNum)
+ *       otherwise MV_OK
+ *
+ *******************************************************************************/
+-
+ MV_STATUS mvPexLocalBusNumSet(MV_U32 pexIf, MV_U32 busNum)
+ {
+ 	MV_U32 pexStatus;
+@@ -595,11 +579,11 @@ MV_STATUS mvPexLocalBusNumSet(MV_U32 pexIf, MV_U32 busNum)
+ 
+ 	pexStatus &= ~PXSR_PEX_BUS_NUM_MASK;
+ 
+-	pexStatus |= (0xFF << PXSR_PEX_BUS_NUM_OFFS) & PXSR_PEX_BUS_NUM_MASK;
++	pexStatus |= (busNum << PXSR_PEX_BUS_NUM_OFFS) & PXSR_PEX_BUS_NUM_MASK;
+ 
+ 	MV_REG_WRITE(PEX_STATUS_REG(pexIf), pexStatus);
+ 
+-	return mvPexSecondaryBusNumSet(pexIf, busNum);
++	return MV_OK;
+ }
+ 
+ /*******************************************************************************
+@@ -620,6 +604,8 @@ MV_STATUS mvPexLocalBusNumSet(MV_U32 pexIf, MV_U32 busNum)
+ *******************************************************************************/
+ MV_U32 mvPexLocalBusNumGet(MV_U32 pexIf)
+ {
++	MV_U32 pexStatus;
++
+ 	if (pexIf >= MV_PEX_MAX_IF)
+ 		return 0xFFFFFFFF;
+ 
+@@ -631,7 +617,11 @@ MV_U32 mvPexLocalBusNumGet(MV_U32 pexIf)
+ 		}
+ 	}
+ 
+-	return mvPexSecondaryBusNumGet(pexIf);
++	pexStatus = MV_REG_READ(PEX_STATUS_REG(pexIf));
++
++	pexStatus &= PXSR_PEX_BUS_NUM_MASK;
++
++	return (pexStatus >> PXSR_PEX_BUS_NUM_OFFS);
+ }
+ 
+ /*******************************************************************************
+@@ -667,7 +657,7 @@ MV_STATUS mvPexLocalDevNumSet(MV_U32 pexIf, MV_U32 devNum)
+ 		return MV_BAD_PARAM;
+ 	}
+ 	if (devNum >= MAX_PEX_DEVICES) {
+-		DB(mvOsPrintf("mvPexLocalDevNumSet: ERR. device number illigal %d\n", devNum));
++		mvOsPrintf("mvPexLocalDevNumSet: ERR. device number illigal %d\n", devNum);
+ 		return MV_BAD_PARAM;
+ 	}
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPex.h b/arch/arm/plat-armada/mv_hal/pex/mvPex.h
+index 1b6b0dd..fbc2051 100755
+--- a/arch/arm/plat-armada/mv_hal/pex/mvPex.h
++++ b/arch/arm/plat-armada/mv_hal/pex/mvPex.h
+@@ -177,12 +177,6 @@ extern "C" {
+ 	/* mvPexLocalBusNumGet - Get PEX interface local bus number. */
+ 	MV_U32 mvPexLocalBusNumGet(MV_U32 pexIf);
+ 
+-	/* mvPexSecondaryBusNumGet - Get the secondary bus number used in Virtual Bridge */
+-	MV_U32 mvPexSecondaryBusNumGet(MV_U32 pexIf);
+-
+-	/* mvPexSecondaryBusNumSet - Set the secondary bus number used in the Virtual Bridge */
+-	MV_STATUS mvPexSecondaryBusNumSet(MV_U32 pexIf, MV_U32 busNum);
+-
+ 	/* mvPexLocalDevNumSet - Set PEX interface local device number. */
+ 	MV_STATUS mvPexLocalDevNumSet(MV_U32 pexIf, MV_U32 devNum);
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h b/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h
+index 70ab4c5..040c9dd 100755
+--- a/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h
++++ b/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h
+@@ -72,7 +72,7 @@ extern "C" {
+ #include "mvSysPexConfig.h"
+ 
+ /* defines */
+-#define MAX_PEX_DEVICES         1
++#define MAX_PEX_DEVICES         32
+ #define MAX_PEX_FUNCS           8
+ #define MAX_PEX_BUSSES          256
+ 
+@@ -172,19 +172,18 @@ extern "C" {
+ /********************************************/
+ /* PCI Express Control and Status Registers */
+ /********************************************/
+-#define PEX_CTRL_REG(pexIf)					((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A00)
+-#define PEX_LINK_CAPABILITIES_REG(pexIf)	((MV_PEX_IF_REGS_BASE(pexIf)) + 0x6C)
++#define PEX_CTRL_REG(pexIf)				((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A00)
++#define PEX_LINK_CAPABILITIES_REG(pexIf)		((MV_PEX_IF_REGS_BASE(pexIf)) + 0x6C)
+ #define PEX_CAPABILITIES_REG(pexIf)			((MV_PEX_IF_REGS_BASE(pexIf)) + 0x60)
+ #define PEX_STATUS_REG(pexIf)				((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A04)
+-#define PEX_SECONDARY_BUS_REG(pexIf)		((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A2C)
+-#define PEX_COMPLT_TMEOUT_REG(pexIf)		((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A10)
++#define PEX_COMPLT_TMEOUT_REG(pexIf)			((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A10)
+ #define PEX_PWR_MNG_EXT_REG(pexIf)			((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A18)
+ #define PEX_FLOW_CTRL_REG(pexIf)			((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A20)
+-#define PEX_DYNMC_WIDTH_MNG_REG(pexIf)		((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A30)
+-#define PEX_ROOT_CMPLX_SSPL_REG(pexif)		((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A0C)
++#define PEX_DYNMC_WIDTH_MNG_REG(pexIf)			((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A30)
++#define PEX_ROOT_CMPLX_SSPL_REG(pexif)			((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A0C)
+ #define PEX_ACK_TMR_1X_REG(pexIf)			((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A40)
+-#define PEX_TL_CTRL_REG(pexIf)				((MV_PEX_IF_REGS_BASE(pexIf)) - ((pexIf)*0x10000))
+-#define PEX_RAM_PARITY_CTRL_REG(pexIf)		((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A50)
++#define PEX_TL_CTRL_REG(pexIf)				(MV_PEX_IF_REGS_BASE(pexIf) - (pexIf)*0x10000)
++#define PEX_RAM_PARITY_CTRL_REG(pexIf) 			((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A50)
+ #define PEX_DBG_CTRL_REG(pexIf) 			((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A60)
+ #define PEX_DBG_STATUS_REG(pexIf)           ((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A64)
+ 
+@@ -224,13 +223,6 @@ extern "C" {
+ #define PXCR_CONF_MSTR_DIS_SCRMB		BIT27	/* Master Disable Scrambling */
+ #define PXCR_CONF_DIRECT_DIS_SCRMB		BIT28	/* Direct Disable Scrambling */
+ 
+-/* PCI Ecpress Secondary Bus register */
+-/* PEX_SECONDARY_BUS_REG */
+-#define SECONDARY_BUS_NUMBER_ENABLE				BIT8
+-#define SECONDARY_BUS_NUMBER_OFFS				0
+-#define SECONDARY_BUS_NUMBER_MASK				0xFF
+-
+-
+ /* PCI Express Status Register */
+ /* PEX_STATUS_REG (PXSR) */
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/pex/mvVrtBrgPex.c b/arch/arm/plat-armada/mv_hal/pex/mvVrtBrgPex.c
+index e5e2232..08b8eaf 100644
+--- a/arch/arm/plat-armada/mv_hal/pex/mvVrtBrgPex.c
++++ b/arch/arm/plat-armada/mv_hal/pex/mvVrtBrgPex.c
+@@ -63,7 +63,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *******************************************************************************/
+ 
+ #include "mvPex.h"
+-#include "mvVrtBrgPex.h"
+ 
+ /* #define MV_DEBUG */
+ /* defines  */
+@@ -168,8 +167,7 @@ MV_U32 mvPexVrtBrgConfigRead(MV_U32 pexIf, MV_U32 bus, MV_U32 dev, MV_U32 func,
+ 		}
+ 	} else if (bus == (localBus + 1)) {
+ 		/* access the device behind the virtual bridge */
+-/*		if ((dev == localDev) || (dev > 1)) { */
+-		if (dev > 1) {
++		if ((dev == localDev) || (dev > 1)) {
+ 			return 0xffffffff;
+ 		} else {
+ 			/* access the device behind the virtual bridge, in this case
+-- 
+1.7.9.5
+

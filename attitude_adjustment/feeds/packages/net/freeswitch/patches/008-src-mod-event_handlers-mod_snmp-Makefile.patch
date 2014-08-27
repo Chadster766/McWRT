@@ -1,0 +1,16 @@
+--- a/src/mod/event_handlers/mod_snmp/Makefile
++++ b/src/mod/event_handlers/mod_snmp/Makefile
+@@ -1,7 +1,10 @@
+-include ../../../../build/modmake.rules
++BASE=../../../..
++
++include $(BASE)/build/modmake.rules
++include $(BASE)/build/openwrt_rules.mk
++
++LOCAL_CFLAGS=$(shell $(STAGING_DIR)/host/bin/net-snmp-config --cflags --agent-libs) -DNETSNMP_NO_INLINE
+ 
+-LOCAL_CFLAGS=`net-snmp-config --cflags`
+-LOCAL_LDFLAGS=`net-snmp-config --agent-libs`
+ LOCAL_OBJS=subagent.o
+ 
+ local_depend: $(LOCAL_OBJS)

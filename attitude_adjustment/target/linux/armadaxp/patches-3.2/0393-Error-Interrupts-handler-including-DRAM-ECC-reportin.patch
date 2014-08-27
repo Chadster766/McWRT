@@ -1,0 +1,946 @@
+From 8c87b9e271336264312c3fcd21113c1dc97e3a37 Mon Sep 17 00:00:00 2001
+From: Igor Petrik <igorp@marvell.com>
+Date: Sun, 2 Dec 2012 17:15:12 +0200
+Subject: [PATCH 393/609] Error Interrupts handler including DRAM ECC
+ reporting to user agent via netlink socket.
+
+Change-Id: I183309e143b079fa38047a68cd4ef5f8ad3451d4
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/Makefile                    |    1 +
+ arch/arm/mach-armadaxp/config/mvRules.mk           |    1 +
+ arch/arm/plat-armada/Kconfig                       |    7 +
+ arch/arm/plat-armada/Makefile                      |    1 -
+ arch/arm/plat-armada/error_handling.c              |  276 ------------
+ .../plat-armada/mv_drivers_lsp/mv_error/mv_error.c |  452 ++++++++++++++++++++
+ tools/error_handling/README                        |   10 +
+ tools/error_handling/netlink-user.c                |  105 +++++
+ 8 files changed, 576 insertions(+), 277 deletions(-)
+ delete mode 100644 arch/arm/plat-armada/error_handling.c
+ create mode 100644 arch/arm/plat-armada/mv_drivers_lsp/mv_error/mv_error.c
+ create mode 100644 tools/error_handling/README
+ create mode 100755 tools/error_handling/netlink-user.c
+
+diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
+index 0d92c40..b41188b 100644
+--- a/arch/arm/mach-armadaxp/Makefile
++++ b/arch/arm/mach-armadaxp/Makefile
+@@ -126,6 +126,7 @@ obj-$(CONFIG_MV_ETH_L2SEC)              += $(LSP_L2FW_DIR)/mv_eth_l2sec.o
+ endif
+ 
+ obj-$(CONFIG_MV_INCLUDE_GIG_ETH)        += $(LSP_PHY_DIR)/phy_sysfs.o
++obj-$(CONFIG_ERROR_HANDLING)		   += $(LSP_ERR_DIR)/mv_error.o
+ 
+ obj-$(CONFIG_MV_USE_XOR_ENGINE) 	+= $(PLAT_DRIVERS)/mv_xor/
+ obj-$(CONFIG_MV_CESA) 			+= $(PLAT_DRIVERS)/mv_cesa/
+diff --git a/arch/arm/mach-armadaxp/config/mvRules.mk b/arch/arm/mach-armadaxp/config/mvRules.mk
+index 4881d57..216f5bc 100644
+--- a/arch/arm/mach-armadaxp/config/mvRules.mk
++++ b/arch/arm/mach-armadaxp/config/mvRules.mk
+@@ -100,6 +100,7 @@ endif
+ LSP_TRACE_DIR     = $(PLAT_DRIVERS)/mv_trace
+ LSP_SWITCH_DIR    = $(PLAT_DRIVERS)/mv_switch
+ LSP_PHY_DIR       = $(PLAT_DRIVERS)/mv_phy
++LSP_ERR_DIR       = $(PLAT_DRIVERS)/mv_error
+ 
+ # Environment components
+ AXP_FAM_DIR	= armada_xp_family
+diff --git a/arch/arm/plat-armada/Kconfig b/arch/arm/plat-armada/Kconfig
+index 1c44d5a..5710b3b 100644
+--- a/arch/arm/plat-armada/Kconfig
++++ b/arch/arm/plat-armada/Kconfig
+@@ -462,6 +462,13 @@ config	ERROR_HANDLING
+         ---help---
+         Choosing this option will enable error notification
+ 
++config	ERROR_HANDLING_DRAM_ECC
++	bool "DRAM ECC Error handling notification support"
++	depends on ERROR_HANDLING
++        default n
++        ---help---
++        Choosing this option will enable DRAM ECC error notification by netlink
++
+ 
+ 
+ menu "Soc DMA accelerations"
+diff --git a/arch/arm/plat-armada/Makefile b/arch/arm/plat-armada/Makefile
+index ea19ed2..a5caaf7 100644
+--- a/arch/arm/plat-armada/Makefile
++++ b/arch/arm/plat-armada/Makefile
+@@ -8,5 +8,4 @@ obj-$(CONFIG_SHEEVA_DEEP_IDLE)		+= cpuidle.o armada_suspend.o suspend.o
+ obj-$(CONFIG_HOTPLUG_CPU)		+= hotplug.o
+ obj-$(CONFIG_PLAT_ARMADA)		+= pmu.o
+ obj-$(CONFIG_PCI_MSI)			+= msi.o
+-obj-$(CONFIG_ERROR_HANDLING)		+=error_handling.o
+ obj-$(CONFIG_CPU_FREQ_ARMADA_XP)	+= cpufreq.o
+diff --git a/arch/arm/plat-armada/error_handling.c b/arch/arm/plat-armada/error_handling.c
+deleted file mode 100644
+index b38dd13..0000000
+--- a/arch/arm/plat-armada/error_handling.c
++++ /dev/null
+@@ -1,276 +0,0 @@
+-/*
+- * This program is free software; you can redistribute it and/or modify
+- * it under the terms of the GNU General Public License as published by
+- * the Free Software Foundation; either version 2 of the License, or
+- * (at your option) any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+- */
+-
+-#include <linux/irq.h>
+-#include <linux/notifier.h>
+-#include <linux/module.h>
+-#include <asm/io.h>
+-#include <linux/interrupt.h>
+-#include <linux/list.h>
+-#include <linux/slab.h>
+-#include <linux/workqueue.h>
+-
+-#define MAX_ERRORS 8
+-#define COHERENCY_FBRIC_ERROR_MASK 0x2025c
+-#define COHERENCY_FBRIC_ERROR_CAUSE 0x20258
+-#define COHERENCY_FBRIC_LOCAL_CAUSE 0x20260
+-#define SOC_MAIN_INTR_ERROR_CAUSE 0x20a20
+-
+-#define AXP_SOC_MAIN_INT_ERR_MASK(cpu)    ((0x218c0+(cpu)*0x100))
+-
+-#define AXP_COHERENCY_FBRIC_LCL_INT_MASK(cpu)    ((0x218c4+(cpu)*0x100))
+-#define COHERENCY_FBRIC_ERROR_SUM_MASK 	(0x1 << 27)
+-
+-struct error_notification{
+-	bool    mbus_error;
+-        u32     cause_register;
+-};
+-
+-struct error_info {
+-       struct work_struct error_handling_work;
+-	bool	mbus_error;
+-        u32	cause_register;
+-};
+-
+-struct axp_error_info_struct{
+-        struct error_info axp_error_info_array[8];
+-        int head;
+-        int tail;
+-	int size;
+-	spinlock_t	lock;
+-};
+-
+-struct axp_error_info_struct axp_error_info;
+-
+-struct unit_error{
+-	/*the unit_cause_reg, unit_maks_reg, and mask values represent
+-        the cause, and mask registers, in addition to the maks that are responsible
+-	for enabling / masking the interrupt, it's also used
+-	for acking the the interrupt when it's received */
+-	u32 unit_cause_reg;
+-	u32 unit_mask_reg;
+-	u32 mask;
+-	/*the place in the casue register
+-	are represnted with the error value */
+-	u32 error_val;
+-	struct list_head list; /* kernel's list structure */
+-};
+-
+-struct unit_error mbusunit_error_list;
+-BLOCKING_NOTIFIER_HEAD(armadaxp_error_notifier_chain);
+-EXPORT_SYMBOL(armadaxp_error_notifier_chain);
+-static struct workqueue_struct * error_workqueue;
+-
+-
+-
+-static void error_notifier(struct work_struct *work)
+-{
+-	struct error_notification nt;
+-	struct error_info *temp_error=container_of(work, struct error_info, error_handling_work);
+-	nt.mbus_error = temp_error->mbus_error;
+-	nt.cause_register = temp_error->cause_register;
+-	blocking_notifier_call_chain(&armadaxp_error_notifier_chain,0,&nt);
+-	return;
+-}
+-
+-
+-/*
+-this function is a helper function to handle the Mbus unit error without
+-having to modify any of the MBUS unit drivers.
+-
+-how to use:
+-Each driver (or even any other module), should pass a reg offset,a mask, and an error ID.
+-the mask will be writen to the  register offset  to enabled the dersired error in the unit level.
+-
+-
+-the ID will represet the error offset ( i.e. bit 0 will be represented as 0) in the Main interrupt
+-error casue ( offset 20A20 in AXP based on table 37 in the Spec).
+-in case of an ISR, the mask will be used to ack the interrupt
+-in the unit level and this also means that next error will not trigger an interrupt !!!
+-
+-for example:
+-to enable errors from CESA, which will trigger bits 0x7f at register 0x908c8, and can be unmasked by 0x908cc, while
+-eventually setting bit 0 at the main interrupt error cause, the following IO_error_register call should be used:  
+-IO_error_register(0x7f,0x908c8,0x908cc,0x0);
+-*/
+-
+-int IO_error_register(u32 mask,u32 unit_cause_reg, u32 unit_mask_reg, int error_val){
+-
+-	struct unit_error *new_error;
+-	int cpu;
+-	new_error = kmalloc(sizeof(struct unit_error),GFP_KERNEL);
+-	new_error->unit_cause_reg=unit_cause_reg;
+-	new_error->unit_mask_reg=unit_mask_reg;
+-	new_error->mask=mask;
+-	new_error->error_val=error_val;
+-	INIT_LIST_HEAD(&new_error->list);
+-	list_add(&new_error->list,&mbusunit_error_list.list);
+-
+-	/*unamsk for each possbile CPU, this can overriden by setting affinity*/	
+-	for_each_possible_cpu(cpu){
+-		writel(( 0x1 << error_val) , INTER_REGS_BASE | AXP_SOC_MAIN_INT_ERR_MASK(cpu));
+-	}
+-	
+-	/*write the mask to the reg passed by the unit
+-	 assuming that this will unmaks the desired errors per unit*/
+-	writel(mask,INTER_REGS_BASE | unit_mask_reg);
+-	return 0;
+-}
+-EXPORT_SYMBOL(IO_error_register);
+-
+-
+-
+-static irqreturn_t armadaxp_mbusunit_error_isr(int irq, void *arg){
+-
+-	u32 error_cause;
+-	u32 cause_value;
+-	unsigned long flags;
+-	struct unit_error* entry;
+-	error_cause=readl(INTER_REGS_BASE | SOC_MAIN_INTR_ERROR_CAUSE);
+-	list_for_each_entry(entry,&mbusunit_error_list.list,list){
+-		/*will have to pass the type of error to
+-		  differentiate MBUs and "system" errors
+-		*/
+-		if(error_cause == (0x1 << entry->error_val)){
+-			spin_lock_irqsave(&axp_error_info.lock,flags);
+-			if(((axp_error_info.head + 1) % MAX_ERRORS )== axp_error_info.tail)
+-				panic(" ARMADA XP error handler: ERROR RATE is too high");
+-			axp_error_info.axp_error_info_array[axp_error_info.head].cause_register=error_cause;
+-			axp_error_info.axp_error_info_array[axp_error_info.head].mbus_error=1;
+-			/*the actual ack*/
+-			cause_value=readl(INTER_REGS_BASE | entry->unit_cause_reg);
+-			/*very important to notice that we mask the error after first time it happens,
+-			this will resolve the case that no one acks the error, which will compromise the
+-			overall system stability ( i.e. interrupt without ack ) which is highly undesirable.
+-			the "customized" function, registered with the notification call chain can
+-			unmask the error, which will cause it to happen again. */
+-			writel(((~cause_value) & entry->mask), (INTER_REGS_BASE | entry->unit_mask_reg));
+-		
+-                queue_work(error_workqueue, (struct work_struct *) &axp_error_info.axp_error_info_array[axp_error_info.head] );
+-		axp_error_info.head = (axp_error_info.head + 1) % MAX_ERRORS;
+-			spin_unlock_irqrestore(&axp_error_info.lock,flags);
+-		}
+-	}
+-		return IRQ_HANDLED;
+-}
+-
+-
+-static irqreturn_t armadaxp_error_event_isr(int irq, void *arg)
+-{
+-	u32 error_cause, fabric_error_cause;
+-	unsigned long flags;
+-        error_cause=readl(INTER_REGS_BASE | COHERENCY_FBRIC_LOCAL_CAUSE);
+-	fabric_error_cause = readl(INTER_REGS_BASE | COHERENCY_FBRIC_ERROR_CAUSE);
+-	if(error_cause & 0x8000000){
+-		spin_lock_irqsave(&axp_error_info.lock,flags);
+-		if(((axp_error_info.head + 1) % MAX_ERRORS )== axp_error_info.tail)
+-			panic(" ARMADA XP error handler: ERROR RATE is too high");
+-		fabric_error_cause = readl(INTER_REGS_BASE | COHERENCY_FBRIC_ERROR_CAUSE);
+-		axp_error_info.axp_error_info_array[axp_error_info.head].cause_register=fabric_error_cause;
+-		axp_error_info.axp_error_info_array[axp_error_info.head].mbus_error=0;
+-		/*very important to notice that we mask the error after first time it happens,
+-		this will resolve the case that no one acks the error, which will compromise the
+-		overall system stability ( i.e. interrupt without ack ) which is highly undesirable.
+-		the "customized" function, registered with the notification call chain can
+-		unmask the error, which will cause it to happen again. */
+-		writel(((~fabric_error_cause) & readl(INTER_REGS_BASE | COHERENCY_FBRIC_ERROR_MASK) ), (INTER_REGS_BASE | COHERENCY_FBRIC_ERROR_MASK));
+-	
+-		writel(~(fabric_error_cause) ,INTER_REGS_BASE | COHERENCY_FBRIC_ERROR_CAUSE);
+-
+-		queue_work(error_workqueue,(struct work_struct *) &axp_error_info.axp_error_info_array[axp_error_info.head] );
+-		axp_error_info.head = (axp_error_info.head + 1) % MAX_ERRORS;
+-		spin_unlock_irqrestore(&axp_error_info.lock,flags);
+-		return IRQ_HANDLED;
+-	}else
+-		return IRQ_NONE;
+-}
+-
+-static int armadaxp_error_event(struct notifier_block *this, unsigned long event,
+-         void *ptr)
+-{
+-	unsigned long flags;
+-	spin_lock_irqsave(&axp_error_info.lock,flags);
+-	printk("ARMADA XP error handler is reading value %X from offset %X \n",axp_error_info.axp_error_info_array[axp_error_info.tail].cause_register,
+-								axp_error_info.axp_error_info_array[axp_error_info.tail].mbus_error==1?0x20A20:0x20258);
+-	axp_error_info.tail = (axp_error_info.tail + 1) % MAX_ERRORS;
+-	spin_unlock_irqrestore(&axp_error_info.lock,flags);
+-
+-        return NOTIFY_DONE;
+-
+-}
+-
+-static struct notifier_block error_handling_block = {
+-        .notifier_call  = armadaxp_error_event,
+-};
+-
+-static int __init errorhandling_notification_setup(void)
+-{
+-	int err;
+-	u32 temp_reg;
+-	int cpu;
+-	int i;
+-	/*
+-		nothing specal is need to enabling error handling first
+-	*/
+-	err = request_irq(IRQ_AURORA_MP, armadaxp_error_event_isr,IRQF_SHARED , "Armada Error Handler", armadaxp_error_event_isr );
+-	if(err)
+-	{
+-		printk("opps: request_irq failed to requestin IRQ# %d, returning now ! \n", IRQ_AURORA_MP);
+-		return err;
+-	}
+-	/*clear the error casue register, and unmask interrupt
+-	   to trigger the coherency fabric error interrupt */
+-	writel(0x0,INTER_REGS_BASE | COHERENCY_FBRIC_ERROR_CAUSE);
+-
+-	/*ERRATA 6349 need to be taken into consideration*/
+-#ifdef CONFIG_ARMADA_XP_REV_A0
+-	writel(0xFFF0FFFF ,INTER_REGS_BASE |COHERENCY_FBRIC_ERROR_MASK);
+-#else
+-	writel(0xFFFFFFFF ,INTER_REGS_BASE |COHERENCY_FBRIC_ERROR_MASK);
+-#endif
+-	/*bit 27 in COHERENCY_FBRIC_LOCAL_CAUSE is responsible for the errors from COHERENCY_FBRIC_ERROR_CAUSE
+-	 thus must unmaks it in the per cpu Coherency Fabric Local Interrupt Mask Register */
+- 	
+-	for_each_possible_cpu(cpu){
+-		temp_reg=readl( INTER_REGS_BASE | AXP_COHERENCY_FBRIC_LCL_INT_MASK(cpu));
+-                writel( temp_reg | COHERENCY_FBRIC_ERROR_SUM_MASK , INTER_REGS_BASE | AXP_COHERENCY_FBRIC_LCL_INT_MASK(cpu));
+-        }
+-
+-		/* the MBUS units part of the error handling setup*/
+-	INIT_LIST_HEAD(&mbusunit_error_list.list);
+-	err = request_irq(IRQ_AURORA_SOC_ERROR, armadaxp_mbusunit_error_isr,IRQF_DISABLED , "Armada MBUS unit Error Handler", NULL );
+-        if(err)
+-        {
+-		 printk("opps: request_irq failed to requestin IRQ# %d, returning now ! \n", IRQ_AURORA_SOC_ERROR);
+-                return err;
+-        }
+-	/*setup the axp_error_info struct */
+-	axp_error_info.head=0;
+-	axp_error_info.tail=0;
+-	spin_lock_init(&axp_error_info.lock);
+-
+-	  /* Setup notifier */
+-        blocking_notifier_chain_register(&armadaxp_error_notifier_chain, &error_handling_block);
+-	error_workqueue=create_workqueue("error handling");
+-
+-	for (i=0; i < MAX_ERRORS; i++)
+-		INIT_WORK(&(axp_error_info.axp_error_info_array[i].error_handling_work),error_notifier);
+-
+-	// IO_error_register(0x7f,0x908c8,0x908cc,0x0);	
+-	printk("ARMADA XP error handling module was loaded \n");
+-        return 0;
+-}
+-postcore_initcall(errorhandling_notification_setup);
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_error/mv_error.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_error/mv_error.c
+new file mode 100644
+index 0000000..cd3c5a1
+--- /dev/null
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_error/mv_error.c
+@@ -0,0 +1,452 @@
++/*
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ */
++
++#include <linux/irq.h>
++#include <linux/notifier.h>
++#include <linux/module.h>
++#include <asm/io.h>
++#include <linux/interrupt.h>
++#include <linux/list.h>
++#include <linux/slab.h>
++#include <linux/workqueue.h>
++#include <linux/proc_fs.h>
++#include <net/sock.h>
++#include <linux/netlink.h>
++#include <linux/skbuff.h>
++
++#define MAX_ERRORS 8
++#define COHERENCY_FBRIC_ERROR_MASK  0x2025c
++#define COHERENCY_FBRIC_ERROR_CAUSE 0x20258
++#define COHERENCY_FBRIC_LOCAL_CAUSE 0x20260
++#define SOC_MAIN_INTR_ERROR_CAUSE   0x20a20
++
++#define AXP_SOC_MAIN_INT_ERR_MASK(cpu)    ((0x218c0+(cpu)*0x100))
++#define AXP_COHERENCY_FBRIC_LCL_INT_MASK(cpu)    ((0x218c4+(cpu)*0x100))
++#define COHERENCY_FBRIC_ERROR_SUM_MASK	(0x1 << 27)
++
++struct error_notification {
++	bool mbus_error;
++	u32 cause_register;
++	u32 unit_cause;
++	u32 more_data;
++};
++
++struct error_info {
++	struct work_struct error_handling_work;
++	bool mbus_error;
++	u32 cause_register;
++	u32 unit_cause;
++	u32 more_data;
++};
++
++struct axp_error_info_struct {
++	struct error_info axp_error_info_array[8];
++	int head;
++	int tail;
++	int size;
++	spinlock_t lock;
++};
++
++#ifdef CONFIG_ERROR_HANDLING_DRAM_ECC
++struct axp_error_nl_message {
++	u32 unit_value;
++	u32 cause_value;
++	u32 unit_address;
++	u32 more_data;
++};
++
++static void nl_send_msg(void *messageStr, int len);
++static void nl_recv_connect_msg(struct sk_buff *skb);
++struct sock *nl_sk;
++static int listener_pid;
++
++#define NETLINK_USER                31
++#define DDR_INTR_ERROR_CAUSE        0x014D0
++#define DDR_INTR_ERROR_MASK         0x014D4
++#define DDR_INTR_ERROR_ADDR         0x01450
++#endif /*CONFIG_ERROR_HANDLING_DRAM_ECC */
++
++struct axp_error_info_struct axp_error_info;
++struct unit_error mbusunit_error_list;
++BLOCKING_NOTIFIER_HEAD(armadaxp_error_notifier_chain);
++EXPORT_SYMBOL(armadaxp_error_notifier_chain);
++static struct workqueue_struct *error_workqueue;
++
++struct unit_error {
++	/*the unit_cause_reg, unit_maks_reg, and mask values represent
++	   the cause, and mask registers,
++       in addition to the maks that are responsible
++	   for enabling / masking the interrupt, it's also used
++	   for acking the the interrupt when it's received */
++	u32 unit_cause_reg;
++	u32 unit_mask_reg;
++	u32 mask;
++	/*the place in the casue register
++	   are represnted with the error value */
++	u32 error_val;
++	struct list_head list;	/* kernel's list structure */
++};
++
++/*Error notifier called async to report the error interrupt event
++    notification sent by queue_work() in ISR functions*/
++static void error_notifier(struct work_struct *work)
++{
++	struct error_notification nt;
++	struct error_info *temp_error =
++	    container_of(work, struct error_info, error_handling_work);
++
++	nt.mbus_error = temp_error->mbus_error;
++	nt.cause_register = temp_error->cause_register;
++	nt.unit_cause = temp_error->unit_cause;
++	nt.more_data = temp_error->more_data;
++	blocking_notifier_call_chain(&armadaxp_error_notifier_chain, 0, &nt);
++
++	return;
++}
++
++/*
++this function is a helper function to handle the Mbus unit error without
++having to modify any of the MBUS unit drivers.
++
++how to use:
++Each driver (or even any other module), should pass a reg offset,a mask, and an error ID.
++the mask will be writen to the  register offset  to enabled the dersired error in the unit level.
++
++the ID will represet the error offset ( i.e. bit 0 will be represented as 0) in the Main interrupt
++error casue ( offset 20A20 in AXP based on table 37 in the Spec).
++in case of an ISR, the mask will be used to ack the interrupt
++in the unit level and this also means that next error will not trigger an interrupt !!!
++
++for example:
++to enable errors from CESA, which will trigger bits 0x7f at register 0x908c8, and can be unmasked by 0x908cc, while
++eventually setting bit 0 at the main interrupt error cause, the following IO_error_register call should be used:
++IO_error_register(0x7f,0x908c8,0x908cc,0x0);
++*/
++
++int IO_error_register(u32 mask, u32 unit_cause_reg, u32 unit_mask_reg,
++		      int error_val)
++{
++
++	struct unit_error *new_error;
++	int cpu;
++
++	new_error = kmalloc(sizeof(struct unit_error), GFP_KERNEL);
++	new_error->unit_cause_reg = unit_cause_reg;
++	new_error->unit_mask_reg = unit_mask_reg;
++	new_error->mask = mask;
++	new_error->error_val = error_val;
++
++	INIT_LIST_HEAD(&new_error->list);
++	list_add(&new_error->list, &mbusunit_error_list.list);
++
++	/*unamsk for each possbile CPU, this can overriden by setting affinity */
++	for_each_possible_cpu(cpu) {
++		writel((0x1 << error_val),
++		       INTER_REGS_BASE | AXP_SOC_MAIN_INT_ERR_MASK(cpu));
++	}
++
++	/*write the mask to the reg passed by the unit
++	   assuming that this will unmaks the desired errors per unit */
++	writel(mask, INTER_REGS_BASE | unit_mask_reg);
++	return 0;
++}
++
++EXPORT_SYMBOL(IO_error_register);
++
++/*ISR for MBUS(Units) errors*/
++static irqreturn_t armadaxp_mbusunit_error_isr(int irq, void *arg)
++{
++
++	u32 error_cause;
++	unsigned long flags;
++	struct unit_error *entry;
++
++	error_cause = readl(INTER_REGS_BASE | SOC_MAIN_INTR_ERROR_CAUSE);
++
++	list_for_each_entry(entry, &mbusunit_error_list.list, list) {
++		/*will have to pass the type of error to
++		   differentiate MBUs and "system" errors
++		 */
++		if (error_cause == (0x1 << entry->error_val)) {
++			spin_lock_irqsave(&axp_error_info.lock, flags);
++
++			if (((axp_error_info.head + 1) % MAX_ERRORS) ==
++			    axp_error_info.tail)
++				panic
++				    (" ARMADA XP error handler: ERROR RATE is too high");
++			axp_error_info.axp_error_info_array[axp_error_info.
++							    head].
++			    cause_register = error_cause;
++			axp_error_info.axp_error_info_array[axp_error_info.
++							    head].mbus_error =
++			    1;
++			/*the actual ack */
++			axp_error_info.axp_error_info_array[axp_error_info.
++							    head].unit_cause =
++			    readl(INTER_REGS_BASE | entry->unit_cause_reg);
++
++			/*very important to notice that we mask the error after first time it happens,
++			   this will resolve the case that no one acks the error, which will compromise the
++			   overall system stability ( i.e. interrupt without ack ) which is highly undesirable.
++			   the "customized" function, registered with the notification call chain can
++			   unmask the error, which will cause it to happen again. */
++			writel(((~axp_error_info.
++				 axp_error_info_array[axp_error_info.head].
++				 unit_cause) & entry->mask),
++			       (INTER_REGS_BASE | entry->unit_mask_reg));
++
++#ifdef CONFIG_ERROR_HANDLING_DRAM_ECC
++			/*Read Specific Unit(DRAM) Data */
++			if (entry->error_val == 0x9) {
++				axp_error_info.
++				    axp_error_info_array[axp_error_info.head].
++				    more_data =
++				    readl(INTER_REGS_BASE |
++					  DDR_INTR_ERROR_ADDR);
++				/*Clear unit cause register */
++				writel(0,
++				       INTER_REGS_BASE | entry->unit_cause_reg);
++			}
++#endif
++			/*Report the error event */
++			queue_work(error_workqueue,
++				   (struct work_struct *)&axp_error_info.
++				   axp_error_info_array[axp_error_info.head]);
++			axp_error_info.head =
++			    (axp_error_info.head + 1) % MAX_ERRORS;
++			spin_unlock_irqrestore(&axp_error_info.lock, flags);
++		}
++	}
++	return IRQ_HANDLED;
++}
++
++/*ISR for Fabric errors*/
++static irqreturn_t armadaxp_error_event_isr(int irq, void *arg)
++{
++	u32 error_cause, fabric_error_cause;
++	unsigned long flags;
++
++	error_cause = readl(INTER_REGS_BASE | COHERENCY_FBRIC_LOCAL_CAUSE);
++	fabric_error_cause =
++	    readl(INTER_REGS_BASE | COHERENCY_FBRIC_ERROR_CAUSE);
++
++	if (error_cause & 0x8000000) {
++		spin_lock_irqsave(&axp_error_info.lock, flags);
++
++		if (((axp_error_info.head + 1) % MAX_ERRORS) ==
++		    axp_error_info.tail)
++			panic
++			    (" ARMADA XP error handler: ERROR RATE is too high");
++		fabric_error_cause =
++		    readl(INTER_REGS_BASE | COHERENCY_FBRIC_ERROR_CAUSE);
++		axp_error_info.axp_error_info_array[axp_error_info.head].
++		    cause_register = fabric_error_cause;
++		axp_error_info.axp_error_info_array[axp_error_info.head].
++		    mbus_error = 0;
++
++		/*very important to notice that we mask the error after first time it happens,
++		   this will resolve the case that no one acks the error, which will compromise the
++		   overall system stability ( i.e. interrupt without ack ) which is highly undesirable.
++		   the "customized" function, registered with the notification call chain can
++		   unmask the error, which will cause it to happen again. */
++		writel(((~fabric_error_cause) &
++			readl(INTER_REGS_BASE | COHERENCY_FBRIC_ERROR_MASK)),
++		       (INTER_REGS_BASE | COHERENCY_FBRIC_ERROR_MASK));
++
++		writel(~(fabric_error_cause),
++		       INTER_REGS_BASE | COHERENCY_FBRIC_ERROR_CAUSE);
++
++		queue_work(error_workqueue,
++			   (struct work_struct *)&axp_error_info.
++			   axp_error_info_array[axp_error_info.head]);
++		axp_error_info.head = (axp_error_info.head + 1) % MAX_ERRORS;
++		spin_unlock_irqrestore(&axp_error_info.lock, flags);
++		return IRQ_HANDLED;
++	} else
++		return IRQ_NONE;
++}
++
++/*Error handler called by error notifier to report the error interrupt event
++    notification sent by blocking_notifier_call_chain()*/
++static int armadaxp_error_event(struct notifier_block *this,
++				unsigned long event, void *ptr)
++{
++	unsigned long flags;
++#ifdef CONFIG_ERROR_HANDLING_DRAM_ECC
++	struct axp_error_nl_message nl_message;
++#endif
++	spin_lock_irqsave(&axp_error_info.lock, flags);
++
++	printk(KERN_INFO
++	       "ARMADA XP error handler is reading value %X(cause %X) from offset %X \n",
++	       axp_error_info.axp_error_info_array[axp_error_info.tail].
++	       cause_register,
++	       axp_error_info.axp_error_info_array[axp_error_info.tail].
++	       unit_cause,
++	       axp_error_info.axp_error_info_array[axp_error_info.tail].
++	       mbus_error == 1 ? 0x20A20 : 0x20258);
++
++	axp_error_info.tail = (axp_error_info.tail + 1) % MAX_ERRORS;
++	spin_unlock_irqrestore(&axp_error_info.lock, flags);
++
++#ifdef CONFIG_ERROR_HANDLING_DRAM_ECC
++	/*Prepare Netlink message */
++	nl_message.unit_value =
++	    axp_error_info.axp_error_info_array[axp_error_info.tail].unit_cause;
++	nl_message.cause_value =
++	    axp_error_info.axp_error_info_array[axp_error_info.tail].
++	    cause_register;
++	nl_message.more_data =
++	    axp_error_info.axp_error_info_array[axp_error_info.tail].more_data;
++	nl_message.unit_address =
++	    axp_error_info.axp_error_info_array[axp_error_info.tail].
++	    mbus_error == 1 ? 0x20A20 : 0x20258;
++	/*Send Netlink message */
++	nl_send_msg(&nl_message, sizeof(nl_message));
++#endif
++
++	return NOTIFY_DONE;
++}
++
++static struct notifier_block error_handling_block = {
++	.notifier_call = armadaxp_error_event,
++};
++
++static int __init errorhandling_notification_setup(void)
++{
++	int err;
++	u32 temp_reg;
++	int cpu;
++	int i;
++
++#ifdef CONFIG_ERROR_HANDLING_DRAM_ECC
++	/*Create netlink socket connection to report error messages */
++	nl_sk = netlink_kernel_create(&init_net, NETLINK_USER, 0,
++				      nl_recv_connect_msg, NULL, THIS_MODULE);
++	if (!nl_sk) {
++		printk(KERN_ALERT "opps: Error creating socket.\n");
++		return -10;
++	}
++#endif
++
++	/*Request IRQ for Fabric error interrupts */
++	err = request_irq(IRQ_AURORA_MP, armadaxp_error_event_isr, IRQF_SHARED,
++			  "Armada Error Handler", armadaxp_error_event_isr);
++	if (err) {
++		printk
++		    ("opps: request_irq failed to requestin IRQ# %d, returning now ! \n",
++		     IRQ_AURORA_MP);
++		return err;
++	}
++	/*clear the error casue register, and unmask interrupt
++	   to trigger the coherency fabric error interrupt */
++	writel(0x0, INTER_REGS_BASE | COHERENCY_FBRIC_ERROR_CAUSE);
++
++	/*ERRATA 6349 need to be taken into consideration */
++#ifdef CONFIG_ARMADA_XP_REV_A0
++	writel(0xFFF0FFFF, INTER_REGS_BASE | COHERENCY_FBRIC_ERROR_MASK);
++#else
++	writel(0xFFFFFFFF, INTER_REGS_BASE | COHERENCY_FBRIC_ERROR_MASK);
++#endif
++	/*bit 27 in COHERENCY_FBRIC_LOCAL_CAUSE is responsible for the errors from COHERENCY_FBRIC_ERROR_CAUSE
++	   thus must unmaks it in the per cpu Coherency Fabric Local Interrupt Mask Register */
++
++	for_each_possible_cpu(cpu) {
++		temp_reg =
++		    readl(INTER_REGS_BASE |
++			  AXP_COHERENCY_FBRIC_LCL_INT_MASK(cpu));
++		writel(temp_reg | COHERENCY_FBRIC_ERROR_SUM_MASK,
++		       INTER_REGS_BASE | AXP_COHERENCY_FBRIC_LCL_INT_MASK(cpu));
++	}
++
++#ifdef CONFIG_ERROR_HANDLING_DRAM_ECC
++	/*Config Proper DRAM ECC reporting path */
++	writel(0x00010000, INTER_REGS_BASE | 0x1454);	/*Set Threshold 1 for 1-bit ECC errors*/
++#endif
++
++	/* the MBUS units part of the error handling setup */
++	INIT_LIST_HEAD(&mbusunit_error_list.list);
++	irq_clear_status_flags(IRQ_AURORA_SOC_ERROR, IRQ_PER_CPU_DEVID);
++	err = request_irq(IRQ_AURORA_SOC_ERROR, armadaxp_mbusunit_error_isr,
++			  (IRQF_DISABLED | IRQF_SAMPLE_RANDOM),
++			  "Armada MBUS unit Error Handler", NULL);
++	if (err) {
++		printk
++		    ("opps: request_irq failed to IRQ# %d err %d, returning now ! \n",
++		     IRQ_AURORA_SOC_ERROR, err);
++		return err;
++	}
++#ifdef CONFIG_ARMADAXP_USE_IRQ_INDIRECT_MODE
++#ifdef CONFIG_ERROR_HANDLING_DRAM_ECC
++/*Enable the main mask of the interrupt*/
++	writel(0x1100000F, INTER_REGS_BASE | 0x20b10);
++#endif
++#endif
++
++	/*setup the axp_error_info struct */
++	axp_error_info.head = 0;
++	axp_error_info.tail = 0;
++	spin_lock_init(&axp_error_info.lock);
++
++	/* Setup notifier */
++	blocking_notifier_chain_register(&armadaxp_error_notifier_chain,
++					 &error_handling_block);
++	error_workqueue = create_workqueue("error handling");
++
++	for (i = 0; i < MAX_ERRORS; i++)
++		INIT_WORK(&
++			  (axp_error_info.axp_error_info_array[i].
++			   error_handling_work), error_notifier);
++
++#ifdef CONFIG_ERROR_HANDLING_DRAM_ECC
++	/*Register DRAM ECC error handler */
++	IO_error_register(0x3, DDR_INTR_ERROR_CAUSE, DDR_INTR_ERROR_MASK, 0x9);
++#endif
++
++	printk("ARMADA XP error handling module was loaded \n");
++	return 0;
++}
++
++postcore_initcall(errorhandling_notification_setup);
++
++#ifdef CONFIG_ERROR_HANDLING_DRAM_ECC
++/************************Netlink setup***********************/
++
++/*This function called on message from User space,
++    used to store pid of User space agent*/
++static void nl_recv_connect_msg(struct sk_buff *skb)
++{
++	struct nlmsghdr *nlh;
++	nlh = (struct nlmsghdr *)skb->data;
++	listener_pid = nlh->nlmsg_pid;	/*pid of sending process */
++}
++
++/*This function sending raw message to user space agent*/
++static void nl_send_msg(void *messageStr, int len)
++{
++	struct sk_buff *skb;
++	struct nlmsghdr *nlh;
++	int *ptr;
++
++	skb = nlmsg_new(len, 0);
++	nlh = nlmsg_put(skb, 0, 0, NLMSG_DONE, len, 0);
++	ptr = messageStr;
++
++	NETLINK_CB(skb).dst_group = 0;	/* not in mcast group */
++	memcpy(nlmsg_data(nlh), messageStr, len);
++	netlink_unicast(nl_sk, skb, listener_pid, MSG_DONTWAIT);
++}
++#endif
+diff --git a/tools/error_handling/README b/tools/error_handling/README
+new file mode 100644
+index 0000000..ebb57eb
+--- /dev/null
++++ b/tools/error_handling/README
+@@ -0,0 +1,10 @@
++This example of user space agent connectiong to error interrupts handler and getting netlink messages about DRAM ECC errors.
++
++To see the message, compile the agent "cc netlink-user.c -o netlink-user" and run it on kernel compiled with ERROR_HANDLING_DRAM_ECC enabled.
++After cause DRAM ECC error and check dmesg.
++
++General flow of the agent:
++1. Establish netink to kernel agent.
++2. Wait for messages from armadaxp_error_event in kernel.
++3. Get the message, cast it to appropriate structure and analize the data sent from kernel.
++.
+diff --git a/tools/error_handling/netlink-user.c b/tools/error_handling/netlink-user.c
+new file mode 100755
+index 0000000..5e1aba3
+--- /dev/null
++++ b/tools/error_handling/netlink-user.c
+@@ -0,0 +1,105 @@
++#include <sys/socket.h>
++#include <linux/netlink.h>
++
++#define NETLINK_USER 31
++#define MAX_PAYLOAD 1024  /* maximum payload size*/
++
++
++#define MV_DRAM_UNIT_CODE 		(1<<9)
++#define MV_MBUS_ERRORS_SOURCE 		0x20A20
++#define MV_1BIT_ERROR_MASK  		0x1
++#define MV_2BIT_ERROR_MASK      	0x2
++#define MV_DATA_PATH_ERROR_MASK      	0x3
++
++struct axp_error_nl_message{
++        int unit_value;
++        int cause_value;
++        int unit_address;
++        int more_data;
++};
++
++struct sockaddr_nl src_addr, dest_addr;
++struct nlmsghdr *nlh = NULL;
++struct iovec iov;
++int sock_fd;
++struct msghdr msg;
++struct axp_error_nl_message* data;
++
++void main() {
++	pid_t childID;
++printf("Started\n");
++    sock_fd=socket(PF_NETLINK, SOCK_RAW, NETLINK_USER);
++    if(sock_fd<0)
++	return -1;
++    printf("Sock opened\n");
++
++    memset(&src_addr, 0, sizeof(src_addr));
++    src_addr.nl_family = AF_NETLINK;
++    src_addr.nl_pid = getpid();  /* self pid */
++    /* interested in group 1<<0 */
++    bind(sock_fd, (struct sockaddr*)&src_addr,
++        sizeof(src_addr));
++
++    memset(&dest_addr, 0, sizeof(dest_addr));
++    memset(&dest_addr, 0, sizeof(dest_addr));
++    dest_addr.nl_family = AF_NETLINK;
++    dest_addr.nl_pid = 0;   /* For Linux Kernel */
++    dest_addr.nl_groups = 0; /* unicast */
++
++    nlh = (struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD));
++    memset(nlh, 0, NLMSG_SPACE(MAX_PAYLOAD));
++    nlh->nlmsg_len = NLMSG_SPACE(MAX_PAYLOAD);
++    nlh->nlmsg_pid = getpid();
++    nlh->nlmsg_flags = 0;
++    strcpy(NLMSG_DATA(nlh), "Hello");
++    iov.iov_base = (void *)nlh;
++    iov.iov_len = nlh->nlmsg_len;
++    msg.msg_name = (void *)&dest_addr;
++    msg.msg_namelen = sizeof(dest_addr);
++    msg.msg_iov = &iov;
++    msg.msg_iovlen = 1;
++
++    printf("Sending message to kernel\n");
++    sendmsg(sock_fd,&msg,0);
++
++   printf("Waiting for message from kernel\n");
++while(1==1)
++{
++
++    /* Read message from kernel */
++    recvmsg(sock_fd, &msg, 0);
++    data = NLMSG_DATA(nlh);
++
++    /*Amalyze message async*/
++    childID = fork();
++    if( childID >= 0)
++    {
++	if( childID == 0)
++	{
++            printf(" Received message Unit value 0x%X, Cause value 0x%X, addr 0x%X\n",
++                data->unit_value,
++                data->cause_value,
++                data->unit_address);
++	    if( data->unit_address == MV_MBUS_ERRORS_SOURCE )
++		printf("The Error from Units\n");
++	    else
++                printf("The Error from Fabric\n");
++
++            if( data->cause_value ==  MV_DRAM_UNIT_CODE)
++                printf("The Error from DDR Unit\n");
++            else
++                printf("The Error from Other Unit\n");
++
++            if( (data->unit_value&MV_1BIT_ERROR_MASK) != 0)
++                printf("The Error is 1Bit ECC\n");
++            if( (data->unit_value&MV_2BIT_ERROR_MASK) != 0)
++                printf("The Error is 2Bit ECC\n");
++            if( (data->unit_value&MV_DATA_PATH_ERROR_MASK) != 0)
++                printf("The Error is Data Path Parity\n");
++            printf("Address register is 0x%X\n", data->more_data);
++	}
++    }
++
++}
++    close(sock_fd);
++}
+-- 
+1.7.9.5
+

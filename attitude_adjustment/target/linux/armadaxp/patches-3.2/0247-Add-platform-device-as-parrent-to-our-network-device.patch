@@ -1,0 +1,125 @@
+From 6c3842b8e343dcc7395cf3c031ad230b3de1b413 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Wed, 15 Aug 2012 02:41:38 -0400
+Subject: [PATCH 247/609] Add platform device as parrent to our network
+ device.
+
+	It create sysfs entry for our network device and enable Network Manager to
+	work correctly with our network device.
+	Issue was originally reported by RedHat
+
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |   25 +++++++++++++-------
+ 1 file changed, 16 insertions(+), 9 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index b00f5ea..f9e10ab 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -139,7 +139,8 @@ static int  mv_eth_priv_init(struct eth_port *pp, int port);
+ static void mv_eth_priv_cleanup(struct eth_port *pp);
+ static int  mv_eth_config_get(struct eth_port *pp, u8 *mac);
+ static int  mv_eth_hal_init(struct eth_port *pp);
+-struct net_device *mv_eth_netdev_init(struct eth_port *pp, int mtu, u8 *mac);
++struct net_device *mv_eth_netdev_init(struct eth_port *pp, int mtu, u8 *mac,
++					struct platform_device *pdev);
+ static void mv_eth_netdev_set_features(struct net_device *dev);
+ static void mv_eth_netdev_update_features(struct net_device *dev);
+ 
+@@ -1037,7 +1038,8 @@ void mv_eth_switch_priv_update(struct net_device *netdev, int i)
+ }
+ 
+ 
+-int mv_eth_switch_netdev_init(struct eth_port *pp, int dev_i)
++int mv_eth_switch_netdev_init(struct eth_port *pp, int dev_i,
++				struct platform_device *pdev)
+ {
+ 	int i;
+ 	struct net_device *netdev;
+@@ -1045,7 +1047,8 @@ int mv_eth_switch_netdev_init(struct eth_port *pp, int dev_i)
+ 	switch_enabled_ports = 0;
+ 
+ 	for (i = 0; i < switch_net_config[pp->port].netdev_max; i++) {
+-		netdev = mv_eth_netdev_init(pp, switch_net_config[pp->port].mtu, switch_net_config[pp->port].mac_addr[i]);
++		netdev = mv_eth_netdev_init(pp, switch_net_config[pp->port].mtu, switch_net_config[pp->port].mac_addr[i],
++						pdev);
+ 		if (netdev == NULL) {
+ 			printk(KERN_ERR "mv_eth_switch_netdev_init: can't create netdevice\n");
+ 			break;
+@@ -2918,7 +2921,8 @@ static MV_STATUS mv_eth_bm_pools_init(void)
+ }
+ 
+ /* Note: call this function only after mv_eth_ports_num is initialized */
+-static int mv_eth_load_network_interfaces(MV_U32 portMask, MV_U32 cpuMask)
++static int mv_eth_load_network_interfaces(MV_U32 portMask, MV_U32 cpuMask,
++						struct platform_device *pdev)
+ {
+ 	u32 port, dev_i = 0;
+ 	struct eth_port *pp;
+@@ -3003,7 +3007,7 @@ static int mv_eth_load_network_interfaces(MV_U32 portMask, MV_U32 cpuMask)
+ 			int queue = CONFIG_MV_ETH_RXQ_DEF;
+ 
+ 			mv_eth_switch_netdev_first = dev_i;
+-			dev_i = mv_eth_switch_netdev_init(pp, dev_i);
++			dev_i = mv_eth_switch_netdev_init(pp, dev_i, pdev);
+ 			if (dev_i < (mv_eth_switch_netdev_first + switch_net_config[port].netdev_max)) {
+ 				printk(KERN_ERR "%s: can't create netdevice for switch\n", __func__);
+ 				mv_eth_priv_cleanup(pp);
+@@ -3019,7 +3023,7 @@ static int mv_eth_load_network_interfaces(MV_U32 portMask, MV_U32 cpuMask)
+ 		}
+ #endif /* CONFIG_MV_ETH_SWITCH */
+ 
+-		mv_net_devs[dev_i] = mv_eth_netdev_init(pp, mtu, mac);
++		mv_net_devs[dev_i] = mv_eth_netdev_init(pp, mtu, mac, pdev);
+ 		if (!mv_net_devs[dev_i]) {
+ 			printk(KERN_ERR "%s: can't create netdevice\n", __func__);
+ 			mv_eth_priv_cleanup(pp);
+@@ -3275,7 +3279,7 @@ static int mv_eth_probe(struct platform_device *pdev)
+ #endif /* CONFIG_MV_INCLUDE_SWITCH */
+ 
+ 	if (!mv_eth_initialized) {
+-		if (mv_eth_load_network_interfaces(port_mask, cpu_mask))
++		if (mv_eth_load_network_interfaces(port_mask, cpu_mask, pdev))
+ 			goto oom;
+ 	}
+ 
+@@ -3289,6 +3293,7 @@ static int mv_eth_probe(struct platform_device *pdev)
+ 	/* Call mv_eth_open specifically for ports not connected to Linux netdevice */
+ 	for (port = 0; port < mv_eth_ports_num; port++) {
+ 		pp = mv_eth_port_by_id(port);
++
+ 		if (pp) {
+ 			if (!(pp->flags & MV_ETH_F_CONNECT_LINUX)) {
+ 				if (pp->flags & MV_ETH_F_SWITCH)
+@@ -3418,7 +3423,8 @@ static void mv_eth_tx_timeout(struct net_device *dev)
+  * mv_eth_netdev_init -- Allocate and initialize net_device    *
+  *                   structure                                 *
+  ***************************************************************/
+-struct net_device *mv_eth_netdev_init(struct eth_port *pp, int mtu, u8 *mac)
++struct net_device *mv_eth_netdev_init(struct eth_port *pp, int mtu, u8 *mac,
++				struct platform_device *pdev)
+ {
+ 	int cpu, i;
+ 	struct net_device *dev;
+@@ -3494,6 +3500,8 @@ struct net_device *mv_eth_netdev_init(struct eth_port *pp, int mtu, u8 *mac)
+ 		cpuCtrl->cleanup_timer.data = (unsigned long)dev;
+ 	}
+ 
++	SET_NETDEV_DEV(dev, &pdev->dev);
++
+ 	if (pp->flags & MV_ETH_F_CONNECT_LINUX) {
+ 		mv_eth_netdev_set_features(dev);
+ 		if (register_netdev(dev)) {
+@@ -4201,7 +4209,6 @@ int mv_eth_start_internals(struct eth_port *pp, int mtu)
+ 				err = -EINVAL;
+ 				goto out;
+ 			}
+-
+ 			if (mv_eth_ctrl_txq_cpu_own(pp->port, pp->txp, cpuCtrl->txq, 1, cpu) < 0) {
+ 				err = -EINVAL;
+ 				goto out;
+-- 
+1.7.9.5
+

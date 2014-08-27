@@ -1,0 +1,508 @@
+From 5ae401069d660d3bad048b1ad7e6ec34521e3099 Mon Sep 17 00:00:00 2001
+From: Raymond Huang <rhuang@marvell.com>
+Date: Wed, 4 Jan 2012 18:17:39 +0800
+Subject: [PATCH 227/609] LPAE: add proc-sheeva_pj4bv7lpae.S
+
+Change-Id: I1daaa3312bd14874c434b78c34f933fbfd19af53
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mm/Makefile                 |    6 +-
+ arch/arm/mm/proc-sheeva_pj4bv7lpae.S |  464 ++++++++++++++++++++++++++++++++++
+ 2 files changed, 467 insertions(+), 3 deletions(-)
+ create mode 100644 arch/arm/mm/proc-sheeva_pj4bv7lpae.S
+
+diff --git a/arch/arm/mm/Makefile b/arch/arm/mm/Makefile
+index ca6295e..b85ee1a 100644
+--- a/arch/arm/mm/Makefile
++++ b/arch/arm/mm/Makefile
+@@ -91,13 +91,13 @@ obj-$(CONFIG_CPU_XSCALE)	+= proc-xscale.o
+ obj-$(CONFIG_CPU_XSC3)		+= proc-xsc3.o
+ obj-$(CONFIG_CPU_MOHAWK)	+= proc-mohawk.o
+ obj-$(CONFIG_CPU_FEROCEON)	+= proc-feroceon.o
+-obj-$(CONFIG_CPU_V6)		+= proc-v6.o
+-obj-$(CONFIG_CPU_V6K)		+= proc-v6.o
++#obj-$(CONFIG_CPU_V6)		+= proc-v6.o
++#obj-$(CONFIG_CPU_V6K)		+= proc-v6.o
++#obj-$(CONFIG_CPU_V7)		+= proc-v7.o
+ obj-$(CONFIG_CPU_SHEEVA_PJ4B_V6)	+= proc-sheeva_pj4bv6.o
+ ifeq ($(CONFIG_ARM_LPAE),y)
+ obj-$(CONFIG_CPU_V7)		+= proc-v7lpae.o
+ else
+-obj-$(CONFIG_CPU_V7)		+= proc-v7.o
+ obj-$(CONFIG_CPU_SHEEVA_PJ4B_V7)	+= proc-sheeva_pj4bv7.o
+ endif
+ 
+diff --git a/arch/arm/mm/proc-sheeva_pj4bv7lpae.S b/arch/arm/mm/proc-sheeva_pj4bv7lpae.S
+new file mode 100644
+index 0000000..f7f8117
+--- /dev/null
++++ b/arch/arm/mm/proc-sheeva_pj4bv7lpae.S
+@@ -0,0 +1,464 @@
++/*
++ *  linux/arch/arm/mm/proc-sheeva_pj4bv7lpae.S
++ *
++ * Copyright (C) 2001 Deep Blue Solutions Ltd.
++ * Copyright (C) 2011 ARM Ltd.
++ * Author: Catalin Marinas <catalin.marinas@arm.com>
++ *   based on arch/arm/mm/proc-v7.S
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
++ */
++#include <linux/init.h>
++#include <linux/linkage.h>
++#include <asm/assembler.h>
++#include <asm/asm-offsets.h>
++#include <asm/hwcap.h>
++#include <asm/pgtable-hwdef.h>
++#include <asm/pgtable.h>
++#include <mach/armadaxp.h>
++
++#include "proc-macros.S"
++#include "sheeva_pj4b-macros.S"
++
++#define TTB_IRGN_NC	(0 << 8)
++#define TTB_IRGN_WBWA	(1 << 8)
++#define TTB_IRGN_WT	(2 << 8)
++#define TTB_IRGN_WB	(3 << 8)
++#define TTB_RGN_NC	(0 << 10)
++#define TTB_RGN_OC_WBWA	(1 << 10)
++#define TTB_RGN_OC_WT	(2 << 10)
++#define TTB_RGN_OC_WB	(3 << 10)
++#define TTB_S		(3 << 12)
++#define TTB_EAE		(1 << 31)
++
++/* PTWs cacheable, inner WB not shareable, outer WB not shareable */
++#define TTB_FLAGS_UP	(TTB_IRGN_WB|TTB_RGN_OC_WB)
++#define PMD_FLAGS_UP	(PMD_SECT_WB)
++
++/* PTWs cacheable, inner WBWA shareable, outer WBWA not shareable */
++#define TTB_FLAGS_SMP	(TTB_IRGN_WBWA|TTB_S|TTB_RGN_OC_WBWA)
++#define PMD_FLAGS_SMP	(PMD_SECT_WBWA|PMD_SECT_S)
++
++ENTRY(cpu_pj4bv7_proc_init)
++	mov	pc, lr
++ENDPROC(cpu_pj4bv7_proc_init)
++
++ENTRY(cpu_pj4bv7_proc_fin)
++	mrc	p15, 0, r0, c1, c0, 0		@ ctrl register
++	bic	r0, r0, #0x1000			@ ...i............
++	bic	r0, r0, #0x0006			@ .............ca.
++	mcr	p15, 0, r0, c1, c0, 0		@ disable caches
++	mov	pc, lr
++ENDPROC(cpu_pj4bv7_proc_fin)
++
++/*
++ *	cpu_pj4bv7_reset(loc)
++ *
++ *	Perform a soft reset of the system.  Put the CPU into the
++ *	same state as it would be if it had been reset, and branch
++ *	to what would be the reset vector.
++ *
++ *	- loc   - location to jump to for soft reset
++ */
++	.align	5
++ENTRY(cpu_pj4bv7_reset)
++	mov	pc, r0
++ENDPROC(cpu_pj4bv7_reset)
++
++/*
++ *	cpu_pj4bv7_do_idle()
++ *
++ *	Idle the processor (eg, wait for interrupt).
++ *
++ *	IRQs are already disabled.
++ */
++ENTRY(cpu_pj4bv7_do_idle)
++	dsb					@ WFI may enter a low-power mode
++	wfi
++	mov	pc, lr
++ENDPROC(cpu_pj4bv7_do_idle)
++
++ENTRY(cpu_pj4bv7_dcache_clean_area)
++#ifndef TLB_CAN_READ_FROM_L1_CACHE
++	dcache_line_size r2, r3
++1:	mcr	p15, 0, r0, c7, c10, 1		@ clean D entry
++	add	r0, r0, r2
++	subs	r1, r1, r2
++	bhi	1b
++	dsb
++#endif
++	mov	pc, lr
++ENDPROC(cpu_pj4bv7_dcache_clean_area)
++
++/*
++ *	cpu_v7_switch_mm(pgd_phys, tsk)
++ *
++ *	Set the translation table base pointer to be pgd_phys
++ *
++ *	- pgd_phys - physical address of new TTB
++ *
++ *	It is assumed that:
++ *	- we are not using split page tables
++ */
++ENTRY(cpu_pj4bv7_switch_mm)
++#ifdef CONFIG_MMU
++	ldr	r1, [r1, #MM_CONTEXT_ID]	@ get mm->context.id
++	mov	r2, #0
++	and	r3, r1, #0xff
++	mov	r3, r3, lsl #(48 - 32)		@ ASID
++	mcrr	p15, 0, r0, r3, c2		@ set TTB 0
++	isb
++#endif
++	mov	pc, lr
++ENDPROC(cpu_pj4bv7_switch_mm)
++
++/*
++ *	cpu_pj4bv7_set_pte_ext(ptep, pte)
++ *
++ *	Set a level 2 translation table entry.
++ *
++ *	- ptep  - pointer to level 2 translation table entry
++ *		  (hardware version is stored at +2048 bytes)
++ *	- pte   - PTE value to store
++ *	- ext	- value for extended PTE bits
++ */
++ENTRY(cpu_pj4bv7_set_pte_ext)
++#ifdef CONFIG_MMU
++	tst	r2, #L_PTE_PRESENT
++	beq	1f
++	tst	r3, #1 << (55 - 32)		@ L_PTE_DIRTY
++	orreq	r2, #L_PTE_RDONLY
++1:	strd	r2, r3, [r0]
++	mcr	p15, 0, r0, c7, c10, 1		@ flush_pte
++#endif
++	mov	pc, lr
++ENDPROC(cpu_pj4bv7_set_pte_ext)
++
++cpu_pj4bv7_name:
++	.ascii	"Marvell - PJ4Bv7 Processor"
++	.align
++
++	/*
++	 * Memory region attributes for LPAE (defined in pgtable-3level.h):
++	 *
++	 *   n = AttrIndx[2:0]
++	 *
++	 *			n	MAIR
++	 *   UNCACHED		000	00000000
++	 *   BUFFERABLE		001	01000100
++	 *   DEV_WC		001	01000100
++	 *   WRITETHROUGH	010	10101010
++	 *   WRITEBACK		011	11101110
++	 *   DEV_CACHED		011	11101110
++	 *   DEV_SHARED		100	00000100
++	 *   DEV_NONSHARED	100	00000100
++	 *   unused		101
++	 *   unused		110
++	 *   WRITEALLOC		111	11111111
++	 */
++.equ	MAIR0,	0xeeaa4400			@ MAIR0
++.equ	MAIR1,	0xff000004			@ MAIR1
++
++/* Suspend/resume support: derived from arch/arm/mach-s5pv210/sleep.S */
++.globl	cpu_v7_suspend_size
++.equ	cpu_v7_suspend_size, 4 * 10
++#ifdef CONFIG_PM_SLEEP
++ENTRY(cpu_v7_do_suspend)
++	stmfd	sp!, {r4 - r11, lr}
++	mrc	p15, 0, r4, c13, c0, 0	@ FCSE/PID
++	mrc	p15, 0, r5, c13, c0, 1	@ Context ID
++	mrc	p15, 0, r6, c3, c0, 0	@ Domain ID
++	mrrc	p15, 0, r7, r8, c2	@ TTB 0
++	mrrc	p15, 1, r2, r3, c2	@ TTB 1
++	mrc	p15, 0, r9, c1, c0, 0	@ Control register
++	mrc	p15, 0, r10, c1, c0, 1	@ Auxiliary control register
++	mrc	p15, 0, r11, c1, c0, 2	@ Co-processor access control
++	stmia	r0, {r2 - r11}
++	ldmfd	sp!, {r4 - r11, pc}
++ENDPROC(cpu_v7_do_suspend)
++
++ENTRY(cpu_v7_do_resume)
++	mov	ip, #0
++	mcr	p15, 0, ip, c8, c7, 0	@ invalidate TLBs
++	mcr	p15, 0, ip, c7, c5, 0	@ invalidate I cache
++	ldmia	r0, {r2 - r11}
++	mcr	p15, 0, r4, c13, c0, 0	@ FCSE/PID
++	mcr	p15, 0, r5, c13, c0, 1	@ Context ID
++	mcr	p15, 0, r6, c3, c0, 0	@ Domain ID
++	mcrr	p15, 0, r7, r8, c2	@ TTB 0
++	mcrr	p15, 1, r2, r3, c2	@ TTB 1
++	mcr	p15, 0, ip, c2, c0, 2	@ TTB control register
++	mcr	p15, 0, r10, c1, c0, 1	@ Auxiliary control register
++	mcr	p15, 0, r11, c1, c0, 2	@ Co-processor access control
++	ldr	r4, =MAIR0
++	ldr	r5, =MAIR1
++	mcr	p15, 0, r4, c10, c2, 0	@ write MAIR0
++	mcr	p15, 0, r5, c10, c2, 1	@ write MAIR1
++	isb
++	mov	r0, r9			@ control register
++	mov	r2, r7, lsr #14		@ get TTB0 base
++	mov	r2, r2, lsl #14
++	ldr	r3, cpu_resume_l1_flags
++	b	cpu_resume_mmu
++ENDPROC(cpu_v7_do_resume)
++cpu_resume_l1_flags:
++	ALT_SMP(.long PMD_TYPE_SECT | PMD_SECT_AP_WRITE | PMD_FLAGS_SMP)
++	ALT_UP(.long  PMD_TYPE_SECT | PMD_SECT_AP_WRITE | PMD_FLAGS_UP)
++#else
++#define cpu_v7_do_suspend	0
++#define cpu_v7_do_resume	0
++#endif
++
++	__CPUINIT
++
++/*
++ *	__pj4bv7_setup
++ *
++ *	Initialise TLB, Caches, and MMU state ready to switch the MMU
++ *	on. Return in r0 the new CP15 C1 control register setting.
++ *
++ *	This should be able to cover all ARMv7 cores with LPAE.
++ *
++ *	It is assumed that:
++ *	- cache type register is implemented
++ */
++__pj4bv7_setup:
++	sheeva_pj4b_config
++
++#ifdef CONFIG_ARMADA_XP_REV_A0
++/* DSMP A0 */
++	/* Auxiliary Debug Modes Control 1 Register */
++	mrc        p15, 1, r0, c15, c1, 1                         /* Read */
++	orr        r0, r0, #0x00020                                /* BIT5 STREX backoff_disable--> '1' enable the back off of STREX instr */
++	orr	   r0, r0, #0x00100                                /* BIT8 Internal Parity Handling Disable--> '1' Disable Internal Parity Handling */
++	mcr        p15, 1, r0, c15, c1, 1                         /* Write */
++
++/* Auxiliary Functional Modes Control Register 0 */
++	mrc        p15, 1, r0, c15, c2, 0                         /* Read */
++#ifdef CONFIG_SMP
++	orr          r0, r0, #0x00002                                /* BIT1 SMP/nAMP --> '1' taking part in coherency */
++#endif
++	orr     r0, r0, #0x00004                                /* BIT2 L1 parity --> '1' Enabled */
++	orr     r0, r0, #0x00100                                /* BIT8 FW --> '1' enable Cache and TLB maintenance broadcast */
++	mcr        p15, 1, r0, c15, c2, 0                         /* Write */
++
++	/* Auxiliary Debug Modes Control 0 Register */
++	mrc        p15, 1, r0, c15, c1, 0                         /* Read */
++	orr          r0, r0, #0x001000                              /* BIT12 ldstm_first Two_sgl --> '1' Force first issue to be single */
++	orr          r0, r0, #0x400000                              /* BIT22 dvm_wakeup_dis --> '1' WFI/WFE will serve the DVM and back to idle */
++	mcr        p15, 1, r0, c15, c1, 0                         /* Write */
++	/* Auxiliary Debug Modes Control 2 Register */
++	mrc        p15, 1, r0, c15, c1, 2                         /* Read */
++	orr          r0, r0, #0x02000000                         /* BIT25 Intervention Interleave Disable--> '1'  Disable Interleaving with Intervention Data */
++	orr          r0, r0, #0x08000000                         /* BIT27 CWF Disable--> '1' Disable critical word first sequencing */
++	orr          r0, r0, #0x20000000                         /* BIT29 DEV Stream Disable--> '1' Disable MO device read / write */
++	orr          r0, r0, #0x40000000                         /* BIT30 L1 Replacement Policy Config--> '1' Strict Round-Robin Replacement Policy  */
++	mcr        p15, 1, r0, c15, c1, 2                         /* Write */
++
++#else
++	mov	r10, #0
++1:
++#ifdef CONFIG_SMP
++	ALT_SMP(mrc	p15, 0, r0, c1, c0, 1)
++	ALT_UP(mov	r0, #(1 << 6))		@ fake it for UP
++	tst	r0, #(1 << 6)			@ SMP/nAMP mode enabled?
++	orreq	r0, r0, #(1 << 6)		@ Enable SMP/nAMP mode
++	orreq	r0, r0, r10			@ Enable CPU-specific SMP bits
++	mcreq	p15, 0, r0, c1, c0, 1
++#endif
++#endif
++#ifdef CONFIG_CPU_SHEEVA_PJ4B_PMC_ACCESS_IN_USERMODE
++	@ Enable performance counters user access
++	mrc     p15, 0, r0, c9, c14, 0
++	orr     r0, r0, #0x1
++	mcr     p15, 0, r0, c9, c14, 0
++#endif /* CONFIG_CPU_SHEEVA_PJ4B_PMC_ACCESS_IN_USERMODE */
++__v7_setup:
++	adr	r12, __pj4bv7_setup_stack	@ the local stack
++	stmia	r12, {r0-r5, r7, r9, r11, lr}
++	bl	v7_flush_dcache_all
++	ldmia	r12, {r0-r5, r7, r9, r11, lr}
++
++	mov	r10, #0
++	mcr	p15, 0, r10, c7, c5, 0		@ I+BTB cache invalidate
++	dsb
++#ifdef CONFIG_MMU
++	mcr	p15, 0, r10, c8, c7, 0		@ invalidate I + D TLBs
++	mov	r5, #TTB_EAE
++	ALT_SMP(orr	r5, r5, #TTB_FLAGS_SMP)
++	ALT_SMP(orr	r5, r5, #TTB_FLAGS_SMP << 16)
++	ALT_UP(orr	r5, r5, #TTB_FLAGS_UP)
++	ALT_UP(orr	r5, r5, #TTB_FLAGS_UP << 16)
++	mrc	p15, 0, r10, c2, c0, 2
++	orr	r10, r10, r5
++#if PHYS_OFFSET <= PAGE_OFFSET
++	/*
++	 * TTBR0/TTBR1 split (PAGE_OFFSET):
++	 *   0x40000000: T0SZ = 2, T1SZ = 0 (not used)
++	 *   0x80000000: T0SZ = 0, T1SZ = 1
++	 *   0xc0000000: T0SZ = 0, T1SZ = 2
++	 *
++	 * Only use this feature if PAGE_OFFSET <=  PAGE_OFFSET, otherwise
++	 * booting secondary CPUs would end up using TTBR1 for the identity
++	 * mapping set up in TTBR0.
++	 */
++	orr	r10, r10, #(((PAGE_OFFSET >> 30) - 1) << 16)	@ TTBCR.T1SZ
++#endif
++	mcr	p15, 0, r10, c2, c0, 2		@ TTB control register
++	mov	r5, #0
++#if defined CONFIG_VMSPLIT_2G
++	/* PAGE_OFFSET == 0x80000000, T1SZ == 1 */
++	add	r6, r8, #1 << 4			@ skip two L1 entries
++#elif defined CONFIG_VMSPLIT_3G
++	/* PAGE_OFFSET == 0xc0000000, T1SZ == 2 */
++	add	r6, r8, #4096 * (1 + 3)		@ only L2 used, skip pgd+3*pmd
++#else
++	mov	r6, r8
++#endif
++	mcrr	p15, 1, r6, r5, c2		@ load TTBR1
++	ldr	r5, =MAIR0
++	ldr	r6, =MAIR1
++	mcr	p15, 0, r5, c10, c2, 0		@ write MAIR0
++	mcr	p15, 0, r6, c10, c2, 1		@ write MAIR1
++#endif
++	adr	r5, v7_crval
++	ldmia	r5, {r5, r6}
++#ifdef CONFIG_CPU_ENDIAN_BE8
++	orr	r6, r6, #1 << 25		@ big-endian page tables
++#endif
++#ifdef CONFIG_SWP_EMULATE
++	orr     r5, r5, #(1 << 10)              @ set SW bit in "clear"
++	bic     r6, r6, #(1 << 10)              @ clear it in "mmuset"
++#endif
++	mrc	p15, 0, r0, c1, c0, 0		@ read control register
++	bic	r0, r0, r5			@ clear bits them
++	orr	r0, r0, r6			@ set them
++ THUMB(	orr	r0, r0, #1 << 30	)	@ Thumb exceptions
++	mov	pc, lr				@ return to head.S:__ret
++ENDPROC(__pj4bv7_setup)
++
++	/*   AT
++	 *  TFR   EV X F   IHD LR    S
++	 * .EEE ..EE PUI. .TAT 4RVI ZWRS BLDP WCAM
++	 * rxxx rrxx xxx0 0101 xxxx xxxx x111 xxxx < forced
++	 *   11    0 110    1  0011 1100 .111 1101 < we want
++	 */
++	.type	v7_crval, #object
++v7_crval:
++	crval	clear=0x0120c302, mmuset=0x30c23c7d, ucset=0x00c01c7c
++
++__pj4bv7_setup_stack:
++	.space	4 * 11				@ 11 registers
++
++	__INITDATA
++
++	.type	v7_processor_functions, #object
++ENTRY(v7_processor_functions)
++	.word	v7_early_abort
++	.word	v7_pabort
++	.word	cpu_pj4bv7_proc_init
++	.word	cpu_pj4bv7_proc_fin
++	.word	cpu_pj4bv7_reset
++	.word	cpu_pj4bv7_do_idle
++	.word	cpu_pj4bv7_dcache_clean_area
++	.word	cpu_pj4bv7_switch_mm
++	.word	cpu_pj4bv7_set_pte_ext
++	.word	0
++	.word	0
++	.word	0
++	.size	v7_processor_functions, . - v7_processor_functions
++
++	.section ".rodata"
++
++	.type	cpu_arch_name, #object
++cpu_arch_name:
++	.asciz	"armv7"
++	.size	cpu_arch_name, . - cpu_arch_name
++
++	.type	cpu_elf_name, #object
++cpu_elf_name:
++	.asciz	"v7"
++	.size	cpu_elf_name, . - cpu_elf_name
++	.align
++
++	.section ".proc.info.init", #alloc, #execinstr
++
++	.type	__pj4bv7_proc_info, #object
++__pj4bv7_proc_info:
++	.long	0x560f5840		@ Required ID value
++	.long	0xff0ffff0		@ Mask for ID
++	ALT_SMP(.long \
++		PMD_TYPE_SECT | \
++		PMD_SECT_AP_WRITE | \
++		PMD_SECT_AP_READ | \
++		PMD_SECT_AF | \
++		PMD_FLAGS_SMP)
++	ALT_UP(.long \
++		PMD_TYPE_SECT | \
++		PMD_SECT_AP_WRITE | \
++		PMD_SECT_AP_READ | \
++		PMD_SECT_AF | \
++		PMD_FLAGS_UP)
++		/* PMD_SECT_XN is set explicitly in head.S for LPAE */
++	.long   PMD_TYPE_SECT | \
++		PMD_SECT_XN | \
++		PMD_SECT_AP_WRITE | \
++		PMD_SECT_AP_READ | \
++		PMD_SECT_AF
++	b	__pj4bv7_setup
++	.long	cpu_arch_name
++	.long	cpu_elf_name
++	.long	HWCAP_SWP|HWCAP_HALF|HWCAP_THUMB|HWCAP_FAST_MULT|HWCAP_EDSP|HWCAP_TLS
++	.long	cpu_pj4bv7_name
++	.long	v7_processor_functions
++	.long	v7wbi_tlb_fns
++	.long	v6_user_fns
++	.long	v7_cache_fns
++	.size	__pj4bv7_proc_info, . - __pj4bv7_proc_info
++
++	/*
++	 * Match any ARMv7 processor core.
++	 */
++	.type	__v7_proc_info, #object
++__v7_proc_info:
++	.long	0x000f0000		@ Required ID value
++	.long	0x000f0000		@ Mask for ID
++	ALT_SMP(.long \
++		PMD_TYPE_SECT | \
++		PMD_SECT_AP_WRITE | \
++		PMD_SECT_AP_READ | \
++		PMD_SECT_AF | \
++		PMD_FLAGS_SMP)
++	ALT_UP(.long \
++		PMD_TYPE_SECT | \
++		PMD_SECT_AP_WRITE | \
++		PMD_SECT_AP_READ | \
++		PMD_SECT_AF | \
++		PMD_FLAGS_UP)
++		/* PMD_SECT_XN is set explicitly in head.S for LPAE */
++	.long   PMD_TYPE_SECT | \
++		PMD_SECT_XN | \
++		PMD_SECT_AP_WRITE | \
++		PMD_SECT_AP_READ | \
++		PMD_SECT_AF
++	W(b)	__v7_setup
++	.long	cpu_arch_name
++	.long	cpu_elf_name
++	.long	HWCAP_SWP|HWCAP_HALF|HWCAP_THUMB|HWCAP_FAST_MULT|HWCAP_EDSP|HWCAP_TLS
++	.long	cpu_pj4bv7_name
++	.long	v7_processor_functions
++	.long	v7wbi_tlb_fns
++	.long	v6_user_fns
++	.long	v7_cache_fns
++	.size	__v7_proc_info, . - __v7_proc_info
+-- 
+1.7.9.5
+

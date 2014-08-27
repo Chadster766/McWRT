@@ -1,0 +1,20 @@
+#!/bin/sh /etc/rc.common
+
+START=46
+start() {
+	touch /var/log/messages
+	mkdir -p /var/lock/subsys
+	/sbin/shorewall-lite -qq start
+}
+
+stop() {
+	/sbin/shorewall-lite -qq stop
+}
+
+restart() {
+	if [ -f /etc/shorewall-lite/state/restore ] ; then
+		/sbin/shorewall-lite -qq restore
+	else
+		/sbin/shorewall-lite -qq restart
+	fi
+}

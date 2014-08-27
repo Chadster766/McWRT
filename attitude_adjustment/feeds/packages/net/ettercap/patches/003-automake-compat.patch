@@ -1,0 +1,34 @@
+--- a/configure.in
++++ b/configure.in
+@@ -197,6 +197,9 @@ dnl ========================
+ dnl   Libtool related...
+ dnl ========================
+ 
++LT_INIT
++LTDL_INIT
++LT_CONFIG_LTDL_DIR([libltdl])
+ AC_DISABLE_STATIC
+ AC_LIBTOOL_WIN32_DLL
+ AC_LIBTOOL_DLOPEN
+--- a/include/ec_os_mingw.h
++++ b/include/ec_os_mingw.h
+@@ -163,7 +163,7 @@ EC_API_EXTERN const char *ec_win_get_ec_
+  */
+ #if !defined(HAVE_DLOPEN)
+    #define RTLD_NOW 0
+-   #define LTDL_SHLIB_EXT       "*.dll"
++   #define LT_MODULE_EXT       ".dll"
+ 
+    #define dlopen(dll,flg)      ec_win_dlopen (dll, flg)
+    #define lt_dlopen(dll)       ec_win_dlopen (dll, 0)
+--- a/src/ec_plugins.c
++++ b/src/ec_plugins.c
+@@ -131,7 +131,7 @@ int plugin_filter(struct dirent *d)
+ int plugin_filter(const struct dirent *d)
+ #endif
+ {
+-   if ( match_pattern(d->d_name, PLUGIN_PATTERN LTDL_SHLIB_EXT) )
++   if ( match_pattern(d->d_name, PLUGIN_PATTERN LT_MODULE_EXT) )
+       return 1;
+ 
+    return 0;

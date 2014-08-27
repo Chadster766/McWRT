@@ -1,0 +1,87 @@
+Source-Makefile: package/uhttpd/Makefile
+Package: uhttpd
+Submenu: Web Servers/Proxies
+Version: 2012-10-30-e57bf6d8bfa465a50eea2c30269acdfe751a46fd
+Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +libubox
+Menu-Depends: 
+Provides: 
+Section: net
+Category: Network
+Title: uHTTPd - tiny, single threaded HTTP server
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: uhttpd-2012-10-30-e57bf6d8bfa465a50eea2c30269acdfe751a46fd.tar.gz
+Type: ipkg
+Description:  uHTTPd is a tiny single threaded HTTP server with TLS, CGI and Lua
+ support. It is intended as a drop-in replacement for the Busybox
+ HTTP daemon.
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+Config:
+  config PACKAGE_uhttpd_debug
+    bool "Build with debug messages"
+    default n
+@@
+
+Package: uhttpd-mod-tls
+Submenu: Web Servers/Proxies
+Version: 2012-10-30-e57bf6d8bfa465a50eea2c30269acdfe751a46fd
+Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread uhttpd +PACKAGE_uhttpd-mod-tls_cyassl:libcyassl +PACKAGE_uhttpd-mod-tls_openssl:libopenssl
+Menu-Depends: 
+Provides: 
+Section: net
+Category: Network
+Title: uHTTPd - tiny, single threaded HTTP server (TLS plugin)
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: uhttpd-2012-10-30-e57bf6d8bfa465a50eea2c30269acdfe751a46fd.tar.gz
+Type: ipkg
+Description:  The TLS plugin adds HTTPS support to uHTTPd.
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+Config:
+  choice
+    depends on PACKAGE_uhttpd-mod-tls
+    prompt "TLS Provider"
+    default PACKAGE_uhttpd-mod-tls_cyassl
+
+    config PACKAGE_uhttpd-mod-tls_cyassl
+      bool "CyaSSL"
+
+    config PACKAGE_uhttpd-mod-tls_openssl
+      bool "OpenSSL"
+  endchoice
+@@
+
+Package: uhttpd-mod-lua
+Submenu: Web Servers/Proxies
+Version: 2012-10-30-e57bf6d8bfa465a50eea2c30269acdfe751a46fd
+Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread uhttpd +liblua
+Menu-Depends: 
+Provides: 
+Section: net
+Category: Network
+Title: uHTTPd - tiny, single threaded HTTP server (Lua plugin)
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: uhttpd-2012-10-30-e57bf6d8bfa465a50eea2c30269acdfe751a46fd.tar.gz
+Type: ipkg
+Description:  The Lua plugin adds a CGI-like Lua runtime interface to uHTTPd.
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+
+Package: uhttpd-mod-ubus
+Submenu: Web Servers/Proxies
+Version: 2012-10-30-e57bf6d8bfa465a50eea2c30269acdfe751a46fd
+Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread uhttpd +libubus +libblobmsg-json
+Menu-Depends: 
+Provides: 
+Section: net
+Category: Network
+Title: uHTTPd - tiny, single threaded HTTP server (ubus plugin)
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: uhttpd-2012-10-30-e57bf6d8bfa465a50eea2c30269acdfe751a46fd.tar.gz
+Type: ipkg
+Description:  The ubus plugin adds a HTTP/JSON RPC proxy for ubus and publishes the
+ session.* namespace and procedures.
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+
+

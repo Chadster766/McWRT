@@ -1,0 +1,41 @@
+From 507f2c4ebbc5b790ea44386f2fcdbdc55c3d76e0 Mon Sep 17 00:00:00 2001
+From: Rami Rosen <rosenr@marvell.com>
+Date: Wed, 2 May 2012 10:23:54 +0300
+Subject: [PATCH 164/609] Change netfilter module Kconfig for NFP learning
+ dependencies
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ net/ipv4/netfilter/Kconfig |    2 +-
+ net/ipv6/netfilter/Kconfig |    2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/net/ipv4/netfilter/Kconfig b/net/ipv4/netfilter/Kconfig
+index 99c6492..713cb58 100644
+--- a/net/ipv4/netfilter/Kconfig
++++ b/net/ipv4/netfilter/Kconfig
+@@ -185,7 +185,7 @@ config IP_NF_TARGET_NETMAP
+ config IP_NF_TARGET_NFP
+ 	tristate "NFP target support"
+ 	default y
+-	depends on NF_CONNTRACK_IPV4 && MV_ETH_NFP_CT
++	depends on NF_CONNTRACK_IPV4 && MV_ETH_NFP_CT && MV_ETH_NFP_LEARN
+ 	help
+ 	  This target allows to process selected connections in NFP.
+ 	  To compile it as a module, choose M here.  If unsure, say N.
+diff --git a/net/ipv6/netfilter/Kconfig b/net/ipv6/netfilter/Kconfig
+index 568657e..0381a24 100644
+--- a/net/ipv6/netfilter/Kconfig
++++ b/net/ipv6/netfilter/Kconfig
+@@ -197,7 +197,7 @@ config IP6_NF_RAW
+ config IP6_NF_TARGET_NFP
+ 	tristate "NFP target support for IPv6"
+ 	default y
+-	depends on NF_CONNTRACK_IPV6 && MV_ETH_NFP_CT && (MV_ETH_NFP_LEARN || (m && MV_ETH_NFP_LEARN=m))
++	depends on NF_CONNTRACK_IPV6 && MV_ETH_NFP_CT && MV_ETH_NFP_LEARN
+ 	help
+ 	  This target allows to process selected connections in NFP.
+ 
+-- 
+1.7.9.5
+

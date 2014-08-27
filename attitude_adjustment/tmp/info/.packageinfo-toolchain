@@ -1,0 +1,312 @@
+Source-Makefile: package/toolchain/Makefile
+Package: libc
+Version: <LIBC_VERSION>-1
+Depends: +libgcc
+Menu-Depends: 
+Provides: 
+Section: libs
+Category: Base system
+Title: C library
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: 
+Type: ipkg
+Description: C library
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+Config:
+	menu "Configuration"
+	depends EXTERNAL_TOOLCHAIN && PACKAGE_libc
+
+	config LIBC_ROOT_DIR
+		string
+		prompt "libc shared library base directory"
+		depends EXTERNAL_TOOLCHAIN && PACKAGE_libc
+		default TOOLCHAIN_ROOT  if !NATIVE_TOOLCHAIN
+		default "/"  if NATIVE_TOOLCHAIN
+
+	config LIBC_FILE_SPEC
+		string
+		prompt "libc shared library files (use wildcards)"
+		depends EXTERNAL_TOOLCHAIN && PACKAGE_libc
+		default "./lib/ld{-*.so,-linux*.so.*} ./lib/lib{anl,c,cidn,crypt,dl,m,nsl,nss_dns,nss_files,resolv,util}{-*.so,.so.*}"
+
+	endmenu
+@@
+
+Package: libgcc
+Version: <LIBGCC_VERSION>-1
+Depends: 
+Menu-Depends: 
+Provides: 
+Section: libs
+Category: Base system
+Title: GCC support library
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: 
+Type: ipkg
+Description: GCC support library
+http://gcc.gnu.org/
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+Config:
+	menu "Configuration"
+		depends EXTERNAL_TOOLCHAIN && PACKAGE_libgcc
+
+	config LIBGCC_ROOT_DIR
+		string
+		prompt "libgcc shared library base directory"
+		depends EXTERNAL_TOOLCHAIN && PACKAGE_libgcc
+		default TOOLCHAIN_ROOT  if !NATIVE_TOOLCHAIN
+		default "/"  if NATIVE_TOOLCHAIN
+
+	config LIBGCC_FILE_SPEC
+		string
+		prompt "libgcc shared library files (use wildcards)"
+		depends EXTERNAL_TOOLCHAIN && PACKAGE_libgcc
+		default "./lib/libgcc_s.so.*"
+
+	endmenu
+@@
+
+Package: libssp
+Version: <LIBGCC_VERSION>-1
+Depends:  @SSP_SUPPORT
+Menu-Depends: 
+Provides: 
+Section: libs
+Category: Base system
+Title: GCC support library
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: 
+Type: ipkg
+Description: GCC support library
+http://gcc.gnu.org/
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+Config:
+	menu "Configuration"
+		depends EXTERNAL_TOOLCHAIN && PACKAGE_libssp
+
+	config LIBSSP_ROOT_DIR
+		string
+		prompt "libssp shared library base directory"
+		depends EXTERNAL_TOOLCHAIN && PACKAGE_libssp
+		default TOOLCHAIN_ROOT  if !NATIVE_TOOLCHAIN
+		default "/"  if NATIVE_TOOLCHAIN
+
+	config LIBSSP_FILE_SPEC
+		string
+		prompt "libssp shared library files (use wildcards)"
+		depends EXTERNAL_TOOLCHAIN && PACKAGE_libssp
+		default "./lib/libssp.so.*"
+
+	endmenu
+@@
+
+Package: libstdcpp
+Version: <LIBGCC_VERSION>-1
+Depends:  @INSTALL_LIBSTDCPP
+Menu-Depends: 
+Provides: 
+Section: libs
+Category: Base system
+Title: GNU Standard C++ Library v3
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: 
+Type: ipkg
+Description: GNU Standard C++ Library v3
+http://gcc.gnu.org/
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+Config:
+	menu "Configuration"
+	depends EXTERNAL_TOOLCHAIN && PACKAGE_libstdcpp
+
+	config LIBSTDCPP_ROOT_DIR
+		string
+		prompt "libstdcpp shared library base directory"
+		depends EXTERNAL_TOOLCHAIN && PACKAGE_libstdcpp
+		default TOOLCHAIN_ROOT  if !NATIVE_TOOLCHAIN
+		default "/"  if NATIVE_TOOLCHAIN
+
+	config LIBSTDCPP_FILE_SPEC
+		string
+		prompt "libstdc++ shared library files (use wildcards)"
+		depends EXTERNAL_TOOLCHAIN && PACKAGE_libstdcpp
+		default "./lib/libstdc++.so.*"
+
+	endmenu
+@@
+
+Package: libpthread
+Version: <LIBC_VERSION>-1
+Depends: +libgcc
+Menu-Depends: 
+Provides: 
+Section: libs
+Category: Base system
+Title: POSIX thread library
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: 
+Type: ipkg
+Description: POSIX thread library
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+Config:
+	menu "Configuration"
+	depends EXTERNAL_TOOLCHAIN && PACKAGE_libpthread
+
+	config LIBPTHREAD_ROOT_DIR
+		string
+		prompt "libpthread shared library base directory"
+		depends EXTERNAL_TOOLCHAIN && PACKAGE_libpthread
+		default TOOLCHAIN_ROOT  if !NATIVE_TOOLCHAIN
+		default "/"  if NATIVE_TOOLCHAIN
+
+	config LIBPTHREAD_FILE_SPEC
+		string
+		prompt "libpthread shared library files (use wildcards)"
+		depends EXTERNAL_TOOLCHAIN && PACKAGE_libpthread
+		default "./lib/libpthread{-*.so,.so.*}"
+
+	endmenu
+@@
+
+Package: librt
+Version: <LIBC_VERSION>-1
+Depends: +libpthread
+Menu-Depends: 
+Provides: 
+Section: libs
+Category: Base system
+Title: POSIX.1b RealTime extension library
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: 
+Type: ipkg
+Description: POSIX.1b RealTime extension library
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+Config:
+	menu "Configuration"
+	depends EXTERNAL_TOOLCHAIN && PACKAGE_librt
+
+	config LIBRT_ROOT_DIR
+		string
+		prompt "librt shared library base directory"
+		depends EXTERNAL_TOOLCHAIN && PACKAGE_librt
+		default TOOLCHAIN_ROOT  if !NATIVE_TOOLCHAIN
+		default "/"  if NATIVE_TOOLCHAIN
+
+	config LIBRT_FILE_SPEC
+		string
+		prompt "librt shared library files (use wildcards)"
+		depends EXTERNAL_TOOLCHAIN && PACKAGE_librt
+		default "./lib/librt{-*.so,.so.*}"
+
+	endmenu
+@@
+
+Package: libgfortran
+Version: <LIBGCC_VERSION>-1
+Depends:  @INSTALL_GFORTRAN
+Menu-Depends: 
+Provides: 
+Section: libs
+Category: Base system
+Title: GFortran support library
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: 
+Type: ipkg
+Description: GFortran support library
+http://gcc.gnu.org/
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+Config:
+	menu "Configuration"
+		depends EXTERNAL_TOOLCHAIN && PACKAGE_libgfortran
+
+	config LIBGFORTRAN_ROOT_DIR
+		string
+		prompt "libgfortran shared library base directory"
+		depends EXTERNAL_TOOLCHAIN && PACKAGE_libgfortran
+		default TOOLCHAIN_ROOT  if !NATIVE_TOOLCHAIN
+		default "/"  if NATIVE_TOOLCHAIN
+
+	config LIBGFORTRAN_FILE_SPEC
+		string
+		prompt "libgfortran shared library files (use wildcards)"
+		depends EXTERNAL_TOOLCHAIN && PACKAGE_libgfortran
+		default "./usr/lib/libgfortran.so.*"
+
+	endmenu
+@@
+
+Package: ldd
+Version: <LIBC_VERSION>-1
+Depends: +libgcc
+Menu-Depends: 
+Provides: 
+Section: utils
+Category: Utilities
+Title: LDD trace utility
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: 
+Type: ipkg
+Description: LDD trace utility
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+Config:
+	menu "Configuration"
+		depends EXTERNAL_TOOLCHAIN && PACKAGE_ldd
+
+	config LDD_ROOT_DIR
+		string
+		prompt "ldd trace utility base directory"
+		depends EXTERNAL_TOOLCHAIN && PACKAGE_ldd
+		default TOOLCHAIN_ROOT  if !NATIVE_TOOLCHAIN
+		default "/"  if NATIVE_TOOLCHAIN
+
+	config LDD_FILE_SPEC
+		string
+		prompt "ldd trace utility file"
+		depends EXTERNAL_TOOLCHAIN && PACKAGE_ldd
+		default "./usr/bin/ldd"
+
+	endmenu
+@@
+
+Package: ldconfig
+Version: <LIBC_VERSION>-1
+Depends: +libgcc
+Menu-Depends: 
+Provides: 
+Section: utils
+Category: Utilities
+Title: Shared library path configuration
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: 
+Type: ipkg
+Description: Shared library path configuration
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+Config:
+	menu "Configuration"
+		depends EXTERNAL_TOOLCHAIN && PACKAGE_ldconfig
+
+	config LDCONFIG_ROOT_DIR
+		string
+		prompt "ldconfig base directory"
+		depends EXTERNAL_TOOLCHAIN && PACKAGE_ldconfig
+		default TOOLCHAIN_ROOT  if !NATIVE_TOOLCHAIN
+		default "/"  if NATIVE_TOOLCHAIN
+
+	config LDCONFIG_FILE_SPEC
+		string
+		prompt "ldconfig file"
+		depends EXTERNAL_TOOLCHAIN && PACKAGE_ldconfig
+		default "./sbin/ldconfig"
+
+	endmenu
+@@
+
+

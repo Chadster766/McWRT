@@ -1,0 +1,34 @@
+Source-Makefile: feeds/packages/net/ipset/Makefile
+Package: ipset
+Version: 6.11-2
+Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread @(!(TARGET_ps3||TARGET_pxcab)||BROKEN) +iptables-mod-ipset +kmod-ipt-ipset +libmnl
+Menu-Depends: 
+Provides: 
+Section: net
+Category: Network
+Title: IPset administration utility
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: ipset-6.11.tar.bz2
+Type: ipkg
+Description: IPset administration utility
+http://ipset.netfilter.org/
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+
+Package: kmod-ipt-ipset
+Submenu: Netfilter Extensions
+Version: <LINUX_VERSION>+6.11-2
+Depends: @(!(TARGET_ps3||TARGET_pxcab)||BROKEN) +kmod-ipt-core +kmod-nfnetlink
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: IPset netfilter modules
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: ipset-6.11.tar.bz2
+Type: ipkg
+Description: IPset netfilter modules
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+
+

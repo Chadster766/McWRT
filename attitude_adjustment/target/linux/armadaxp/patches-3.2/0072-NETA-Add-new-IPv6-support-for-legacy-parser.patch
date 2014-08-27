@@ -1,0 +1,94 @@
+From 26b534a4ac3860824609b28c9b56c4e321b6559f Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Sun, 15 Jul 2012 17:17:48 +0300
+Subject: [PATCH 072/609] NETA: Add new IPv6 support for legacy parser
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h       |    2 ++
+ arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h      |   18 ++++++++++++++++++
+ arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaRegs.h  |   13 +++++++++++++
+ 3 files changed, 33 insertions(+)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
+index 12338cb..6167d93 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
+@@ -238,6 +238,8 @@ extern "C" {
+ #define MV_ETH_GMAC_NEW
+ /* New WRR/EJP module is used */
+ #define MV_ETH_WRR_NEW
++/* IPv6 parsing support for Legacy parser */
++#define MV_ETH_LEGACY_PARSER_IPV6
+ /* New PNC module - extra fields */
+ #define MV_ETH_PNC_NEW
+ /* PNC Load Balancing support */
+diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
+index fe8afa2..d0593d5 100755
+--- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
++++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
+@@ -126,6 +126,22 @@ extern "C" {
+ #define NETA_RX_IS_VLAN(rxd)           ((rxd)->status & ETH_RX_VLAN_TAGGED_FRAME_MASK)
+ #define NETA_RX_SET_VLAN(rxd)          ((rxd)->status |= ETH_RX_VLAN_TAGGED_FRAME_MASK)
+ 
++#ifdef MV_ETH_LEGACY_PARSER_IPV6
++
++#define NETA_RX_L3_IS_IP4(status)      (((status) & NETA_RX_L3_MASK) == NETA_RX_L3_IP4)
++#define NETA_RX_L3_SET_IP4(rxd)        ((rxd)->status |= NETA_RX_L3_IP4)
++
++#define NETA_RX_L3_IS_IP4_ERR(status)  (((status) & NETA_RX_L3_MASK) == NETA_RX_L3_IP4_ERR)
++#define NETA_RX_L3_SET_IP4_ERR(rxd)    ((rxd)->status |= NETA_RX_L3_IP4_ERR)
++
++#define NETA_RX_L3_IS_IP6(status)      (((status) & NETA_RX_L3_MASK) == NETA_RX_L3_IP6)
++#define NETA_RX_L3_SET_IP6(rxd)        ((rxd)->status |= NETA_RX_L3_IP6)
++
++#define NETA_RX_L3_IS_UN(status)       (((status) & NETA_RX_L3_MASK) == NETA_RX_L3_UN)
++#define NETA_RX_L3_SET_UN(rxd)         ((rxd)->status |= NETA_RX_L3_UN)
++
++#else
++
+ #define NETA_RX_L3_IS_IP4(status)      ((status) & ETH_RX_IP_HEADER_OK_MASK)
+ #define NETA_RX_L3_SET_IP4(rxd)        ((rxd)->status |= (ETH_RX_IP_HEADER_OK_MASK | ETH_RX_IP_FRAME_TYPE_MASK))
+ 
+@@ -142,6 +158,8 @@ extern "C" {
+ #define NETA_RX_L3_IS_UN(status)       (((status) & ETH_RX_IP_FRAME_TYPE_MASK) == 0)
+ #define NETA_RX_L3_SET_UN(rxd)         ((rxd)->status &= ~ETH_RX_IP_FRAME_TYPE_MASK)
+ 
++#endif /* MV_ETH_LEGACY_PARSER_IPV6 */
++
+ #define NETA_RX_L4_IS_TCP(status)      (((status) & ETH_RX_L4_TYPE_MASK) == ETH_RX_L4_TCP_TYPE)
+ #define NETA_RX_L4_SET_TCP(rxd)        ((rxd)->status |= ETH_RX_L4_TCP_TYPE)
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaRegs.h b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaRegs.h
+index 4b6b62b..9c17560 100644
+--- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaRegs.h
++++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaRegs.h
+@@ -1056,12 +1056,25 @@ typedef struct neta_rx_desc {
+ #define ETH_RX_NOT_LLC_SNAP_FORMAT_BIT      23
+ #define ETH_RX_NOT_LLC_SNAP_FORMAT_MASK     (1 << ETH_RX_NOT_LLC_SNAP_FORMAT_BIT)
+ 
++#ifdef MV_ETH_LEGACY_PARSER_IPV6
++
++#define NETA_RX_L3_OFFS                     24
++#define NETA_RX_L3_MASK                     (3 << NETA_RX_L3_OFFS)
++#define NETA_RX_L3_UN                       (0 << NETA_RX_L3_OFFS)
++#define NETA_RX_L3_IP6                      (2 << NETA_RX_L3_OFFS)
++#define NETA_RX_L3_IP4           	        (3 << NETA_RX_L3_OFFS)
++#define NETA_RX_L3_IP4_ERR            		(1 << NETA_RX_L3_OFFS)
++
++#else
++
+ #define ETH_RX_IP_FRAME_TYPE_BIT            24
+ #define ETH_RX_IP_FRAME_TYPE_MASK           (1 << ETH_RX_IP_FRAME_TYPE_BIT)
+ 
+ #define ETH_RX_IP_HEADER_OK_BIT             25
+ #define ETH_RX_IP_HEADER_OK_MASK            (1 << ETH_RX_IP_HEADER_OK_BIT)
+ 
++#endif /* MV_ETH_LEGACY_PARSER_IPV6 */
++
+ #define ETH_RX_UNKNOWN_DA_BIT               28
+ #define ETH_RX_UNKNOWN_DA_MASK              (1 << ETH_RX_UNKNOWN_DA_BIT)
+ 
+-- 
+1.7.9.5
+

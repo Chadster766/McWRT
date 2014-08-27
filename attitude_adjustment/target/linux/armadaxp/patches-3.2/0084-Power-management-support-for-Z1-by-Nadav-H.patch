@@ -1,0 +1,107 @@
+From 908d4c5ba89d10934ba282e1c8e58c775e888c0c Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Mon, 5 Mar 2012 00:58:34 +0200
+Subject: [PATCH 084/609] Power management support for Z1 ( by Nadav H.)
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/Kconfig   |    4 ++--
+ arch/arm/mach-armadaxp/headsmp.S |    7 ++++++-
+ arch/arm/mach-armadaxp/platsmp.c |    3 ++-
+ arch/arm/plat-armada/cpuidle.c   |    7 +++++--
+ 4 files changed, 15 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/Kconfig b/arch/arm/mach-armadaxp/Kconfig
+index 5d65643..597082f 100644
+--- a/arch/arm/mach-armadaxp/Kconfig
++++ b/arch/arm/mach-armadaxp/Kconfig
+@@ -21,8 +21,8 @@ choice
+ config  ARMADA_XP_REV_Z1
+ 	bool "MV88F78x30 and MV88F78x60 Z1 SoC devices"
+ 	select ARMADA_XP_ERRATA_SMI_1
+-	select ARMADA_XP_DEEP_IDLE_L2_WA if CACHE_AURORA_L2
+-	select ARMADA_XP_DEEP_IDLE_UNMASK_INTS_WA
++#	select ARMADA_XP_DEEP_IDLE_L2_WA if CACHE_AURORA_L2
++#	select ARMADA_XP_DEEP_IDLE_UNMASK_INTS_WA
+ 	select SHEEVA_ERRATA_ARM_CPU_4742
+ 	select SHEEVA_ERRATA_ARM_CPU_4786 if (ARM_THUMB && VFP)
+ #	select SHEEVA_ERRATA_ARM_CPU_5315
+diff --git a/arch/arm/mach-armadaxp/headsmp.S b/arch/arm/mach-armadaxp/headsmp.S
+index 318b254..ac75648 100644
+--- a/arch/arm/mach-armadaxp/headsmp.S
++++ b/arch/arm/mach-armadaxp/headsmp.S
+@@ -65,7 +65,12 @@ l0_dis_skip:
+ 	mcr	p15, 1, r7, c15, c2, 0	
+ sp_ena_skip:
+ #endif
+-pen:	dsb
++pen:
++	#if __LINUX_ARM_ARCH__ >= 7
++	dsb
++#else
++	 mcr p15, 0, r0, c7, c10, 4
++#endif
+ 	ldr	r7, [r6]
+ 	cmp	r7, r0
+ 	bne	pen
+diff --git a/arch/arm/mach-armadaxp/platsmp.c b/arch/arm/mach-armadaxp/platsmp.c
+index aac4314..f2fa59c 100644
+--- a/arch/arm/mach-armadaxp/platsmp.c
++++ b/arch/arm/mach-armadaxp/platsmp.c
+@@ -86,7 +86,9 @@ static DEFINE_SPINLOCK(boot_lock);
+ void __cpuinit platform_secondary_init(unsigned int cpu)
+ {
+ 	trace_hardirqs_off();
++#ifndef CONFIG_ARMADA_XP_REV_Z1
+ 	armadaxp_fabric_restore_deepIdle();
++#endif
+ 
+ 	/*
+ 	 * if any interrupts are already enabled for the primary
+@@ -115,7 +117,6 @@ void __cpuinit platform_secondary_init(unsigned int cpu)
+ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
+ {
+ 	unsigned long timeout;
+-	unsigned int test;
+ 
+ 	/*
+ 	 * set synchronisation state between this boot processor
+diff --git a/arch/arm/plat-armada/cpuidle.c b/arch/arm/plat-armada/cpuidle.c
+index b52ba33..7f4d7d6 100644
+--- a/arch/arm/plat-armada/cpuidle.c
++++ b/arch/arm/plat-armada/cpuidle.c
+@@ -43,6 +43,9 @@ extern unsigned char armadaxp_deep_idle_exit_start;
+ extern unsigned char armadaxp_deep_idle_exit_end;
+ #endif
+ 
++#ifdef	CONFIG_CPU_IDLE
++static int device_registered;
++
+ static void hw_sem_lock(void)
+ {
+ 	unsigned int cpu = hard_smp_processor_id();
+@@ -273,7 +276,7 @@ void armadaxp_deepidle(void)
+ 
+ 	aurora_l2_pm_exit();
+ #if defined(CONFIG_VFP)
+-	/*vfp_restore();*/
++	vfp_restore();
+ #endif
+ 	pr_debug("armadaxp_deepidle: Exiting DEEP IDLE.\n");
+ }
+@@ -321,7 +324,6 @@ static int armadaxp_enter_idle(struct cpuidle_device *dev,
+ }
+ 
+ #ifdef CONFIG_MV_PMU_PROC
+-static int device_registered;
+ struct proc_dir_entry *cpu_idle_proc;
+ 
+ static int mv_cpu_idle_write(struct file *file, const char *buffer,
+@@ -479,3 +481,4 @@ int armadaxp_init_cpuidle(void)
+ }
+ 
+ device_initcall(armadaxp_init_cpuidle);
++#endif
+-- 
+1.7.9.5
+

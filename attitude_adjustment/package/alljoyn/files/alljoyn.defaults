@@ -1,0 +1,9 @@
+#! /bin/sh
+uci batch <<EOF
+add ucitrack alljoyn
+set ucitrack.@alljoyn[-1].init=alljoyn
+add_list ucitrack.@network[-1].affects=alljoyn
+commit ucitrack
+EOF
+/etc/init.d/alljoyn enable
+exit 0

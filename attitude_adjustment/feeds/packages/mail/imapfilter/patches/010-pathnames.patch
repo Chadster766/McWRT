@@ -1,0 +1,31 @@
+--- a/pathnames.h
++++ b/pathnames.h
+@@ -3,7 +3,7 @@
+ 
+ 
+ /* Program's home directory. */
+-#define PATHNAME_HOME			".imapfilter"
++#define PATHNAME_HOME			"/etc/imapfilter"
+ 
+ /* Program's configuration file. */
+ #define PATHNAME_CONFIG			PATHNAME_HOME "/config.lua"
+@@ -39,7 +39,7 @@
+ #define PATHNAME_CERTS			PATHNAME_HOME "/certificates"
+ 
+ /* Debug temporary file template. */
+-#define PATHNAME_DEBUG			PATHNAME_HOME "/debug.XXXXXX"
++#define PATHNAME_DEBUG			"/tmp/imapfilterdebug.XXXXXX"
+ 
+ 
+ #endif				/* PATHNAMES_H */
+--- a/imapfilter.c
++++ b/imapfilter.c
+@@ -50,7 +50,7 @@
+ 	opts.config = NULL;
+ 	opts.oneline = NULL;
+ 
+-	env.home = getenv("HOME");
++	env.home = "";
+ 	env.pathmax = -1;
+ 
+ 	while ((c = getopt(argc, argv, "Vc:de:il:v?")) != -1) {

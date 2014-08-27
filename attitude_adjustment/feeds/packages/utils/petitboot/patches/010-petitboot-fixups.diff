@@ -1,0 +1,391 @@
+ 12 files changed, 96 insertions(+), 40 deletions(-)
+
+diff --git a/discover/kboot-parser.c b/discover/kboot-parser.c
+index 23d48a4..7c7cb5d 100644
+--- a/discover/kboot-parser.c
++++ b/discover/kboot-parser.c
+@@ -133,7 +133,7 @@ static int kboot_parse(struct discover_context *dc)
+ 	conf = talloc_zero(dc, struct conf_context);
+ 
+ 	if (!conf)
+-		return -1;
++		return 0;
+ 
+ 	conf->dc = dc;
+ 	conf->global_options = kboot_global_options,
+diff --git a/discover/parser.c b/discover/parser.c
+index 2b4ddd2..8f2735c 100644
+--- a/discover/parser.c
++++ b/discover/parser.c
+@@ -13,16 +13,16 @@ extern struct parser __start_parsers[], __stop_parsers[];
+ void iterate_parsers(struct discover_context *ctx)
+ {
+ 	struct parser *parser;
++	unsigned int count = 0;
+ 
+ 	pb_log("trying parsers for %s\n", ctx->device_path);
+ 
+ 	for (parser = __start_parsers; parser < __stop_parsers; parser++) {
+ 		pb_log("\ttrying parser '%s'\n", parser->name);
+-		/* just use a dummy device path for now */
+-		if (parser->parse(ctx))
+-			return;
++		count += parser->parse(ctx);
+ 	}
+-	pb_log("\tno boot_options found\n");
++	if (!count)
++		pb_log("\tno boot_options found\n");
+ }
+ 
+ static int compare_parsers(const void *a, const void *b)
+diff --git a/discover/yaboot-parser.c b/discover/yaboot-parser.c
+index 1000505..6101cd8 100644
+--- a/discover/yaboot-parser.c
++++ b/discover/yaboot-parser.c
+@@ -295,7 +295,7 @@ static int yaboot_parse(struct discover_context *dc)
+ 	conf = talloc_zero(dc, struct conf_context);
+ 
+ 	if (!conf)
+-		return -1;
++		return 0;
+ 
+ 	conf->dc = dc;
+ 	conf->global_options = yaboot_global_options,
+diff --git a/lib/log/log.h b/lib/log/log.h
+index 2a5d375..6f44bea 100644
+--- a/lib/log/log.h
++++ b/lib/log/log.h
+@@ -3,7 +3,7 @@
+ 
+ #include <stdio.h>
+ 
+-void pb_log(const char *fmt, ...);
++void __attribute__ ((format (printf, 1, 2))) pb_log(const char *fmt, ...);
+ void pb_log_set_stream(FILE *stream);
+ FILE * pb_log_get_stream(void);
+ void pb_log_always_flush(int state);
+diff --git a/lib/system/system.c b/lib/system/system.c
+index 65bd6bf..7371445 100644
+--- a/lib/system/system.c
++++ b/lib/system/system.c
+@@ -20,6 +20,7 @@ const struct pb_system_apps pb_system_apps = {
+ 	.cp = "/bin/cp",
+ 	.kexec = "/sbin/kexec",
+ 	.mount = "/bin/mount",
++	.shutdown = "/sbin/shutdown",
+ 	.sftp = "/usr/bin/sftp",
+ 	.tftp = "/usr/bin/tftp",
+ 	.umount = "/bin/umount",
+diff --git a/lib/system/system.h b/lib/system/system.h
+index 47c7c02..1918309 100644
+--- a/lib/system/system.h
++++ b/lib/system/system.h
+@@ -5,6 +5,7 @@ struct pb_system_apps {
+ 	const char *cp;
+ 	const char *kexec;
+ 	const char *mount;
++	const char *shutdown;
+ 	const char *sftp;
+ 	const char *tftp;
+ 	const char *umount;
+diff --git a/ui/common/discover-client.c b/ui/common/discover-client.c
+index e8ce4dd..5b42b6c 100644
+--- a/ui/common/discover-client.c
++++ b/ui/common/discover-client.c
+@@ -46,7 +46,7 @@ struct discover_client* discover_client_init(
+ 	client->ops.cb_arg = cb_arg;
+ 
+ 	client->fd = socket(AF_UNIX, SOCK_STREAM, 0);
+-	if (!client->fd < 0) {
++	if (client->fd < 0) {
+ 		pb_log("%s: socket: %s\n", __func__, strerror(errno));
+ 		goto out_err;
+ 	}
+diff --git a/ui/common/loader.c b/ui/common/loader.c
+index 0fe62a0..5c69533 100644
+--- a/ui/common/loader.c
++++ b/ui/common/loader.c
+@@ -263,16 +263,22 @@ fail:
+ /**
+  * pb_load_file - Loads a remote file and returns the local file path.
+  * @ctx: The talloc context to associate with the returned string.
++ * @remote: The remote file URL.
++ * @tempfile: An optional variable pointer to be set when a temporary local
++ *  file is created.
+  *
+  * Returns the local file path in a talloc'ed character string on success,
+  * or NULL on error.
+  */
+ 
+-char *pb_load_file(void *ctx, const char *remote)
++char *pb_load_file(void *ctx, const char *remote, unsigned int *tempfile)
+ {
+ 	char *local;
+ 	struct pb_url *url = pb_url_parse(NULL, remote);
+ 
++	if (tempfile)
++		*tempfile = 0;
++
+ 	if (!url)
+ 		return NULL;
+ 
+@@ -280,19 +286,28 @@ char *pb_load_file(void *ctx, const char *remote)
+ 	case pb_url_ftp:
+ 	case pb_url_http:
+ 		local = pb_load_wget(ctx, url, 0);
++		if (tempfile && local)
++			*tempfile = 1;
+ 		break;
+ 	case pb_url_https:
+-		local = pb_load_wget(ctx, url,
+-			wget_no_check_certificate);
++		local = pb_load_wget(ctx, url, wget_no_check_certificate);
++		if (tempfile && local)
++			*tempfile = 1;
+ 		break;
+ 	case pb_url_nfs:
+ 		local = pb_load_nfs(ctx, url);
++		if (tempfile && local)
++			*tempfile = 1;
+ 		break;
+ 	case pb_url_sftp:
+ 		local = pb_load_sftp(ctx, url);
++		if (tempfile && local)
++			*tempfile = 1;
+ 		break;
+ 	case pb_url_tftp:
+ 		local = pb_load_tftp(ctx, url);
++		if (tempfile && local)
++			*tempfile = 1;
+ 		break;
+ 	default:
+ 		local = talloc_strdup(ctx, url->full);
+diff --git a/ui/common/loader.h b/ui/common/loader.h
+index b06bb43..42d4d4b 100644
+--- a/ui/common/loader.h
++++ b/ui/common/loader.h
+@@ -19,6 +19,6 @@
+ #if !defined(_PB_FILE_LOADER_H)
+ #define _PB_FILE_LOADER_H
+ 
+-char *pb_load_file(void *ctx, const char *remote);
++char *pb_load_file(void *ctx, const char *remote, unsigned int *tempfile);
+ 
+ #endif
+diff --git a/ui/common/ps3.c b/ui/common/ps3.c
+index cb1c8d1..c62a10d 100644
+--- a/ui/common/ps3.c
++++ b/ui/common/ps3.c
+@@ -87,7 +87,7 @@ static int ps3_flash_open(struct ps3_flash_ctx *fc, const char *mode)
+ 	result = os_area_fixed_read(&fc->header, &fc->params, fc->dev);
+ 
+ 	if (result) {
+-		pb_log("%s: os_area_fixed_read failed: %s\n", __func__);
++		pb_log("%s: os_area_fixed_read failed\n", __func__);
+ 		goto fail;
+ 	}
+ 
+@@ -114,7 +114,7 @@ int ps3_flash_get_values(struct ps3_flash_values *values)
+ 	result = ps3_flash_open(&fc, "r");
+ 
+ 	if (result)
+-		goto done;
++		goto fail;
+ 
+ 	result = os_area_db_read(&fc.db, &fc.header, fc.dev);
+ 
+@@ -123,7 +123,7 @@ int ps3_flash_get_values(struct ps3_flash_values *values)
+ 	if (result) {
+ 		pb_log("%s: os_area_db_read failed: %s\n", __func__,
+ 			strerror(errno));
+-		goto done;
++		goto fail;
+ 	}
+ 
+ 	sum = result = os_area_db_get(&fc.db, &id_default_item, &tmp);
+@@ -141,14 +141,13 @@ int ps3_flash_get_values(struct ps3_flash_values *values)
+ 	if (!result)
+ 		values->video_mode = (uint16_t)tmp;
+ 
+-done:
+ 	pb_log("%s: default_item: %x\n", __func__,
+ 		(unsigned int)values->default_item);
+ 	pb_log("%s: timeout: %u\n", __func__,
+ 		(unsigned int)values->timeout);
+ 	pb_log("%s: video_mode:   %u\n", __func__,
+ 		(unsigned int)values->video_mode);
+-
++fail:
+ 	return (result || sum) ? -1 : 0;
+ }
+ 
+diff --git a/ui/common/ui-system.c b/ui/common/ui-system.c
+index bd6dd31..0140f0e 100644
+--- a/ui/common/ui-system.c
++++ b/ui/common/ui-system.c
+@@ -33,13 +33,13 @@
+ #include "ui-system.h"
+ 
+ /**
+- * run_kexec_local - Final kexec helper.
++ * kexec_load - kexec load helper.
+  * @l_image: The local image file for kexec to execute.
+  * @l_initrd: Optional local initrd file for kexec --initrd, can be NULL.
+  * @args: Optional command line args for kexec --append, can be NULL.
+  */
+ 
+-static int run_kexec_local(const char *l_image, const char *l_initrd,
++static int kexec_load(const char *l_image, const char *l_initrd,
+ 	const char *args)
+ {
+ 	int result;
+@@ -49,34 +49,64 @@ static int run_kexec_local(const char *l_image, const char *l_initrd,
+ 	char *s_args = NULL;
+ 
+ 	p = argv;
+-	*p++ = pb_system_apps.kexec;		/* 1 */
++	*p++ = pb_system_apps.kexec;	/* 1 */
++	*p++ = "-l";			/* 2 */
+ 
+ 	if (l_initrd) {
+ 		s_initrd = talloc_asprintf(NULL, "--initrd=%s", l_initrd);
+ 		assert(s_initrd);
+-		*p++ = s_initrd;		 /* 2 */
++		*p++ = s_initrd;	 /* 3 */
+ 	}
+ 
+ 	if (args) {
+ 		s_args = talloc_asprintf(NULL, "--append=%s", args);
+ 		assert(s_args);
+-		*p++ = s_args;			 /* 3 */
++		*p++ = s_args;		/* 4 */
+ 	}
+ 
+-	/* First try by telling kexec to run shutdown */
++	*p++ = l_image;			/* 5 */
++	*p++ = NULL;			/* 6 */
+ 
+-	*(p + 0) = l_image;
+-	*(p + 1) = NULL;
++	result = pb_run_cmd(argv);
++
++	if (result)
++		pb_log("%s: failed: (%d)\n", __func__, result);
++
++	talloc_free(s_initrd);
++	talloc_free(s_args);
++
++	return result;
++}
++
++/**
++ * kexec_reboot - Helper to boot the new kernel.
++ *
++ * Must only be called after a successful call to kexec_load().
++ */
++
++static int kexec_reboot(void)
++{
++	int result;
++	const char *argv[4];
++	const char **p;
++
++	/* First try running shutdown.  Init scripts should run 'exec -e' */
++
++	p = argv;
++	*p++ = pb_system_apps.shutdown;	/* 1 */
++	*p++ =  "-r";			/* 2 */
++	*p++ =  "now";			/* 3 */
++	*p++ =  NULL;			/* 4 */
+ 
+ 	result = pb_run_cmd(argv);
+ 
+-	/* kexec will return zero on success */
+-	/* On error, force a kexec with the -f option */
++	/* On error, force a kexec with the -e option */
+ 
+ 	if (result) {
+-		*(p + 0) = "-f";		/* 4 */
+-		*(p + 1) = l_image;		/* 5 */
+-		*(p + 2) = NULL;		/* 6 */
++		p = argv;
++		*p++ = pb_system_apps.kexec;	/* 1 */
++		*p++ = "-e";			/* 2 */
++		*p++ = NULL;			/* 3 */
+ 
+ 		result = pb_run_cmd(argv);
+ 	}
+@@ -84,9 +114,6 @@ static int run_kexec_local(const char *l_image, const char *l_initrd,
+ 	if (result)
+ 		pb_log("%s: failed: (%d)\n", __func__, result);
+ 
+-	talloc_free(s_initrd);
+-	talloc_free(s_args);
+-
+ 	return result;
+ }
+ 
+@@ -99,31 +126,44 @@ int pb_run_kexec(const struct pb_kexec_data *kd)
+ 	int result;
+ 	char *l_image = NULL;
+ 	char *l_initrd = NULL;
++	unsigned int clean_image = 0;
++	unsigned int clean_initrd = 0;
+ 
+ 	pb_log("%s: image:  '%s'\n", __func__, kd->image);
+ 	pb_log("%s: initrd: '%s'\n", __func__, kd->initrd);
+ 	pb_log("%s: args:   '%s'\n", __func__, kd->args);
+ 
++	result = -1;
++
+ 	if (kd->image) {
+-		l_image = pb_load_file(NULL, kd->image);
++		l_image = pb_load_file(NULL, kd->image, &clean_image);
+ 		if (!l_image)
+-			return -1;
++			goto no_load;
+ 	}
+ 
+ 	if (kd->initrd) {
+-		l_initrd = pb_load_file(NULL, kd->initrd);
++		l_initrd = pb_load_file(NULL, kd->initrd, &clean_initrd);
+ 		if (!l_initrd)
+-			return -1;
++			goto no_load;
+ 	}
+ 
+ 	if (!l_image && !l_initrd)
+-		return -1;
++		goto no_load;
++
++	result = kexec_load(l_image, l_initrd, kd->args);
+ 
+-	result = run_kexec_local(l_image, l_initrd, kd->args);
++no_load:
++	if (clean_image)
++		unlink(l_image);
++	if (clean_initrd)
++		unlink(l_initrd);
+ 
+ 	talloc_free(l_image);
+ 	talloc_free(l_initrd);
+ 
++	if (!result)
++		result = kexec_reboot();
++
+ 	return result;
+ }
+ 
+diff --git a/ui/common/url.c b/ui/common/url.c
+index 0de0f58..544eee2 100644
+--- a/ui/common/url.c
++++ b/ui/common/url.c
+@@ -140,7 +140,7 @@ struct pb_url *pb_url_parse(void *ctx, const char *url_str)
+ 		path = strchr(p, '/');
+ 
+ 		if (!path) {
+-			pb_log("%s: parse path failed '%s'\n", p);
++			pb_log("%s: parse path failed '%s'\n", __func__ , p);
+ 			goto fail;
+ 		}
+ 

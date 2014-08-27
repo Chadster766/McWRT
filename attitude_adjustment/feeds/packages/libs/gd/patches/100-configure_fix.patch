@@ -1,0 +1,30 @@
+--- a/configure.ac
++++ b/configure.ac
+@@ -61,7 +61,7 @@ fi
+ AC_HEADER_STDC
+ AC_CHECK_HEADERS([errno.h limits.h stddef.h stdlib.h string.h unistd.h])
+ 
+-AM_ICONV
++m4_pattern_allow([AM_ICONV])
+ # if test -n "$LIBICONV" ; then
+ #   LIBS="$LIBS $LIBICONV"
+ # fi
+@@ -353,14 +353,14 @@ if test "$withval" != no; then
+   AC_PATH_PROG([LIBPNG12_CONFIG], [libpng12-config])
+   AC_PATH_PROG([LIBPNG_CONFIG], [libpng-config])
+   if test -n "$LIBPNG12_CONFIG"; then
+-    libpng_CPPFLAGS=`libpng12-config --cflags`
++    libpng_CPPFLAGS=`$LIBPNG12_CONFIG --cflags`
+     # should be --ldopts, but it's currently broken
+-    libpng_LDFLAGS=`libpng12-config --ldflags`
++    libpng_LDFLAGS=`$LIBPNG12_CONFIG --ldflags`
+     libpng_LDFLAGS=`echo " $libpng_LDFLAGS" | sed 's/ -l[[^ ]][[^ ]]*//g'`
+   elif test -n "$LIBPNG_CONFIG"; then
+-    libpng_CPPFLAGS=`libpng-config --cflags`
++    libpng_CPPFLAGS=`$LIBPNG_CONFIG --cflags`
+     # should be --ldopts, but it's currently broken
+-    libpng_LDFLAGS=`libpng-config --ldflags`
++    libpng_LDFLAGS=`$LIBPNG_CONFIG --ldflags`
+     libpng_LDFLAGS=`echo " $libpng_LDFLAGS" | sed 's/ -l[[^ ]][[^ ]]*//g'`
+   elif test -d "$withval"; then
+     libpng_CPPFLAGS="-I$withval/include"

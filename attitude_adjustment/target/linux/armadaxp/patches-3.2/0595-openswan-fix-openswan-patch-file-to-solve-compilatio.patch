@@ -1,0 +1,265 @@
+From ee028396d17dccafff766c0f749c87ca6b39a7d2 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Fri, 12 Apr 2013 09:11:33 +0300
+Subject: [PATCH 595/609] openswan: fix openswan patch file to solve
+ compilation failures
+
+Change-Id: I9b092991fcd58650806adf3102b251e2128bf74e
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ cesa/openswan/0001-mv_openswan_2_6_37.patch |  127 ++++++++++++++-------------
+ 1 file changed, 64 insertions(+), 63 deletions(-)
+
+diff --git a/cesa/openswan/0001-mv_openswan_2_6_37.patch b/cesa/openswan/0001-mv_openswan_2_6_37.patch
+index 06a2a5f..a442717 100644
+--- a/cesa/openswan/0001-mv_openswan_2_6_37.patch
++++ b/cesa/openswan/0001-mv_openswan_2_6_37.patch
+@@ -17,18 +17,18 @@ index f314c80..8af42d6 100644
+ --- a/Makefile.inc
+ +++ b/Makefile.inc
+ @@ -430,12 +430,12 @@ HAVE_STATSD?=false
+-
++ 
+  # Do we have Openssl libraries available for BIGNUM support?
+  # Required of HAVE_OCF support
+ -HAVE_OPENSSL?=false
+ +HAVE_OPENSSL?=true
+-
++ 
+  # Userland (IKE) Open Cryptographic Framework support (hw crypto offload)
+  # For Kernel level OCF support, enable CONFIG_KLIPS_OCF on a kernel that
+  # has support for OCF (inline or module)
+ -HAVE_OCF?=false
+ +HAVE_OCF?=true
+-
++ 
+  ifeq ($(HAVE_OCF),true)
+  HAVE_OPENSSL=true
+ diff --git a/linux/net/ipsec/defconfig b/linux/net/ipsec/defconfig
+@@ -37,15 +37,15 @@ index 3f744ce..c23e808 100644
+ +++ b/linux/net/ipsec/defconfig
+ @@ -56,8 +56,8 @@ CONFIG_KLIPS_ENC_CRYPTOAPI=y
+  CONFIG_KLIPS_IPCOMP=y
+-
++ 
+  # To enable userspace-switchable KLIPS debugging, say 'y'.
+ -CONFIG_KLIPS_DEBUG=y
+ +CONFIG_KLIPS_DEBUG=n
+-
++ 
+  # OCF HW offloading, requires kernel patch
+ -# CONFIG_KLIPS_OCF is not set
+ +CONFIG_KLIPS_OCF=y
+-
++ 
+ diff --git a/linux/net/ipsec/ipsec_ocf.c b/linux/net/ipsec/ipsec_ocf.c
+ index 58d8d9c..c8f1bad 100644
+ --- a/linux/net/ipsec/ipsec_ocf.c
+@@ -53,7 +53,7 @@ index 58d8d9c..c8f1bad 100644
+ @@ -76,18 +76,29 @@ MODULE_PARM_DESC(ipsec_ocf_cbimm,
+  static struct tasklet_struct ipsec_ocf_task;
+  static struct sk_buff_head ipsec_ocf_skbq;
+-
++ 
+ +#ifdef CONFIG_SMP
+ +static void ipsec_crypto_dispatch_wrapper(struct cryptop *crp)
+ +{
+@@ -69,49 +69,49 @@ index 58d8d9c..c8f1bad 100644
+ +#endif
+  static void ipsec_ocf_skbq_process(unsigned long arg)
+  {
+-	void (*func)(void *arg);
+-	void *this;
+-	struct sk_buff *skb;
+-
++ 	void (*func)(void *arg);
++ 	void *this;
++ 	struct sk_buff *skb;
++ 	
+ -	if ((skb = skb_dequeue(&ipsec_ocf_skbq)) != NULL) {
+ +	while ((skb = skb_dequeue(&ipsec_ocf_skbq)) != NULL) {
+-		func = ((void **) (&skb->cb[0]))[0];
+-		this = ((void **) (&skb->cb[0]))[1];
+-		(*func)(this);
++ 		func = ((void **) (&skb->cb[0]))[0];
++ 		this = ((void **) (&skb->cb[0]))[1];
++ 		(*func)(this);
+ -		/* make sure we run again */
+ -		tasklet_schedule(&ipsec_ocf_task);
+-	}
++ 	}
+  }
+-
++ 
+ @@ -101,7 +112,7 @@ static void ipsec_ocf_queue_init(void)
+-	((void **) (&(this)->skb->cb[0]))[0] = func; \
+-	((void **) (&(this)->skb->cb[0]))[1] = this; \
+-	skb_queue_tail(&ipsec_ocf_skbq, (this)->skb); \
++ 	((void **) (&(this)->skb->cb[0]))[0] = func; \
++ 	((void **) (&(this)->skb->cb[0]))[1] = this; \
++ 	skb_queue_tail(&ipsec_ocf_skbq, (this)->skb); \
+ -	tasklet_schedule(&ipsec_ocf_task);
+ +	tasklet_hi_schedule(&ipsec_ocf_task);
+-
++ 
+  #endif
+-
++ 
+ @@ -539,6 +550,7 @@ ipsec_ocf_rcv(struct ipsec_rcv_state *irs)
+-	struct ipsec_sa *ipsp;
+-	int req_count = 0;
+-	int rc, err;
++ 	struct ipsec_sa *ipsp;
++ 	int req_count = 0;
++ 	int rc, err;
+ +	unsigned int cpu = 0;
+-
+-	KLIPS_PRINT(debug_rcv, "klips_debug:ipsec_ocf_rcv\n");
+-
++ 
++ 	KLIPS_PRINT(debug_rcv, "klips_debug:ipsec_ocf_rcv\n");
++ 
+ @@ -735,7 +747,7 @@ ipsec_ocf_rcv(struct ipsec_rcv_state *irs)
+-	crp->crp_olen = irs->skb->len; /* Total output length */
+-	crp->crp_flags =
+-			CRYPTO_F_SKBUF |
++ 	crp->crp_olen = irs->skb->len; /* Total output length */
++ 	crp->crp_flags =
++ 			CRYPTO_F_SKBUF |
+ -			(ipsec_ocf_cbimm ? CRYPTO_F_BATCH : 0) |
+ +			(ipsec_ocf_cbimm ? CRYPTO_F_CBIMM : 0) |
+-			(ipsec_ocf_batch ? CRYPTO_F_BATCH : 0) |
+-			0;
+-	crp->crp_buf = (caddr_t) irs->skb;
++ 			(ipsec_ocf_batch ? CRYPTO_F_BATCH : 0) |
++ 			0;
++ 	crp->crp_buf = (caddr_t) irs->skb;
+ @@ -743,16 +755,30 @@ ipsec_ocf_rcv(struct ipsec_rcv_state *irs)
+-	crp->crp_sid = ipsp->ocf_cryptoid;
+-	crp->crp_opaque = (caddr_t) irs;
++ 	crp->crp_sid = ipsp->ocf_cryptoid;
++ 	crp->crp_opaque = (caddr_t) irs;
+    rcv_migrate:
+ -	if ((err = crypto_dispatch(crp))){
+ -		KLIPS_PRINT(debug_rcv, "crypto_dispatch rcv failure %u\n", err);
+@@ -122,7 +122,7 @@ index 58d8d9c..c8f1bad 100644
+ +	for_each_online_cpu(cpu) {
+ +		if (cpu != smp_processor_id())
+ +			break;
+-	}
++ 	}
+ -	if (crp->crp_etype == EAGAIN) {
+ -		/* Session has been migrated. Store the new session id and retry */
+ -		ipsp->ocf_cryptoid = crp->crp_sid;
+@@ -143,32 +143,32 @@ index 58d8d9c..c8f1bad 100644
+ +			goto rcv_migrate;
+ +		}
+ +#ifdef CONFIG_SMP
+-	}
++ 	}
+ +#endif
+-
+-	return(IPSEC_RCV_PENDING);
++ 
++ 	return(IPSEC_RCV_PENDING);
+  }
+ @@ -966,7 +992,7 @@ ipsec_ocf_xmit(struct ipsec_xmit_state *ixs)
+-	struct ipsec_sa *ipsp;
+-	int req_count, payload_size;
+-	int err;
++ 	struct ipsec_sa *ipsp;
++ 	int req_count, payload_size;
++ 	int err;
+ -
+ +	unsigned int cpu = 0;
+-
+-	KLIPS_PRINT(debug_tunnel & DB_TN_XMIT, "klips_debug:ipsec_ocf_xmit\n");
+-
++ 
++ 	KLIPS_PRINT(debug_tunnel & DB_TN_XMIT, "klips_debug:ipsec_ocf_xmit\n");
++ 
+ @@ -1160,7 +1186,7 @@ ipsec_ocf_xmit(struct ipsec_xmit_state *ixs)
+-	crp->crp_olen = ixs->skb->len; /* Total output length */
+-	crp->crp_flags =
+-			CRYPTO_F_SKBUF |
++ 	crp->crp_olen = ixs->skb->len; /* Total output length */
++ 	crp->crp_flags =
++ 			CRYPTO_F_SKBUF |
+ -			(ipsec_ocf_cbimm ? CRYPTO_F_BATCH : 0) |
+ +			(ipsec_ocf_cbimm ? CRYPTO_F_CBIMM : 0) |
+-			(ipsec_ocf_batch ? CRYPTO_F_BATCH : 0) |
+-			0;
+-	crp->crp_buf = (caddr_t) ixs->skb;
++ 			(ipsec_ocf_batch ? CRYPTO_F_BATCH : 0) |
++ 			0;
++ 	crp->crp_buf = (caddr_t) ixs->skb;
+ @@ -1168,17 +1194,32 @@ ipsec_ocf_xmit(struct ipsec_xmit_state *ixs)
+-	crp->crp_sid = ipsp->ocf_cryptoid;
+-	crp->crp_opaque = (caddr_t) ixs;
++ 	crp->crp_sid = ipsp->ocf_cryptoid;
++ 	crp->crp_opaque = (caddr_t) ixs;
+    xmit_migrate:
+ -	if ((err = crypto_dispatch(crp))){
+ -		KLIPS_PRINT(debug_tunnel&DB_TN_XMIT,
+@@ -181,8 +181,8 @@ index 58d8d9c..c8f1bad 100644
+ +	for_each_online_cpu(cpu) {
+ +		if (cpu != smp_processor_id())
+ +			break;
+-	}
+--	if (crp->crp_etype == EAGAIN) {
++ 	}
++-	if (crp->crp_etype == EAGAIN) { 
+ -		/* Session has been migrated. Store the new session id */
+ -		ipsp->ocf_cryptoid = crp->crp_sid;
+ -		goto xmit_migrate;
+@@ -197,16 +197,16 @@ index 58d8d9c..c8f1bad 100644
+ +			crypto_freereq(crp);
+ +			return IPSEC_XMIT_ERRMEMALLOC;
+ +		}
+-+		if (crp->crp_etype == EAGAIN) {
+++		if (crp->crp_etype == EAGAIN) { 
+ +			/* Session has been migrated. Store the new session id */
+ +			ipsp->ocf_cryptoid = crp->crp_sid;
+ +			goto xmit_migrate;
+ +		}
+ +#ifdef CONFIG_SMP
+-	}
++ 	}
+ +#endif
+-
+-	return(IPSEC_XMIT_PENDING);
++ 
++ 	return(IPSEC_XMIT_PENDING);
+  }
+ diff --git a/packaging/linus/config-all.h b/packaging/linus/config-all.h
+ index 32134a8..38cf91c 100644
+@@ -219,7 +219,7 @@ index 32134a8..38cf91c 100644
+ -#undef CONFIG_KLIPS_OCF
+ +//#undef CONFIG_KLIPS_OCF
+ +#define CONFIG_KLIPS_OCF 1
+-
++ 
+  #ifndef CONFIG_KLIPS_ALG_AES_MAC
+  #define CONFIG_KLIPS_ALG_AES_MAC 1
+ diff --git a/packaging/makefiles/module.defs b/packaging/makefiles/module.defs
+@@ -228,12 +228,13 @@ index 75bbcd9..8731959 100644
+ +++ b/packaging/makefiles/module.defs
+ @@ -37,7 +37,7 @@ CONFIG_KLIPS_ENC_CRYPTOAPI=n
+  CONFIG_KLIPS_IPCOMP=y
+-
++ 
+  # To enable userspace-switchable KLIPS debugging, say 'y'.
+ -CONFIG_KLIPS_DEBUG=y
+ +CONFIG_KLIPS_DEBUG=n
+-
++ 
+  #
+  #
+---
++-- 
+ 1.7.10.4
++
+-- 
+1.7.9.5
+

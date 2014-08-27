@@ -1,0 +1,50 @@
+include $(TOPDIR)/rules.mk
+include $(INCLUDE_DIR)/kernel.mk
+
+PKG_NAME:=wlan-v7
+PKG_VERSION:=1.0.0
+PKG_RELEASE:=1
+
+PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/$(if $(PKG_BRANCH),$(PKG_BRANCH),wlan-v7-trunk)-$(PKG_VERSION)
+
+include $(INCLUDE_DIR)/package.mk
+
+WLAN_V7_FILES:=$(PKG_BUILD_DIR)/ap8x.ko
+WLAN_V7_AUTOLOAD:=ap8x
+
+
+define KernelPackage/wlan-v7
+  SUBMENU:=Wireless Drivers
+  TITLE:=Test driver for 88W8764 WiFi chipsets
+  FILES:=$(WLAN_V7_FILES)
+  AUTOLOAD:=$(call AutoLoad,30,WLAN_V7_AUTOLOAD)
+endef
+
+define KernelPackage/wlan-v7/description
+ This package contains a test driver for Marvell 802.11a/b/g chipsets.
+endef
+
+MAKE_ARGS:= \
+	ARCH="$(LINUX_KARCH)" \
+	CROSS_COMPILE="$(TARGET_CROSS)" \
+	TOOLPREFIX="$(KERNEL_CROSS)" \
+	TOOLPATH="$(KERNEL_CROSS)" \
+	KERNELPATH="$(LINUX_DIR)" \
+	KDIR="$(LINUX_DIR)" \
+	SUBDIRS="$(PKG_BUILD_DIR)" \
+	EXTRA_CFLAGS="$(EXTRA_CFLAGS)"
+
+define Build/Prepare
+	mkdir -p $(PKG_BUILD_DIR)
+	$(CP) ./src/* $(PKG_BUILD_DIR)/
+endef
+
+define Build/Compile
+	$(MAKE) -C "$(LINUX_DIR)" $(MAKE_ARGS) modules
+endef
+
+define KernelPackage/wlan-v7/install
+	$(INSTALL_DIR) $(1)/usr/bin
+endef
+
+$(eval $(call KernelPackage,wlan-v7))

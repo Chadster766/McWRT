@@ -1,0 +1,211 @@
+diff -urN ndyndns-2.1.orig/cfg.c ndyndns-2.1/cfg.c
+--- ndyndns-2.1.orig/cfg.c	2011-01-26 17:02:05.762443700 +0100
++++ ndyndns-2.1/cfg.c	2011-01-26 17:03:43.334443683 +0100
+@@ -804,34 +804,6 @@
+             continue;
+         }
+ 
+-        tmp = parse_line_string(point, "user");
+-        if (tmp) {
+-            switch (prs) {
+-                default:
+-                    parse_warn(lnum, "user");
+-                    break;
+-                case PRS_CONFIG:
+-                    cfg_set_user(tmp);
+-                    break;
+-            }
+-            free(tmp);
+-            continue;
+-        }
+-
+-        tmp = parse_line_string(point, "group");
+-        if (tmp) {
+-            switch (prs) {
+-                default:
+-                    parse_warn(lnum, "group");
+-                    break;
+-                case PRS_CONFIG:
+-                    cfg_set_group(tmp);
+-                    break;
+-            }
+-            free(tmp);
+-            continue;
+-        }
+-
+         tmp = parse_line_string(point, "interface");
+         if (tmp) {
+             switch (prs) {
+diff -urN ndyndns-2.1.orig/chroot.c ndyndns-2.1/chroot.c
+--- ndyndns-2.1.orig/chroot.c	2011-01-26 17:02:05.762443700 +0100
++++ ndyndns-2.1/chroot.c	2011-01-26 17:03:54.470442525 +0100
+@@ -19,8 +19,6 @@
+ #include <unistd.h>
+ #include <stdlib.h>
+ #include <string.h>
+-#include <pwd.h>
+-#include <grp.h>
+ 
+ #include "defines.h"
+ #include "log.h"
+@@ -82,32 +80,3 @@
+         }
+     }
+ }
+-
+-void drop_root(uid_t uid, gid_t gid)
+-{
+-    if (uid == 0 || gid == 0) {
+-        log_line("FATAL - drop_root: attempt to drop root to root?\n");
+-        exit(EXIT_FAILURE);
+-    }
+-
+-    if (getgid() == 0) {
+-        if (setregid(gid, gid) == -1) {
+-            log_line("FATAL - drop_root: failed to drop real gid == root!\n");
+-            exit(EXIT_FAILURE);
+-        }
+-    }
+-
+-    if (getuid() == 0) {
+-        if (setreuid(uid, uid) == -1) {
+-            log_line("FATAL - drop_root: failed to drop real uid == root!\n");
+-            exit(EXIT_FAILURE);
+-        }
+-    }
+-
+-    /* be absolutely sure */
+-    if (getgid() == 0 || getuid() == 0) {
+-        log_line("FATAL - drop_root: tried to drop root, but still have root!\n");
+-        exit(EXIT_FAILURE);
+-    }
+-}
+-
+diff -urN ndyndns-2.1.orig/Makefile.in ndyndns-2.1/Makefile.in
+--- ndyndns-2.1.orig/Makefile.in	2011-01-26 17:02:05.766443748 +0100
++++ ndyndns-2.1/Makefile.in	2011-01-26 17:03:43.338443633 +0100
+@@ -1,11 +1,9 @@
+ #CC = gcc -Wall -Wpointer-arith -Wstrict-prototypes -pedantic
+ CC = @CC@
+-dnslib = -lnss_dns
+ objects = log.o nstrl.o util.o chroot.o pidfile.o signals.o strlist.o checkip.o $(PLATFORM).o cfg.o ndyndns.o
+-CURLINC = @CURLINC@
+ CURLLIB = @CURLLIB@
+ VERSION = @VERSION@
+-CFLAGS = @CFLAGS@ -Wall -Wextra -pedantic $(CURLINC)
++CFLAGS += -Wall -Wpointer-arith -Wstrict-prototypes -pedantic
+ PLATFORM = @PLATFORM@
+ prefix = @prefix@
+ exec_prefix = @exec_prefix@
+@@ -16,7 +14,7 @@
+ all: ndyndns
+ 
+ ndyndns : $(objects)
+-	$(CC) $(LDFLAGS) $(dnslib) $(CURLLIB) -o ndyndns $(objects)
++	$(CC) $(LDFLAGS) $(CURLLIB) -o ndyndns $(objects)
+ 
+ ndyndns.o : log.h nstrl.h util.h chroot.h pidfile.h signals.h strlist.h checkip.h $(PLATFORM).h cfg.h
+ 	$(CC) $(CFLAGS) -c -o $@ ndyndns.c
+diff -urN ndyndns-2.1.orig/ndyndns.c ndyndns-2.1/ndyndns.c
+--- ndyndns-2.1.orig/ndyndns.c	2011-01-26 17:02:05.766443748 +0100
++++ ndyndns-2.1/ndyndns.c	2011-01-26 17:04:15.526443092 +0100
+@@ -32,8 +32,6 @@
+ #include <net/if.h>
+ #include <ctype.h>
+ #include <time.h>
+-#include <pwd.h>
+-#include <grp.h>
+ 
+ #include <signal.h>
+ #include <errno.h>
+@@ -897,40 +895,6 @@
+     strlcpy(pidfile, pidfname, sizeof pidfile);
+ }
+ 
+-void cfg_set_user(char *username)
+-{
+-    int t;
+-    char *p;
+-    struct passwd *pws;
+-
+-    t = (unsigned int) strtol(username, &p, 10);
+-    if (*p != '\0') {
+-        pws = getpwnam(username);
+-        if (pws) {
+-            cfg_uid = (int)pws->pw_uid;
+-            if (!cfg_gid)
+-                cfg_gid = (int)pws->pw_gid;
+-        } else suicide("FATAL - Invalid uid specified.\n");
+-    } else
+-        cfg_uid = t;
+-}
+-
+-void cfg_set_group(char *groupname)
+-{
+-    int t;
+-    char *p;
+-    struct group *grp;
+-
+-    t = (unsigned int) strtol(groupname, &p, 10);
+-    if (*p != '\0') {
+-        grp = getgrnam(groupname);
+-        if (grp) {
+-            cfg_gid = (int)grp->gr_gid;
+-        } else suicide("FATAL - Invalid gid specified.\n");
+-    } else
+-        cfg_gid = t;
+-}
+-
+ void cfg_set_interface(char *interface)
+ {
+     strlcpy(ifname, interface, sizeof ifname);
+@@ -954,8 +918,6 @@
+             {"disable-chroot", 0, 0, 'x'},
+             {"file", 1, 0, 'f'},
+             {"cfg-stdin", 0, 0, 'F'},
+-            {"user", 1, 0, 'u'},
+-            {"group", 1, 0, 'g'},
+             {"interface", 1, 0, 'i'},
+             {"remote", 0, 0, 'r'},
+             {"help", 0, 0, 'h'},
+@@ -963,7 +925,7 @@
+             {0, 0, 0, 0}
+         };
+ 
+-        c = getopt_long(argc, argv, "rdnp:qc:xf:Fu:g:i:hv", long_options, &option_index);
++        c = getopt_long(argc, argv, "rdnp:qc:xf:i:hv", long_options, &option_index);
+         if (c == -1) break;
+ 
+         switch (c) {
+@@ -983,8 +945,6 @@
+                     "  -F, --cfg-stdin             read configuration file from standard input\n"
+                     "  -p, --pidfile               pidfile path\n");
+                 printf(
+-                    "  -u, --user                  user name that ndyndns should run as\n"
+-                    "  -g, --group                 group name that ndyndns should run as\n"
+                     "  -i, --interface             interface ip to check (default: ppp0)\n"
+                     "  -r, --remote                get ip from remote dyndns host (overrides -i)\n"
+                     "  -h, --help                  print this help and exit\n"
+@@ -1060,14 +1020,6 @@
+                 cfg_set_pidfile(optarg);
+                 break;
+ 
+-            case 'u':
+-                cfg_set_user(optarg);
+-                break;
+-
+-            case 'g':
+-                cfg_set_group(optarg);
+-                break;
+-
+             case 'i':
+                 cfg_set_interface(optarg);
+                 break;
+@@ -1095,7 +1047,6 @@
+ 
+     /* Note that failure cases are handled by called fns. */
+     imprison(get_chroot());
+-    drop_root(cfg_uid, cfg_gid);
+ 
+     /* Cover our tracks... */
+     wipe_chroot();

@@ -1,0 +1,25 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2008-2011 OpenWrt.org
+
+START=60
+
+SERVICE_PID_FILE=/var/run/zabbix/zabbix_agentd.pid
+
+start() {
+	[ -f /etc/zabbix/zabbix_agentd.conf ] || return 1
+	user_exists zabbix 53 || user_add zabbix 53
+	group_exists zabbix 53 || group_add zabbix 53
+	[ -d /var/log/zabbix ] || {
+		mkdir -m0755 -p /var/log/zabbix
+		chown zabbix:zabbix /var/log/zabbix
+	}
+	[ -d /var/run/zabbix ] || {
+		mkdir -m0755 -p /var/run/zabbix
+		chown zabbix:zabbix /var/run/zabbix
+	}
+	service_start /usr/sbin/zabbix_agentd
+}
+
+stop() {
+	service_stop /usr/sbin/zabbix_agentd
+}

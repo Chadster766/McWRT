@@ -1,0 +1,43 @@
+#!/bin/sh /etc/rc.common
+
+START=50
+CONF=/etc/ucarp.conf
+IP=$(which ip)
+UCARP=$(which ucarp)
+ARPING=$(which arping)
+
+start() {
+	. ${CONF}
+
+	[ ${BACKGROUND} = 1 ] && daemon="--daemonize"
+
+	cat > /var/run/ucarp-vip-up <<EOF
+#!/bin/sh
+
+$IP addr add ${VIP}/${VMASK} dev ${IF}
+
+EOF
+	for ip in ${PINGIP}
+	do
+	cat >> /var/run/ucarp-vip-up <<EOF
+$ARPING -c 2 -I ${IF} -s ${VIP} ${ip}
+EOF
+	done
+	chmod a+x /var/run/ucarp-vip-up
+
+	cat > /var/run/ucarp-vip-down <<EOF
+#!/bin/sh
+
+$IP addr del ${VIP}/${VMASK} dev ${IF}
+
+EOF
+	chmod a+x /var/run/ucarp-vip-down
+
+	$UCARP --interface=${IF} --srcip=${MYIP} --vhid=1 --pass=${PASSWORD} \
+			--addr=${VIP} --nomcast $daemon \
+			--upscript=/var/run/ucarp-vip-up --downscript=/var/run/ucarp-vip-down
+}
+
+stop() {
+	killall ucarp
+}

@@ -1,0 +1,115 @@
+From eb41647a13311807cef26c553f170840cbf54a27 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Sun, 22 Jul 2012 11:36:00 +0300
+Subject: [PATCH 236/609] enabling NAND and modifing armada_xp_defconfig to
+ enable this by default
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/configs/armada_xp_defconfig               |    3 +++
+ .../plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.c   |    8 +++++---
+ drivers/mtd/nand/nand_bbt.c                        |    2 +-
+ include/linux/mtd/bbm.h                            |    2 --
+ include/linux/mtd/nand.h                           |    6 ++++++
+ 5 files changed, 15 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm/configs/armada_xp_defconfig b/arch/arm/configs/armada_xp_defconfig
+index 80030d2..ed7e7fb 100644
+--- a/arch/arm/configs/armada_xp_defconfig
++++ b/arch/arm/configs/armada_xp_defconfig
+@@ -19,6 +19,7 @@ CONFIG_ARMADAXP_USE_IRQ_INDIRECT_MODE=y
+ CONFIG_MV_INCLUDE_PCI=y
+ # CONFIG_MV_INCLUDE_LEGACY_NAND is not set
+ # CONFIG_MV_INCLUDE_SWITCH is not set
++CONFIG_MTD_NAND_NFC_INIT_RESET=y
+ CONFIG_MV_PMU_PROC=y
+ CONFIG_MV_ETH_NETA=y
+ CONFIG_MV_ETH_PORTS_NUM=4
+@@ -112,6 +113,8 @@ CONFIG_MTD_CFI_INTELEXT=y
+ CONFIG_MTD_CFI_STAA=y
+ CONFIG_MTD_PHYSMAP=y
+ CONFIG_MTD_M25P80=y
++CONFIG_MTD_NAND=y
++CONFIG_MTD_NAND_VERIFY_WRITE=y
+ CONFIG_MTD_UBI=y
+ CONFIG_BLK_DEV_LOOP=y
+ # CONFIG_SCSI_PROC_FS is not set
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.c
+index 66a6140..d8def8a 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.c
+@@ -26,7 +26,7 @@
+ #include <linux/irq.h>
+ #include <linux/slab.h>
+ #include <asm/dma.h>
+-
++#include <drivers/mtd/mtdcore.h>
+ #include "mvCommon.h"
+ #include "mvOs.h"
+ 
+@@ -1413,13 +1413,15 @@ static void orion_nfc_init_nand(struct nand_chip *nand, struct orion_nfc_info *i
+ {
+ 	
+ 	if (info->nfc_width == 16)
+-		nand->options 	= (NAND_USE_FLASH_BBT | NAND_BUSWIDTH_16);
++		nand->bbt_options 	= (NAND_BBT_USE_FLASH |  NAND_BUSWIDTH_16);
+ 	else
+-		nand->options 	= NAND_USE_FLASH_BBT;
++		nand->bbt_options 	= NAND_BBT_USE_FLASH;
+ 	nand->num_devs		= info->num_devs;
++#if CONFIG_MTD_NAND_NFC_MLC_SUPPORT
+ 	nand->oobsize_ovrd	= ((CHUNK_SPR * CHUNK_CNT) + LST_CHUNK_SPR);
+ 	nand->bb_location	= BB_BYTE_POS;
+ 	nand->bb_page		= mvNfcBadBlockPageNumber(&info->nfcCtrl);
++#endif
+ 	nand->waitfunc		= orion_nfc_waitfunc;
+ 	nand->select_chip	= orion_nfc_select_chip;
+ 	nand->dev_ready		= orion_nfc_dev_ready;
+diff --git a/drivers/mtd/nand/nand_bbt.c b/drivers/mtd/nand/nand_bbt.c
+index 997bbf7..ea1e6ae 100644
+--- a/drivers/mtd/nand/nand_bbt.c
++++ b/drivers/mtd/nand/nand_bbt.c
+@@ -457,7 +457,7 @@ static int scan_block_custom(struct mtd_info *mtd, struct nand_bbt_descr *bd,
+ 	int ret;
+ 	struct mtd_oob_ops ops;
+ 
+-	ops.mode = MTD_OOB_RAW;
++	ops.mode = MTD_OPS_RAW;
+ 	ops.ooboffs = 0;
+ 	ops.ooblen = mtd->oobsize;
+ 	ops.oobbuf = (buf + mtd->writesize);
+diff --git a/include/linux/mtd/bbm.h b/include/linux/mtd/bbm.h
+index 58c7f21..1dd5270 100644
+--- a/include/linux/mtd/bbm.h
++++ b/include/linux/mtd/bbm.h
+@@ -120,10 +120,8 @@ struct nand_bbt_descr {
+  */
+ #define NAND_BBT_DYNAMICSTRUCT	0x80000000
+ 
+-#ifdef CONFIG_MTD_NAND_NFC_MLC_SUPPORT
+ /* Search the bad block indicators according to Marvell's Naked symantics */
+ #define NAND_BBT_SCANMVCUSTOM	0x10000000
+-#endif
+ /* The maximum number of blocks to scan for a bbt */
+ #define NAND_BBT_SCAN_MAXBLOCKS	4
+ 
+diff --git a/include/linux/mtd/nand.h b/include/linux/mtd/nand.h
+index b3f514b..eaf202b 100644
+--- a/include/linux/mtd/nand.h
++++ b/include/linux/mtd/nand.h
+@@ -503,6 +503,12 @@ struct nand_chip {
+ 
+ 	int chip_delay;
+ 	unsigned int options;
++	unsigned int	num_devs;
++#ifdef CONFIG_MTD_NAND_NFC_MLC_SUPPORT
++	unsigned int	oobsize_ovrd;
++	unsigned int	bb_location;
++	unsigned int	bb_page;
++#endif
+ 	unsigned int bbt_options;
+ 
+ 	int page_shift;
+-- 
+1.7.9.5
+

@@ -1,0 +1,24 @@
+uci delete network.mesh
+uci set network.mesh=interface
+uci set network.mesh.proto=wing
+
+uci delete firewall.zone_mesh
+uci set firewall.zone_mesh=zone
+uci set firewall.zone_mesh.name="mesh"
+uci set firewall.zone_mesh.input="ACCEPT"
+uci set firewall.zone_mesh.output="ACCEPT"
+uci set firewall.zone_mesh.forward="REJECT"
+uci set firewall.zone_mesh.masq="1"
+
+uci delete firewall.fwd_lan_mesh
+uci set firewall.fwd_lan_mesh=forwarding
+uci set firewall.fwd_lan_mesh.src="lan"
+uci set firewall.fwd_lan_mesh.dest="mesh"
+
+uci delete firewall.fwd_mesh_wan
+uci set firewall.fwd_mesh_wan=forwarding
+uci set firewall.fwd_mesh_wan.src="mesh"
+uci set firewall.fwd_mesh_wan.dest="wan"
+
+uci commit
+

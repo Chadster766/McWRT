@@ -1,0 +1,17 @@
+#!/bin/sh /etc/rc.common
+
+START=50
+
+LOG_D=/var/log
+RUN_D=/var/run
+PID_F=$RUN_D/dhcp-fwd.pid
+
+start() {
+	[ -d $LOG_D ] || mkdir -p $LOG_D
+	[ -d $RUN_D ] || mkdir -p $RUN_D
+	dhcp-fwd
+}
+
+stop() {
+	[ -f $PID_F ] && kill $(cat $PID_F)
+}

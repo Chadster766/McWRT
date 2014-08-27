@@ -1,0 +1,22 @@
+--- a/tests/Makefile.am
++++ b/tests/Makefile.am
+@@ -34,7 +34,7 @@
+ 
+ CLEANFILES = plain-test
+ 
+-LDADD = ../src/libopencdk.la
++LDADD = ../src/libopencdk.la $(LIBGCRYPT_LIBS)
+ 
+ if HAVE_W32_SYSTEM
+ # there is a problem with some tests and WINE
+--- a/tests/Makefile.in
++++ b/tests/Makefile.in
+@@ -258,7 +258,7 @@
+ AM_LDFLAGS = -no-install
+ AM_CPPFLAGS = $(LIBGCRYPT_CFLAGS)
+ CLEANFILES = plain-test
+-LDADD = ../src/libopencdk.la
++LDADD = ../src/libopencdk.la $(LIBGCRYPT_LIBS)
+ noinst_HEADER = t-support.h
+ all: all-am
+ 

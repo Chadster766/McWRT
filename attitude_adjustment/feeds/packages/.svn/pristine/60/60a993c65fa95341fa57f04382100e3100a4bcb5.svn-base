@@ -1,0 +1,25 @@
+Index: alsa-utils-1.0.24.2/alsamixer/volume_mapping.c
+===================================================================
+--- alsa-utils-1.0.24.2.orig/alsamixer/volume_mapping.c	2011-03-11 13:26:29.000000000 +0100
++++ alsa-utils-1.0.24.2/alsamixer/volume_mapping.c	2011-03-11 13:27:58.000000000 +0100
+@@ -109,9 +109,9 @@
+ 	if (use_linear_dB_scale(min, max))
+ 		return (value - min) / (double)(max - min);
+ 
+-	normalized = exp10((value - max) / 6000.0);
++	normalized = pow(10, (value - max) / 6000.0);
+ 	if (min != SND_CTL_TLV_DB_GAIN_MUTE) {
+-		min_norm = exp10((min - max) / 6000.0);
++		min_norm = pow(10, (min - max) / 6000.0);
+ 		normalized = (normalized - min_norm) / (1 - min_norm);
+ 	}
+ 
+@@ -144,7 +144,7 @@
+ 	}
+ 
+ 	if (min != SND_CTL_TLV_DB_GAIN_MUTE) {
+-		min_norm = exp10((min - max) / 6000.0);
++		min_norm = pow(10, (min - max) / 6000.0);
+ 		volume = volume * (1 - min_norm) + min_norm;
+ 	}
+ 	value = lrint_dir(6000.0 * log10(volume), dir) + max;

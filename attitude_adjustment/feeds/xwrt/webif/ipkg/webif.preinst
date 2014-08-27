@@ -1,0 +1,10 @@
+#!/bin/sh
+#
+if [ -z "${IPKG_INSTROOT}" ]; then	# only run below on 'real' system (not image builder)
+	# install new httpd.conf	
+	if [ -f "/etc/httpd.conf" ]; then
+		cp /etc/httpd.conf /tmp/httpd.conf.old        	# make a copy for comparing
+	else
+		echo > /tmp/httpd.conf.old
+	fi
+fi

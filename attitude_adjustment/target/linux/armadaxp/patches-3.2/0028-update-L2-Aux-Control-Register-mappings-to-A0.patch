@@ -1,0 +1,47 @@
+From e7eea32bb6ee059e93c0e6b14da781fdb3b31bc8 Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Tue, 6 Dec 2011 14:43:21 +0200
+Subject: [PATCH 028/609] update L2 Aux Control Register mappings to A0
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../arm/plat-armada/include/plat/cache-aurora-l2.h |   10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/plat-armada/include/plat/cache-aurora-l2.h b/arch/arm/plat-armada/include/plat/cache-aurora-l2.h
+index 197891d..d2e4e06 100644
+--- a/arch/arm/plat-armada/include/plat/cache-aurora-l2.h
++++ b/arch/arm/plat-armada/include/plat/cache-aurora-l2.h
+@@ -123,12 +123,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define L2ACR_ASSOCIATIVITY_8WAY	(7 << L2ACR_ASSOCIATIVITY_OFFSET)
+ #define L2ACR_WAY_SIZE_OFFSET		17			
+ #define L2ACR_WAY_SIZE_MASK		(0x7 << L2ACR_WAY_SIZE_OFFSE)
++#ifdef CONFIG_ARMADA_XP_REV_Z1
+ #define L2ACR_WAY_SIZE_16KB		(1 << L2ACR_WAY_SIZE_OFFSET)
+ #define L2ACR_WAY_SIZE_32KB		(2 << L2ACR_WAY_SIZE_OFFSET)
+ #define L2ACR_WAY_SIZE_64KB		(3 << L2ACR_WAY_SIZE_OFFSET)
+ #define L2ACR_WAY_SIZE_128KB		(4 << L2ACR_WAY_SIZE_OFFSET)
+ #define L2ACR_WAY_SIZE_256KB		(5 << L2ACR_WAY_SIZE_OFFSET)
+ #define L2ACR_WAY_SIZE_512KB		(6 << L2ACR_WAY_SIZE_OFFSET)
++#else  /* A0 and over */
++#define L2ACR_WAY_SIZE_16KB		(2 << L2ACR_WAY_SIZE_OFFSET)
++#define L2ACR_WAY_SIZE_32KB		(3 << L2ACR_WAY_SIZE_OFFSET)
++#define L2ACR_WAY_SIZE_64KB		(4 << L2ACR_WAY_SIZE_OFFSET)
++#define L2ACR_WAY_SIZE_128KB		(5 << L2ACR_WAY_SIZE_OFFSET)
++#define L2ACR_WAY_SIZE_256KB		(6 << L2ACR_WAY_SIZE_OFFSET)
++#define L2ACR_WAY_SIZE_512KB		(7 << L2ACR_WAY_SIZE_OFFSET)
++#endif
+ #define L2ACR_ECC_ENABLE		BIT20
+ #define L2ACR_PARITY_ENABLE		BIT21
+ #define L2ACR_INV_EVIC_LINE_UC_ERR	BIT22
+@@ -136,7 +145,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define L2ACR_FORCE_WR_ALLOC_MASK	(0x3 << L2ACR_FORCE_WR_ALLOC_OFFSET)
+ #define L2ACR_FORCE_WR_ALLOC_DISABLE	(0 << L2ACR_FORCE_WR_ALLOC_OFFSET)
+ #define L2ACR_FORCE_NO_WR_ALLOC		(1 << L2ACR_FORCE_WR_ALLOC_OFFSET)
+-#define L2ACR_FORCE_WR_ALLOC		(2 << L2ACR_FORCE_WR_ALLOC_OFFSET)
+ #define L2ACR_REPLACEMENT_OFFSET	27
+ #define L2ACR_REPLACEMENT_MASK		(0x3 << L2ACR_REPLACEMENT_OFFSET)
+ #define L2ACR_REPLACEMENT_TYPE_WAYRR	(0 << L2ACR_REPLACEMENT_OFFSET)
+-- 
+1.7.9.5
+

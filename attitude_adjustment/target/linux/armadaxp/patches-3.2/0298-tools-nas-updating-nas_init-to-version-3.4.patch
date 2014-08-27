@@ -1,0 +1,191 @@
+From 66b21b61e34457a1238b8364c52ced430d03f8d2 Mon Sep 17 00:00:00 2001
+From: Lior Amsalem <alior@marvell.com>
+Date: Wed, 19 Sep 2012 16:38:43 +0300
+Subject: [PATCH 298/609] tools: nas: updating nas_init to version 3.4
+
+Signed-off-by: Lior Amsalem <alior@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ tools/nas/nas_init.sh |   85 ++++++++++++++++++++++++++++---------------------
+ 1 file changed, 49 insertions(+), 36 deletions(-)
+
+diff --git a/tools/nas/nas_init.sh b/tools/nas/nas_init.sh
+index 2d21675..b96c1ee 100755
+--- a/tools/nas/nas_init.sh
++++ b/tools/nas/nas_init.sh
+@@ -1,8 +1,15 @@
+ #!/bin/bash
+ 
+-echo " * Version: 3.3"
++echo " * Version: 3.4"
+ 
+ # LOG:
++# 3.4:
++#   1. adding support for ubuntu systems by using -u param.
++#   2. when using ubuntu, users will have to stop and start samba manually, 
++#      will be done automaticlly in later versions.
++#   3. fixing bonding setup flow as needed by newer kernels.(both 2 and 4 links)
++#   4. switching bond configuration to balance-xor (from balance-alb).
++#   5. checking if smbd and nmbd exist on the filesystem.
+ # 3.3:
+ #   1. adding support for 5 HDDs RAID5.
+ #   2. reverting gso, tso to default state.
+@@ -20,25 +27,25 @@ echo " * Version: 3.3"
+ #   2. XOR affinity update.
+ #   3. RAID-6 support.
+ # 3.0:
+-#   1. first all-in-one script to include: affinity, bonding, nas_init
+-#   2. PAGE_SIZE automatic set
+-#   3. LINK_NUM support to identify number of links
+-#   4. prints cleanup and better flow status report
+-#   5. Error prints added
+-#   6. Exit on error
++#   1. first all-in-one script to include: affinity, bonding, nas_init.
++#   2. PAGE_SIZE automatic set.
++#   3. LINK_NUM support to identify number of links.
++#   4. prints cleanup and better flow status report.
++#   5. Error prints added.
++#   6. Exit on error.
+ # 2.5:
+ #   1. XFS mount options updated.
+ #   2. RAID1 chunk size updated.
+ #   3. splice enabled for XFS.
+ # 2.4:
+-#   1. support RAID-1
+-#   2. splice enabled by default 
++#   1. support RAID-1.
++#   2. splice enabled by default.
+ # 2.3:
+-#   1. fixing the mkdir share for loop
++#   1. fixing the mkdir share for loop.
+ # 2.2:
+-#   1. automatic size settings for PARTSIZE
++#   1. automatic size settings for PARTSIZE.
+ # 2.1:
+-#   1. setting coal to 100 in net queue 0 and fixing for in NETQ
++#   1. setting coal to 100 in net queue 0 and fixing for in NETQ.
+ 
+ PREPARE_HDD="no"
+ ZAP_ROOTFS="no"
+@@ -58,6 +65,7 @@ PARTNUM="1"
+ LINK_NUM=`dmesg |grep "Giga ports" |awk '{print $2}'`
+ PARTSIZE="55GB"
+ NETQ="0"
++SYSTEM="sdk"
+ 
+ MNT_DIR="/mnt/public"
+ mkdir -p $MNT_DIR
+@@ -101,7 +109,7 @@ case "$ARCH" in
+     *)	do_error_hold "Architecture ${ARCH} unsupported" ;;
+ esac
+ 
+-while getopts "l:pbmzn:sf:t:h:" flag; do
++while getopts "l:pbmzun:sf:t:h:" flag; do
+     case "$flag" in
+ 	f)
+ 	    FS=$OPTARG
+@@ -150,6 +158,8 @@ while getopts "l:pbmzn:sf:t:h:" flag; do
+ 		*)	do_error "Usage: drive toplogy: 4|8" ;;
+ 	    esac
+ 	    ;;
++	u)      SYSTEM="ubuntu"
++	    ;;
+ 	
+ 	*)	echo "Usage: $0"
+ 	    echo "           -f <ext4|xfs|btrfs|fat32>: file system type ext4, xfs, btrfs or fat32"
+@@ -160,6 +170,7 @@ while getopts "l:pbmzn:sf:t:h:" flag; do
+ 	    echo "           -h <num>: number of HDDs to use"
+ 	    echo "           -l <num>: number of links to use"
+ 	    echo "           -b <rootfs_tarball_path>:  path to rootfs tarball to be placed on /dev/sda2"
++	    echo "           -u: running script on ubuntu filesystem"
+ 	    exit 1
+ 	    ;;
+     esac
+@@ -196,24 +207,24 @@ fi
+ echo -ne "******************************************\n"
+ [[ "$TOPOLOGY" == "rd0" || "$TOPOLOGY" == "rd1" || "$TOPOLOGY" == "rd5" || "$TOPOLOGY" == "rd6" ]] && [ ! -e "$(which mdadm)" ] && do_error "missing mdadm in rootfs (aptitude install mdadm)"
+ 
+-#if [[ -e "$(which smbd)" && -e "$(which nmbd)" ]]; then
+-#    echo -n "* Starting Samba daemons"
+-#    $(which smbd) && $(which nmbd)
+-#else
+-
+-echo -ne " * Stopping SAMBA processes:   "
+-if [ "$(pidof smbd)" ]; then
+-    killall smbd
+-fi
++[ ! -e "$(which smbd)" ] && do_error "SAMBA in not installed on your filesystem (aptitude install samba)"
++[ ! -e "$(which nmbd)" ] && do_error "SAMBA in not installed on your filesystem (aptitude install samba)"
+ 
+-if [ "$(pidof nmbd)" ]; then
+-    killall nmbd
++if [ "$SYSTEM" == "sdk" ]; then
++    echo -ne " * Stopping SAMBA processes:   "
++    if [ "$(pidof smbd)" ]; then
++	killall smbd
++    fi
++	
++    if [ "$(pidof nmbd)" ]; then
++	killall nmbd
++    fi
+ fi
+-
+ sleep 2
+ 
++echo -ne " * Checking SAMBA is not running:  "
+ if [ `ps -ef |grep smb |grep -v grep |wc -l` != 0 ]; then
+-    do_error "Unable to stop Samba processes"
++    do_error "Unable to stop Samba processes, when using ubuntu you need to stop them manually"
+ fi
+ echo -ne "[Done]\n"
+ 
+@@ -348,12 +359,11 @@ if [ "$LINK_NUM" == "2" ]; then
+     ifconfig eth0 0.0.0.0 down
+     ifconfig eth1 0.0.0.0 down
+ 
+-    ifconfig bond0 192.168.0.5 netmask 255.255.255.0 up
++    ifconfig bond0 192.168.0.5 netmask 255.255.255.0 down
++    echo balance-xor > /sys/class/net/bond0/bonding/mode
++    ifconfig bond0 up 
+     ifenslave bond0 eth0 eth1
+ 
+-    ifconfig bond0 down
+-    echo balance-alb > /sys/class/net/bond0/bonding/mode
+-    ifconfig bond0 up
+     set +o verbose
+ elif [ "$LINK_NUM" == "4" ]; then
+     set -o verbose
+@@ -362,12 +372,11 @@ elif [ "$LINK_NUM" == "4" ]; then
+     ifconfig eth2 0.0.0.0 down
+     ifconfig eth3 0.0.0.0 down
+ 
+-    ifconfig bond0 192.168.0.5 netmask 255.255.255.0 up
++    ifconfig bond0 192.168.0.5 netmask 255.255.255.0 down
++    echo balance-xor > /sys/class/net/bond0/bonding/mode
++    ifconfig bond0 up 
+     ifenslave bond0 eth0 eth1 eth2 eth3
+ 
+-    ifconfig bond0 down
+-    echo balance-alb > /sys/class/net/bond0/bonding/mode
+-    ifconfig bond0 up
+     set +o verbose
+ elif [ "$LINK_NUM" == "1" ]; then
+     set -o verbose
+@@ -799,8 +808,12 @@ if [ "$FS" != "NONE" ]; then
+ 
+ 	rm -rf /var/log/log.smbd
+ 	rm -rf /var/log/log.nmbd
+-	$(which nmbd) -D -s /etc/smb.conf
+-	$(which smbd) -D -s /etc/smb.conf
++
++	if [ "$SYSTEM" == "sdk" ]; then
++	    $(which nmbd) -D -s /etc/smb.conf
++	    $(which smbd) -D -s /etc/smb.conf
++	fi
++
+ 	sleep 1
+ 	echo -ne "[Done]\n"
+     else
+-- 
+1.7.9.5
+

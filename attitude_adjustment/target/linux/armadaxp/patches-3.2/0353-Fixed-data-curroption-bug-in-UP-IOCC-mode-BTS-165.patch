@@ -1,0 +1,33 @@
+From 3f73ca4113c10df6b13dfe62e6fb1fd13af9c775 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 2 Dec 2012 10:29:08 +0200
+Subject: [PATCH 353/609] Fixed data curroption bug in UP+IOCC mode (BTS #165)
+
+	The bug was caused since the shared bit was off in UP mode.
+	It was resolved by turning on the shared bit when IOCC is
+	enabled.
+
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mm/mmu.c |    3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/mm/mmu.c b/arch/arm/mm/mmu.c
+index db62fab..763bf61 100644
+--- a/arch/arm/mm/mmu.c
++++ b/arch/arm/mm/mmu.c
+@@ -451,7 +451,8 @@ static void __init build_mem_type_table(void)
+ 		mem_types[MT_CACHECLEAN].prot_sect |= PMD_SECT_APX|PMD_SECT_AP_WRITE;
+ #endif
+ 
+-#if defined(CONFIG_SMP) || defined (CONFIG_SHEEVA_ERRATA_ARM_CPU_5114)
++#if defined(CONFIG_SMP) || defined (CONFIG_SHEEVA_ERRATA_ARM_CPU_5114) ||	\
++		(defined (CONFIG_ARCH_ARMADA_XP) && defined (CONFIG_AURORA_IO_CACHE_COHERENCY))
+ 			/*
+ 			 * Mark memory with the "shared" attribute
+ 			 * for SMP systems
+-- 
+1.7.9.5
+

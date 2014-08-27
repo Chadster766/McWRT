@@ -1,0 +1,68 @@
+From 2936f2937a2bbb34482cbbd05659ce4db1d41f64 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 10 Sep 2012 16:13:11 +0300
+Subject: [PATCH 282/609] Preperations for suspend to RAM
+
+	1. Added suspend routine to system timer
+	2. Assigend value to pp->pm_mode in neta driver
+
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/time.c                      |   23 ++++++++++++++++++++
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |    5 +++++
+ 2 files changed, 28 insertions(+)
+
+diff --git a/arch/arm/mach-armadaxp/time.c b/arch/arm/mach-armadaxp/time.c
+index 86ec098..97e15ca 100644
+--- a/arch/arm/mach-armadaxp/time.c
++++ b/arch/arm/mach-armadaxp/time.c
+@@ -233,6 +233,29 @@ void __cpuinit mv_timer_setup(struct clock_event_device *clk, unsigned int fabri
+ 	clk->min_delta_ns	= clockevent_delta2ns(0x1, clk);
+ }
+ 
++/*
++ * Resume timer from suspend to RAM
++ * TODO - need to implement kernel hooks for suspend/resume
++ */
++void axp_timer_resume(void)
++{
++	u32 u;
++
++	pr_info("Resuming ArmadaXP SOC Timer %d\n", soc_timer_id);
++
++	MV_REG_WRITE(TIMER_VAL(soc_timer_id), 0xffffffff);
++	MV_REG_WRITE(TIMER_RELOAD(soc_timer_id), 0xffffffff);
++
++	u = MV_REG_READ(BRIDGE_MASK);
++	u &= ~BRIDGE_INT_TIMER(soc_timer_id);
++	MV_REG_WRITE(BRIDGE_MASK, u);
++
++	u = MV_REG_READ(TIMER_CTRL);
++	u |= (TIMER_EN(soc_timer_id) | TIMER_RELOAD_EN(soc_timer_id) |
++			TIMER_TURN_25MHZ(soc_timer_id));
++	MV_REG_WRITE(TIMER_CTRL, u);
++}
++
+ void __init axp_time_init(unsigned int fabric_clk)
+ {
+ 	u32 u;
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 8d4f549..03a7569 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -5925,6 +5925,11 @@ int mv_eth_suspend(struct platform_device *pdev, pm_message_t state)
+ 		if (!pp)
+ 			continue;
+ 
++		if (state.event & PM_EVENT_SUSPEND)
++			pp->pm_mode = MV_ETH_PM_CLOCK;
++		else
++			pp->pm_mode = MV_ETH_PM_WOL;
++
+ 		if (pp->pm_mode == MV_ETH_PM_CLOCK) {
+ 			if (mv_eth_suspend_clock(pp->port)) {
+ 				printk(KERN_ERR "%s: Error, port %d clock suspend failed.\n", __func__, port);
+-- 
+1.7.9.5
+

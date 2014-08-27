@@ -1,0 +1,35 @@
+Using this package to create a bootable usb stick for openwrt.
+
+The status of this package is currently 'it works for me', and it will
+require more effort before it's generic across the board.  Currently
+only tested to be working on x86-2.6 using an initramfs image.
+My development environment for this is a via epia with a
+serial console (no monitors or keyboards attached).
+
+To create the images that are bootable, configure your buildroot to include
+the lilo package in the image, as well as e2fsprogs.  Have it create an
+ext2 file system as the target file system.  Let it build the works.
+
+When the build is finished, you will need to run the script 'mkbootable'
+located in the lilo package directory, it requires root privileges to
+loop mount the fs for installing lilo.  When it's done, you have an
+8 meg ext2fs root file system ready to run.
+
+To use the image, dd it directly onto a usb stick.  It should go onto
+/dev/sda not /dev/sda1, it's assuming the stick is not partitioned.
+When you boot the stick, you will get a lilo menu on the serial terminal.
+The three options allow you to boot with the stick itself as the root file
+system, or, to boot into a ramdisk, and not mount the stick at all.  The
+stick will likely show up at /dev/disc
+
+Boot the unit, and select the ramdisk.  Once up in the ramdisk, you can
+use the e2fstools to expand the image to fill the stick and add a journal
+to use it as ext3.
+
+e2fsck -f /dev/disc
+tune2fs -j /dev/disc
+resize2fs /dev/disc
+
+Reboot the box, and, have fun with openwrt on your x86 using the usb
+stick to boot and run from.
+

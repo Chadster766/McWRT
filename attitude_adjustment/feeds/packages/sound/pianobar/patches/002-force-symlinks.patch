@@ -1,0 +1,24 @@
+--- a/Makefile
++++ b/Makefile
+@@ -108,8 +108,8 @@ libpiano.so.0: ${LIBPIANO_RELOBJ} ${LIBP
+ 	${CC} -shared -Wl,-soname,libpiano.so.0 ${CFLAGS} ${LDFLAGS} ${LIBGNUTLS_LDFLAGS} \
+ 			-o libpiano.so.0.0.0 ${LIBPIANO_RELOBJ} \
+ 			${LIBWAITRESS_RELOBJ} ${LIBEZXML_RELOBJ}
+-	ln -s libpiano.so.0.0.0 libpiano.so.0
+-	ln -s libpiano.so.0 libpiano.so
++	ln -sf libpiano.so.0.0.0 libpiano.so.0
++	ln -sf libpiano.so.0 libpiano.so
+ 	${AR} rcs libpiano.a ${LIBPIANO_OBJ} ${LIBWAITRESS_OBJ} ${LIBEZXML_OBJ}
+ 
+ %.o: %.c
+@@ -177,8 +177,8 @@ endif
+ install-libpiano:
+ 	install -d ${DESTDIR}/${LIBDIR}/
+ 	install -m644 libpiano.so.0.0.0 ${DESTDIR}/${LIBDIR}/
+-	ln -s libpiano.so.0.0.0 ${DESTDIR}/${LIBDIR}/libpiano.so.0
+-	ln -s libpiano.so.0 ${DESTDIR}/${LIBDIR}/libpiano.so
++	ln -sf libpiano.so.0.0.0 ${DESTDIR}/${LIBDIR}/libpiano.so.0
++	ln -sf libpiano.so.0 ${DESTDIR}/${LIBDIR}/libpiano.so
+ 	install -m644 libpiano.a ${DESTDIR}/${LIBDIR}/
+ 	install -d ${DESTDIR}/${INCDIR}/
+ 	install -m644 src/libpiano/piano.h ${DESTDIR}/${INCDIR}/

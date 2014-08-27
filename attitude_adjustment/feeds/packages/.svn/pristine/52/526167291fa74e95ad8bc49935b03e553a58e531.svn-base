@@ -1,0 +1,38 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2011 OpenWrt.org
+
+START=50
+
+start_instance () {
+	local section="$1"
+	config_get service  "$section" 'service'
+	config_get username "$section" 'username'
+	config_get password "$section" 'password'
+	config_get host     "$section" 'host'
+	config_get update   "$section" 'update'
+
+	[ "$update" = 1 ] && {
+		if [ "$service" = "dyndns" ]; then
+			wget http://checkip.dyndns.org -O /tmp/updatedd_ip_check
+			current_ip=`cat /tmp/updatedd_ip_check |cut -d':' -f2|cut -d'<' -f1 |cut -d' ' -f2`
+			rm /tmp/updatedd_ip_check
+			old_ip=`nslookup "$host" |grep "$host" -A 1 |grep Address |cut -d' ' -f3`
+			if [ "$current_ip" = "$old_ip" ]; then
+				echo "Preventing abusive update"
+				abusive=1
+			fi
+		fi
+		if [ "$abusive" != "1" ]; then
+			service_start /usr/bin/updatedd -Y $service -- $username:$password $host
+		fi
+	}
+}
+
+start() {
+	config_load 'updatedd'
+	config_foreach start_instance 'updatedd'
+}
+
+stop() {
+	service_stop /usr/bin/updatedd
+}

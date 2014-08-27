@@ -1,0 +1,53 @@
+From 7a4d0b024fd744dd5755c22781addfc05612c628 Mon Sep 17 00:00:00 2001
+From: Lior Amsalem <alior@marvell.com>
+Date: Wed, 8 Aug 2012 15:45:07 +0300
+Subject: [PATCH 242/609] ata: sata_mv: setting PHY speed according to
+ SControl speed
+
+Signed-off-by: Lior Amsalem <alior@marvell.com>
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ drivers/ata/sata_mv.c |   12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/drivers/ata/sata_mv.c b/drivers/ata/sata_mv.c
+index f66bf30..3f5b612 100644
+--- a/drivers/ata/sata_mv.c
++++ b/drivers/ata/sata_mv.c
+@@ -302,6 +302,7 @@ enum {
+ 	MV5_LTMODE		= 0x30,
+ 	MV5_PHY_CTL		= 0x0C,
+ 	SATA_IFCFG		= 0x050,
++	LP_PHY_CTL		= 0x058,
+ 
+ 	MV_M2_PREAMP_MASK	= 0x7e0,
+ 
+@@ -1348,6 +1349,8 @@ static int mv_scr_write(struct ata_link *link, unsigned int sc_reg_in, u32 val)
+ 
+ 	if (ofs != 0xffffffffU) {
+ 		void __iomem *addr = mv_ap_base(link->ap) + ofs;
++		void __iomem *lp_phy_addr = mv_ap_base(link->ap) + LP_PHY_CTL;
++
+ 		if (sc_reg_in == SCR_CONTROL) {
+ 			/*
+ 			 * Workaround for 88SX60x1 FEr SATA#26:
+@@ -1364,6 +1367,15 @@ static int mv_scr_write(struct ata_link *link, unsigned int sc_reg_in, u32 val)
+ 			 */
+ 			if ((val & 0xf) == 1 || (readl(addr) & 0xf) == 1)
+ 				val |= 0xf000;
++
++			/*
++			 * Setting PHY speed according to SControl speed
++			 */
++			if ((val & 0xf0) == 0x10)
++				writelfl(0x7, lp_phy_addr);
++			else
++				writelfl(0x227, lp_phy_addr);
++
+ 		}
+ 		writelfl(val, addr);
+ 		return 0;
+-- 
+1.7.9.5
+

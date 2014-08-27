@@ -1,0 +1,739 @@
+From b0a310bd0dfab2f32d221c243203a4f0c1609dd6 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Mon, 12 Mar 2012 03:12:16 -0400
+Subject: [PATCH 150/609] OSS: Multi-line cache operations update
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/linux_oss/mvOs.h |  456 ++++++++++++++++-----------------
+ 1 file changed, 228 insertions(+), 228 deletions(-)
+ mode change 100644 => 100755 arch/arm/plat-armada/linux_oss/mvOs.h
+
+diff --git a/arch/arm/plat-armada/linux_oss/mvOs.h b/arch/arm/plat-armada/linux_oss/mvOs.h
+old mode 100644
+new mode 100755
+index d9dbd09..46c7ac1
+--- a/arch/arm/plat-armada/linux_oss/mvOs.h
++++ b/arch/arm/plat-armada/linux_oss/mvOs.h
+@@ -1,7 +1,7 @@
+ /*******************************************************************************
+ Copyright (C) Marvell International Ltd. and its affiliates
+ 
+-This software file (the "File") is owned and distributed by Marvell 
++This software file (the "File") is owned and distributed by Marvell
+ International Ltd. and/or its affiliates ("Marvell") under the following
+ alternative licensing terms.  Once you have made an election to distribute the
+ File under one of the following license alternatives, please (i) delete this
+@@ -13,22 +13,21 @@ Marvell copyright notice above.
+ ********************************************************************************
+ Marvell GPL License Option
+ 
+-If you received this File from Marvell, you may opt to use, redistribute and/or 
+-modify this File in accordance with the terms and conditions of the General 
+-Public License Version 2, June 1991 (the "GPL License"), a copy of which is 
+-available along with the File in the license.txt file or by writing to the Free 
+-Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or 
+-on the worldwide web at http://www.gnu.org/licenses/gpl.txt. 
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File in accordance with the terms and conditions of the General
++Public License Version 2, June 1991 (the "GPL License"), a copy of which is
++available along with the File in the license.txt file or by writing to the Free
++Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
++on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
+ 
+-THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED 
+-WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY 
+-DISCLAIMED.  The GPL License provides additional details about this warranty 
++THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
++DISCLAIMED.  The GPL License provides additional details about this warranty
+ disclaimer.
+ *******************************************************************************/
+ #ifndef _MV_OS_LNX_H_
+ #define _MV_OS_LNX_H_
+-                                                                                                                                               
+-                                                                                                                                               
++
+ #ifdef __KERNEL__
+ /* for kernel space */
+ #include <linux/stddef.h>
+@@ -49,14 +48,14 @@ disclaimer.
+ #include <linux/string.h>
+ #include <linux/slab.h>
+ #include <linux/mm.h>
+-  
++
+ #include <asm/system.h>
+ #include <asm/pgtable.h>
+ #include <asm/page.h>
+ #include <asm/hardirq.h>
+ #include <asm/dma.h>
+ #include <asm/io.h>
+- 
++
+ #include <linux/random.h>
+ 
+ #include "dbg-trace.h"
+@@ -64,9 +63,9 @@ disclaimer.
+ #include "ctrlEnv/mvCtrlEnvRegs.h"
+ #include "mvSysHwConfig.h"
+ 
+-extern void mv_early_printk(char *fmt,...);
++extern void mv_early_printk(char *fmt, ...);
+ 
+-#define MV_ASM              __asm__ __volatile__  
++#define MV_ASM              __asm__ __volatile__
+ #define INLINE              inline
+ #define _INIT				__init
+ #define MV_TRC_REC	        TRC_REC
+@@ -74,7 +73,7 @@ extern void mv_early_printk(char *fmt,...);
+ #define mvOsEarlyPrintf	    mv_early_printk
+ #define mvOsOutput          printk
+ #define mvOsSPrintf         sprintf
+-#define mvOsMalloc(_size_)  kmalloc(_size_,GFP_ATOMIC)
++#define mvOsMalloc(_size_)  kmalloc(_size_, GFP_ATOMIC)
+ #define mvOsFree            kfree
+ #define mvOsMemcpy          memcpy
+ #define mvOsMemset          memset
+@@ -88,80 +87,81 @@ extern void mv_early_printk(char *fmt,...);
+ #define mvCopyToOs          copy_to_user
+ #define mvOsWarning()       WARN_ON(1)
+ 
+- 
++
+ #include "mvTypes.h"
+ #include "mvCommon.h"
+-  
++
+ #ifdef MV_NDEBUG
+ #define mvOsAssert(cond)
+ #else
+-#define mvOsAssert(cond) { do { if(!(cond)) { BUG(); } }while(0); }
++#define mvOsAssert(cond) { do { if (!(cond)) { BUG(); } } while (0); }
+ #endif /* MV_NDEBUG */
+- 
++
+ #else /* __KERNEL__ */
+- 
++
+ /* for user space applications */
+ #include <stdlib.h>
+ #include <stdio.h>
+ #include <assert.h>
+ #include <string.h>
+- 
++
+ #define INLINE inline
+ #define mvOsPrintf printf
+ #define mvOsOutput printf
+ #define mvOsMalloc(_size_) malloc(_size_)
+ #define mvOsFree free
+ #define mvOsAssert(cond) assert(cond)
+- 
+-#endif /* __KERNEL__ */                                                                                                                                               
+-#define mvOsIoVirtToPhy(pDev, pVirtAddr)        virt_to_dma( (pDev), (pVirtAddr) )
+-/*    pci_map_single( (pDev), (pVirtAddr), 0, PCI_DMA_BIDIRECTIONAL ) */
+ 
+-#define mvOsIoVirtToPhys(pDev, pVirtAddr)       virt_to_dma( (pDev), (pVirtAddr) )
++#endif /* __KERNEL__ */
++
++#define mvOsIoVirtToPhy(pDev, pVirtAddr)        virt_to_dma((pDev), (pVirtAddr))
++/*    pci_map_single((pDev), (pVirtAddr), 0, PCI_DMA_BIDIRECTIONAL) */
+ 
+-#define mvOsCacheFlushInv(pDev, p, size )                            \
+-	    pci_map_single( (pDev), (p), (size), PCI_DMA_BIDIRECTIONAL)
++#define mvOsIoVirtToPhys(pDev, pVirtAddr)       virt_to_dma((pDev), (pVirtAddr))
++
++#define mvOsCacheFlushInv(pDev, p, size)                            \
++	pci_map_single((pDev), (p), (size), PCI_DMA_BIDIRECTIONAL)
+ /*
+  * This was omitted because as of 2.6.35 the Biderection performs only
+  * flush for outer cache because of the speculative issues.
+  * This should be replaced by Flush then invalidate
+  *
+ #define mvOsCacheClear(pDev, p, size )                              \
+-    pci_map_single( (pDev), (p), (size), PCI_DMA_BIDIRECTIONAL)
++	pci_map_single((pDev), (p), (size), PCI_DMA_BIDIRECTIONAL)
+ */
+- 
+-#define mvOsCacheFlush(pDev, p, size )                              \
+-    pci_map_single( (pDev), (p), (size), PCI_DMA_TODEVICE)
+- 
++
++#define mvOsCacheFlush(pDev, p, size)                              \
++	pci_map_single((pDev), (p), (size), PCI_DMA_TODEVICE)
++
+ #define mvOsCacheInvalidate(pDev, p, size)                          \
+-    pci_map_single( (pDev), (p), (size), PCI_DMA_FROMDEVICE )
++	pci_map_single((pDev), (p), (size), PCI_DMA_FROMDEVICE)
+ 
+ #define mvOsCacheUnmap(pDev, phys, size)                          \
+-    pci_unmap_single( (pDev), (dma_addr_t)(phys), (size), PCI_DMA_FROMDEVICE )
++	pci_unmap_single((pDev), (dma_addr_t)(phys), (size), PCI_DMA_FROMDEVICE)
+ 
+ #define CPU_PHY_MEM(x)              (MV_U32)x
+-#define CPU_MEMIO_CACHED_ADDR(x)    (void*)x
+-#define CPU_MEMIO_UNCACHED_ADDR(x)  (void*)x
++#define CPU_MEMIO_CACHED_ADDR(x)    (void *)x
++#define CPU_MEMIO_UNCACHED_ADDR(x)  (void *)x
+ 
+ 
+ /* CPU architecture dependent 32, 16, 8 bit read/write IO addresses */
+ #define MV_MEMIO32_WRITE(addr, data)    \
+-    ((*((volatile unsigned int*)(addr))) = ((unsigned int)(data)))
++	((*((volatile unsigned int *)(addr))) = ((unsigned int)(data)))
+ 
+ #define MV_MEMIO32_READ(addr)           \
+-    ((*((volatile unsigned int*)(addr))))
++	((*((volatile unsigned int *)(addr))))
+ 
+ #define MV_MEMIO16_WRITE(addr, data)    \
+-    ((*((volatile unsigned short*)(addr))) = ((unsigned short)(data)))
++	((*((volatile unsigned short *)(addr))) = ((unsigned short)(data)))
+ 
+ #define MV_MEMIO16_READ(addr)           \
+-    ((*((volatile unsigned short*)(addr))))
++	((*((volatile unsigned short *)(addr))))
+ 
+ #define MV_MEMIO8_WRITE(addr, data)     \
+-    ((*((volatile unsigned char*)(addr))) = ((unsigned char)(data)))
++	((*((volatile unsigned char *)(addr))) = ((unsigned char)(data)))
+ 
+ #define MV_MEMIO8_READ(addr)            \
+-    ((*((volatile unsigned char*)(addr))))
++	((*((volatile unsigned char *)(addr))))
+ 
+ 
+ /* No Fast Swap implementation (in assembler) for ARM */
+@@ -169,70 +169,68 @@ extern void mv_early_printk(char *fmt,...);
+ #define MV_16BIT_LE_FAST(val)            MV_16BIT_LE(val)
+ #define MV_32BIT_BE_FAST(val)            MV_32BIT_BE(val)
+ #define MV_16BIT_BE_FAST(val)            MV_16BIT_BE(val)
+-    
++
+ /* 32 and 16 bit read/write in big/little endian mode */
+ 
+ /* 16bit write in little endian mode */
+ #define MV_MEMIO_LE16_WRITE(addr, data) \
+-        MV_MEMIO16_WRITE(addr, MV_16BIT_LE_FAST(data))
++	MV_MEMIO16_WRITE(addr, MV_16BIT_LE_FAST(data))
+ 
+ /* 16bit read in little endian mode */
+-static __inline MV_U16 MV_MEMIO_LE16_READ(MV_U32 addr)
++static inline MV_U16 MV_MEMIO_LE16_READ(MV_U32 addr)
+ {
+-    MV_U16 data;
++	MV_U16 data;
+ 
+-    data= (MV_U16)MV_MEMIO16_READ(addr);
++	data = (MV_U16)MV_MEMIO16_READ(addr);
+ 
+-    return (MV_U16)MV_16BIT_LE_FAST(data);
++	return (MV_U16)MV_16BIT_LE_FAST(data);
+ }
+ 
+ /* 32bit write in little endian mode */
+ #define MV_MEMIO_LE32_WRITE(addr, data) \
+-        MV_MEMIO32_WRITE(addr, MV_32BIT_LE_FAST(data))
++	MV_MEMIO32_WRITE(addr, MV_32BIT_LE_FAST(data))
+ 
+ /* 32bit read in little endian mode */
+-static __inline MV_U32 MV_MEMIO_LE32_READ(MV_U32 addr)
++static inline MV_U32 MV_MEMIO_LE32_READ(MV_U32 addr)
+ {
+-    MV_U32 data;
++	MV_U32 data;
+ 
+-    data= (MV_U32)MV_MEMIO32_READ(addr);
++	data = (MV_U32)MV_MEMIO32_READ(addr);
+ 
+-    return (MV_U32)MV_32BIT_LE_FAST(data);
++	return (MV_U32)MV_32BIT_LE_FAST(data);
+ }
+ 
+-static __inline void mvOsBCopy(char* srcAddr, char* dstAddr, int byteCount)
++static inline void mvOsBCopy(char *srcAddr, char *dstAddr, int byteCount)
+ {
+-    while(byteCount != 0)
+-    {
+-        *dstAddr = *srcAddr;
+-        dstAddr++;
+-        srcAddr++;
+-        byteCount--;
+-    }
++	while (byteCount != 0) {
++		*dstAddr = *srcAddr;
++		dstAddr++;
++		srcAddr++;
++		byteCount--;
++	}
+ }
+ 
+-static INLINE MV_U64 mvOsDivMod64(MV_U64 divided, MV_U64 divisor, MV_U64* modulu)
++static INLINE MV_U64 mvOsDivMod64(MV_U64 divided, MV_U64 divisor, MV_U64 *modulu)
+ {
+-    MV_U64  division = 0;
++	MV_U64  division = 0;
+ 
+-    if(divisor == 1)
+-	return divided;
++	if (divisor == 1)
++		return divided;
+ 
+-    while(divided >= divisor)
+-    {
+-	    division++;
+-	    divided -= divisor;
+-    }
+-    if (modulu != NULL)
+-        *modulu = divided;
++	while (divided >= divisor) {
++		division++;
++		divided -= divisor;
++	}
++	if (modulu != NULL)
++		*modulu = divided;
+ 
+-    return division;
++	return division;
+ }
+ 
+ #if defined(MV_BRIDGE_SYNC_REORDER)
+ extern MV_U32 *mvUncachedParam;
+ 
+-static __inline void mvOsBridgeReorderWA(void)
++static inline void mvOsBridgeReorderWA(void)
+ {
+ 	volatile MV_U32 val = 0;
+ 
+@@ -260,93 +258,96 @@ static __inline void mvOsBridgeReorderWA(void)
+ #define CPU_I_CACHE_LINE_SIZE   32    /* 2do: replace 32 with linux core macro */
+ #define CPU_D_CACHE_LINE_SIZE   32    /* 2do: replace 32 with linux core macro */
+ 
+-#if defined (SHEEVA_ERRATA_ARM_CPU_4413)
++#if defined(SHEEVA_ERRATA_ARM_CPU_4413)
+ #define	 DSBWA_4413(x)	dmb() 		/* replaced dsb() for optimization */
+ #else
+ #define  DSBWA_4413(x)
+ #endif
+ 
+-#if defined (SHEEVA_ERRATA_ARM_CPU_4611)
++#if defined(SHEEVA_ERRATA_ARM_CPU_4611)
+ #define	 DSBWA_4611(x)	dmb()		/* replaced dsb() for optimization */
+ #else
+ #define  DSBWA_4611(x)
+ #endif
+ 
+ #if defined(CONFIG_AURORA_IO_CACHE_COHERENCY)
+- #define mvOsCacheLineFlushInv(handle, addr)
+- #define mvOsCacheLineInv(handle,addr)
+- #define mvOsCacheLineFlush(handle, addr)
+- #define mvOsCacheIoSync()			{ MV_REG_WRITE(0x21810, 0x1); while (MV_REG_READ(0x21810) & 0x1);}
++#define mvOsCacheLineFlushInv(handle, addr)
++#define mvOsCacheLineInv(handle, addr)
++#define mvOsCacheLineFlush(handle, addr)
++#define mvOsCacheMultiLineFlush(handle, addr, size)
++#define mvOsCacheMultiLineInv(handle, addr, size)
++#define mvOsCacheMultiLineFlushInv(handle, addr, size)
++#define mvOsCacheIoSync()		{ MV_REG_WRITE(0x21810, 0x1); while (MV_REG_READ(0x21810) & 0x1); }
+ #else
+- #define mvOsCacheIoSync()			/* Dummy - not needed in s/w cache coherency */
+- /*************************************/
+- /* FLUSH & INVALIDATE single D$ line */
+- /*************************************/
+- #if defined(CONFIG_L2_CACHE_ENABLE) || defined(CONFIG_CACHE_FEROCEON_L2)
+-  #define mvOsCacheLineFlushInv(handle, addr)                     \
+-  {                                                               \
+-    __asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));\
+-    __asm__ __volatile__ ("mcr p15, 1, %0, c15, c10, 1" : : "r" (addr));\
+-    __asm__ __volatile__ ("mcr p15, 0, r0, c7, c10, 4");		\
+-  }
+- #elif defined(CONFIG_CACHE_AURORA_L2)
+-  #define mvOsCacheLineFlushInv(handle, addr)                     \
+-  {                                                               \
+-    DSBWA_4611(addr);						 \
+-    __asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));  /* Clean and Inv D$ by MVA to PoC */ \
+-    writel(__virt_to_phys((int)(((int)addr) & ~0x1f)), (INTER_REGS_BASE + MV_AURORA_L2_REGS_OFFSET + 0x7F0/*L2_FLUSH_PA*/)); \
+-    writel(0x0, (INTER_REGS_BASE + MV_AURORA_L2_REGS_OFFSET + 0x700/*L2_SYNC*/)); \
+-    __asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 4" : : "r" (addr));  /* DSB */ \
+-  }
+- #else
+-  #define mvOsCacheLineFlushInv(handle, addr)                     \
+-  {                                                               \
+-    DSBWA_4611(addr);						 \
+-    __asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));\
+-    __asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 4" : : "r" (addr)); \
+-  }
+- #endif
+- 
+- /*****************************/
+- /* INVALIDATE single D$ line */
+- /*****************************/
+- #if defined(CONFIG_L2_CACHE_ENABLE) || defined(CONFIG_CACHE_FEROCEON_L2)
+- #define mvOsCacheLineInv(handle,addr)                           \
+- {                                                               \
+-   __asm__ __volatile__ ("mcr p15, 0, %0, c7, c6, 1" : : "r" (addr)); \
+-  __asm__ __volatile__ ("mcr p15, 1, %0, c15, c11, 1" : : "r" (addr)); \
+- }
+- #elif defined(CONFIG_CACHE_AURORA_L2)
+- #define mvOsCacheLineInv(handle,addr)                           \
+- {                                                               \
+-   DSBWA_4413(addr);								\
+-   __asm__ __volatile__ ("mcr p15, 0, %0, c7, c6, 1" : : "r" (addr));   /* Invalidate D$ by MVA to PoC */ \
+-   writel(__virt_to_phys(((int)addr) & ~0x1f), (INTER_REGS_BASE + MV_AURORA_L2_REGS_OFFSET + 0x770/*L2_INVALIDATE_PA*/)); \
+-   writel(0x0, (INTER_REGS_BASE + MV_AURORA_L2_REGS_OFFSET + 0x700/*L2_SYNC*/)); \
+-   __asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 4" : : "r" (addr));  /* DSB */ \
+- }
+- #else
+- #define mvOsCacheLineInv(handle,addr)                           \
+- {                                                               \
+-   DSBWA_4413(addr);							\
+-   __asm__ __volatile__ ("mcr p15, 0, %0, c7, c6, 1" : : "r" (addr)); \
+-   __asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 4" : : "r" (addr)); \
+- }
+- #endif
++#define mvOsCacheIoSync()		/* Dummy - not needed in s/w cache coherency */
++/*************************************/
++/* FLUSH & INVALIDATE single D$ line */
++/*************************************/
++#if defined(CONFIG_L2_CACHE_ENABLE) || defined(CONFIG_CACHE_FEROCEON_L2)
++#define mvOsCacheLineFlushInv(handle, addr)                     \
++{                                                               \
++	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));\
++	__asm__ __volatile__ ("mcr p15, 1, %0, c15, c10, 1" : : "r" (addr));\
++	__asm__ __volatile__ ("mcr p15, 0, r0, c7, c10, 4");		\
++}
++#elif defined(CONFIG_CACHE_AURORA_L2)
++#define mvOsCacheLineFlushInv(handle, addr)                     \
++{                                                               \
++	DSBWA_4611(addr);						 \
++	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));  /* Clean and Inv D$ by MVA to PoC */ \
++	writel(__virt_to_phys((int)(((int)addr) & ~0x1f)), (INTER_REGS_BASE + MV_AURORA_L2_REGS_OFFSET + 0x7F0/*L2_FLUSH_PA*/)); \
++	writel(0x0, (INTER_REGS_BASE + MV_AURORA_L2_REGS_OFFSET + 0x700/*L2_SYNC*/)); \
++	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 4" : : "r" (addr));  /* DSB */ \
++}
++#else
++#define mvOsCacheLineFlushInv(handle, addr)                     \
++{                                                               \
++	DSBWA_4611(addr);						 \
++	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));\
++	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 4" : : "r" (addr)); \
++}
++#endif
+ 
+- /************************/
+- /* FLUSH single D$ line */
+- /************************/
+- #if defined(CONFIG_L2_CACHE_ENABLE) || defined(CONFIG_CACHE_FEROCEON_L2)
+- #define mvOsCacheLineFlush(handle, addr)                     \
+- {                                                               \
++/*****************************/
++/* INVALIDATE single D$ line */
++/*****************************/
++#if defined(CONFIG_L2_CACHE_ENABLE) || defined(CONFIG_CACHE_FEROCEON_L2)
++#define mvOsCacheLineInv(handle, addr)                          \
++{                                                               \
++	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c6, 1" : : "r" (addr)); \
++	__asm__ __volatile__ ("mcr p15, 1, %0, c15, c11, 1" : : "r" (addr)); \
++}
++#elif defined(CONFIG_CACHE_AURORA_L2)
++#define mvOsCacheLineInv(handle, addr)                          \
++{                                                               \
++	DSBWA_4413(addr);								\
++	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c6, 1" : : "r" (addr));   /* Invalidate D$ by MVA to PoC */ \
++	writel(__virt_to_phys(((int)addr) & ~0x1f), (INTER_REGS_BASE + MV_AURORA_L2_REGS_OFFSET + 0x770/*L2_INVALIDATE_PA*/)); \
++	writel(0x0, (INTER_REGS_BASE + MV_AURORA_L2_REGS_OFFSET + 0x700/*L2_SYNC*/)); \
++	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 4" : : "r" (addr));  /* DSB */ \
++}
++#else
++#define mvOsCacheLineInv(handle, addr)                          \
++{                                                               \
++	DSBWA_4413(addr);							\
++	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c6, 1" : : "r" (addr)); \
++	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 4" : : "r" (addr)); \
++}
++#endif
++
++/************************/
++/* FLUSH single D$ line */
++/************************/
++#if defined(CONFIG_L2_CACHE_ENABLE) || defined(CONFIG_CACHE_FEROCEON_L2)
++#define mvOsCacheLineFlush(handle, addr)                     \
++{                                                               \
+ #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043
+-   __asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));\
++	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));\
+ #else
+-   __asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 1" : : "r" (addr));\
++	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 1" : : "r" (addr));\
+ #endif
+-   __asm__ __volatile__ ("mcr p15, 1, %0, c15, c9, 1" : : "r" (addr));\
+-   __asm__ __volatile__ ("mcr p15, 0, r0, c7, c10, 4");          \
++	__asm__ __volatile__ ("mcr p15, 1, %0, c15, c9, 1" : : "r" (addr));\
++	__asm__ __volatile__ ("mcr p15, 0, r0, c7, c10, 4");          \
+  }
+  #elif defined(CONFIG_CACHE_AURORA_L2) && !defined(CONFIG_SHEEVA_ERRATA_ARM_CPU_6043)
+ 
+@@ -374,20 +375,19 @@ static __inline void mvOsBridgeReorderWA(void)
+  {                                                               \
+    DSBWA_4611(addr);						 \
+ #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043
+-   __asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));\
++	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));\
+ #else
+-   __asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 1" : : "r" (addr));\
++	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 1" : : "r" (addr));\
+ #endif
+-   __asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 4" : : "r" (addr)); \
++	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 4" : : "r" (addr)); \
+  }
+- #endif
+-#endif /* CONFIG_AURORA_IO_CACHE_COHERENCY */
++#endif
+ 
+-#define MV_OS_CACHE_MULTI_THRESH	256	
++#define MV_OS_CACHE_MULTI_THRESH	256
+ static inline void mvOsCacheMultiLineFlush(void *handle, void *addr, int size)
+ {
+ 	if (size <= MV_OS_CACHE_MULTI_THRESH) {
+-#if defined(CONFIG_CACHE_AURORA_L2) && !defined(CONFIG_AURORA_IO_CACHE_COHERENCY)
++#if defined(CONFIG_CACHE_AURORA_L2)
+ 		DSBWA_4611(addr);
+ 		while (size > 0) {
+ #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043
+@@ -407,15 +407,15 @@ static inline void mvOsCacheMultiLineFlush(void *handle, void *addr, int size)
+ 			size -= CPU_D_CACHE_LINE_SIZE;
+ 			addr += CPU_D_CACHE_LINE_SIZE;
+ 		}
+-#endif
++#endif /* CONFIG_CACHE_AURORA_L2 */
+ 	} else
+ 		pci_map_single(handle, addr, size, PCI_DMA_TODEVICE);
+ }
+ 
+ static inline void mvOsCacheMultiLineInv(void *handle, void *addr, int size)
+ {
+-        if( size <= MV_OS_CACHE_MULTI_THRESH) {
+-#if defined(CONFIG_CACHE_AURORA_L2) && !defined(CONFIG_AURORA_IO_CACHE_COHERENCY)
++	if (size <= MV_OS_CACHE_MULTI_THRESH) {
++#if defined(CONFIG_CACHE_AURORA_L2)
+ 		DSBWA_4413(addr);
+ 		while (size > 0) {
+ 			__asm__ __volatile__ ("mcr p15, 0, %0, c7, c6, 1" : : "r" (addr));   /* Invalidate D$ by MVA to PoC */
+@@ -431,18 +431,17 @@ static inline void mvOsCacheMultiLineInv(void *handle, void *addr, int size)
+ 			size -= CPU_D_CACHE_LINE_SIZE;
+ 			addr += CPU_D_CACHE_LINE_SIZE;
+ 		}
+-#endif
++#endif  /* CONFIG_CACHE_AURORA_L2 */
+ 	} else
+ 		pci_map_single(handle, addr, size, PCI_DMA_FROMDEVICE);
+-	
+ }
+ 
+ static inline void mvOsCacheMultiLineFlushInv(void *handle, void *addr, int size)
+ {
+-        if(size <= MV_OS_CACHE_MULTI_THRESH) {
+-#if defined(CONFIG_CACHE_AURORA_L2) && !defined(CONFIG_AURORA_IO_CACHE_COHERENCY)
++	if (size <= MV_OS_CACHE_MULTI_THRESH) {
++#if defined(CONFIG_CACHE_AURORA_L2)
+ 		DSBWA_4611(addr);
+-		while(size > 0) {
++		while (size > 0) {
+ 			__asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));  /* Clean and Inv D$ by MVA to PoC */
+ 			writel(__virt_to_phys((int)(((int)addr) & ~0x1f)), (INTER_REGS_BASE + MV_AURORA_L2_REGS_OFFSET + 0x7F0/*L2_FLUSH_PA*/));
+ 			size -= CPU_D_CACHE_LINE_SIZE;
+@@ -451,23 +450,24 @@ static inline void mvOsCacheMultiLineFlushInv(void *handle, void *addr, int size
+ 		writel(0x0, (INTER_REGS_BASE + MV_AURORA_L2_REGS_OFFSET + 0x700/*L2_SYNC*/));
+ 		__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 4" : : "r" (addr));  /* DSB */
+ #else
+-		while(size > 0) {
++		while (size > 0) {
+ 			mvOsCacheLineFlushInv(handle, addr);
+ 			size -= CPU_D_CACHE_LINE_SIZE;
+ 			addr += CPU_D_CACHE_LINE_SIZE;
+ 		}
+-#endif
+-	} else 
+-                pci_map_single(handle, addr, size, PCI_DMA_BIDIRECTIONAL);
++#endif  /* CONFIG_CACHE_AURORA_L2 */
++	} else
++		pci_map_single(handle, addr, size, PCI_DMA_BIDIRECTIONAL);
+ }
++#endif /* CONFIG_AURORA_IO_CACHE_COHERENCY */
+ 
+-static __inline void mvOsPrefetch(const void *ptr)
++static inline void mvOsPrefetch(const void *ptr)
+ {
+-        __asm__ __volatile__(
+-                "pld\t%0"
+-                :
+-                : "o" (*(char *)ptr)
+-                : "cc");
++	__asm__ __volatile__(
++		"pld\t%0"
++		:
++		: "o" (*(char *)ptr)
++		: "cc");
+ }
+ 
+ 
+@@ -481,7 +481,7 @@ static __inline void mvOsPrefetch(const void *ptr)
+ /* register manipulations  */
+ 
+ /******************************************************************************
+-* This debug function enable the write of each register that u-boot access to 
++* This debug function enable the write of each register that u-boot access to
+ * to an array in the DRAM, the function record only MV_REG_WRITE access.
+ * The function could not be operate when booting from flash.
+ * In order to print the array we use the printreg command.
+@@ -494,72 +494,72 @@ extern int reg_arry_index;
+ 
+ /* Marvell controller register read/write macros */
+ #define MV_REG_VALUE(offset)          \
+-                (MV_MEMIO32_READ((INTER_REGS_BASE | (offset))))
++	(MV_MEMIO32_READ((INTER_REGS_BASE | (offset))))
+ 
+ #define MV_REG_READ(offset)             \
+-        (MV_MEMIO_LE32_READ(INTER_REGS_BASE | (offset)))
++	(MV_MEMIO_LE32_READ(INTER_REGS_BASE | (offset)))
+ 
+ #if defined(REG_DEBUG)
+ #define MV_REG_WRITE(offset, val)    \
+-        MV_MEMIO_LE32_WRITE((INTER_REGS_BASE | (offset)), (val)); \
+-        { \
+-                reg_arry[reg_arry_index][0] = (INTER_REGS_BASE | (offset));\
+-                reg_arry[reg_arry_index][1] = (val);\
+-                reg_arry_index++;\
+-        }
++	MV_MEMIO_LE32_WRITE((INTER_REGS_BASE | (offset)), (val)); \
++	{ \
++		reg_arry[reg_arry_index][0] = (INTER_REGS_BASE | (offset));\
++		reg_arry[reg_arry_index][1] = (val);\
++		reg_arry_index++;\
++	}
+ #else
+ #define MV_REG_WRITE(offset, val)    \
+-        MV_MEMIO_LE32_WRITE((INTER_REGS_BASE | (offset)), (val))
++	MV_MEMIO_LE32_WRITE((INTER_REGS_BASE | (offset)), (val))
+ #endif
+-                                                
++
+ #define MV_REG_BYTE_READ(offset)        \
+-        (MV_MEMIO8_READ((INTER_REGS_BASE | (offset))))
++	(MV_MEMIO8_READ((INTER_REGS_BASE | (offset))))
+ 
+ #if defined(REG_DEBUG)
+ #define MV_REG_BYTE_WRITE(offset, val)  \
+-        MV_MEMIO8_WRITE((INTER_REGS_BASE | (offset)), (val)); \
+-        { \
+-                reg_arry[reg_arry_index][0] = (INTER_REGS_BASE | (offset));\
+-                reg_arry[reg_arry_index][1] = (val);\
+-                reg_arry_index++;\
+-        }
++	MV_MEMIO8_WRITE((INTER_REGS_BASE | (offset)), (val)); \
++	{ \
++		reg_arry[reg_arry_index][0] = (INTER_REGS_BASE | (offset));\
++		reg_arry[reg_arry_index][1] = (val);\
++		reg_arry_index++;\
++	}
+ #else
+ #define MV_REG_BYTE_WRITE(offset, val)  \
+-        MV_MEMIO8_WRITE((INTER_REGS_BASE | (offset)), (val))
++	MV_MEMIO8_WRITE((INTER_REGS_BASE | (offset)), (val))
+ #endif
+ 
+ #if defined(REG_DEBUG)
+ #define MV_REG_BIT_SET(offset, bitMask)                 \
+-        (MV_MEMIO32_WRITE((INTER_REGS_BASE | (offset)), \
+-         (MV_MEMIO32_READ(INTER_REGS_BASE | (offset)) | \
+-          MV_32BIT_LE_FAST(bitMask)))); \
+-        { \
+-                reg_arry[reg_arry_index][0] = (INTER_REGS_BASE | (offset));\
+-                reg_arry[reg_arry_index][1] = (MV_MEMIO32_READ(INTER_REGS_BASE | (offset)));\
+-                reg_arry_index++;\
+-        }
++	(MV_MEMIO32_WRITE((INTER_REGS_BASE | (offset)), \
++	(MV_MEMIO32_READ(INTER_REGS_BASE | (offset)) | \
++	MV_32BIT_LE_FAST(bitMask)))); \
++	{ \
++		reg_arry[reg_arry_index][0] = (INTER_REGS_BASE | (offset));\
++		reg_arry[reg_arry_index][1] = (MV_MEMIO32_READ(INTER_REGS_BASE | (offset)));\
++		reg_arry_index++;\
++	}
+ #else
+ #define MV_REG_BIT_SET(offset, bitMask)                 \
+-        (MV_MEMIO32_WRITE((INTER_REGS_BASE | (offset)), \
+-         (MV_MEMIO32_READ(INTER_REGS_BASE | (offset)) | \
+-          MV_32BIT_LE_FAST(bitMask))))
++	(MV_MEMIO32_WRITE((INTER_REGS_BASE | (offset)), \
++	(MV_MEMIO32_READ(INTER_REGS_BASE | (offset)) | \
++	MV_32BIT_LE_FAST(bitMask))))
+ #endif
+-        
++
+ #if defined(REG_DEBUG)
+-#define MV_REG_BIT_RESET(offset,bitMask)                \
+-        (MV_MEMIO32_WRITE((INTER_REGS_BASE | (offset)), \
+-         (MV_MEMIO32_READ(INTER_REGS_BASE | (offset)) & \
+-          MV_32BIT_LE_FAST(~bitMask)))); \
+-        { \
+-                reg_arry[reg_arry_index][0] = (INTER_REGS_BASE | (offset));\
+-                reg_arry[reg_arry_index][1] = (MV_MEMIO32_READ(INTER_REGS_BASE | (offset)));\
+-                reg_arry_index++;\
+-        }
++#define MV_REG_BIT_RESET(offset, bitMask)                \
++	(MV_MEMIO32_WRITE((INTER_REGS_BASE | (offset)), \
++	(MV_MEMIO32_READ(INTER_REGS_BASE | (offset)) & \
++	MV_32BIT_LE_FAST(~bitMask)))); \
++	{ \
++		reg_arry[reg_arry_index][0] = (INTER_REGS_BASE | (offset));\
++		reg_arry[reg_arry_index][1] = (MV_MEMIO32_READ(INTER_REGS_BASE | (offset)));\
++		reg_arry_index++;\
++	}
+ #else
+-#define MV_REG_BIT_RESET(offset,bitMask)                \
+-        (MV_MEMIO32_WRITE((INTER_REGS_BASE | (offset)), \
+-         (MV_MEMIO32_READ(INTER_REGS_BASE | (offset)) & \
+-          MV_32BIT_LE_FAST(~bitMask))))
++#define MV_REG_BIT_RESET(offset, bitMask)                \
++	(MV_MEMIO32_WRITE((INTER_REGS_BASE | (offset)), \
++	(MV_MEMIO32_READ(INTER_REGS_BASE | (offset)) & \
++	MV_32BIT_LE_FAST(~bitMask))))
+ #endif
+ 
+ /* Assembly functions */
+@@ -578,19 +578,19 @@ extern int reg_arry_index;
+ 
+ 
+ /* ARM architecture APIs */
+-MV_U32  mvOsCpuRevGet (MV_VOID);
+-MV_U32  mvOsCpuPartGet (MV_VOID);
+-MV_U32  mvOsCpuArchGet (MV_VOID);
+-MV_U32  mvOsCpuVarGet (MV_VOID);
+-MV_U32  mvOsCpuAsciiGet (MV_VOID);
+-MV_U32 mvOsCpuThumbEEGet (MV_VOID);
++MV_U32  mvOsCpuRevGet(MV_VOID);
++MV_U32  mvOsCpuPartGet(MV_VOID);
++MV_U32  mvOsCpuArchGet(MV_VOID);
++MV_U32  mvOsCpuVarGet(MV_VOID);
++MV_U32  mvOsCpuAsciiGet(MV_VOID);
++MV_U32  mvOsCpuThumbEEGet(MV_VOID);
+ 
+ /*  Other APIs  */
+-void* mvOsIoCachedMalloc( void* osHandle, MV_U32 size, MV_ULONG* pPhyAddr, MV_U32 *memHandle);
+-void* mvOsIoUncachedMalloc( void* osHandle, MV_U32 size, MV_ULONG* pPhyAddr, MV_U32 *memHandle );
+-void mvOsIoUncachedFree( void* osHandle, MV_U32 size, MV_ULONG phyAddr, void* pVirtAddr, MV_U32 memHandle );
+-void mvOsIoCachedFree( void* osHandle, MV_U32 size, MV_ULONG phyAddr, void* pVirtAddr, MV_U32 memHandle );
+-int mvOsRand(void);
++void *mvOsIoCachedMalloc(void *osHandle, MV_U32 size, MV_ULONG *pPhyAddr, MV_U32 *memHandle);
++void *mvOsIoUncachedMalloc(void *osHandle, MV_U32 size, MV_ULONG *pPhyAddr, MV_U32 *memHandle);
++void mvOsIoUncachedFree(void *osHandle, MV_U32 size, MV_ULONG phyAddr, void *pVirtAddr, MV_U32 memHandle);
++void mvOsIoCachedFree(void *osHandle, MV_U32 size, MV_ULONG phyAddr, void *pVirtAddr, MV_U32 memHandle);
++int  mvOsRand(void);
+ 
+ #endif /* _MV_OS_LNX_H_ */
+ 
+-- 
+1.7.9.5
+

@@ -1,0 +1,57 @@
+From db9adc6562558451617dda8596ca5ff200f15962 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Thu, 5 Sep 2013 12:16:26 -0700
+Subject: [PATCH 575/609] A300: Add MACHINE_START for DB-88F6282-A-BP board
+
+The board name that Linux prints during the boot is, actually,
+the string from MACHINE_START definition.
+
+For example:
+MACHINE_START(DB88F6281_BP, "Marvell DB-88F6281-BP Development Board")
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-kirkwood/db88f6281-bp-setup.c |   13 ++++++++++++-
+ arch/arm/tools/mach-types                   |    1 +
+ 2 files changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/mach-kirkwood/db88f6281-bp-setup.c b/arch/arm/mach-kirkwood/db88f6281-bp-setup.c
+index 8711910..35a7656 100644
+--- a/arch/arm/mach-kirkwood/db88f6281-bp-setup.c
++++ b/arch/arm/mach-kirkwood/db88f6281-bp-setup.c
+@@ -133,8 +133,19 @@ static int __init db88f6281_pci_init(void)
+ }
+ subsys_initcall(db88f6281_pci_init);
+ 
++/* In order to print DB-88F6282-BP board name,
++ * MACHINE_START should be created.
++ */
++MACHINE_START(DB88F6282_BP, "Marvell DB-88F6282-BP Development Board")
++	.atag_offset	= 0x100,
++	.init_machine	= db88f6281_init,
++	.map_io		= kirkwood_map_io,
++	.init_early	= kirkwood_init_early,
++	.init_irq	= kirkwood_init_irq,
++	.timer		= &kirkwood_timer,
++MACHINE_END
++
+ MACHINE_START(DB88F6281_BP, "Marvell DB-88F6281-BP Development Board")
+-	/* Maintainer: Saeed Bishara <saeed@marvell.com> */
+ 	.atag_offset	= 0x100,
+ 	.init_machine	= db88f6281_init,
+ 	.map_io		= kirkwood_map_io,
+diff --git a/arch/arm/tools/mach-types b/arch/arm/tools/mach-types
+index 692f30c..5b2de82 100755
+--- a/arch/arm/tools/mach-types
++++ b/arch/arm/tools/mach-types
+@@ -1674,6 +1674,7 @@ db88f6281_bp		MACH_DB88F6281_BP	DB88F6281_BP		1680
+ rd88f6192_nas		MACH_RD88F6192_NAS	RD88F6192_NAS		1681
+ rd88f6281		MACH_RD88F6281		RD88F6281		1682
+ db78x00_bp		MACH_DB78X00_BP		DB78X00_BP		1683
++db88f6282_bp		MACH_DB88F6282_BP	DB88F6282_BP		1684
+ smdk2416		MACH_SMDK2416		SMDK2416		1685
+ oce_spider_si		MACH_OCE_SPIDER_SI	OCE_SPIDER_SI		1686
+ oce_spider_sk		MACH_OCE_SPIDER_SK	OCE_SPIDER_SK		1687
+-- 
+1.7.9.5
+

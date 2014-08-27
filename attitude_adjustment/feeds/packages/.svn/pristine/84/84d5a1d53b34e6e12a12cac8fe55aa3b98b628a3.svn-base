@@ -1,0 +1,91 @@
+--- a/src/Linux/Makefile
++++ b/src/Linux/Makefile
+@@ -74,7 +74,7 @@ HEADERS= hsflowd.h hsflowtokens.h sflowo
+ SFLOWDIR=../sflow
+ 
+ #CC= g++
+-CC= gcc -std=gnu99
++CC?= gcc -std=gnu99
+ 
+ OPT_FULL = -O3 -DNDEBUG
+ OPT_DEBUG = -g -ggdb
+--- a/src/sflow/Makefile
++++ b/src/sflow/Makefile
+@@ -3,7 +3,7 @@
+ 
+ HEADERS= sflow_api.h sflow.h Makefile
+ 
+-OPT = -O3 -DNDEBUG
++OPT ?= -O3 -DNDEBUG
+ #OPT = -g -ggdb -O2
+ #OPT= -g -ggdb
+ 
+@@ -12,7 +12,7 @@ LDFLAGS=
+ 
+ #CC= g++
+ #CC= gcc -std=c99
+-CC= gcc
++CC?= gcc
+ 
+ OBJS= sflow_agent.o \
+       sflow_sampler.o \
+@@ -20,8 +20,8 @@ OBJS= sflow_agent.o \
+       sflow_receiver.o
+ 
+ libsflow.a: $(OBJS)
+-	ar cru $@ $(OBJS)
+-	ranlib $@
++	$(AR) cru $@ $(OBJS)
++	$(RANLIB) $@
+ 
+ all: libsflow.a
+ 
+--- a/Makefile
++++ b/Makefile
+@@ -11,32 +11,32 @@ all: $(PROG) 
+ 
+ $(PROG):
+ 	cd src/sflow; $(MAKE)
+-	PLATFORM=`uname`; \
++	PLATFORM?=`uname`; \
+ 	MYVER=`./getVersion`; \
+         MYREL=`./getRelease`; \
+         cd src/$$PLATFORM; $(MAKE) VERSION=$$MYVER RELEASE=$$MYREL
+ 
+ clean:
+ 	cd src/sflow; $(MAKE) clean
+-	PLATFORM=`uname`; \
++	PLATFORM?=`uname`; \
+ 	MYVER=`./getVersion`; \
+         MYREL=`./getRelease`; \
+         cd src/$$PLATFORM; $(MAKE) VERSION=$$MYVER RELEASE=$$MYREL clean
+ 
+ install:
+-	PLATFORM=`uname`; \
++	PLATFORM?=`uname`; \
+ 	MYVER=`./getVersion`; \
+         MYREL=`./getRelease`; \
+         cd src/$$PLATFORM; $(MAKE) VERSION=$$MYVER RELEASE=$$MYREL install
+ 
+ schedule:
+-	PLATFORM=`uname`; \
++	PLATFORM?=`uname`; \
+ 	MYVER=`./getVersion`; \
+         MYREL=`./getRelease`; \
+         cd src/$$PLATFORM; $(MAKE) VERSION=$$MYVER RELEASE=$$MYREL schedule
+ 
+ rpm:
+-	PLATFORM=`uname`; \
++	PLATFORM?=`uname`; \
+ 	MYVER=`./getVersion`; \
+         MYREL=`./getRelease`; \
+ 	MYSRCDIR=$(RPM_SOURCES_DIR)/$(PROG)-$$MYVER; \
+@@ -46,7 +46,7 @@ rpm:
+ 	rpmbuild -ba $(PROG).spec
+ 
+ deb: $(PROG)
+-	PLATFORM=`uname`; \
++	PLATFORM?=`uname`; \
+ 	MYARCH=`uname -m`; \
+ 	MYVER=`./getVersion`; \
+         MYREL=`./getRelease`; \

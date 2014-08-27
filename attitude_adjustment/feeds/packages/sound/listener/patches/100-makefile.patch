@@ -1,0 +1,31 @@
+--- a/Makefile
++++ b/Makefile
+@@ -2,7 +2,10 @@ VERSION=1.7.2
+ 
+ INSTALL_PREFIX=/usr/local
+ 
+-CFLAGS+=-g -O2 -Wall -DVERSION=\"$(VERSION)\"
++ifeq ($(CFLAGS),)
++  CFLAGS:=-g -O2
++endif
++CFLAGS+=-Wall -DVERSION=\"$(VERSION)\"
+ 
+ OBJSsl=sl.o snd_dev.o error.o utils.o
+ OBJSli=listener.o snd_dev.o error.o utils.o lib.o
+@@ -11,13 +14,13 @@ OBJSsp=snd_dev.o lsp.o error.o utils.o
+ all: setlistener listener listenersoundpipe
+ 
+ setlistener: $(OBJSsl)
+-	$(CC) -g -Wall -W $(OBJSsl) -ldl -lncurses -o setlistener
++	$(CC) $(CFLAGS) $(OBJSsl) $(LDFLAGS) -ldl -lncurses -o setlistener
+ 
+ listener: $(OBJSli)
+-	$(CC) -g -Wall -W $(OBJSli) -ldl -lm -lsndfile -o listener -DCONFIGFILE=$(INSTALL_PREFIX)/etc/listener.conf
++	$(CC) $(CFLAGS) $(OBJSli) $(LDFLAGS) -ldl -lm -lsndfile -o listener -DCONFIGFILE=$(INSTALL_PREFIX)/etc/listener.conf
+ 
+ listenersoundpipe: $(OBJSsp)
+-	$(CC) -g -Wall -W $(OBJSsp) -o listenersoundpipe
++	$(CC) $(CFLAGS) $(OBJSsp) -o listenersoundpipe
+ 
+ install: setlistener listener listenersoundpipe
+ 	cp setlistener $(INSTALL_PREFIX)/bin

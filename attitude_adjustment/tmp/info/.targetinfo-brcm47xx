@@ -1,0 +1,144 @@
+Source-Makefile: target/linux/brcm47xx/Makefile
+Target: brcm47xx
+Target-Board: brcm47xx
+Target-Name: Broadcom BCM947xx/953xx
+Target-Path: /home/chad/WRT1900AC/Mamba/attitude_adjustment
+Target-Arch: mipsel
+Target-Arch-Packages: brcm47xx
+Target-Features: gpio pci pcmcia squashfs usb
+Target-Depends: 
+Target-Optimization: -Os -pipe -mips32 -mtune=mips32 -fno-caller-saves
+Linux-Version: 3.3.8
+Linux-Release: 1
+Linux-Kernel-Arch: mips
+Target-Description:
+	Build firmware images for Broadcom based routers
+	(e.g. Netgear WGT634U)
+@@
+Default-Packages: base-files libc libgcc busybox dropbear mtd uci opkg hotplug2 netifd dnsmasq iptables ppp ppp-mod-pppoe kmod-ipt-nathelper firewall wpad-mini kmod-switch kmod-diag nvram
+Target-Profile: Broadcom-b43
+Target-Profile-Name: Broadcom BCM43xx WiFi (b43, default)
+Target-Profile-Packages: kmod-b43 kmod-b43legacy
+Target-Profile-Config: 
+
+@@
+Target-Profile-Description:
+	Package set compatible with hardware using Broadcom BCM43xx cards
+	using the MAC80211 b43 and b43legacy drivers and tg3 Ethernet driver
+@@
+
+Target-Profile: Broadcom-wl
+Target-Profile-Name: Broadcom BCM43xx WiFi (wl, proprietary)
+Target-Profile-Packages: -wpad-mini kmod-brcm-wl wlc nas
+Target-Profile-Config: 
+
+@@
+Target-Profile-Description:
+	Package set compatible with hardware using Broadcom BCM43xx cards
+	using the proprietary broadcom wireless "wl" driver and b44 Ethernet
+	driver.
+@@
+
+Target-Profile: Broadcom-ath5k
+Target-Profile-Name: Atheros WiFi (ath5k)
+Target-Profile-Packages: kmod-ath5k
+Target-Profile-Config: 
+
+@@
+Target-Profile-Description:
+
+@@
+
+Target-Profile: Broadcom-none
+Target-Profile-Name: No WiFi
+Target-Profile-Packages: -wpad-mini
+Target-Profile-Config: 
+
+@@
+Target-Profile-Description:
+
+@@
+
+Target-Profile: Bcm4705-b43
+Target-Profile-Name: BCM4705/BCM4785, Broadcom BCM43xx WiFi (b43)
+Target-Profile-Packages: kmod-b43 kmod-b43legacy kmod-tg3
+Target-Profile-Config: 
+
+@@
+Target-Profile-Description:
+
+@@
+
+Target-Profile: Bcm4705-wl
+Target-Profile-Name: BCM4705/BCM4785, BCM43xx WiFi (wl, proprietary)
+Target-Profile-Packages: -wpad-mini kmod-brcm-wl wlc nas kmod-tg3
+Target-Profile-Config: 
+
+@@
+Target-Profile-Description:
+	Package set compatible with hardware using Broadcom BCM43xx cards
+	using the proprietary broadcom wireless "wl" driver and tg3 Ethernet
+	driver.
+@@
+
+Target-Profile: Bcm4705-none
+Target-Profile-Name: BCM4705/BCM4785, no WiFi
+Target-Profile-Packages: -wpad-mini kmod-tg3
+Target-Profile-Config: 
+
+@@
+Target-Profile-Description:
+
+@@
+
+Target-Profile: Ps1208mfg
+Target-Profile-Name: Edimax PS-1208MFG
+Target-Profile-Packages: -firewall -dropbear -dnsmasq -mtd -ppp -wpad-mini block-mount kmod-usb-storage kmod-usb2 kmod-usb-ohci -iptables -kmod-switch kmod-fs-ext4 block-extroot
+Target-Profile-Config: 
+
+@@
+Target-Profile-Description:
+	Package set optimize for edimax PS-1208MFG printserver
+@@
+
+Target-Profile: WGT634U
+Target-Profile-Name: Netgear WGT634U
+Target-Profile-Packages: kmod-ath5k kmod-usb-core kmod-usb2 kmod-ocf-ubsec-ssb
+Target-Profile-Config: 
+
+@@
+Target-Profile-Description:
+	Package set compatible with the Netgear WGT634U. Contains USB support
+@@
+
+Target-Profile: WL500GPv1
+Target-Profile-Name: ASUS WL-500g Premium v1 (Atheros WiFi using ath5k)
+Target-Profile-Packages: kmod-ath5k kmod-usb-core kmod-usb-uhci kmod-usb2
+Target-Profile-Config: 
+
+@@
+Target-Profile-Description:
+	Package set optimized for the WL-500g Premium v1 with USB and Atheros WiFi card support
+@@
+
+Target-Profile: WRT350Nv1
+Target-Profile-Name: Linksys WRT350Nv1
+Target-Profile-Packages: kmod-usb-core kmod-usb-ohci kmod-usb2 kmod-tg3 kmod-ocf-ubsec-ssb
+Target-Profile-Config: 
+
+@@
+Target-Profile-Description:
+	Package set compatible with the Linksys WRT350Nv1. Contains USB support
+@@
+
+Target-Profile: WRTSL54GS
+Target-Profile-Name: Linksys WRTSL54GS
+Target-Profile-Packages: kmod-usb-core kmod-usb-ohci kmod-usb2 kmod-usb-storage kmod-scsi-core kmod-fs-ext3 e2fsprogs kmod-b43
+Target-Profile-Config: 
+
+@@
+Target-Profile-Description:
+	Package set compatible with the Linksys WRTSL54GS. Contains USB support
+@@
+
+

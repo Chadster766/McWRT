@@ -1,0 +1,41 @@
+--- ptrtd-0.5.2/ptrtd.old	2007-02-22 16:10:57.896689015 +0100
++++ ptrtd-0.5.2/ptrtd.c	2007-02-22 16:11:39.194388792 +0100
+@@ -201,13 +201,13 @@
+ 	if( do_config )
+ 	{
+ 		printf( "Tunnel: %s\n", ifname );
+-		sprintf( cmd, "/sbin/ip link set %s up", ifname );
++		sprintf( cmd, "/usr/sbin/ip link set %s up", ifname );
+ 		printf( "command: %s\n", cmd );
+ 		system( cmd );
+-		sprintf( cmd, "/sbin/ip addr add fe80::1/64 dev %s", ifname );
++		sprintf( cmd, "/usr/sbin/ip addr add fe80::1/64 dev %s", ifname );
+ 		printf( "command: %s\n", cmd );
+ 		system( cmd );
+-		sprintf( cmd, "/sbin/ip route add %s/%d dev %s via fe80::5",
++		sprintf( cmd, "/usr/sbin/ip route add %s/%d dev %s via fe80::5",
+ 				prefix, plen, ifname );
+ 		printf( "command: %s\n", cmd );
+ 		system( cmd );
+--- ptrtd-0.5.2/tap802ipd.old	2007-02-22 16:11:22.600920230 +0100
++++ ptrtd-0.5.2/tap802ipd.c	2007-02-22 16:11:51.040581581 +0100
+@@ -125,16 +125,16 @@
+ 
+ 	tap_get_name( (struct iface *)tap_iface, ifname );
+ 	printf( "Tunnel: %s\n", ifname );
+-	sprintf( cmd, "/sbin/ip link set %s address %02x:%02x:%02x:%02x:%02x:%02x up\n", ifname,
++	sprintf( cmd, "/usr/sbin/ip link set %s address %02x:%02x:%02x:%02x:%02x:%02x up\n", ifname,
+ 			ip_iface->hwaddr[0], ip_iface->hwaddr[1],
+ 			ip_iface->hwaddr[2], ip_iface->hwaddr[3],
+ 			ip_iface->hwaddr[4], ip_iface->hwaddr[5] );
+ 	printf( "command: %s\n", cmd );
+ 	system( cmd );
+-	//sprintf( cmd, "/sbin/ip addr add fe80::1/64 dev %s", ifname );
++	//sprintf( cmd, "/usr/sbin/ip addr add fe80::1/64 dev %s", ifname );
+ 	//printf( "command: %s\n", cmd );
+ 	//system( cmd );
+-	//sprintf( cmd, "/sbin/ip route add %s/%d dev %s via fe80::5", prefix, plen, ifname );
++	//sprintf( cmd, "/usr/sbin/ip route add %s/%d dev %s via fe80::5", prefix, plen, ifname );
+ 	//printf( "command: %s\n", cmd );
+ 	//system( cmd );
+ }

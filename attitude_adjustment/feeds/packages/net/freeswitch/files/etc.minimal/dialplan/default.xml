@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    NOTICE:
+    
+    This context is usually accessed via authenticated callers on the sip profile on port 5060 
+    or transfered callers from the public context which arrived via the sip profile on port 5080.
+    
+    Authenticated users will use the user_context variable on the user to determine what context
+    they can access.  You can also add a user in the directory with the cidr= attribute acl.conf.xml
+    will build the domains ACL using this value.
+-->
+<!-- http://wiki.freeswitch.org/wiki/Dialplan_XML -->
+<include>
+  <context name="default">
+
+    <extension name="unloop">
+      <condition field="${unroll_loops}" expression="^true$"/>
+      <condition field="${sip_looped_call}" expression="^true$">
+	<action application="deflect" data="${destination_number}"/>
+      </condition>
+    </extension>
+
+    <extension name="redial">
+      <condition field="destination_number" expression="^870$">
+	<action application="transfer" data="${hash(select/${domain_name}-last_dial/${caller_id_number})}"/>
+      </condition>
+    </extension>
+
+    <extension name="global" continue="true">
+      <condition field="${call_debug}" expression="^true$" break="never">
+	<action application="info"/>
+      </condition>
+      <condition field="${sip_has_crypto}" expression="^(AES_CM_128_HMAC_SHA1_32|AES_CM_128_HMAC_SHA1_80)$" break="never">
+	<action application="set" data="sip_secure_media=true"/>
+	<!-- Offer SRTP on outbound legs if we have it on inbound. -->
+	<!-- <action application="export" data="sip_secure_media=true"/> -->
+      </condition>
+    </extension>
+
+    <!-- If sip_req_host is not a local domain then this has to be an external sip uri -->
+    <!--
+    <extension name="external_sip_uri" continue="true">
+      <condition field="source" expression="mod_sofia"/>
+      <condition field="${outside_call}" expression="^$"/>
+      <condition field="${domain_exists(${sip_req_host})}" expression="true">
+	<anti-action application="bridge" data="sofia/${use_profile}/${sip_to_uri}"/>
+      </condition>
+    </extension>
+    -->
+
+    <extension name="call_return">
+      <condition field="destination_number" expression="^\*69$|^869$|^lcr$">
+	<action application="transfer" data="${hash(select/${domain_name}-call_return/${caller_id_number})}"/>
+      </condition>
+    </extension>
+
+    <extension name="extension-intercom">
+      <condition field="destination_number" expression="^8(100[0-4])$">
+	<action application="set" data="dialed_extension=$1"/>
+	<action application="export" data="sip_auto_answer=true"/>
+	<action application="bridge" data="user/${dialed_extension}@${domain_name}"/>
+      </condition>
+    </extension>
+
+    <extension name="google_in" continue="true">
+      <condition field="caller_id_name" expression="^(Google Voice|(.*)gmail.com(.*))$">
+        <action application="log" data="Google Voice Call Incoming"/>
+        <action application="set" data="execute_on_answer=send_dtmf 1"/>
+      </condition>
+    </extension>             
+
+    <!-- 
+	 dial the extension (1000-1004) for 2 minutes before giving up 
+	 otherwise hang up after a successful bridge (hangup_after-bridge=true).
+	 Record call if *2 is pressed during call.
+    -->
+    <extension name="Local_Extension">
+      <condition field="destination_number" expression="^(100[0-4])$">
+	<action application="set" data="dialed_extension=$1"/>
+	<action application="export" data="dialed_extension=$1"/>
+	<!-- bind_meta_app can have these args <key> [a|b|ab] [a|b|o|s] <app> -->
+	<!-- <action application="bind_meta_app" data="1 b s record_session::$${recordings_dir}/${caller_id_number}.${strftime(%Y-%m-%d-%H-%M-%S)}.wav"/> -->
+	<action application="set" data="ringback=${us-ring}"/>
+	<!-- <action application="set" data="transfer_ringback=$${hold_music}"/> -->
+	<action application="set" data="call_timeout=240"/>
+	<!-- <action application="set" data="sip_exclude_contact=${network_addr}"/> -->
+	<action application="set" data="hangup_after_bridge=true"/>
+	<!--<action application="set" data="continue_on_fail=NORMAL_TEMPORARY_FAILURE,USER_BUSY,NO_ANSWER,TIMEOUT,NO_ROUTE_DESTINATION"/> -->
+	<action application="set" data="continue_on_fail=false"/>
+	<!--<action application="set" data="called_party_callgroup=${user_data(${dialed_extension}@${domain_name} var callgroup)}"/>-->
+	<!--<action application="export" data="nolocal:sip_secure_media=${user_data(${dialed_extension}@${domain_name} var sip_secure_media)}"/>-->
+	<action application="bridge" data="user/${dialed_extension}@${domain_name}"/>
+      </condition>
+    </extension>
+
+    <extension name="show_info">
+      <condition field="destination_number" expression="^9992$">
+	<action application="answer"/>
+	<action application="info"/>
+	<action application="sleep" data="250"/>
+	<action application="hangup"/>
+      </condition>
+    </extension>
+
+    <extension name="delay_echo">
+      <condition field="destination_number" expression="^9995$">
+	<action application="answer"/>
+	<action application="delay_echo" data="5000"/>
+      </condition>
+    </extension>
+
+    <extension name="echo">
+      <condition field="destination_number" expression="^9996$">
+	<action application="answer"/>
+	<action application="echo"/>
+      </condition>
+    </extension>
+
+    <extension name="milliwatt">
+      <condition field="destination_number" expression="^9997$">
+	<action application="answer"/>
+	<action application="playback" data="tone_stream://%(251,0,1004);loops=-1"/>
+      </condition>
+    </extension>
+
+    <extension name="tone_stream">
+      <condition field="destination_number" expression="^9998$">
+	<action application="answer"/>
+	<action application="playback" data="tone_stream://path=${base_dir}/conf/tetris.ttml;loops=10"/>
+      </condition>
+    </extension>
+
+    <extension name="fur_elise">
+      <condition field="destination_number" expression="^9991$">
+	<action application="answer"/>
+	<action application="playback" data="tone_stream://path=${base_dir}/conf/fur_elise.ttml;loops=10"/>
+      </condition>
+    </extension>
+    
+    <extension name="dial_through_gateway">
+      <!-- Dial any 10 digit or 1+10 number -->
+      <condition field="destination_number" expression="^(1{0,1}\d{10})$">
+        <action application="bridge" data="sofia/gateway/example.com/$1" />
+      </condition>
+    </extension>
+
+    <!--
+	You can place files in the default directory to get included.
+    -->
+    <X-PRE-PROCESS cmd="include" data="default/*.xml"/>
+    
+    <!--
+	WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
+	
+	Anything you put below this line will may get ignored due to the files in 
+	default/*.xml
+
+	WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
+    -->
+
+  </context>
+</include>

@@ -1,0 +1,22 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006 OpenWrt.org
+
+START=90
+
+kill_discover() {
+	killall -q -KILL pb-discover
+	umount -f -d /var/petitboot/mnt/* 2>/dev/null
+}
+
+start() {
+	kill_discover
+	/usr/sbin/pb-discover 2>&- >&- &
+}
+
+stop() {
+	# first signal pb-discover to exit
+	killall -q -INT pb-discover
+	sleep 3
+	# now force it
+	kill_discover
+}

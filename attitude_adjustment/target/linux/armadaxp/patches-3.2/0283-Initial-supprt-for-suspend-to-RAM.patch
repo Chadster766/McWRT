@@ -1,0 +1,398 @@
+From 64641004d2cc573337dcd6d54a3030c1ea680809 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 10 Sep 2012 16:15:38 +0300
+Subject: [PATCH 283/609] Initial supprt for suspend to RAM:
+
+	1. Added entry for suspend to RAM in pm.c
+	2. Added functions for suspending SOC in suspend.c
+	3. Added low level assemble in armada-suspend.S
+	4. Added SOC resume routine in core.c
+
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/core.c                  |   30 ++++++
+ arch/arm/mach-armadaxp/include/mach/armadaxp.h |    3 +
+ arch/arm/mach-armadaxp/pm.c                    |   15 ++-
+ arch/arm/plat-armada/Makefile                  |    2 +-
+ arch/arm/plat-armada/armadaxp_suspend.S        |  131 ++++++++++++++++++++++++
+ arch/arm/plat-armada/suspend.c                 |  102 ++++++++++++++++++
+ 6 files changed, 281 insertions(+), 2 deletions(-)
+ create mode 100644 arch/arm/plat-armada/suspend.c
+
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index feacf05..2024b5d 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -106,6 +106,7 @@ extern unsigned int irq_int_type[];
+ extern void __init axp_map_io(void);
+ extern void __init mv_init_irq(void);
+ extern struct sys_timer axp_timer;
++extern void axp_timer_resume();
+ extern MV_CPU_DEC_WIN* mv_sys_map(void);
+ #if defined(CONFIG_MV_INCLUDE_CESA)
+ extern u32 mv_crypto_virt_base_get(u8 chan);
+@@ -216,7 +217,9 @@ static int __init parse_tag_mv_uboot(const struct tag *tag)
+ 
+ 	printk("Using UBoot passing parameters structure\n");
+ 	mvUbootVer = read_tag(tag->u.mv_uboot.uboot_version);
++#ifdef CONFIG_MV_INCLUDE_USB
+ 	mvIsUsbHost = read_tag(tag->u.mv_uboot.isUsbHost);
++#endif
+ 	gBoardId =  (mvUbootVer & 0xff);
+ 
+ #ifdef CONFIG_MV_INCLUDE_GIG_ETH
+@@ -1428,6 +1431,33 @@ static int mvAmpInitCpuIf()
+ #endif
+ 
+ /*****************************************************************************
++ * DB BOARD: Restore from suspend to RAM
++ * ****************************************************************************/
++void axp_db_restore(void)
++{
++
++	/* init the Board environment */
++	mvBoardEnvInit();
++
++	/* init the controller environment */
++	if (mvCtrlEnvInit()) {
++		pr_warn("Controller env initialization failed.\n");
++		return;
++	}
++
++	/* Init the CPU windows setting and the access protection windows. */
++	if (mvCpuIfInit(mv_sys_map())) {
++		pr_warn("Cpu Interface initialization failed.\n");
++		return;
++	}
++
++	mvSysEthPhyInit();
++
++	/* TODO - timer should be restored by kernel hook */
++	axp_timer_resume();
++}
++
++/*****************************************************************************
+  * DB BOARD: Main Initialization
+  ****************************************************************************/
+ static void __init axp_db_init(void)
+diff --git a/arch/arm/mach-armadaxp/include/mach/armadaxp.h b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
+index 05e9bff..fed55a9 100644
+--- a/arch/arm/mach-armadaxp/include/mach/armadaxp.h
++++ b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
+@@ -314,6 +314,9 @@
+  * Linux native definitiotns
+  */
+ #define SDRAM_OPERATION_REG		(INTER_REGS_BASE | 0x1418)
++#define SDRAM_CONFIG_REG		(INTER_REGS_BASE | 0x1400)
++#define SDRAM_DLB_EVICT_REG		(INTER_REGS_BASE | 0x170C)
++
+ #define AXP_UART_PHYS_BASE(port)	(INTER_REGS_PHYS_BASE | 0x12000 + (port * 0x100))
+ #define DDR_VIRT_BASE			(INTER_REGS_BASE | 0x00000)
+ #define AXP_BRIDGE_VIRT_BASE		(INTER_REGS_BASE | 0x20000)
+diff --git a/arch/arm/mach-armadaxp/pm.c b/arch/arm/mach-armadaxp/pm.c
+index 86faefd..7c16339 100644
+--- a/arch/arm/mach-armadaxp/pm.c
++++ b/arch/arm/mach-armadaxp/pm.c
+@@ -21,6 +21,8 @@
+ 
+ #ifdef CONFIG_SHEEVA_DEEP_IDLE
+ extern void armadaxp_deepidle(int power_state);
++extern void armadaxp_suspend(void);
++extern void axp_db_restore(void);
+ 
+ typedef enum  {
+ 	DISABLED,
+@@ -34,7 +36,8 @@ typedef enum  {
+  */
+ static int armadaxp_pm_valid(suspend_state_t state)
+ {
+-	return (state == PM_SUSPEND_STANDBY);
++	return ((state == PM_SUSPEND_STANDBY) ||
++		(state == PM_SUSPEND_MEM));
+ }
+ 
+ /*
+@@ -112,6 +115,16 @@ static int armadaxp_pm_enter(suspend_state_t state)
+ 		printk(KERN_INFO "Exiting Wol Mode (Neta IRQs 8,10,12,14 are disabled now)...\n");
+ #endif /* CONFIG_MV_ETH_PNC_WOL */
+ 		break;
++
++	case PM_SUSPEND_MEM:
++
++		pr_info("Suspending Armada XP\n");
++		armadaxp_suspend();
++
++		pr_info("Restoring Armada XP\n");
++		axp_db_restore();
++
++		break;
+ 	default:
+ 		return -EINVAL;
+ 	}
+diff --git a/arch/arm/plat-armada/Makefile b/arch/arm/plat-armada/Makefile
+index 35cd6aa..e0a9ec5 100644
+--- a/arch/arm/plat-armada/Makefile
++++ b/arch/arm/plat-armada/Makefile
+@@ -9,7 +9,7 @@ endif
+ # This will never compile, because DUMMY will never by defined.
+ obj-$(DUMMY)   				:= dummy.o
+ 
+-obj-$(CONFIG_SHEEVA_DEEP_IDLE)		+= cpuidle.o armadaxp_suspend.o
++obj-$(CONFIG_SHEEVA_DEEP_IDLE)		+= cpuidle.o armadaxp_suspend.o suspend.o
+ obj-$(CONFIG_HOTPLUG_CPU)               += hotplug.o
+ obj-$(CONFIG_ARCH_ARMADA_XP)		+= pmu.o
+ obj-$(CONFIG_PCI_MSI)			+= msi.o
+diff --git a/arch/arm/plat-armada/armadaxp_suspend.S b/arch/arm/plat-armada/armadaxp_suspend.S
+index 1e50433..3aa91d2 100644
+--- a/arch/arm/plat-armada/armadaxp_suspend.S
++++ b/arch/arm/plat-armada/armadaxp_suspend.S
+@@ -12,6 +12,137 @@
+ #include <asm/assembler.h>
+ #include <mach/armadaxp.h>
+ 
++#define GPIO_64_66_VALUE_REG			(INTER_REGS_BASE + 0x18180)
++#define GPIO_64_66_CTRL_REG			(INTER_REGS_BASE + 0x18184)
++#define MPP_CTRL_64_66_REG			(INTER_REGS_BASE + 0x18020)
++
++ENTRY(armadaxp_powerdown)
++	/* Save ARM registers */
++	stmfd	sp!, {r4-r12, lr}		@ save registers on stack
++
++	/*
++	* Save the CP15 context
++	*/
++	mrc     p15, 0, r2, c1, c0, 0           @ save CP15 - CR
++	mrc     p15, 0, r3, c3, c0, 0           @ save CP15 - DACR
++	mrc     p15, 0, r4, c13, c0, 0          @ save CP15 - FCSE
++	mrc     p15, 0, r5, c2, c0, 0           @ save CP15 - TTBR0
++	mrc     p15, 0, r6, c13, c0, 1          @ save CP15 - context ID
++	mrc     p15, 1, r7, c15, c1, 0          @ save CP15 - extra features
++	mrc     p15, 0, r8, c1, c0, 1           @ save CP15 - Aux CR
++	mov     r9, r13                         @ save resume SP
++	stmfd   sp!, {r2-r9}
++
++	mrc     p15, 0, r2, c2, c0, 1   @ save CP15 - TTBR1
++	mrc	p15, 1, r3, c15, c2, 0	@ save CP15 - Aux Func Modes Ctrl 0
++	mrc	p15, 1, r4, c15, c1, 2	@ save CP15 - Aux Debug Modes Ctrl 2
++	mrc     p15, 1, r5, c15, c1, 1  @ save CP15 - Aux Debug Modes Ctrl 1
++	mrc     p15, 0, r6, c9, c14, 0  @ save CP15 - PMC
++	mrc     p15, 0, r7, c10, c2, 0  @ save CP15 - PRRR
++	mrc     p15, 0, r8, c10, c2, 1  @ save CP15 - NMRR
++	stmfd   sp!, {r2-r8}
++
++	/*
++	* Save the physical address of the resume SP
++	*/
++	mov     r0, sp
++	bl      suspend_phys_addr
++	ldr     r1, =suspend_saved_sp
++#ifdef CONFIG_SMP
++	mrc     p15, 0, r2, c0, c0, 5
++	and     r2, r2, #15
++	str     r0, [r1, r2, lsl #2]
++#else
++	str     r0, [r1]
++#endif
++
++	/*
++	* Flush L1 DCache
++	*/
++	bl v7_flush_kern_cache_all
++
++	/*
++	* Issue a Data Synchronization Barrier instruction to ensure that all
++	* state saving has been	completed.
++	*/
++	dsb
++
++	/* Flush the DLB and wait ~7 usec*/
++	ldr r2, =SDRAM_DLB_EVICT_REG
++	ldr	r0, [r2]
++	bic     r0, #0x000000FF
++	str     r0, [r2]
++
++	ldr r1, = 6000  /* WC freq =  1.6 Ghz, 2 cycles per loop */
++1:	subs r1,r1,#1
++	bne 1b
++
++	/* Set DDR in battery backup mode
++	 * It will exit self-refresh only on reset */
++	ldr 	r2, =SDRAM_CONFIG_REG
++	ldr	r0, [r2]
++	bic     r0, #0x01000000
++	str     r0, [r2]
++
++	/* Prepare register for DDR Self refresh */
++	ldr	r2, =(SDRAM_OPERATION_REG - INTER_REGS_BASE)
++	ldr	r0, =INTER_REGS_BASE
++	orr	r2, r2, r0
++	ldr	r0, [r2]
++#ifdef CONFIG_CPU_BIG_ENDIAN
++	ldr	r3, =0x07000000
++#else
++	ldr	r3, =0x00000007
++#endif
++	orr	r0, r0, r3
++
++	/*
++	 * Write 0x1 then 0x7 through MPP 64-67 to PIC that controls power
++	 * 0x1 - Power off all voltages;  0x7 - Acknowledge command
++	 */
++	ldr r3, =(MPP_CTRL_64_66_REG)
++	ldr r4, =0x2000
++	str r4, [r3]
++
++	ldr r3, =(GPIO_64_66_VALUE_REG)
++	ldr r4, =(GPIO_64_66_CTRL_REG)
++
++	ldr r5, =0x1
++	ldr r6, =0x0
++
++	str r5, [r3]
++	str r6, [r4]
++
++	ldr r1, =200000000
++	ldr r5, =0x7
++
++	/*
++	 * Wait between cmd (0x1) and cmd ack (0x7)
++	 * TODO - Need to reduce this delay
++	 */
++1:	subs r1,r1,#1
++	bne 1b
++
++	/*
++	 * Put Dram into self refresh. From here on we can perform
++	 * 8 instructions to ensure executiion from I-Cache
++	 */
++	.align 5
++	str	r0, [r2]
++
++	/* Wait 100 cycles for DDR to enter self refresh */
++	ldr r1, = 50
++1:	subs r1,r1,#1
++	bne 1b
++
++	/* Issue the cmd ack. This will turn of the board */
++	str r5, [r3]
++
++	/* trap the processor */
++	b .
++
++ENDPROC(armadaxp_powerdown)
++
+ /*
+ * armadaxp_cpu_suspend: enter cpu deepIdle state
+ * input:
+diff --git a/arch/arm/plat-armada/suspend.c b/arch/arm/plat-armada/suspend.c
+new file mode 100644
+index 0000000..4917164
+--- /dev/null
++++ b/arch/arm/plat-armada/suspend.c
+@@ -0,0 +1,102 @@
++/*
++ * arch/arm/plat-armada/cpuidle.c
++ *
++ * CPU idle implementation for Marvell ARMADA-XP SoCs
++ *
++ * This file is licensed under the terms of the GNU General Public
++ * License version 2.  This program is licensed "as is" without any
++ * warranty of any kind, whether express or implied.
++ *
++ */
++#include <linux/kernel.h>
++#include <linux/init.h>
++#include <linux/interrupt.h>
++#include <linux/platform_device.h>
++#include <linux/proc_fs.h>
++#include <linux/cpuidle.h>
++#include <asm/io.h>
++#include <asm/proc-fns.h>
++#include <plat/cache-aurora-l2.h>
++#include <mach/smp.h>
++#include <asm/vfp.h>
++#include <asm/cacheflush.h>
++#include <asm/tlbflush.h>
++#include <asm/pgalloc.h>
++#include <asm/sections.h>
++#include <linux/export.h>
++#include <asm/sections.h>
++
++#include <../cpuidle.h>
++#include "ctrlEnv/sys/mvCpuIfRegs.h"
++#include "ctrlEnv/mvCtrlEnvLib.h"
++#include "ctrlEnv/sys/mvCpuIf.h"
++#include "mvOs.h"
++
++void armadaxp_powerdown(void);
++void armadaxp_cpu_resume(void);
++
++/*
++ * Store boot information used by bin header
++ */
++#define  BOOT_INFO_ADDR		(0x3000)
++#define  BOOT_MAGIC_WORD	(0xDEADB002)
++#define  REG_LIST_END		(0xFFFFFFFF)
++
++#define SDRAM_WIN_BASE_REG(x)	(0x20180 + (0x8*x))
++#define SDRAM_WIN_CTRL_REG(x)	(0x20184 + (0x8*x))
++#define MAX_CS_COUNT		4
++
++void armadaxp_store_boot_info(void)
++{
++	int *store_addr = (int *)BOOT_INFO_ADDR;
++	int *resume_pc, win;
++
++	store_addr = phys_to_virt(store_addr);
++	resume_pc = virt_to_phys(armadaxp_cpu_resume);
++
++	/*
++	 * Store magic word indicating suspend to ram
++	 * and return address
++	 */
++	*store_addr++ = (int)(BOOT_MAGIC_WORD);
++	*store_addr++ = resume_pc;
++
++	/*
++	 * Now store registers that need to be proggrammed before
++	 * comming back to linux. format is addr->value
++	 */
++	for (win = 0; win < 4; win++) {
++		*store_addr++ = INTER_REGS_PHYS_BASE + SDRAM_WIN_BASE_REG(win);
++		*store_addr++ = MV_REG_READ(SDRAM_WIN_BASE_REG(win));
++
++		*store_addr++ = INTER_REGS_PHYS_BASE + SDRAM_WIN_CTRL_REG(win);
++		*store_addr++ = MV_REG_READ(SDRAM_WIN_CTRL_REG(win));
++	}
++
++	/* Mark the end of the boot info*/
++	*store_addr = REG_LIST_END;
++}
++/*
++ * Save SOC & CPU register data before powering down board
++ */
++void armadaxp_suspend()
++{
++#if defined(CONFIG_VFP)
++	vfp_save();
++#endif
++	aurora_l2_pm_enter();
++
++	armadaxp_store_boot_info();
++
++	armadaxp_powerdown();
++
++	cpu_init();
++
++	armadaxp_fabric_restore_deepIdle();
++
++	aurora_l2_pm_exit();
++
++#if defined(CONFIG_VFP)
++	vfp_restore();
++#endif
++}
+-- 
+1.7.9.5
+

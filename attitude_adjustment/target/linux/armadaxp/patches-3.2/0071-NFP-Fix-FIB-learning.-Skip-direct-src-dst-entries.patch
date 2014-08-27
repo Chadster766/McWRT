@@ -1,0 +1,77 @@
+From 9515b8861ec9789f9af1aafed9e32ad7818c1353 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Sun, 8 Jan 2012 04:09:51 -0500
+Subject: [PATCH 071/609] NFP: Fix FIB learning. Skip direct src/dst entries
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ net/ipv4/route.c |   22 +++++++++++-----------
+ 1 file changed, 11 insertions(+), 11 deletions(-)
+
+diff --git a/net/ipv4/route.c b/net/ipv4/route.c
+index bc54471..59c8467 100644
+--- a/net/ipv4/route.c
++++ b/net/ipv4/route.c
+@@ -835,13 +835,16 @@ void nfp_fib_sync(void)
+ 	for (h = 0; h <= rt_hash_mask; h++) {
+ 		if (!rt_hash_table[h].chain)
+ 			continue;
++
+ 		rcu_read_lock_bh();
+-		for (rt = rcu_dereference_bh(rt_hash_table[h].chain) ; rt;
++		for (rt = rcu_dereference_bh(rt_hash_table[h].chain); rt;
+ 		    rt = rcu_dereference_bh(rt->dst.rt_next)) {
+ 			if (rt_is_expired(rt))
+ 				continue;
++
+ 			rt->nfp = false;
+-			if (!(rt->rt_flags & (RTCF_MULTICAST | RTCF_BROADCAST | RTCF_LOCAL | RTCF_REJECT))) {
++			if (!(rt->rt_flags & (RTCF_DIRECTSRC | RTCF_DIRECTDST |
++						RTCF_MULTICAST | RTCF_BROADCAST | RTCF_LOCAL | RTCF_REJECT))) {
+ 				if (!nfp_hook_fib_rule_add(AF_INET, (u8 *)(&rt->rt_src), (u8 *)(&rt->rt_dst),
+ 					  (u8 *)(&rt->rt_gateway), rt->rt_iif, rt->dst.dev->ifindex))
+ 					rt->nfp = true;
+@@ -2241,9 +2244,6 @@ static int __mkroute_input(struct sk_buff *skb,
+ 		err = -ENOBUFS;
+ 		goto cleanup;
+ 	}
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
+-	rth->nfp = false;
+-#endif
+ 
+ 	rth->rt_key_dst	= daddr;
+ 	rth->rt_key_src	= saddr;
+@@ -2268,12 +2268,12 @@ static int __mkroute_input(struct sk_buff *skb,
+ 
+ 	rt_set_nexthop(rth, NULL, res, res->fi, res->type, itag);
+ 
+-
+ #if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
+ 	rth->nfp = false;
+-	if (!(rth->rt_flags & (RTCF_MULTICAST | RTCF_BROADCAST | RTCF_LOCAL | RTCF_REJECT))) {
+-		if (!nfp_hook_fib_rule_add(AF_INET, (u8*)(&rth->rt_src), (u8*)(&rth->rt_dst),
+-					(u8*)(&rth->rt_gateway), rth->rt_iif, rth->dst.dev->ifindex))
++	if (!(rth->rt_flags & (RTCF_DIRECTSRC | RTCF_DIRECTDST |
++				RTCF_MULTICAST | RTCF_BROADCAST | RTCF_LOCAL | RTCF_REJECT))) {
++		if (!nfp_hook_fib_rule_add(AF_INET, (u8 *)(&rth->rt_src), (u8 *)(&rth->rt_dst),
++					(u8 *)(&rth->rt_gateway), rth->rt_iif, rth->dst.dev->ifindex))
+ 			rth->nfp = true;
+ 	}
+ #endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
+@@ -2332,11 +2332,11 @@ static int ip_route_input_slow(struct sk_buff *skb, __be32 daddr, __be32 saddr,
+ 	struct flowi4	fl4;
+ 	unsigned	flags = 0;
+ 	u32		itag = 0;
+-	struct rtable * rth;
++	struct rtable  *rth;
+ 	unsigned	hash;
+ 	__be32		spec_dst;
+ 	int		err = -EINVAL;
+-	struct net    * net = dev_net(dev);
++	struct net     *net = dev_net(dev);
+ 
+ 	/* IP on this device is disabled. */
+ 
+-- 
+1.7.9.5
+

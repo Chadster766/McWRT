@@ -1,0 +1,51 @@
+--- a/Makefile
++++ b/Makefile
+@@ -11,17 +11,14 @@
+ DEFINES += -DETCDIR='"$(etcdir)"'
+ 
+ OPTIM =
+-OPTIM += -g
+ OPTIM += -O3
+ 
+-CC = gcc
+-LD = gcc
+-INCLUDES = -I.
++INCLUDES = -I. -I$(STAGING_DIR)/usr/include
+ CPPFLAGS = $(INCLUDES) $(DEFINES)
+ CFLAGS = -Wall -Wformat-security -Wno-format-zero-length $(OPTIM)
+-LDFLAGS =
++LDFLAGS = -L$(STAGING_DIR)/usr/lib
+ LDLIBS =
+-INSTALL = install -c -D -o root -g root
++INSTALL = install -c -D
+ 
+ l2tpns.LIBS = -lm -lcli -ldl
+ 
+--- a/l2tpns.c
++++ b/l2tpns.c
+@@ -4239,23 +4239,8 @@
+ 		struct sched_param params = {0};
+ 		params.sched_priority = 1;
+ 
+-		if (get_nprocs() < 2)
+-		{
+-			LOG(0, 0, 0, "Not using FIFO scheduler, there is only 1 processor in the system.\n");
+-			config->scheduler_fifo = 0;
+-		}
+-		else
+-		{
+-			if ((ret = sched_setscheduler(0, SCHED_FIFO, &params)) == 0)
+-			{
+-				LOG(1, 0, 0, "Using FIFO scheduler.  Say goodbye to any other processes running\n");
+-			}
+-			else
+-			{
+-				LOG(0, 0, 0, "Error setting scheduler to FIFO: %s\n", strerror(errno));
+-				config->scheduler_fifo = 0;
+-			}
+-		}
++		LOG(0, 0, 0, "Not using FIFO scheduler, there is only 1 processor in the system.\n");
++		config->scheduler_fifo = 0;
+ 	}
+ 
+ 	/* Set up the cluster communications port. */

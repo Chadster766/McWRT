@@ -1,0 +1,58 @@
+Source-Makefile: target/linux/ps3/Makefile
+Target: ps3
+Target-Board: ps3
+Target-Name: Sony PS3 Game Console
+Target-Path: /home/chad/WRT1900AC/Mamba/attitude_adjustment
+Target-Arch: powerpc
+Target-Arch-Packages: ps3
+Target-Features: broken display powerpc64 usb
+Target-Depends: 
+Target-Optimization: -Os -pipe -fno-caller-saves
+Linux-Version: 2.6.30.10
+Linux-Release: 1
+Linux-Kernel-Arch: powerpc
+Target-Description:
+	Build for the Sony PS3 Game Console
+
+	The OpenWRT build will create both a 1st stage PS3-Linux image
+	suitable for programming into the PS3 flash memory, and a 2nd
+	stage PS3-Linux image suitable for loading via bootloaders or
+	the kexec utility.
+
+	Enable the Petitboot package to build a PS3 bootloader.
+@@
+Default-Packages: base-files libc libgcc busybox dropbear mtd uci opkg hotplug2 netifd dnsmasq iptables ppp ppp-mod-pppoe kmod-ipt-nathelper firewall
+Target: ps3/petitboot
+Target-Board: ps3
+Target-Name: Petitboot
+Target-Path: target/linux/ps3
+Target-Arch: powerpc
+Target-Arch-Packages: ps3
+Target-Features: broken display fpu powerpc64 ramdisk usb
+Target-Depends: 
+Target-Optimization: -Os -pipe -fno-caller-saves
+Linux-Version: 2.6.30.10
+Linux-Release: 1
+Linux-Kernel-Arch: powerpc
+Target-Description:
+	Build for the Sony PS3 Game Console
+
+	The OpenWRT build will create both a 1st stage PS3-Linux image
+	suitable for programming into the PS3 flash memory, and a 2nd
+	stage PS3-Linux image suitable for loading via bootloaders or
+	the kexec utility.
+
+	Enable the Petitboot package to build a PS3 bootloader.
+@@
+Default-Packages: base-files libc libgcc busybox dropbear mtd uci opkg hotplug2 netifd dnsmasq iptables ppp ppp-mod-pppoe kmod-ipt-nathelper firewall
+Target-Profile: Default
+Target-Profile-Name: Default PS3 Petitboot profile
+Target-Profile-Packages: -dnsmasq -iptables -opkg -ppp -ppp-mod-pppoe -kmod-ipt-nathelper -firewall -mtd -hotplug2 -swconfig kexec-tools ps3-utils petitboot
+Target-Profile-Config: 
+
+@@
+Target-Profile-Description:
+        Default PS3 Petitboot profile
+@@
+
+

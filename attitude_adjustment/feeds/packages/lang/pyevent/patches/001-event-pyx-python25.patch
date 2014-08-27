@@ -1,0 +1,11 @@
+--- pyevent-0.3-old/event.pyx	2005-09-11 22:16:15.000000000 -0500
++++ pyevent-0.3/event.pyx	2007-06-12 11:28:33.000000000 -0500
+@@ -259,7 +259,7 @@
+     global __event_exc
+     event_dispatch()
+     if __event_exc:
+-        raise __event_exc[0], __event_exc[1], __event_exc[2]
++        raise OSError, "%s [%s]" % (__event_exc[0], __event_exc[1]), __event_exc[2]
+ 
+ def loop(nonblock=False):
+     """Dispatch all pending events on queue in a single pass."""

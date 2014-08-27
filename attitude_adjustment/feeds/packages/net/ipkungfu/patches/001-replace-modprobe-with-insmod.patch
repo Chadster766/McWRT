@@ -1,0 +1,22 @@
+Index: ipkungfu-0.6.1/ipkungfu.in
+===================================================================
+--- ipkungfu-0.6.1.orig/ipkungfu.in	2007-01-21 19:47:04.000000000 -0800
++++ ipkungfu-0.6.1/ipkungfu.in	2008-08-03 11:41:13.000000000 -0700
+@@ -618,7 +618,7 @@
+ 	# they're built in.
+ 	DEFAULT_MODULES_LIST="ip_nat_irc ip_conntrack_ftp ip_nat_ftp ip_conntrack_irc"
+ 	for default_module in $DEFAULT_MODULES_LIST; do
+-		if [ -f $($MODPROBE -la | grep ${default_module}) ]; then
++		if [ -f $(find /lib/modules/$(uname -r) -name "${default_module}*") ]; then
+ 			$MODPROBE ${default_module} 2>&1 | logError
+ 		fi
+ 	done
+@@ -627,7 +627,7 @@
+ 		MODULES_ARRAY=(${MODULES_LIST})
+ 
+ 		for module in ${MODULES_ARRAY[@]}; do
+-			if [ -e /lib/modules/`uname -r`/kernel/net/ipv4/netfilter/${module}* ]; then
++			if [ -e /lib/modules/`uname -r`/${module}* ]; then
+ 				if [ -z "`${LSMOD} | grep ${module}`" ] ; then			
+ 					if [ $INIT != 1 ] ; then
+ 						echo -n -e "Loading ${BRIGHT_COLOUR}${module}${CLOSE_COLOUR} module..."

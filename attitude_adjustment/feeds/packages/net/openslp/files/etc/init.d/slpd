@@ -1,0 +1,14 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2008 OpenWrt.org
+START=50
+
+start() {
+	cp /etc/slp* /var
+	IP=`ifconfig br-lan | grep inet | cut -d" " -f12 | cut -d: -f2`
+	sed -i "s/IPADDR/${IP}/g" /var/slp.reg
+	slpd -r /var/slp.reg -c /var/slp.conf
+}
+
+stop() {
+	killall slpd
+}

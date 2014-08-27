@@ -1,0 +1,39 @@
+Source-Makefile: target/linux/octeon/Makefile
+Target: octeon
+Target-Board: octeon
+Target-Name: Cavium Networks Octeon
+Target-Path: /home/chad/WRT1900AC/Mamba/attitude_adjustment
+Target-Arch: mips
+Target-Arch-Packages: octeon
+Target-Features: broken jffs2 pci squashfs usb
+Target-Depends: 
+Target-Optimization: -Os -pipe -march=octeon -fno-caller-saves
+Linux-Version: 2.6.37.6
+Linux-Release: 1
+Linux-Kernel-Arch: mips
+Target-Description:
+	Build firmware images for Cavium Networks Octeon-based boards.
+@@
+Default-Packages: base-files libc libgcc busybox dropbear mtd uci opkg hotplug2 netifd dnsmasq iptables ppp ppp-mod-pppoe kmod-ipt-nathelper firewall wpad-mini
+Target-Profile: generic
+Target-Profile-Name: Generic Octeon board
+Target-Profile-Packages: kmod-ath9k
+Target-Profile-Config: 
+
+@@
+Target-Profile-Description:
+	Base packages for Octeon boards.
+@@
+
+Target-Profile: mototech
+Target-Profile-Name: Mototech evaluation board
+Target-Profile-Packages: kmod-ath9k kmod-ata-core kmod-ata-sil24 kmod-usb-core kmod-usb2 kmod-usb-octeon
+Target-Profile-Kconfig: yes
+Target-Profile-Config: 
+
+@@
+Target-Profile-Description:
+	Package set compatible with the Mototech Evaluation Board (CN5000F).
+@@
+
+

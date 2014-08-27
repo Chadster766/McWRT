@@ -1,0 +1,28 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2011 OpenWrt.org
+START=50
+
+OPTIONS="-d /etc/miau/"
+LOG_DIR="/var/log/miau"
+ERR_LOG="$LOG_DIR/error.log"
+OUT_LOG="$LOG_DIR/miau.log"
+
+start() {
+	[ -f /var/run/miau.pid ] && {
+		echo "[ERROR] miau is running"
+		exit 0
+	}
+	[ -d $LOG_DIR ] || mkdir -p $LOG_DIR
+	/usr/bin/miau -f $OPTIONS > $OUT_LOG 2> $ERR_LOG &
+	PID=$!
+	sleep 1
+	if [ -d /proc/$PID ]; then
+		echo $PID > /var/run/miau.pid
+	else
+		echo "[ERROR] Unable to run miau as a daemon"
+	fi
+}
+
+stop() {
+	[ -f /var/run/miau.pid ] && kill $(cat /var/run/miau.pid) >/dev/null 2>&1 && rm /var/run/miau.pid
+}

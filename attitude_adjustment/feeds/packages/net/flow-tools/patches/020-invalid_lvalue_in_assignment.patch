@@ -1,0 +1,171 @@
+diff --git a/lib/ftchash.c b/lib/ftchash.c
+index 9cc7efa..28bafbf 100644
+--- a/lib/ftchash.c
++++ b/lib/ftchash.c
+@@ -326,7 +326,7 @@ void *ftchash_foreach(struct ftchash *ft
+       (char*)ftch->traverse_chunk->base+ftch->traverse_chunk->next) {
+ 
+       ret = ftch->traverse_rec;
+-      (char*)ftch->traverse_rec += ftch->d_size;
++      ftch->traverse_rec = vpadd(ftch->traverse_rec, ftch->d_size);
+       return ret;
+ 
+     } else {
+diff --git a/lib/ftio.c b/lib/ftio.c
+index f6c739c..1082416 100644
+--- a/lib/ftio.c
++++ b/lib/ftio.c
+@@ -2267,7 +2267,7 @@ int readn(register int fd, register void
+         break;
+ 
+       nleft -= nread;
+-      (char*)ptr += nread;
++      ptr = vpadd(ptr, nread);
+   }
+   return (nbytes - nleft);
+ } /* readn */
+@@ -2292,7 +2292,7 @@ int writen(register int fd, register voi
+       return(nwritten); /* error */
+ 
+     nleft -= nwritten;
+-    (char*)ptr += nwritten;
++    ptr =  vpadd(ptr,nwritten);
+   }
+   return(nbytes - nleft);
+ } /* writen */
+diff --git a/lib/ftlib.h b/lib/ftlib.h
+index f91ad0a..66bf2f3 100644
+--- a/lib/ftlib.h
++++ b/lib/ftlib.h
+@@ -152,7 +152,6 @@ #define FT_PDU_V8_11_MAXFLOWS 44  /* max
+ #define FT_PDU_V8_12_MAXFLOWS 44  /* max records in V8 DST_PREFIX_TOS packet */
+ #define FT_PDU_V8_13_MAXFLOWS 35  /* max records in V8 PREFIX_TOS packet */
+ #define FT_PDU_V8_14_MAXFLOWS 35  /* max records in V8 PREFIX_PORT_TOS packet */
+-
+ #define FT_PDU_V8_1_VERSION    2  /* version of AS packet */
+ #define FT_PDU_V8_2_VERSION    2  /* version of PROTO PORT packet */
+ #define FT_PDU_V8_3_VERSION    2  /* version of SRC PREFIX packet */
+@@ -3029,6 +3028,8 @@ #ifndef IN_CLASSD_SSM
+ #define IN_CLASSD_SSM(i) (((u_int32_t)(i) & 0xff000000) == 0xe8000000)
+ #endif /* IN_CLASSD_SSM */
+ 
++void *vpadd(const void* v, const int change);
++
+ /* MACHINE DEPENDANT */
+ #define fmt_uint fmt_uint32
+ 
+diff --git a/lib/fttlv.c b/lib/fttlv.c
+index 7035813..330a783 100644
+--- a/lib/fttlv.c
++++ b/lib/fttlv.c
+@@ -68,10 +68,10 @@ int fttlv_enc_uint32(void *buf, int buf_
+   }
+ 
+   bcopy(&t, buf, 2);
+-  (char*)buf+= 2;
++  buf = vpadd(buf, 2);
+ 
+   bcopy(&len, buf, 2);
+-  (char*)buf+= 2;
++  buf = vpadd(buf, 2);
+ 
+   bcopy(&v, buf, 4);
+ 
+@@ -107,10 +107,10 @@ int fttlv_enc_uint16(void *buf, int buf_
+   }
+ 
+   bcopy(&t, buf, 2);
+-  (char*)buf+= 2;
++  buf = vpadd(buf, 2);
+ 
+   bcopy(&len, buf, 2);
+-  (char*)buf+= 2;
++  buf = vpadd(buf, 2);
+ 
+   bcopy(&v, buf, 2);
+ 
+@@ -145,10 +145,10 @@ int fttlv_enc_uint8(void *buf, int buf_s
+   }
+ 
+   bcopy(&t, buf, 2);
+-  (char*)buf+= 2;
++  buf = vpadd(buf, 2);
+ 
+   bcopy(&len, buf, 2);
+-  (char*)buf+= 2;
++  buf = vpadd(buf, 2);
+ 
+   bcopy(&v, buf, 1);
+ 
+@@ -183,10 +183,10 @@ int fttlv_enc_str(void *buf, int buf_siz
+   }
+ 
+   bcopy(&t, buf, 2);
+-  (char*)buf+= 2;
++  buf = vpadd(buf, 2);
+ 
+   bcopy(&len, buf, 2);
+-  (char*)buf+= 2;
++  buf = vpadd(buf, 2);
+ 
+   bcopy(v, buf, len);
+ 
+@@ -230,16 +230,16 @@ int fttlv_enc_ifname(void *buf, int buf_
+     return -1;
+ 
+   bcopy(&t, buf, 2);
+-  (char*)buf+= 2;
++  buf = vpadd(buf, 2);
+ 
+   bcopy(&len, buf, 2);
+-  (char*)buf+= 2;
++  buf = vpadd(buf, 2);
+ 
+   bcopy(&ip, buf, 4);
+-  (char*)buf += 4;
++  buf = vpadd(buf, 4);
+ 
+   bcopy(&ifIndex, buf, 2);
+-  (char*)buf += 2;
++  buf = vpadd(buf, 2);
+ 
+   bcopy(name, buf, n);
+ 
+@@ -287,19 +287,19 @@ int fttlv_enc_ifalias(void *buf, int buf
+   }
+ 
+   bcopy(&t, buf, 2);
+-  (char*)buf+= 2;
++  buf = vpadd(buf, 2);
+ 
+   bcopy(&len, buf, 2);
+-  (char*)buf+= 2;
++  buf = vpadd(buf, 2);
+ 
+   bcopy(&ip, buf, 4);
+-  (char*)buf += 4;
++  buf = vpadd(buf, 4);
+ 
+   bcopy(&entries, buf, 2);
+-  (char*)buf += 2;
++  buf = vpadd(buf, 2);
+ 
+   bcopy(ifIndex_list, buf, esize);
+-  (char*)buf += esize;
++  buf = vpadd(buf, esize);
+ 
+   bcopy(name, buf, n);
+ 
+diff --git a/lib/support.c b/lib/support.c
+index a32ffe7..2e1db9f 100644
+--- a/lib/support.c
++++ b/lib/support.c
+@@ -736,3 +736,8 @@ int udp_cksum(struct ip *ip, struct udph
+   return sum;
+ } /* udp_cksum */
+ 
++// void pointer add
++
++void * vpadd(const void *v, const int change) {
++  return (void *) (((char*) v) + change);
++}

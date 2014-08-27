@@ -1,0 +1,39 @@
+From 7aa0349d3f08ac9dedd51cfcbec2ea2df8aacddc Mon Sep 17 00:00:00 2001
+From: Matthew Fatheree <Matthew.Fatheree@belkin.com>
+Date: Sat, 10 May 2014 22:59:48 +0700
+Subject: [PATCH 04/31] Add default network configuration for armadaxp
+
+Signed-off-by: Matthew Fatheree <Matthew.Fatheree@belkin.com>
+---
+ .../linux/armadaxp/base-files/etc/config/network   |   19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+ create mode 100644 target/linux/armadaxp/base-files/etc/config/network
+
+diff --git a/target/linux/armadaxp/base-files/etc/config/network b/target/linux/armadaxp/base-files/etc/config/network
+new file mode 100644
+index 0000000..319c83b
+--- /dev/null
++++ b/target/linux/armadaxp/base-files/etc/config/network
+@@ -0,0 +1,19 @@
++# Copyright (C) 2006 OpenWrt.org
++
++config interface loopback
++	option ifname	lo
++	option proto	static
++	option ipaddr	127.0.0.1
++	option netmask	255.0.0.0
++
++config interface lan
++	option type	bridge
++	option ifname	"eth0 wdev0ap0 wdev1ap0"
++	option proto	static
++	option ipaddr	192.168.200.1
++	option netmask	255.255.255.0
++	option gateway  192.168.200.1
++
++config interface wan
++	option proto	dhcp
++	option ifname	eth1
+-- 
+1.7.9.5
+

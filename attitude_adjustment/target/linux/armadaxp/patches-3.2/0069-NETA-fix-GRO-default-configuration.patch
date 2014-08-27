@@ -1,0 +1,34 @@
+From 3d93b73d47a0c713e85468b4f478b8433c607548 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Tue, 3 Jan 2012 11:00:02 -0500
+Subject: [PATCH 069/609] NETA: fix GRO default configuration
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 2f003ac..169cee7 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -3100,14 +3100,14 @@ struct net_device *mv_eth_netdev_init(struct eth_port *pp, int mtu, u8 *mac)
+ 	pp->tx_done_timer.data = (unsigned long)dev;
+ 	pp->cleanup_timer.data = (unsigned long)dev;
+ 
+-	mv_eth_netdev_set_features(dev);
+-
+ 	if (pp->flags & MV_ETH_F_CONNECT_LINUX) {
+ 		if (register_netdev(dev)) {
+ 			printk(KERN_ERR "failed to register %s\n", dev->name);
+ 			free_netdev(dev);
+ 			return NULL;
+ 		} else {
++			mv_eth_netdev_set_features(dev);
++
+ 			printk(KERN_ERR "    o %s, ifindex = %d, GbE port = %d", dev->name, dev->ifindex, pp->port);
+ #ifdef CONFIG_MV_ETH_SWITCH
+ 			if (!(pp->flags & MV_ETH_F_SWITCH))
+-- 
+1.7.9.5
+

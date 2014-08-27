@@ -1,0 +1,120 @@
+diff -ruN libdlna-0.2.3.orig/configure libdlna-0.2.3/configure
+--- libdlna-0.2.3.orig/configure	2007-11-26 21:47:43.000000000 +0100
++++ libdlna-0.2.3/configure	2008-04-19 21:59:15.000000000 +0200
+@@ -177,6 +177,19 @@
+     check_cmd $cc $LDFLAGS "$@" -o $TMPE $TMPO $extralibs
+ }
+ 
++check_host_cc(){
++    log check_host_cc "$@"
++    cat >$TMPC
++    log_file $TMPC
++    check_cmd $host_cc $host_cflags "$@" -c -o $TMPO $TMPC
++}
++
++check_host_ld(){
++    log check_host_ld "$@"
++    check_host_cc || return
++    check_cmd $host_cc $host_cflags $host_ldflags "$@" -o $TMPE $TMPO
++}
++
+ check_exec(){
+     check_ld "$@" && { enabled cross_compile || $TMPE >>$logfile 2>&1; }
+ }
+@@ -311,6 +324,7 @@
+ static="yes"
+ shared="yes"
+ cc="gcc"
++host_cc="gcc"
+ ar="ar"
+ ranlib="ranlib"
+ make="make"
+@@ -454,6 +468,11 @@
+ fi
+ [ -n "$MAKE" ] && make="$MAKE"
+ 
++[ -n "$HOST_CC" ] && host_cc="$HOST_CC"
++[ -n "$HOST_CFLAGS" ] && host_cflags="$HOST_CFLAGS"
++[ -n "$HOST_LDFLAGS" ] && host_ldflags="$HOST_LDFLAGS"
++host_cflags="-Isrc $host_cflags"
++
+ #################################################
+ #   create logging file
+ #################################################
+@@ -610,15 +629,14 @@
+ fi
+ 
+ echolog "Checking for libavformat ..."
+-check_lib ffmpeg/avformat.h av_register_all -lavformat || die "Error, can't find libavformat !"
++check_lib libavformat/avformat.h av_register_all -lavformat -lavcodec -lavutil || die "Error, can't find libavformat !"
+ echolog "Checking for libavcodec ..."
+-check_lib ffmpeg/avcodec.h avcodec_register_all -lavcodec || die "Error, can't find libavcodec !"
++check_lib libavcodec/avcodec.h avcodec_register_all -lavcodec || die "Error, can't find libavcodec !"
+ 
+ #################################################
+ #   version
+ #################################################
+-temp_cflags "-Isrc"
+-check_ld <<EOF
++check_host_ld <<EOF
+ #include <stdio.h>
+ #include <dlna.h>
+ int main(){
+@@ -628,7 +646,6 @@
+ }
+ EOF
+ VERSION=`$TMPE`
+-restore_flags
+ 
+ 
+ #################################################
+diff -ruN libdlna-0.2.3.orig/src/av_mpeg4_part10.c libdlna-0.2.3/src/av_mpeg4_part10.c
+--- libdlna-0.2.3.orig/src/av_mpeg4_part10.c	2007-11-26 21:47:43.000000000 +0100
++++ libdlna-0.2.3/src/av_mpeg4_part10.c	2008-04-19 21:48:45.000000000 +0200
+@@ -26,7 +26,7 @@
+ #include <sys/stat.h>
+ #include <fcntl.h>
+ 
+-#include <ffmpeg/avcodec.h>
++#include <libavcodec/avcodec.h>
+ 
+ #include "dlna_internals.h"
+ #include "profiles.h"
+diff -ruN libdlna-0.2.3.orig/src/av_mpeg4_part2.c libdlna-0.2.3/src/av_mpeg4_part2.c
+--- libdlna-0.2.3.orig/src/av_mpeg4_part2.c	2007-11-26 21:47:43.000000000 +0100
++++ libdlna-0.2.3/src/av_mpeg4_part2.c	2008-04-19 21:48:45.000000000 +0200
+@@ -26,7 +26,7 @@
+ #include <sys/stat.h>
+ #include <fcntl.h>
+ 
+-#include <ffmpeg/avcodec.h>
++#include <libavcodec/avcodec.h>
+ 
+ #include "dlna_internals.h"
+ #include "profiles.h"
+diff -ruN libdlna-0.2.3.orig/src/containers.c libdlna-0.2.3/src/containers.c
+--- libdlna-0.2.3.orig/src/containers.c	2007-11-26 21:47:43.000000000 +0100
++++ libdlna-0.2.3/src/containers.c	2008-04-19 21:48:45.000000000 +0200
+@@ -4,7 +4,7 @@
+ #include <sys/stat.h>
+ #include <fcntl.h>
+ 
+-#include <ffmpeg/avformat.h>
++#include <libavformat/avformat.h>
+ 
+ #include "containers.h"
+ #include "profiles.h"
+diff -ruN libdlna-0.2.3.orig/src/profiles.h libdlna-0.2.3/src/profiles.h
+--- libdlna-0.2.3.orig/src/profiles.h	2007-11-26 21:47:43.000000000 +0100
++++ libdlna-0.2.3/src/profiles.h	2008-04-19 21:48:45.000000000 +0200
+@@ -22,8 +22,8 @@
+ #ifndef _PROFILES_H_
+ #define _PROFILES_H_
+ 
+-#include <ffmpeg/avcodec.h>
+-#include <ffmpeg/avformat.h>
++#include <libavcodec/avcodec.h>
++#include <libavformat/avformat.h>
+ 
+ #include "dlna_internals.h"
+ #include "containers.h"

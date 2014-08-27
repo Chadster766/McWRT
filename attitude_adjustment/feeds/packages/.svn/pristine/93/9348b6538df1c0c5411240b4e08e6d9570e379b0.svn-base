@@ -1,0 +1,57 @@
+diff -Naur chillispot-1.1.0/src/tun.c chillispot-1.1.0.patched/src/tun.c
+--- chillispot-1.1.0/src/tun.c	2006-09-24 20:48:25.000000000 +0300
++++ chillispot-1.1.0.patched/src/tun.c	2009-10-20 02:08:49.000000000 +0300
+@@ -366,7 +366,7 @@
+   this->addrs++;
+   return 0;
+ 
+-#elif defined (__FreeBSD__) defined (__OpenBSD__) || defined (__NetBSD__) || defined (__APPLE__)
++#elif defined (__FreeBSD__) || defined (__OpenBSD__) || defined (__NetBSD__) || defined (__APPLE__)
+ 
+   int fd;
+   struct ifaliasreq      areq;
+@@ -445,7 +445,7 @@
+ #if defined(__linux__)
+   ifr.ifr_netmask.sa_family = AF_INET;
+ 
+-#elif defined(__FreeBSD__) defined (__OpenBSD__) || defined (__NetBSD__) || defined (__APPLE__)
++#elif defined(__FreeBSD__) || defined (__OpenBSD__) || defined (__NetBSD__) || defined (__APPLE__)
+   ((struct sockaddr_in *) &ifr.ifr_addr)->sin_len = 
+     sizeof (struct sockaddr_in);
+   ((struct sockaddr_in *) &ifr.ifr_dstaddr)->sin_len = 
+@@ -497,7 +497,7 @@
+     ((struct sockaddr_in *) &ifr.ifr_netmask)->sin_addr.s_addr = 
+       netmask->s_addr;
+ 
+-#elif defined(__FreeBSD__) defined (__OpenBSD__) || defined (__NetBSD__) || defined (__APPLE__)
++#elif defined(__FreeBSD__) || defined (__OpenBSD__) || defined (__NetBSD__) || defined (__APPLE__)
+     ((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr.s_addr = 
+       netmask->s_addr;
+ 
+@@ -585,7 +585,7 @@
+   close(fd);
+   return 0;
+   
+-#elif defined(__FreeBSD__) defined (__OpenBSD__) || defined (__NetBSD__) || defined (__APPLE__)
++#elif defined(__FreeBSD__) || defined (__OpenBSD__) || defined (__NetBSD__) || defined (__APPLE__)
+ 
+ struct {
+   struct rt_msghdr rt;
+@@ -674,7 +674,7 @@
+ #if defined(__linux__)
+   struct ifreq ifr;
+ 
+-#elif defined(__FreeBSD__) defined (__OpenBSD__) || defined (__NetBSD__) || defined (__APPLE__)
++#elif defined(__FreeBSD__) || defined (__OpenBSD__) || defined (__NetBSD__) || defined (__APPLE__)
+   char devname[IFNAMSIZ+5]; /* "/dev/" + ifname */
+   int devnum;
+   struct ifaliasreq areq;
+@@ -722,7 +722,7 @@
+   ioctl((*tun)->fd, TUNSETNOCSUM, 1); /* Disable checksums */
+   return 0;
+   
+-#elif defined(__FreeBSD__) defined (__OpenBSD__) || defined (__NetBSD__) || defined (__APPLE__)
++#elif defined(__FreeBSD__) || defined (__OpenBSD__) || defined (__NetBSD__) || defined (__APPLE__)
+ 
+   /* Find suitable device */
+   for (devnum = 0; devnum < 255; devnum++) { /* TODO 255 */ 

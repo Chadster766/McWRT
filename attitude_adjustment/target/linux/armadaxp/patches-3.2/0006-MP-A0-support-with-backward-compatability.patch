@@ -1,0 +1,1088 @@
+From df01bf2e45d8a17ac1bc796a0651ce19809a8083 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Wed, 4 Sep 2013 23:40:45 -0700
+Subject: [PATCH 006/609] MP-A0 support with backward compatability  for Z1 -
+ Support V6SMP and V7UP on Z1 - Support  Cortex-A9
+ UP and SMP on DSMP-A0 FPGA. - Enable Perf  - Update
+ all defconfigs
+
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/Kconfig                                  |    2 +-
+ arch/arm/configs/armada_xp_defconfig              |   50 +++++++---------
+ arch/arm/include/asm/spinlock.h                   |   11 +++-
+ arch/arm/include/asm/system.h                     |   18 ++++++
+ arch/arm/kernel/smp.c                             |    1 -
+ arch/arm/kernel/smp_tlb.c                         |   27 ++++++++-
+ arch/arm/mach-armadaxp/Kconfig                    |    7 ---
+ arch/arm/mach-armadaxp/core.c                     |    7 +--
+ arch/arm/mach-armadaxp/include/mach/entry-macro.S |    9 ++-
+ arch/arm/mach-armadaxp/include/mach/smp.h         |   14 -----
+ arch/arm/mach-armadaxp/irq.c                      |   49 ++++++---------
+ arch/arm/mach-armadaxp/platsmp.c                  |   25 ++++++--
+ arch/arm/mach-armadaxp/time.c                     |   29 ++++++---
+ arch/arm/mm/Kconfig                               |   16 +++++
+ arch/arm/mm/cache-aurora-l2.c                     |    2 +-
+ arch/arm/mm/mmu.c                                 |    4 +-
+ arch/arm/mm/proc-macros.S                         |    1 -
+ arch/arm/mm/proc-sheeva_pj4bv6.S                  |   66 +++++++--------------
+ arch/arm/plat-armada/Makefile                     |    2 +-
+ arch/arm/plat-armada/cpuidle.c                    |    2 +-
+ arch/arm/plat-armada/hotplug.c                    |   11 ++++
+ kernel/events/core.c                              |    1 -
+ 22 files changed, 199 insertions(+), 155 deletions(-)
+
+diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+index 576367d..7fc7da7 100644
+--- a/arch/arm/Kconfig
++++ b/arch/arm/Kconfig
+@@ -1588,7 +1588,7 @@ config LOCAL_TIMERS
+ 	bool "Use local timer interrupts"
+ 	depends on SMP
+ 	default y
+-	select HAVE_ARM_TWD if (!ARCH_MSM_SCORPIONMP && !EXYNOS4_MCT)
++	select HAVE_ARM_TWD if (!ARCH_MSM_SCORPIONMP && !EXYNOS4_MCT && !ARCH_ARMADA_XP)
+ 	help
+ 	  Enable support for local timers on SMP platforms, rather then the
+ 	  legacy IPI broadcast method.  Local timers allows the system
+diff --git a/arch/arm/configs/armada_xp_defconfig b/arch/arm/configs/armada_xp_defconfig
+index c57b01c..0f99b49 100644
+--- a/arch/arm/configs/armada_xp_defconfig
++++ b/arch/arm/configs/armada_xp_defconfig
+@@ -1,6 +1,6 @@
+ #
+-# Automatically generated file; DO NOT EDIT.
+-# Linux/arm 3.0.0 Kernel Configuration
++# Automatically generated make config: don't edit
++# Linux/arm 3.0.6 Kernel Configuration
+ #
+ CONFIG_ARM=y
+ CONFIG_SYS_SUPPORTS_APM_EMULATION=y
+@@ -122,6 +122,7 @@ CONFIG_KRETPROBES=y
+ CONFIG_HAVE_KPROBES=y
+ CONFIG_HAVE_KRETPROBES=y
+ CONFIG_HAVE_REGS_AND_STACK_ACCESS_API=y
++CONFIG_HAVE_CLK=y
+ CONFIG_HAVE_DMA_API_DEBUG=y
+ CONFIG_HAVE_HW_BREAKPOINT=y
+ 
+@@ -198,7 +199,6 @@ CONFIG_MMU=y
+ # CONFIG_ARCH_CLPS711X is not set
+ # CONFIG_ARCH_CNS3XXX is not set
+ # CONFIG_ARCH_GEMINI is not set
+-# CONFIG_ARCH_PRIMA2 is not set
+ # CONFIG_ARCH_EBSA110 is not set
+ # CONFIG_ARCH_EP93XX is not set
+ # CONFIG_ARCH_FOOTBRIDGE is not set
+@@ -214,8 +214,9 @@ CONFIG_MMU=y
+ # CONFIG_ARCH_IXP4XX is not set
+ # CONFIG_ARCH_DOVE is not set
+ # CONFIG_ARCH_KIRKWOOD is not set
+-CONFIG_ARCH_ARMADA_XP=y
+ # CONFIG_ARCH_LOKI is not set
++# CONFIG_ARCH_LPC32XX is not set
++CONFIG_ARCH_ARMADA_XP=y
+ # CONFIG_ARCH_MV78XX0 is not set
+ # CONFIG_ARCH_ORION5X is not set
+ # CONFIG_ARCH_MMP is not set
+@@ -244,7 +245,6 @@ CONFIG_ARCH_ARMADA_XP=y
+ # CONFIG_ARCH_OMAP is not set
+ # CONFIG_PLAT_SPEAR is not set
+ # CONFIG_ARCH_VT8500 is not set
+-# CONFIG_ARCH_ZYNQ is not set
+ # CONFIG_GPIO_PCA953X is not set
+ CONFIG_ARCH_SUPPORTS_BIG_ENDIAN=y
+ CONFIG_MV_HAL_RULES_PATH="arch/arm/mach-armadaxp/mv_hal_support/mvRules.mk"
+@@ -254,7 +254,6 @@ CONFIG_MV_HAL_RULES_PATH="arch/arm/mach-armadaxp/mv_hal_support/mvRules.mk"
+ #
+ CONFIG_ARMADA_XP=y
+ CONFIG_ARMADA_XP_REV_Z1=y
+-# CONFIG_KW40_REV_A0 is not set
+ # CONFIG_ARMADA_XP_REV_A0 is not set
+ CONFIG_MACH_ARMADA_XP_DB=y
+ CONFIG_MACH_ARMADA_XP_RDSRV=y
+@@ -465,6 +464,7 @@ CONFIG_ARM_THUMB=y
+ # CONFIG_ARM_THUMBEE is not set
+ # CONFIG_SWP_EMULATE is not set
+ # CONFIG_CPU_BIG_ENDIAN is not set
++# CONFIG_BE8_ON_LE is not set
+ # CONFIG_CPU_ICACHE_DISABLE is not set
+ # CONFIG_CPU_DCACHE_DISABLE is not set
+ # CONFIG_CPU_BPREDICT_DISABLE is not set
+@@ -514,6 +514,7 @@ CONFIG_TICK_ONESHOT=y
+ CONFIG_NO_HZ=y
+ # CONFIG_HIGH_RES_TIMERS is not set
+ CONFIG_GENERIC_CLOCKEVENTS_BUILD=y
++# CONFIG_SMP is not set
+ CONFIG_VMSPLIT_3G=y
+ # CONFIG_VMSPLIT_2G is not set
+ # CONFIG_VMSPLIT_1G is not set
+@@ -698,7 +699,6 @@ CONFIG_WIRELESS=y
+ # CONFIG_NET_9P is not set
+ # CONFIG_CAIF is not set
+ # CONFIG_CEPH_LIB is not set
+-# CONFIG_NFC is not set
+ 
+ #
+ # Device Drivers
+@@ -1161,7 +1161,6 @@ CONFIG_SKY2=y
+ # CONFIG_JME is not set
+ # CONFIG_STMMAC_ETH is not set
+ # CONFIG_PCH_GBE is not set
+-# CONFIG_FTGMAC100 is not set
+ # CONFIG_NETDEV_10000 is not set
+ # CONFIG_TR is not set
+ CONFIG_WLAN=y
+@@ -1317,6 +1316,7 @@ CONFIG_I2C_ALGOBIT=y
+ #
+ # I2C system bus drivers (mostly embedded / system-on-chip)
+ #
++# CONFIG_I2C_DESIGNWARE is not set
+ # CONFIG_I2C_GPIO is not set
+ # CONFIG_I2C_INTEL_MID is not set
+ CONFIG_I2C_MV64XXX=y
+@@ -1388,7 +1388,7 @@ CONFIG_GPIO_SYSFS=y
+ #
+ # Memory mapped GPIO drivers:
+ #
+-# CONFIG_GPIO_GENERIC_PLATFORM is not set
++# CONFIG_GPIO_BASIC_MMIO is not set
+ # CONFIG_GPIO_IT8761E is not set
+ # CONFIG_GPIO_VX855 is not set
+ 
+@@ -1547,13 +1547,12 @@ CONFIG_MFD_SUPPORT=y
+ # CONFIG_TPS65010 is not set
+ # CONFIG_TPS6507X is not set
+ # CONFIG_MFD_TPS6586X is not set
+-# CONFIG_MFD_TPS65910 is not set
+-# CONFIG_MFD_TPS65912_I2C is not set
+-# CONFIG_MFD_TPS65912_SPI is not set
+ # CONFIG_TWL4030_CORE is not set
+ # CONFIG_MFD_STMPE is not set
+ # CONFIG_MFD_TC3589X is not set
+ # CONFIG_MFD_TMIO is not set
++# CONFIG_MFD_T7L66XB is not set
++# CONFIG_MFD_TC6387XB is not set
+ # CONFIG_MFD_TC6393XB is not set
+ # CONFIG_PMIC_DA903X is not set
+ # CONFIG_PMIC_ADP5520 is not set
+@@ -1575,7 +1574,7 @@ CONFIG_MFD_SUPPORT=y
+ # CONFIG_MFD_JANZ_CMODIO is not set
+ # CONFIG_MFD_VX855 is not set
+ # CONFIG_MFD_WL1273_CORE is not set
+-# CONFIG_MFD_AAT2870_CORE is not set
++# CONFIG_MFD_TPS65910 is not set
+ # CONFIG_REGULATOR is not set
+ # CONFIG_MEDIA_SUPPORT is not set
+ 
+@@ -1662,7 +1661,6 @@ CONFIG_LCD_CLASS_DEVICE=y
+ # CONFIG_LCD_PLATFORM is not set
+ # CONFIG_LCD_S6E63M0 is not set
+ # CONFIG_LCD_LD9040 is not set
+-# CONFIG_LCD_AMS369FG06 is not set
+ CONFIG_BACKLIGHT_CLASS_DEVICE=y
+ CONFIG_BACKLIGHT_GENERIC=y
+ CONFIG_BACKLIGHT_DOVE=y
+@@ -1701,7 +1699,6 @@ CONFIG_HID_CYPRESS=y
+ # CONFIG_HID_DRAGONRISE is not set
+ # CONFIG_HID_EMS_FF is not set
+ CONFIG_HID_EZKEY=y
+-# CONFIG_HID_HOLTEK is not set
+ # CONFIG_HID_KEYTOUCH is not set
+ # CONFIG_HID_KYE is not set
+ # CONFIG_HID_UCLOGIC is not set
+@@ -1726,9 +1723,13 @@ CONFIG_HID_PETALYNX=y
+ # CONFIG_HID_PICOLCD is not set
+ # CONFIG_HID_QUANTA is not set
+ # CONFIG_HID_ROCCAT is not set
++# CONFIG_HID_ROCCAT_ARVO is not set
++# CONFIG_HID_ROCCAT_KONE is not set
++# CONFIG_HID_ROCCAT_KONEPLUS is not set
++# CONFIG_HID_ROCCAT_KOVAPLUS is not set
++# CONFIG_HID_ROCCAT_PYRA is not set
+ CONFIG_HID_SAMSUNG=y
+ CONFIG_HID_SONY=y
+-# CONFIG_HID_SPEEDLINK is not set
+ CONFIG_HID_SUNPLUS=y
+ # CONFIG_HID_GREENASIA is not set
+ # CONFIG_HID_SMARTJOYPLUS is not set
+@@ -1774,6 +1775,7 @@ CONFIG_USB_EHCI_TT_NEWSCHED=y
+ # CONFIG_USB_R8A66597_HCD is not set
+ # CONFIG_USB_WHCI_HCD is not set
+ # CONFIG_USB_HWA_HCD is not set
++# CONFIG_USB_MUSB_HDRC is not set
+ 
+ #
+ # USB Device Class drivers
+@@ -1887,6 +1889,7 @@ CONFIG_NEW_LEDS=y
+ #
+ # LED Triggers
+ #
++# CONFIG_NFC_DEVICES is not set
+ # CONFIG_ACCESSIBILITY is not set
+ # CONFIG_INFINIBAND is not set
+ CONFIG_RTC_LIB=y
+@@ -1967,19 +1970,14 @@ CONFIG_DMADEVICES=y
+ #
+ # DMA Devices
+ #
++# CONFIG_DW_DMAC is not set
++# CONFIG_MV_XOR is not set
+ # CONFIG_TIMB_DMA is not set
+ # CONFIG_AUXDISPLAY is not set
+ # CONFIG_UIO is not set
+-
+-#
+-# Virtio drivers
+-#
+-# CONFIG_VIRTIO_PCI is not set
+-# CONFIG_VIRTIO_BALLOON is not set
+ # CONFIG_STAGING is not set
++CONFIG_CLKDEV_LOOKUP=y
+ CONFIG_CLKSRC_MMIO=y
+-CONFIG_IOMMU_SUPPORT=y
+-# CONFIG_VIRT_DRIVERS is not set
+ 
+ #
+ # File systems
+@@ -2207,7 +2205,7 @@ CONFIG_TIMER_STATS=y
+ # CONFIG_PROVE_LOCKING is not set
+ # CONFIG_SPARSE_RCU_POINTER is not set
+ # CONFIG_LOCK_STAT is not set
+-# CONFIG_DEBUG_ATOMIC_SLEEP is not set
++# CONFIG_DEBUG_SPINLOCK_SLEEP is not set
+ # CONFIG_DEBUG_LOCKING_API_SELFTESTS is not set
+ # CONFIG_DEBUG_STACK_USAGE is not set
+ # CONFIG_DEBUG_KOBJECT is not set
+@@ -2390,7 +2388,6 @@ CONFIG_CRC_ITU_T=m
+ CONFIG_CRC32=y
+ # CONFIG_CRC7 is not set
+ CONFIG_LIBCRC32C=y
+-# CONFIG_CRC8 is not set
+ CONFIG_ZLIB_INFLATE=y
+ CONFIG_ZLIB_DEFLATE=y
+ CONFIG_LZO_COMPRESS=y
+@@ -2402,4 +2399,3 @@ CONFIG_HAS_IOPORT=y
+ CONFIG_HAS_DMA=y
+ CONFIG_NLATTR=y
+ # CONFIG_AVERAGE is not set
+-# CONFIG_CORDIC is not set
+diff --git a/arch/arm/include/asm/spinlock.h b/arch/arm/include/asm/spinlock.h
+index 65fa3c8..25f6224 100644
+--- a/arch/arm/include/asm/spinlock.h
++++ b/arch/arm/include/asm/spinlock.h
+@@ -83,7 +83,9 @@ static inline void arch_spin_lock(arch_spinlock_t *lock)
+ 	__asm__ __volatile__(
+ "1:	ldrex	%0, [%1]\n"
+ "	teq	%0, #0\n"
++#ifndef CONFIG_SHEEVA_ERRATA_ARM_CPU_BTS61
+ 	WFE("ne")
++#endif
+ "	strexeq	%0, %2, [%1]\n"
+ "	teqeq	%0, #0\n"
+ "	bne	1b"
+@@ -139,17 +141,20 @@ static inline void arch_write_lock(arch_rwlock_t *rw)
+ {
+ 	unsigned long tmp;
+ 
++	do{
+ 	__asm__ __volatile__(
+ "1:	ldrex	%0, [%1]\n"
+ "	teq	%0, #0\n"
++#ifndef CONFIG_SHEEVA_ERRATA_ARM_CPU_BTS61
+ 	WFE("ne")
++#endif
+ "	strexeq	%0, %2, [%1]\n"
+ "	teq	%0, #0\n"
+ "	bne	1b"
+ 	: "=&r" (tmp)
+ 	: "r" (&rw->lock), "r" (0x80000000)
+ 	: "cc");
+-
++	} while (tmp && atomic_backoff_delay());
+ 	smp_mb();
+ }
+ 
+@@ -169,6 +174,7 @@ static inline int arch_write_trylock(arch_rwlock_t *rw)
+ 		smp_mb();
+ 		return 1;
+ 	} else {
++		atomic_backoff_delay();
+ 		return 0;
+ 	}
+ }
+@@ -209,13 +215,14 @@ static inline void arch_read_lock(arch_rwlock_t *rw)
+ "1:	ldrex	%0, [%2]\n"
+ "	adds	%0, %0, #1\n"
+ "	strexpl	%1, %0, [%2]\n"
++#ifndef CONFIG_SHEEVA_ERRATA_ARM_CPU_BTS61
+ 	WFE("mi")
++#endif
+ "	rsbpls	%0, %1, #0\n"
+ "	bmi	1b"
+ 	: "=&r" (tmp), "=&r" (tmp2)
+ 	: "r" (&rw->lock)
+ 	: "cc");
+-
+ 	smp_mb();
+ }
+ 
+diff --git a/arch/arm/include/asm/system.h b/arch/arm/include/asm/system.h
+index 984014b..b4deeea 100644
+--- a/arch/arm/include/asm/system.h
++++ b/arch/arm/include/asm/system.h
+@@ -255,6 +255,24 @@ do {									\
+ #define swp_is_buggy
+ #endif
+ 
++static inline int atomic_backoff_delay(void)
++{
++#ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_ADD_DELAY_FOR_STREX
++        unsigned int delay;
++
++        __asm__ __volatile__(
++        "       mrc     p15, 0, %0, c0, c0, 5\n"
++        "       and     %0, %0, #0xf\n"
++        "       mov     %0, %0, lsl #8\n"
++        "1:     subs    %0, %0, #1\n"
++        "       bpl     1b\n"
++        : "=&r" (delay)
++        :
++        : "cc");
++#endif
++        return 1;
++}
++
+ static inline unsigned long __xchg(unsigned long x, volatile void *ptr, int size)
+ {
+ 	extern void __bad_xchg(volatile void *, int);
+diff --git a/arch/arm/kernel/smp.c b/arch/arm/kernel/smp.c
+index ccdc25f..8767598 100644
+--- a/arch/arm/kernel/smp.c
++++ b/arch/arm/kernel/smp.c
+@@ -594,7 +594,6 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
+ {
+ 	unsigned int cpu = smp_processor_id();
+ 	struct pt_regs *old_regs = set_irq_regs(regs);
+-
+ 	if (ipinr >= IPI_TIMER && ipinr < IPI_TIMER + NR_IPI)
+ 		__inc_irq_stat(cpu, ipi_irqs[ipinr - IPI_TIMER]);
+ 
+diff --git a/arch/arm/kernel/smp_tlb.c b/arch/arm/kernel/smp_tlb.c
+index 7dcb352..1d62e02 100644
+--- a/arch/arm/kernel/smp_tlb.c
++++ b/arch/arm/kernel/smp_tlb.c
+@@ -12,7 +12,7 @@
+ 
+ #include <asm/smp_plat.h>
+ #include <asm/tlbflush.h>
+-
++#include <asm/cacheflush.h>
+ static void on_each_cpu_mask(void (*func)(void *), void *info, int wait,
+ 	const struct cpumask *mask)
+ {
+@@ -36,6 +36,7 @@ struct tlb_args {
+ 	unsigned long ta_end;
+ };
+ 
++
+ static inline void ipi_flush_tlb_all(void *ignored)
+ {
+ 	local_flush_tlb_all();
+@@ -137,3 +138,27 @@ void flush_tlb_kernel_range(unsigned long start, unsigned long end)
+ 		local_flush_tlb_kernel_range(start, end);
+ }
+ 
++#if ( ( defined( CONFIG_SMP ) && defined( CONFIG_CPU_V6 ) ) || ( defined( CONFIG_SMP ) && defined( CONFIG_CPU_V6K ) ) )
++static inline void ipi_flush_cache_user_range(void *arg)
++{
++	struct tlb_args *ta = (struct tlb_args *)arg;
++	printk("function %s  line %d\n", __func__,__LINE__);
++	local_flush_cache_user_range((struct vm_area_struct *)ta->ta_vma, ta->ta_start, ta->ta_end);
++}
++
++//#if defined(CONFIG_SMP) && defined(CONFIG_CPU_V6)
++
++void flush_cache_user_range(struct vm_area_struct *vma,
++			    unsigned long start, unsigned long end)
++{
++	if (tlb_ops_need_broadcast()) {
++		struct tlb_args ta;
++		ta.ta_vma = vma;
++		ta.ta_start = start;
++		ta.ta_end = end;
++		on_each_cpu_mask(ipi_flush_cache_user_range, &ta, 1, mm_cpumask(vma->vm_mm));
++	} else{
++		local_flush_cache_user_range(vma, start, end);
++	}
++}
++#endif
+diff --git a/arch/arm/mach-armadaxp/Kconfig b/arch/arm/mach-armadaxp/Kconfig
+index 43bd7d3..d708256 100644
+--- a/arch/arm/mach-armadaxp/Kconfig
++++ b/arch/arm/mach-armadaxp/Kconfig
+@@ -37,13 +37,6 @@ config  ARMADA_XP_REV_Z1
+ 	Choosing this option will generate a linux kernel for the
+ 	  MV78x30 and MV78x60 devices with revision Z1
+ 
+-config  KW40_REV_A0
+-	bool "MV88F6710 A0 SoC devices"
+-	select SHEEVA_ERRATA_ARM_CPU_5114 if (CPU_V6)
+-	---help---
+-	Choosing this option will generate a linux kernel for the
+-	  MV88F6710 (KW40) devices with revision A0
+-
+ config  ARMADA_XP_REV_A0
+ 	bool "MV88F78x30 and MV88F78x60 A0 SoC devices"
+ 	---help---
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index 5c8e72e..91e188b 100644
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -1517,13 +1517,10 @@ static void __init axp_fpga_init(void)
+ 	return;
+ }
+ 
+-/*MACHINE_START(ARMADA_XP_FPGA, "Marvell Armada XP FPGA Board")
+-	 MAINTAINER("MARVELL") 
+-	.phys_io	= INTER_REGS_PHYS_BASE,
+-	.io_pg_offst	= ((INTER_REGS_BASE) >> 18) & 0xfffc,
++MACHINE_START(ARMADA_XP_FPGA, "Marvell Armada XP FPGA Board")
+ 	.boot_params	= 0x00000100,
+ 	.map_io		= axp_map_io,
+ 	.init_irq	= axp_init_irq,
+ 	.timer		= &axp_timer,
+ 	.init_machine	= axp_fpga_init,
+-MACHINE_END */
++MACHINE_END
+diff --git a/arch/arm/mach-armadaxp/include/mach/entry-macro.S b/arch/arm/mach-armadaxp/include/mach/entry-macro.S
+index 98f5b90..e3eb156 100644
+--- a/arch/arm/mach-armadaxp/include/mach/entry-macro.S
++++ b/arch/arm/mach-armadaxp/include/mach/entry-macro.S
+@@ -83,7 +83,14 @@
+ 	beq	1002f
+ 	ands 	\tmp, \irqstat, #0x00000001		@ was it doorbell
+ 	beq	1002f
+-	mov 	\tmp, #0
++	ldr	\irqnr, [\base, #AXP_IN_DOORBELL_CAUSE]
++	HTOLL	\irqnr, \tmp
++	clz	\irqnr, \irqnr
++	mov	\tmp, #31
++	sub	\irqnr, \tmp, \irqnr
++	mov 	\tmp, #1
++	lsl	\tmp, \irqnr
++	mvn	\tmp, \tmp
+ 	strh   	\tmp, [\base, #AXP_IN_DOORBELL_CAUSE]	@ clean irq
+ 1002:
+ 	.endm
+diff --git a/arch/arm/mach-armadaxp/include/mach/smp.h b/arch/arm/mach-armadaxp/include/mach/smp.h
+index 7f4563e..953f741 100644
+--- a/arch/arm/mach-armadaxp/include/mach/smp.h
++++ b/arch/arm/mach-armadaxp/include/mach/smp.h
+@@ -3,7 +3,6 @@
+ 
+ #include <asm/io.h>
+ #include <mach/armadaxp.h>
+-
+ #define hard_smp_processor_id()			\
+ 	({						\
+ 		unsigned int cpunum;			\
+@@ -12,18 +11,5 @@
+ 		cpunum &= 0x0F;				\
+ 	})
+ 
+-/*
+- * We use IRQ1 as the IPI
+- */
+-static inline void smp_cross_call(const struct cpumask *mask)
+-{
+-	unsigned long map = *cpus_addr(*mask);
+-	void __iomem *addr = (void __iomem *)(AXP_SW_TRIG_IRQ);
+-	
+-	//printk("smp_cross_call %x \n",(unsigned int)( ((map & 0x3) << 8) | 0x0) );
+-	writel( ( ((map & 0xf) << 8) | 0x0), addr);
+-
+-	return;
+-}
+ 
+ #endif
+diff --git a/arch/arm/mach-armadaxp/irq.c b/arch/arm/mach-armadaxp/irq.c
+index 432b6f6..f024b70 100644
+--- a/arch/arm/mach-armadaxp/irq.c
++++ b/arch/arm/mach-armadaxp/irq.c
+@@ -78,12 +78,10 @@ void axp_irq_mask(struct irq_data *d)
+ 
+ void axp_irq_unmask(struct irq_data *d)
+ {	
+-
+-	u32 irq=d->irq;
+-	if (irq < 8) // per CPU
+-		MV_REG_WRITE(CPU_INT_CLEAR_MASK_LOCAL_REG, irq);
++	if (d->irq < 8) // per CPU
++		MV_REG_WRITE(CPU_INT_CLEAR_MASK_LOCAL_REG, d->irq);
+ 	else
+-		MV_REG_WRITE(CPU_INT_SET_ENABLE_REG, irq);
++		MV_REG_WRITE(CPU_INT_SET_ENABLE_REG, d->irq);
+ }
+ 
+ void axp_irq_disable(struct irq_data *d)
+@@ -99,15 +97,15 @@ void axp_irq_enable(struct irq_data *d)
+ }
+ 
+ #ifdef CONFIG_SMP
+-int axp_set_affinity(unsigned int irq, const struct cpumask *mask_val)
++int axp_set_affinity(struct irq_data *d, const struct cpumask *mask_val,bool force)
+ {
+ 	MV_U32 addr, temp;
+-
++	u32 irq=d->irq;
+ 	addr = (CPU_INT_SOURCE_CONTROL_REG(irq));
+ 
+ 	spin_lock(&irq_controller_lock);
+-	cpumask_copy(irq_desc[irq].affinity, mask_val);
+-	irq_desc[irq].node = cpumask_first(mask_val);
++	cpumask_copy(d->affinity, mask_val);
++	d->node = cpumask_first(mask_val);
+ 	temp = MV_REG_READ(addr);
+ 	temp &= ~0xf;
+ 	temp |= *cpus_addr(*mask_val);
+@@ -193,7 +191,7 @@ void axp_irq_unmask(struct irq_data *d)
+ 	}
+ #ifdef CONFIG_SMP
+ 	else
+-		map = *cpus_addr(*irq_desc[irq].affinity);
++		map = *cpus_addr(*(d->affinity));
+ #endif
+ 	temp &= ~0xf;
+ 	temp |= map;
+@@ -204,13 +202,13 @@ void axp_irq_unmask(struct irq_data *d)
+ 
+ 
+ #ifdef CONFIG_SMP
+-int axp_set_affinity(unsigned int irq, const struct cpumask *mask_val)
++int axp_set_affinity(struct irq_data *d, const struct cpumask *mask_val,bool force)
+ {
+-	cpumask_copy(irq_desc[irq].affinity, mask_val);
++	cpumask_copy((*d).affinity, mask_val);
+ 	spin_lock(&irq_controller_lock);
+-	irq_desc[irq].node = cpumask_first(mask_val);
++	(*d).node = cpumask_first(mask_val);
+ 	spin_unlock(&irq_controller_lock);
+-	axp_irq_unmask(irq);
++	axp_irq_unmask(d);
+ 	return 0;
+ }
+ #endif
+@@ -223,7 +221,7 @@ void second_cpu_init(void)
+ 	struct irq_data *d = irq_get_irq_data(IRQ_AURORA_IN_DRBL_LOW);
+ 	unsigned long temp;
+  	/* open IPI mask */
+-	temp = MV_REG_READ(AXP_IN_DRBEL_MSK) | 0x1;
++	temp = MV_REG_READ(AXP_IN_DRBEL_MSK) | 0xff;
+ 	MV_REG_WRITE(AXP_IN_DRBEL_MSK, temp);
+ 
+ 	axp_irq_unmask(d);
+@@ -243,7 +241,7 @@ static struct irq_chip axp_irq_chip = {
+ 	.irq_enable		= axp_irq_unmask,
+ #endif
+ #ifdef CONFIG_SMP
+-	.set_affinity   = axp_set_affinity,
++	.irq_set_affinity   = axp_set_affinity,
+ #endif
+ };
+ 
+@@ -265,18 +263,6 @@ void __init axp_init_irq(void)
+ #endif
+ 
+ 	}
+-	
+-	/*
+-	gc = irq_alloc_generic_chip("axp_irq", 1, 0, 0xFBB20B00,
+-				    handle_level_irq);
+-	ct = gc->chip_types;
+-	ct->chip.irq_mask = irq_gc_mask_clr_bit;
+-	ct->chip.irq_unmask = irq_gc_mask_set_bit;
+-	irq_setup_generic_chip(gc, IRQ_MSK(32), IRQ_GC_INIT_MASK_CACHE,
+-			       IRQ_NOREQUEST, IRQ_LEVEL | IRQ_NOPROBE);
+-	
+-	*/
+-	
+ 	/*
+ 	 * Register IRQ sources
+ 	 */
+@@ -296,9 +282,12 @@ void __init axp_init_irq(void)
+         	cpumask_clear(irq_default_affinity);
+         	cpumask_set_cpu(smp_processor_id(), irq_default_affinity);
+ 		/* open IPI mask */
+-		axp_irq_unmask(IRQ_AURORA_IN_DRBL_LOW);
++		/* this  register write does the job of axp_irq_unmask(IRQ_AURORA_IN_DRBL_LOW)
++		   i.e. enable / unmask the DRBL_LOW interrupt.
++		*/
++	        MV_REG_WRITE(CPU_INT_CLEAR_MASK_LOCAL_REG, 0);
+ 		addr = /*(void __iomem *)*/(AXP_IN_DRBEL_MSK);
+-		MV_REG_WRITE(addr, 0x1); // only IPI 0
++		MV_REG_WRITE(addr, 0xff); // only IPI 0
+ 	}
+ #endif
+ 
+diff --git a/arch/arm/mach-armadaxp/platsmp.c b/arch/arm/mach-armadaxp/platsmp.c
+index bed0c40..d94d82c 100644
+--- a/arch/arm/mach-armadaxp/platsmp.c
++++ b/arch/arm/mach-armadaxp/platsmp.c
+@@ -12,7 +12,7 @@
+ #include <linux/smp.h>
+ #include <linux/io.h>
+ #include <linux/dma-mapping.h>
+-
++#include <linux/spinlock.h>
+ #include <asm/cacheflush.h>
+ #include <mach/hardware.h>
+ #include <asm/mach-types.h>
+@@ -26,6 +26,21 @@ extern void second_cpu_init(void);
+ extern void second_cpu_msi_init(void);
+ extern MV_CPU_DEC_WIN* mv_sys_map(void);
+ 
++
++/*
++ * We use IRQ1 as the IPI
++ */
++//volatile unsigned int global_test_irqnr;
++static inline void axp_smp_cross_call(const struct cpumask *mask, unsigned int irqnr)
++{
++        unsigned long map = *cpus_addr(*mask);
++        void __iomem *addr = (void __iomem *)(AXP_SW_TRIG_IRQ);
++        writel( ( ((map & 0xf) << 8) | irqnr ), addr);
++
++        return;
++}
++
++
+ /*
+  * control for which core is the next to come out of the secondary
+  * boot "holding pen"
+@@ -93,8 +108,6 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
+ 	flush_cache_all();
+ 	pen_release = cpu;
+ 	flush_cache_all();
+-	/* send ipi to wake cpu in case it in offline state */ 
+-        smp_cross_call(cpumask_of(cpu));
+ 
+ 	timeout = jiffies + (10 * HZ);
+ 	while (time_before(jiffies, timeout)) {
+@@ -218,9 +231,11 @@ void __init smp_init_cpus(void)
+ 
+ 	for (i = 0; i < ncores; i++)
+ 		set_cpu_possible(i, true);
++	set_smp_cross_call(axp_smp_cross_call);
++
+ }
+ 
+-void __init smp_prepare_cpus(unsigned int max_cpus)
++void __init platform_smp_prepare_cpus(unsigned int max_cpus)
+ {
+ 	unsigned int ncores = get_core_count();
+ 	unsigned int cpu = smp_processor_id();
+@@ -243,8 +258,6 @@ void __init smp_prepare_cpus(unsigned int max_cpus)
+ 		ncores = NR_CPUS;
+ 	}
+ 
+-	smp_store_cpu_info(cpu);
+-
+ 	/*
+ 	 * are we trying to boot more cores than exist?
+ 	 */
+diff --git a/arch/arm/mach-armadaxp/time.c b/arch/arm/mach-armadaxp/time.c
+index 53c1f7d..c535a45 100644
+--- a/arch/arm/mach-armadaxp/time.c
++++ b/arch/arm/mach-armadaxp/time.c
+@@ -14,6 +14,7 @@
+ #include <linux/kernel.h>
+ #include <linux/sched.h>
+ #include <linux/timer.h>
++#include <linux/init.h>
+ #include <linux/clockchips.h>
+ #include <linux/interrupt.h>
+ #include <linux/irq.h>
+@@ -22,6 +23,13 @@
+ #include <asm/localtimer.h>
+ #include <asm/sched_clock.h>
+ 
++
++#include <linux/clk.h>
++#include <linux/clockchips.h>
++#include <linux/delay.h>
++#include <linux/io.h>
++
++
+ #include "boardEnv/mvBoardEnvLib.h"
+ #include "cpu/mvCpu.h"
+ 
+@@ -303,19 +311,26 @@ int local_timer_ack(void)
+ /*
+  * Setup the local clock events for a CPU.
+  */
+-void __cpuinit local_timer_setup(struct clock_event_device *clk)
++int __cpuinit local_timer_setup(struct clock_event_device *clk)
+ {
+ #ifdef CONFIG_MACH_ARMADA_XP_FPGA
+ 	unsigned int fabric_clk = 25000000;
+ #else
+ 	unsigned int fabric_clk = mvCpuL2ClkGet();
+ #endif
+-
+-	ticks_per_jiffy = (fabric_clk + HZ/2) / HZ;
+-	clk->name = "local_timer";
+-	clk->irq = IRQ_LOCALTIMER;
+-	mv_timer_setup(clk, fabric_clk);
+-	clockevents_register_device(clk);
++	static cpu0_flag=0;
++	int cpu = smp_processor_id();
++
++	if((cpu) || (!cpu && !cpu0_flag)){
++		ticks_per_jiffy = (fabric_clk + HZ/2) / HZ;
++		clk->name = "local_timer";
++		clk->irq = IRQ_LOCALTIMER;
++		mv_timer_setup(clk, fabric_clk);
++		clockevents_register_device(clk);
++	 if(!cpu)
++		cpu0_flag++;
++	}
++	return 0;
+ }
+ 
+ #ifdef CONFIG_HOTPLUG_CPU
+diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
+index adeabf2..72e3738 100644
+--- a/arch/arm/mm/Kconfig
++++ b/arch/arm/mm/Kconfig
+@@ -390,6 +390,7 @@ config CPU_SHEEVA_PJ4B_V6
+ 	bool "Support Sheeva processor in V6 mode" if ARCH_ARMADA_XP
+ 	select CPU_V6
+ 	select CPU_32v6K
++	select CPU_V6K
+ 	select DMA_CACHE_RWFO if SMP
+ 
+ config CPU_SHEEVA_PJ4B_V7
+@@ -1004,6 +1005,21 @@ config AURORA_L2_OUTER
+ 	help
+ 	  This option enables all outer cache operations in V6 mode.
+ 
++config AURORA_L2_OUTER_WA
++        bool "Enable outer cache (L2) WriteAllocate mode as inner cache (L1)"
++        depends on CACHE_AURORA_L2
++        default n
++        help
++          This option enables outer cache (L2) write-allocate in NMRRR mode 7.
++          If disabled, the L2 cache will be WB no WA.
++
++config AURORA_SF_ENABLED
++        bool "Enable Marvell Aurora Snoop Filter "
++        depends on CPU_SHEEVA_PJ4B_V7 && ARMADA_XP_REV_A0 && SMP
++        default y
++        help
++          This option enables Snoop Filter feature.
++
+ config ENABLE_UNALINGED_ACCESS_FAULT
+ 	bool "Enable S/W handling for Unaligned Access"
+ 	default n
+diff --git a/arch/arm/mm/cache-aurora-l2.c b/arch/arm/mm/cache-aurora-l2.c
+index e969a00..e38ba82 100644
+--- a/arch/arm/mm/cache-aurora-l2.c
++++ b/arch/arm/mm/cache-aurora-l2.c
+@@ -18,7 +18,7 @@
+ 
+ #include <plat/cache-aurora-l2.h>
+ #include <asm/io.h>
+-
++#include <mach/smp.h>
+ #include "ctrlEnv/mvCtrlEnvSpec.h"
+ 
+ /*
+diff --git a/arch/arm/mm/mmu.c b/arch/arm/mm/mmu.c
+index 96a3e87..0cd841d 100644
+--- a/arch/arm/mm/mmu.c
++++ b/arch/arm/mm/mmu.c
+@@ -441,7 +441,7 @@ static void __init build_mem_type_table(void)
+ 		mem_types[MT_MINICLEAN].prot_sect |= PMD_SECT_APX|PMD_SECT_AP_WRITE;
+ 		mem_types[MT_CACHECLEAN].prot_sect |= PMD_SECT_APX|PMD_SECT_AP_WRITE;
+ 
+-		if (is_smp()) {
++#if defined(CONFIG_SMP) || defined (CONFIG_SHEEVA_ERRATA_ARM_CPU_5114)
+ 			/*
+ 			 * Mark memory with the "shared" attribute
+ 			 * for SMP systems
+@@ -457,7 +457,7 @@ static void __init build_mem_type_table(void)
+ 			mem_types[MT_MEMORY].prot_pte |= L_PTE_SHARED;
+ 			mem_types[MT_MEMORY_NONCACHED].prot_sect |= PMD_SECT_S;
+ 			mem_types[MT_MEMORY_NONCACHED].prot_pte |= L_PTE_SHARED;
+-		}
++#endif
+ 	}
+ 
+ 	/*
+diff --git a/arch/arm/mm/proc-macros.S b/arch/arm/mm/proc-macros.S
+index 735fe94..ef0128c 100644
+--- a/arch/arm/mm/proc-macros.S
++++ b/arch/arm/mm/proc-macros.S
+@@ -173,7 +173,6 @@
+         mrs     r2, cpsr
+         orr     r3, r2, #PSR_F_BIT | PSR_I_BIT
+         msr     cpsr_c, r3                      @ Disable interrupts
+-
+ #if __LINUX_ARM_ARCH__ >= 7
+ 	dmb					@ DMB for V7
+ #elif __LINUX_ARM_ARCH__ == 6
+diff --git a/arch/arm/mm/proc-sheeva_pj4bv6.S b/arch/arm/mm/proc-sheeva_pj4bv6.S
+index 1bf4a41..0291e0c 100644
+--- a/arch/arm/mm/proc-sheeva_pj4bv6.S
++++ b/arch/arm/mm/proc-sheeva_pj4bv6.S
+@@ -50,9 +50,6 @@ ENTRY(cpu_sheeva_pj4b_v6_proc_init)
+ 	mov	pc, lr
+ 
+ ENTRY(cpu_sheeva_pj4b_v6_proc_fin)
+-	stmfd	sp!, {lr}
+-	cpsid	if				@ disable interrupts
+-	bl	v6_flush_kern_cache_all
+ #ifdef CONFIG_CACHE_AURORA_L2
+ 	mcr	p15, 0, r0, c7, c10, 4		@ Data Synchronization Barrier
+ 	ldr	r0, =0xffff			@ L2C clean all 16 ways
+@@ -86,7 +83,6 @@ ENTRY(cpu_sheeva_pj4b_v6_proc_fin)
+ 	.align	5
+ ENTRY(cpu_sheeva_pj4b_v6_reset)
+ 	mov	pc, r0
+-
+ /*
+  *	cpu_sheeva_pj4b_v6_do_idle()
+  *
+@@ -104,7 +100,6 @@ ENTRY(cpu_sheeva_pj4b_v6_do_idle)
+ 	mcr	p15, 0, r0, c7, c10, 4		@barrier
+ #endif
+ 	mov	pc, lr
+-
+ ENTRY(cpu_sheeva_pj4b_v6_dcache_clean_area)
+ #ifndef TLB_CAN_READ_FROM_L1_CACHE
+ #if !defined(CONFIG_HAVE_GENERIC_DMA_COHERENT) || defined(CONFIG_SHEEVA_ERRATA_ARM_CPU_4611)
+@@ -127,7 +122,6 @@ ENTRY(cpu_sheeva_pj4b_v6_dcache_clean_area)
+ #endif
+ #endif
+ 	mov	pc, lr
+-
+ /*
+  *	cpu_arm926_switch_mm(pgd_phys, tsk)
+  *
+@@ -142,7 +136,8 @@ ENTRY(cpu_sheeva_pj4b_v6_switch_mm)
+ #ifdef CONFIG_MMU
+ 	mov	r2, #0
+ 	ldr	r1, [r1, #MM_CONTEXT_ID]	@ get mm->context.id
+-	orr	r0, r0, #TTB_FLAGS
++	ALT_SMP(orr	r0, r0, #TTB_FLAGS_SMP)
++	ALT_UP(orr	r0, r0, #TTB_FLAGS_UP)
+ 	mcr	p15, 0, r2, c7, c5, 6		@ flush BTAC/BTB
+ 	mcr	p15, 0, r2, c7, c10, 4		@ drain write buffer
+ 	mcr	p15, 0, r0, c2, c0, 0		@ set TTB 0
+@@ -150,7 +145,6 @@ ENTRY(cpu_sheeva_pj4b_v6_switch_mm)
+ 	mcr	p15, 0, r1, c13, c0, 1		@ set context ID
+ #endif
+ 	mov	pc, lr
+-
+ /*
+  *	cpu_sheeva_pj4b_v6_set_pte_ext(ptep, pte, ext)
+  *
+@@ -162,27 +156,20 @@ ENTRY(cpu_sheeva_pj4b_v6_switch_mm)
+  *	- ext	- value for extended PTE bits
+  */
+ 	armv6_mt_table cpu_v6
+-
+ ENTRY(cpu_sheeva_pj4b_v6_set_pte_ext)
+ #ifdef CONFIG_MMU
+ 	armv6_set_pte_ext cpu_v6
+ #endif
+ 	mov	pc, lr
+-
+-
+-
+ 	.type	cpu_sheeva_pj4b_v6_name, #object
+ cpu_sheeva_pj4b_v6_name:
+ 	.asciz	"Marvell PJ4Bv6 processor"
+ 	.size	cpu_sheeva_pj4b_v6_name, . - cpu_sheeva_pj4b_v6_name
+-
+ 	.type	cpu_pj4_name, #object
+ cpu_pj4_name:
+ 	.asciz	"Marvell PJ4 processor"
+ 	.size	cpu_pj4_name, . - cpu_pj4_name
+-
+ 	.align
+-
+ 	__INIT
+ 
+ /*
+@@ -204,12 +191,14 @@ __pj4bv6_setup:
+ 	sheeva_pj4b_config
+ 
+ #if defined(CONFIG_SMP) || defined (CONFIG_AURORA_IO_CACHE_COHERENCY)
+-	mrc	p15, 0, r0, c1, c0, 1		@ Enable SMP/nAMP mode
++	ALT_SMP(mrc	p15, 0, r0, c1, c0, 1)	@ Enable SMP/nAMP mode
++	ALT_UP(nop)
+ 	orr	r0, r0, #0x20
+-	mcr	p15, 0, r0, c1, c0, 1
++	ALT_SMP(mcr	p15, 0, r0, c1, c0, 1)
+ 	mrc 	p15, 1, r0, c15, c2, 0
+ 	orr	r0, r0, #0x2			@ SMP enable 
+ 	mcr 	p15, 1, r0, c15, c2, 0
++	ALT_UP(nop)
+ #endif
+ #ifdef CONFIG_CPU_SHEEVA_PJ4B_PMC_ACCESS_IN_USERMODE
+ 	@ Enable performance counters user access
+@@ -226,8 +215,11 @@ __pj4bv6_setup:
+ #ifdef CONFIG_MMU
+ 	mcr	p15, 0, r0, c8, c7, 0		@ invalidate I + D TLBs
+ 	mcr	p15, 0, r0, c2, c0, 2		@ TTB control register
+-	orr	r4, r4, #TTB_FLAGS
+-	mcr	p15, 0, r4, c2, c0, 1		@ load TTB1
++	ALT_SMP(orr	r4, r4, #TTB_FLAGS_SMP)
++	ALT_UP(orr	r4, r4, #TTB_FLAGS_UP)
++	ALT_SMP(orr	r8, r8, #TTB_FLAGS_SMP)
++	ALT_UP(orr	r8, r8, #TTB_FLAGS_UP)
++	mcr	p15, 0, r8, c2, c0, 1		@ load TTB1
+ 	mcr	p15, 0, r0, c7, c10, 4		@ Data Synchronization Barrier
+ #endif /* CONFIG_MMU */
+ 	adr	r5, v6_crval
+@@ -250,6 +242,7 @@ __pj4bv6_setup:
+ v6_crval:
+ 	crval	clear=0x01e0fb7f, mmuset=0x00c0387d, ucset=0x00c0187c
+ 
++	__INITDATA
+ 	.type	v6_processor_functions, #object
+ ENTRY(v6_processor_functions)
+ 	.word	v6_early_abort
+@@ -262,20 +255,17 @@ ENTRY(v6_processor_functions)
+ 	.word	cpu_sheeva_pj4b_v6_switch_mm
+ 	.word	cpu_sheeva_pj4b_v6_set_pte_ext
+ 	.size	v6_processor_functions, . - v6_processor_functions
+-
++	.section ".rodata"
+ 	.type	cpu_arch_name, #object
+ cpu_arch_name:
+ 	.asciz	"armv6"
+ 	.size	cpu_arch_name, . - cpu_arch_name
+-
+ 	.type	cpu_elf_name, #object
+ cpu_elf_name:
+ 	.asciz	"v6"
+ 	.size	cpu_elf_name, . - cpu_elf_name
+ 	.align
+-
+ 	.section ".proc.info.init", #alloc, #execinstr
+-
+ 	/*
+ 	 * Match any ARMv6 processor core.
+ 	 */
+@@ -283,33 +273,17 @@ cpu_elf_name:
+ __pj4bv6_proc_info:
+ 	.long	0x000f0000
+ 	.long	0x000f0000
+-	.long   PMD_TYPE_SECT | \
++	ALT_SMP(.long \
++		PMD_TYPE_SECT | \
+ 		PMD_SECT_AP_WRITE | \
+ 		PMD_SECT_AP_READ | \
+-		PMD_FLAGS
+-	.long   PMD_TYPE_SECT | \
+-		PMD_SECT_XN | \
+-		PMD_SECT_AP_WRITE | \
+-		PMD_SECT_AP_READ
+-	b	__pj4bv6_setup
+-	.long	cpu_arch_name
+-	.long	cpu_elf_name
+-	.long	HWCAP_SWP|HWCAP_HALF|HWCAP_THUMB|HWCAP_FAST_MULT|HWCAP_EDSP|HWCAP_JAVA
+-	.long	cpu_sheeva_pj4b_v6_name
+-	.long	v6_processor_functions
+-	.long	v6wbi_tlb_fns
+-	.long	v6_user_fns
+-	.long	v6_cache_fns
+-	.size	__pj4bv6_proc_info, . - __pj4bv6_proc_info
++		PMD_FLAGS_SMP)
+ 
+-	.type	__pj4_v6_proc_info, #object
+-__pj4_v6_proc_info:
+-	.long	0x560f5810
+-	.long	0xff0ffff0
+-	.long   PMD_TYPE_SECT | \
++	ALT_UP(.long \
++		PMD_TYPE_SECT | \
+ 		PMD_SECT_AP_WRITE | \
+ 		PMD_SECT_AP_READ | \
+-		PMD_FLAGS
++		PMD_FLAGS_UP)
+ 	.long   PMD_TYPE_SECT | \
+ 		PMD_SECT_XN | \
+ 		PMD_SECT_AP_WRITE | \
+@@ -317,7 +291,7 @@ __pj4_v6_proc_info:
+ 	b	__pj4bv6_setup
+ 	.long	cpu_arch_name
+ 	.long	cpu_elf_name
+-	.long	HWCAP_SWP|HWCAP_HALF|HWCAP_THUMB|HWCAP_FAST_MULT|HWCAP_EDSP
++	.long	HWCAP_SWP|HWCAP_HALF|HWCAP_THUMB|HWCAP_FAST_MULT|HWCAP_EDSP|HWCAP_JAVA|HWCAP_TLS
+ 	.long	cpu_pj4_name
+ 	.long	v6_processor_functions
+ 	.long	v6wbi_tlb_fns
+diff --git a/arch/arm/plat-armada/Makefile b/arch/arm/plat-armada/Makefile
+index 0ee6d82..21d1239 100644
+--- a/arch/arm/plat-armada/Makefile
++++ b/arch/arm/plat-armada/Makefile
+@@ -10,6 +10,6 @@ endif
+ obj-$(DUMMY)   				:= dummy.o
+ 
+ obj-$(CONFIG_SHEEVA_DEEP_IDLE)		+= cpuidle.o armadaxp_suspend.o power.o
+-obj-$(CONFIG_HOTPLUG_CPU)               += hotplug.o power.o
++obj-$(CONFIG_HOTPLUG_CPU)               += hotplug.o power.o  cpuidle.o armadaxp_suspend.o
+ obj-$(CONFIG_ARCH_ARMADA_XP)		+= pmu.o
+ obj-$(CONFIG_PCI_MSI)			+= msi.o
+diff --git a/arch/arm/plat-armada/cpuidle.c b/arch/arm/plat-armada/cpuidle.c
+index 3fb4eab..46547e7 100644
+--- a/arch/arm/plat-armada/cpuidle.c
++++ b/arch/arm/plat-armada/cpuidle.c
+@@ -330,4 +330,4 @@ int armadaxp_init_cpuidle(void)
+ 	return 0;
+ }
+ 
+-device_initcall(armadaxp_init_cpuidle);
++//device_initcall(armadaxp_init_cpuidle);
+diff --git a/arch/arm/plat-armada/hotplug.c b/arch/arm/plat-armada/hotplug.c
+index 7ed8c78..76c5fe0 100644
+--- a/arch/arm/plat-armada/hotplug.c
++++ b/arch/arm/plat-armada/hotplug.c
+@@ -16,6 +16,17 @@
+ #include <asm/cacheflush.h>
+ #include <../power.h>
+ 
++
++
++#define hard_smp_processor_id()                 \
++        ({                                              \
++                unsigned int cpunum;                    \
++                __asm__("mrc p15, 0, %0, c0, c0, 5"     \
++                        : "=r" (cpunum));               \
++                cpunum &= 0x0F;                         \
++        })
++
++
+ extern volatile int pen_release;
+ 
+ static DECLARE_COMPLETION(cpu_killed);
+diff --git a/kernel/events/core.c b/kernel/events/core.c
+index 7d1f05e..3622876 100644
+--- a/kernel/events/core.c
++++ b/kernel/events/core.c
+@@ -5890,7 +5890,6 @@ perf_event_alloc(struct perf_event_attr *attr, int cpu,
+ 	struct perf_event *event;
+ 	struct hw_perf_event *hwc;
+ 	long err;
+-
+ 	if ((unsigned)cpu >= nr_cpu_ids) {
+ 		if (!task || cpu != -1)
+ 			return ERR_PTR(-EINVAL);
+-- 
+1.7.9.5
+

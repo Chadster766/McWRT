@@ -1,0 +1,38 @@
+From e7a9dc8b181d7df2931e12b9d231cbdc7b288a83 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Thu, 27 Dec 2012 15:19:24 +0200
+Subject: [PATCH 377/609] Revert "Fix: Temporary fix for the standby resume
+ issue"
+
+This reverts commit 8a1a517ad8c1286837fc7f73156e85bb1128040f.
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/boardEnv/mvBoardEnvSpec.c     |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+index e47ac51..c1030cc 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+@@ -406,7 +406,7 @@ MV_BOARD_INFO db88f78XX0rev2Info = {
+ 
+ 	/* PMU Power */
+ 	.pmuPwrUpPolarity		= 0,
+-	.pmuPwrUpDelay			= 0xFFFFF,
++	.pmuPwrUpDelay			= 80000,
+ 
+ 	/* GPP values */
+ 	.gppOutEnValLow			= DB_88F78XX0_REV2_GPP_OUT_ENA_LOW,
+@@ -1325,7 +1325,7 @@ MV_BOARD_INFO rd78460gpInfo = {
+ 
+ 	/* PMU Power */
+ 	.pmuPwrUpPolarity		= 0,
+-	.pmuPwrUpDelay			= 0xFFFFF,
++	.pmuPwrUpDelay			= 80000,
+ 
+ 	/* GPP values */
+ 	.gppOutEnValLow			= RD_78460_GP_GPP_OUT_ENA_LOW,
+-- 
+1.7.9.5
+

@@ -1,0 +1,290 @@
+From 72cd6e94fe0ed8de0573a09537609e0002439a59 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Mon, 17 Dec 2012 14:40:24 +0200
+Subject: [PATCH 364/609] PM: S2RAM: Fix suspend to RAM
+
+	- Fix S2RAM support with internal registers @ 0xF1000000
+	- Add support to the new low level PM flow
+
+Change-Id: I0a1c1b9940ea0bad7641d6386213c3abbaae3e73
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/armada_suspend.S |  127 ---------------------------------
+ arch/arm/plat-armada/cpuidle.c        |   33 ---------
+ arch/arm/plat-armada/suspend.c        |   21 ++++--
+ 3 files changed, 16 insertions(+), 165 deletions(-)
+
+diff --git a/arch/arm/plat-armada/armada_suspend.S b/arch/arm/plat-armada/armada_suspend.S
+index 6d314d4..7d8ad43 100644
+--- a/arch/arm/plat-armada/armada_suspend.S
++++ b/arch/arm/plat-armada/armada_suspend.S
+@@ -164,42 +164,6 @@ ENTRY(armadaxp_powerdown)
+ 	stmfd	sp!, {r4-r12, lr}		@ save registers on stack
+ 
+ 	/*
+-	* Save the CP15 context
+-	*/
+-	mrc     p15, 0, r2, c1, c0, 0           @ save CP15 - CR
+-	mrc     p15, 0, r3, c3, c0, 0           @ save CP15 - DACR
+-	mrc     p15, 0, r4, c13, c0, 0          @ save CP15 - FCSE
+-	mrc     p15, 0, r5, c2, c0, 0           @ save CP15 - TTBR0
+-	mrc     p15, 0, r6, c13, c0, 1          @ save CP15 - context ID
+-	mrc     p15, 1, r7, c15, c1, 0          @ save CP15 - extra features
+-	mrc     p15, 0, r8, c1, c0, 1           @ save CP15 - Aux CR
+-	mov     r9, r13                         @ save resume SP
+-	stmfd   sp!, {r2-r9}
+-
+-	mrc     p15, 0, r2, c2, c0, 1   @ save CP15 - TTBR1
+-	mrc	p15, 1, r3, c15, c2, 0	@ save CP15 - Aux Func Modes Ctrl 0
+-	mrc	p15, 1, r4, c15, c1, 2	@ save CP15 - Aux Debug Modes Ctrl 2
+-	mrc     p15, 1, r5, c15, c1, 1  @ save CP15 - Aux Debug Modes Ctrl 1
+-	mrc     p15, 0, r6, c9, c14, 0  @ save CP15 - PMC
+-	mrc     p15, 0, r7, c10, c2, 0  @ save CP15 - PRRR
+-	mrc     p15, 0, r8, c10, c2, 1  @ save CP15 - NMRR
+-	stmfd   sp!, {r2-r8}
+-
+-	/*
+-	* Save the physical address of the resume SP
+-	*/
+-	mov     r0, sp
+-	bl      suspend_phys_addr
+-	ldr     r1, =suspend_saved_sp
+-#ifdef CONFIG_SMP
+-	mrc     p15, 0, r2, c0, c0, 5
+-	and     r2, r2, #15
+-	str     r0, [r1, r2, lsl #2]
+-#else
+-	str     r0, [r1]
+-#endif
+-
+-	/*
+ 	* Flush L1 DCache
+ 	*/
+ 	bl v7_flush_kern_cache_all
+@@ -291,94 +255,3 @@ ENTRY(armadaxp_powerdown)
+ 
+ ENDPROC(armadaxp_powerdown)
+ 
+-/*
+-* armadaxp_cpu_resume_pd: suspend to RAM - resume from cpu deepIdle state
+-*/
+-ENTRY(armadaxp_cpu_resume_pd)
+-
+-#ifdef CONFIG_CPU_ENDIAN_BE32
+-	/* convert CPU to big endian */
+-	.word 0x100f11ee /* mrc p15, 0, r0, c1, c0 */
+-	.word 0x800080e3 /* orr r0, r0, #0x80 */
+-	.word 0x100f01ee /* mcr p15, 0, r0, c1, c0 */
+-#endif
+-#ifdef CONFIG_CPU_ENDIAN_BE8
+-	setend  be
+-#endif
+-
+-/* Enable SnoopEna - Exclusive */
+-	mrc	15, 0, r1, cr0, cr0, 5
+-	and	r1, r1, #15
+-	mov	r6, #1
+-	add	r7, r1, #24
+-	ldr	r2, =(MV_COHERENCY_FABRIC_CTRL_REG + INTER_REGS_PHYS_BASE)
+-1:
+-	ldrex r3, [r2]
+-	orr	r3, r3, r6, lsl r7
+-	strex r0, r3, [r2]
+-	cmp	r0, #0
+-	bne 1b
+-
+-#ifdef CONFIG_SMP
+-	adr     r0, suspend_saved_sp
+-	mrc     p15, 0, r1, c0, c0, 5
+-	and     r1, r1, #15
+-	ldr     r0, [r0, r1, lsl #2]    @ stack phys addr
+-#else
+-	ldr     r0, suspend_saved_sp            @ stack phys addr
+-#endif
+-
+-	ldmfd   r0!, {r2-r8}
+-	mcr     p15, 0, r2, c2, c0, 1           @ restore CP15 - TTBR1
+-	mcr     p15, 1, r3, c15, c2, 0          @ restore CP15 - Aux Func Modes Ctrl 0
+-	mcr     p15, 1, r4, c15, c1, 2          @ restore CP15 - Aux Debug Modes Ctrl 2
+-	mcr     p15, 1, r5, c15, c1, 1          @ restore CP15 - Aux Debug Modes Ctrl 1
+-	mcr     p15, 0, r6, c9, c14, 0          @ restore CP15 - PMC
+-	mcr     p15, 0, r7, c10, c2, 0          @ restore CP15 - PRRR
+-	mcr     p15, 0, r8, c10, c2, 1          @ restore CP15 - NMRR
+-	ldmfd   r0!, {r2-r9}
+-	mcr	p15, 0, r8, c1, c0, 1		@ restore CP15 - Aux CR
+-	mcr	p15, 1, r7, c15, c1, 0		@ restore CP15 - extra features
+-	mcr	p15, 0, r4, c13, c0, 0		@ restore CP15 - FCSE
+-	mcr	p15, 0, r3, c3, c0, 0		@ restore CP15 - DACR
+-
+-	/* load identity page table */
+-	ldr	r3, identity_page_table_phys
+-	mcr	p15, 0, r3, c2, c0, 0		@ set CP15 - TTBR
+-	mov	r3, #0
+-	mcr	p15, 0, r3, c13, c0, 1          @ set 0 in CP15 - context ID
+-	mcr	p15, 0, r2, c1, c0, 0		@ restore CP15 - CR  @enable mmu
+-	mrc     p15, 0, r3, c0, c0, 0           @ read id reg
+-
+-	ldr	r3, resume2
+-	mov	pc, r3
+-ENDPROC(armadaxp_cpu_resume_pd)
+-
+-	/* stage 2 of the resume function that runs from PAGE_OFFSET virtual space */
+-ENTRY(armadaxp_cpu_resume2)	
+-	/* restore original page table*/
+-
+-	mcr	p15, 0, r5, c2, c0, 0		@ restore CP15 - TTBR
+-	mcr	p15, 0, r6, c13, c0, 1          @ restore CP15 - context ID
+-	mcr     p15, 0, r0, c8, c7, 0           @ TLB invalidate
+-	mov	sp, r9				@ restore virtual sp
+-	mov	r0, #0
+-
+-	ldmfd   sp!, {r4-r12, pc}               @ restore SVC registers
+-
+-ENDPROC(armadaxp_cpu_resume2)
+-	
+-resume2:
+-	.long	armadaxp_cpu_resume2
+-
+-suspend_saved_sp:
+-#ifdef CONFIG_SMP
+-	.rept	CONFIG_NR_CPUS
+-#endif
+-	.long	0	@ physical SP saved here
+-#ifdef CONFIG_SMP
+-	.endr
+-#endif
+-	.global identity_page_table_phys
+-identity_page_table_phys:
+-	.long	0
+diff --git a/arch/arm/plat-armada/cpuidle.c b/arch/arm/plat-armada/cpuidle.c
+index 8fa078f..9d7a312 100644
+--- a/arch/arm/plat-armada/cpuidle.c
++++ b/arch/arm/plat-armada/cpuidle.c
+@@ -18,7 +18,6 @@
+ #include <asm/sections.h>
+ #include <asm/suspend.h>
+ #include <asm/vfp.h>
+-#include <asm/pgalloc.h>
+ #include <plat/cache-aurora-l2.h>
+ #include <mach/smp.h>
+ #include "ctrlEnv/sys/mvCpuIfRegs.h"
+@@ -38,33 +37,6 @@ static MV_ADDR_WIN ahbAddrWinRemap[MAX_AHB_TO_MBUS_WINS];
+ #endif
+ 
+ static int device_registered;
+-extern u32 identity_page_table_phys;
+-
+-unsigned long suspend_phys_addr(void * physaddr)
+-{
+-        return virt_to_phys(physaddr);
+-}
+-
+-/*
+- * Allocate initial page tables to allow the CPU to
+- * enable the MMU safely.  This essentially means a set
+- * of our "standard" page tables, with the addition of
+- * a 1:1 mapping for the physical address of the kernel.
+- */
+-
+-static int build_identity_page_table(void)
+-{
+-	pgd_t *pgd = pgd_alloc(&init_mm);
+-	if (!pgd)
+-		return -ENOMEM;
+-
+-	if (PHYS_OFFSET != PAGE_OFFSET) {
+-		identity_mapping_add(pgd, __pa(_stext), __pa(_etext));
+-		identity_mapping_add(pgd, __pa(_sdata), __pa(_edata)); /* is this needed?*/
+-	}
+-	identity_page_table_phys = virt_to_phys(*pgd);
+-	return 0;
+-}
+ 
+ int pm_mode = DISABLED;
+ int pm_support = WFI;
+@@ -413,11 +385,6 @@ int armadaxp_init_cpuidle(void)
+ 
+ 	printk("Initializing Armada-XP CPU power management ");
+ 
+-	if (build_identity_page_table()) {
+-		printk(KERN_ERR "armadaxp_init_cpuidle: Failed to build identity page table\n");
+-                return -ENOMEM;
+-	}
+-
+ 	armadaxp_fabric_setup_deepIdle();
+ 
+ 	driver->safe_state_index = -1;
+diff --git a/arch/arm/plat-armada/suspend.c b/arch/arm/plat-armada/suspend.c
+index 46dd18c..d44ad13 100644
+--- a/arch/arm/plat-armada/suspend.c
++++ b/arch/arm/plat-armada/suspend.c
+@@ -25,6 +25,7 @@
+ #include <asm/sections.h>
+ #include <linux/export.h>
+ #include <asm/sections.h>
++#include <asm/suspend.h>
+ 
+ #include <../cpuidle.h>
+ #include "ctrlEnv/sys/mvCpuIfRegs.h"
+@@ -32,8 +33,8 @@
+ #include "ctrlEnv/sys/mvCpuIf.h"
+ #include "mvOs.h"
+ 
+-void armadaxp_powerdown(void);
+-void armadaxp_cpu_resume_pd(void);
++int armadaxp_powerdown(unsigned long);
++void armadaxp_cpu_resume(void);
+ void smp_resume(void);
+ 
+ static char *saved_training_space;
+@@ -44,6 +45,7 @@ static char *saved_training_space;
+ #define  BOOT_INFO_ADDR		(0x3000)
+ #define  BOOT_MAGIC_WORD	(0xDEADB002)
+ #define  REG_LIST_END		(0xFFFFFFFF)
++#define  BOOTROM_INTER_REGS_PHYS_BASE	(0xD0000000)
+ 
+ #define SDRAM_WIN_BASE_REG(x)	(0x20180 + (0x8*x))
+ #define SDRAM_WIN_CTRL_REG(x)	(0x20184 + (0x8*x))
+@@ -211,7 +213,7 @@ void armadaxp_store_boot_info(void)
+ 	int *resume_pc, win;
+ 
+ 	store_addr = (int*)phys_to_virt((int)store_addr);
+-	resume_pc = (int*)virt_to_phys(armadaxp_cpu_resume_pd);
++	resume_pc = (int*)virt_to_phys(armadaxp_cpu_resume);
+ 
+ 	/*
+ 	 * Store magic word indicating suspend to ram
+@@ -224,6 +226,16 @@ void armadaxp_store_boot_info(void)
+ 	 * Now store registers that need to be proggrammed before
+ 	 * comming back to linux. format is addr->value
+ 	 */
++	/* Disable X-Bar window 12 which is opend in the bootROM by default to 0xF0000000 */
++	*store_addr++ = BOOTROM_INTER_REGS_PHYS_BASE + 0x200B0;
++	*store_addr++ = 0x0;
++
++	/* Update Internal Regs offset in case UBoot is configured
++	* to use a different base address.	*/
++	*store_addr++ = BOOTROM_INTER_REGS_PHYS_BASE + 0x20080;
++	*store_addr++ = INTER_REGS_PHYS_BASE;
++
++	/* Save AXI windows data */
+ 	for (win = 0; win < 4; win++) {
+ 		*store_addr++ = INTER_REGS_PHYS_BASE + SDRAM_WIN_BASE_REG(win);
+ 		*store_addr++ = MV_REG_READ(SDRAM_WIN_BASE_REG(win));
+@@ -250,11 +262,10 @@ void armadaxp_suspend(void)
+ 	write_pattern();
+ #endif
+ 	/* This call will shut down the board */
+-	armadaxp_powerdown();
++	cpu_suspend(0, armadaxp_powerdown);
+ #ifdef DEBUG_DDR_SELF_REFRESH
+ 	test_pattern();
+ #endif
+-
+ 	cpu_init();
+ 	armadaxp_fabric_restore_deepIdle();
+ 	/*armadaxp_restore_training_space(); Temporarly disabled */
+-- 
+1.7.9.5
+

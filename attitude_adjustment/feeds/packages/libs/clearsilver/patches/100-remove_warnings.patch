@@ -1,0 +1,690 @@
+--- a/cgi/cgi.c
++++ b/cgi/cgi.c
+@@ -698,7 +698,7 @@ NEOERR *cgi_parse (CGI *cgi)
+     x = 0;
+     while (x < len)
+     {
+-      if (len-x > sizeof(buf))
++      if (len-x > (int) sizeof(buf))
+ 	cgiwrap_read (buf, sizeof(buf), &r);
+       else
+ 	cgiwrap_read (buf, len - x, &r);
+@@ -1363,6 +1363,8 @@ void cgi_neo_error (CGI *cgi, NEOERR *er
+ {
+   STRING str;
+ 
++  UNUSED(cgi);
++
+   string_init(&str);
+   cgiwrap_writef("Status: 500\n");
+   cgiwrap_writef("Content-Type: text/html\n\n");
+@@ -1377,6 +1379,8 @@ void cgi_error (CGI *cgi, const char *fm
+ {
+   va_list ap;
+ 
++  UNUSED(cgi);
++
+   cgiwrap_writef("Status: 500\n");
+   cgiwrap_writef("Content-Type: text/html\n\n");
+   cgiwrap_writef("<html><body>\nAn error occured:<pre>");
+@@ -1536,6 +1540,8 @@ NEOERR *cgi_cookie_set (CGI *cgi, const
+   STRING str;
+   char my_time[256];
+ 
++  UNUSED(cgi);
++
+   if (path == NULL) path = "/";
+ 
+   string_init(&str);
+@@ -1584,6 +1590,8 @@ NEOERR *cgi_cookie_set (CGI *cgi, const
+ NEOERR *cgi_cookie_clear (CGI *cgi, const char *name, const char *domain,
+                           const char *path)
+ {
++  UNUSED(cgi);
++
+   if (path == NULL) path = "/";
+   if (domain)
+   {
+--- a/cgi/cgiwrap.c
++++ b/cgi/cgiwrap.c
+@@ -14,6 +14,9 @@
+ #if HAVE_FEATURES_H
+ #include <features.h>
+ #endif
++#ifdef __UCLIBC__
++#include <unistd.h>
++#endif
+ #include <stdarg.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+--- a/cgi/date.c
++++ b/cgi/date.c
+@@ -94,7 +94,7 @@ NEOERR *export_date_tm (HDF *data, const
+   if (err) return nerr_pass(err);
+   err = hdf_set_int_value (obj, "wday", ttm->tm_wday);
+   if (err) return nerr_pass(err);
+-  // neo_tz_offset() returns offset from GMT in seconds
++  /* neo_tz_offset() returns offset from GMT in seconds */
+   tzoffset_seconds = neo_tz_offset(ttm);
+   tzoffset = tzoffset_seconds / 60;
+   if (tzoffset < 0)
+@@ -109,12 +109,12 @@ NEOERR *export_date_tm (HDF *data, const
+   return STATUS_OK;
+ }
+ 
+-NEOERR *export_date_time_t (HDF *data, const char *prefix, const char *timezone,
++NEOERR *export_date_time_t (HDF *data, const char *prefix, const char *tz,
+                             time_t tt)
+ {
+   struct tm ttm;
+ 
+-  neo_time_expand (tt, timezone, &ttm);
++  neo_time_expand (tt, tz, &ttm);
+   return nerr_pass (export_date_tm (data, prefix, &ttm));
+ }
+ 
+--- a/cgi/date.h
++++ b/cgi/date.h
+@@ -17,7 +17,7 @@
+ __BEGIN_DECLS
+ 
+ NEOERR *export_date_tm (HDF *obj, const char *prefix, struct tm *ttm);
+-NEOERR *export_date_time_t (HDF *obj, const char *prefix, const char *timezone, 
++NEOERR *export_date_time_t (HDF *obj, const char *prefix, const char *tz,
+                             time_t tt);
+ 
+ __END_DECLS
+--- a/cgi/html.c
++++ b/cgi/html.c
+@@ -774,7 +774,7 @@ NEOERR *html_strip_alloc(const char *src
+ 	}
+ 	else
+ 	{
+-	  if (ampl < sizeof(amp)-1)
++	  if (ampl < (int) sizeof(amp)-1)
+ 	    amp[ampl++] = tolower(src[x]);
+ 	  else
+ 	  {
+--- a/cgi/rfc2388.c
++++ b/cgi/rfc2388.c
+@@ -155,14 +155,14 @@ static NEOERR * _read_line (CGI *cgi, ch
+     ofs = cgi->readlen - cgi->nl;
+     memmove(cgi->buf, cgi->buf + cgi->nl, ofs);
+   }
+-  // Read either as much buffer space as we have left, or up to 
+-  // the amount of data remaining according to Content-Length
+-  // If there is no Content-Length, just use the buffer space, but recognize
+-  // that it might not work on some servers or cgiwrap implementations.
+-  // Some servers will close their end of the stdin pipe, so cgiwrap_read
+-  // will return if we ask for too much.  Techically, not including
+-  // Content-Length is against the HTTP spec, so we should consider failing
+-  // earlier if we don't have a length.
++  /* Read either as much buffer space as we have left, or up to
++   * the amount of data remaining according to Content-Length
++   * If there is no Content-Length, just use the buffer space, but recognize
++   * that it might not work on some servers or cgiwrap implementations.
++   * Some servers will close their end of the stdin pipe, so cgiwrap_read
++   * will return if we ask for too much.  Techically, not including
++   * Content-Length is against the HTTP spec, so we should consider failing
++   * earlier if we don't have a length. */
+   to_read = cgi->buflen - ofs;
+   if (cgi->data_expected && (to_read > cgi->data_expected - cgi->data_read))
+   {
+--- a/cs/csparse.c
++++ b/cs/csparse.c
+@@ -59,7 +59,7 @@ typedef enum
+   ST_DEF = 1<<6,
+   ST_LOOP =  1<<7,
+   ST_ALT = 1<<8,
+-  ST_ESCAPE = 1<<9,
++  ST_ESCAPE = 1<<9
+ } CS_STATE;
+ 
+ #define ST_ANYWHERE (ST_EACH | ST_WITH | ST_ELSE | ST_IF | ST_GLOBAL | ST_DEF | ST_LOOP | ST_ALT | ST_ESCAPE)
+@@ -178,7 +178,8 @@ CS_CMDS Commands[] = {
+     escape_parse, escape_eval, 1},
+   {"/escape",    sizeof("/escape")-1,    ST_ESCAPE,     ST_POP,
+     end_parse, skip_eval, 1},
+-  {NULL},
++  {NULL,    0,    0,    0,
++  	NULL, NULL, 0}
+ };
+ 
+ /* Possible Config.VarEscapeMode values */
+@@ -193,7 +194,7 @@ CS_ESCAPE_MODES EscapeModes[] = {
+   {"html", NEOS_ESCAPE_HTML},
+   {"js",   NEOS_ESCAPE_SCRIPT},
+   {"url",  NEOS_ESCAPE_URL},
+-  {NULL},
++  {NULL,   0}
+ };
+ 
+ 
+@@ -1154,7 +1155,7 @@ static char *token_list (CSTOKEN *tokens
+     {
+       t = snprintf(p, buflen, "%s%d:%s", i ? "  ":"", i, expand_token_type(tokens[i].type, 0));
+     }
+-    if (t == -1 || t >= buflen) return buf;
++    if (t == -1 || t >= (int) buflen) return buf;
+     buflen -= t;
+     p += t;
+   }
+@@ -2567,6 +2568,9 @@ static NEOERR *else_parse (CSPARSE *pars
+   NEOERR *err;
+   STACK_ENTRY *entry;
+ 
++  UNUSED(cmd);
++  UNUSED(arg);
++
+   /* ne_warn ("else"); */
+   err = uListGet (parse->stack, -1, (void *)&entry);
+   if (err != STATUS_OK) return nerr_pass(err);
+@@ -2600,6 +2604,9 @@ static NEOERR *endif_parse (CSPARSE *par
+   NEOERR *err;
+   STACK_ENTRY *entry;
+ 
++  UNUSED(cmd);
++  UNUSED(arg);
++
+   /* ne_warn ("endif"); */
+   err = uListGet (parse->stack, -1, (void *)&entry);
+   if (err != STATUS_OK) return nerr_pass(err);
+@@ -2781,6 +2788,9 @@ static NEOERR *end_parse (CSPARSE *parse
+   NEOERR *err;
+   STACK_ENTRY *entry;
+ 
++  UNUSED(cmd);
++  UNUSED(arg);
++
+   err = uListGet (parse->stack, -1, (void *)&entry);
+   if (err != STATUS_OK) return nerr_pass(err);
+ 
+@@ -2796,6 +2806,8 @@ static NEOERR *include_parse (CSPARSE *p
+   int flags = 0;
+   CSARG arg1, val;
+ 
++  UNUSED(cmd);
++
+   memset(&arg1, 0, sizeof(CSARG));
+   if (arg[0] == '!')
+     flags |= CSF_REQUIRED;
+@@ -3511,6 +3523,8 @@ static NEOERR *loop_eval (CSPARSE *parse
+ 
+ static NEOERR *skip_eval (CSPARSE *parse, CSTREE *node, CSTREE **next)
+ {
++  UNUSED(parse);
++
+   *next = node->next;
+   return STATUS_OK;
+ }
+@@ -3651,6 +3665,8 @@ static NEOERR * _builtin_subcount(CSPARS
+   int count = 0;
+   CSARG val;
+ 
++  UNUSED(csf);
++
+   memset(&val, 0, sizeof(val));
+   err = eval_expr(parse, args, &val);
+   if (err) return nerr_pass(err);
+@@ -3683,6 +3699,8 @@ static NEOERR * _builtin_str_length(CSPA
+   NEOERR *err;
+   CSARG val;
+ 
++  UNUSED(csf);
++
+   memset(&val, 0, sizeof(val));
+   err = eval_expr(parse, args, &val);
+   if (err) return nerr_pass(err);
+@@ -3706,6 +3724,8 @@ static NEOERR * _builtin_str_crc(CSPARSE
+   NEOERR *err;
+   CSARG val;
+ 
++  UNUSED(csf);
++
+   memset(&val, 0, sizeof(val));
+   err = eval_expr(parse, args, &val);
+   if (err) return nerr_pass(err);
+@@ -3731,6 +3751,8 @@ static NEOERR * _builtin_str_find(CSPARS
+   char *substr = NULL;
+   char *pstr = NULL;
+ 
++  UNUSED(csf);
++
+   result->op_type = CS_TYPE_NUM;
+   result->n = -1;
+ 
+@@ -3758,6 +3780,8 @@ static NEOERR * _builtin_name(CSPARSE *p
+   HDF *obj;
+   CSARG val;
+ 
++  UNUSED(csf);
++
+   memset(&val, 0, sizeof(val));
+   err = eval_expr(parse, args, &val);
+   if (err) return nerr_pass(err);
+@@ -3790,6 +3814,8 @@ static NEOERR * _builtin_first(CSPARSE *
+   char *c;
+   CSARG val;
+ 
++  UNUSED(csf);
++
+   memset(&val, 0, sizeof(val));
+   err = eval_expr(parse, args, &val);
+   if (err) return nerr_pass(err);
+@@ -3819,6 +3845,8 @@ static NEOERR * _builtin_last(CSPARSE *p
+   char *c;
+   CSARG val;
+ 
++  UNUSED(csf);
++
+   memset(&val, 0, sizeof(val));
+   err = eval_expr(parse, args, &val);
+   if (err) return nerr_pass(err);
+@@ -3853,6 +3881,8 @@ static NEOERR * _builtin_abs (CSPARSE *p
+   int n1 = 0;
+   CSARG val;
+ 
++  UNUSED(csf);
++
+   memset(&val, 0, sizeof(val));
+   err = eval_expr(parse, args, &val);
+   if (err) return nerr_pass(err);
+@@ -3873,6 +3903,8 @@ static NEOERR * _builtin_max (CSPARSE *p
+   long int n1 = 0;
+   long int n2 = 0;
+ 
++  UNUSED(csf);
++
+   result->op_type = CS_TYPE_NUM;
+   result->n = 0;
+ 
+@@ -3891,6 +3923,8 @@ static NEOERR * _builtin_min (CSPARSE *p
+   long int n1 = 0;
+   long int n2 = 0;
+ 
++  UNUSED(csf);
++
+   result->op_type = CS_TYPE_NUM;
+   result->n = 0;
+ 
+@@ -3910,6 +3944,8 @@ static NEOERR * _builtin_str_slice (CSPA
+   long int e = 0;
+   size_t len;
+ 
++  UNUSED(csf);
++
+   result->op_type = CS_TYPE_STRING;
+   result->s = "";
+ 
+@@ -3921,9 +3957,9 @@ static NEOERR * _builtin_str_slice (CSPA
+   if (b < 0 && e == 0) e = len;
+   if (b < 0) b += len;
+   if (e < 0) e += len;
+-  if (e > len) e = len;
++  if (e > (int) len) e = len;
+   /* Its the whole string */
+-  if (b == 0 && e == len)
++  if (b == 0 && e == (int) len)
+   {
+     result->s = s;
+     result->alloc = 1;
+@@ -4179,10 +4215,10 @@ static NEOERR *cs_init_internal (CSPARSE
+     my_parse->global_hdf = parent->global_hdf;
+     my_parse->fileload = parent->fileload;
+     my_parse->fileload_ctx = parent->fileload_ctx;
+-    // This should be safe since locals handling is done entirely local to the
+-    // eval functions, not globally by the parse handling.  This should
+-    // pass the locals down to the new parse context to make locals work with
+-    // lvar
++    /* This should be safe since locals handling is done entirely local to the
++     * eval functions, not globally by the parse handling.  This should
++     * pass the locals down to the new parse context to make locals work with
++     * lvar */
+     my_parse->locals = parent->locals;
+     my_parse->parent = parent;
+ 
+--- a/util/dict.c
++++ b/util/dict.c
+@@ -87,6 +87,8 @@ static NEOERR *dictNewItem(dictCtx dict,
+ {
+   dictItemPtr my_item;
+ 
++  UNUSED(dict);
++
+   if (item != NULL)
+     *item = NULL;
+ 
+--- a/util/neo_date.h
++++ b/util/neo_date.h
+@@ -17,10 +17,10 @@
+ __BEGIN_DECLS
+ 
+ /* UTC time_t -> struct tm in local timezone */
+-void neo_time_expand (const time_t tt, const char *timezone, struct tm *ttm);
++void neo_time_expand (const time_t tt, const char *tz, struct tm *ttm);
+ 
+ /* local timezone struct tm -> time_t UTC */
+-time_t neo_time_compact (struct tm *ttm, const char *timezone);
++time_t neo_time_compact (struct tm *ttm, const char *tz);
+ 
+ /* To be portable... in seconds */
+ long neo_tz_offset(struct tm *ttm);
+--- a/util/neo_files.c
++++ b/util/neo_files.c
+@@ -35,7 +35,7 @@ NEOERR *ne_mkdirs (const char *path, mod
+ 
+   strncpy (mypath, path, sizeof(mypath));
+   x = strlen(mypath);
+-  if ((x < sizeof(mypath)) && (mypath[x-1] != '/'))
++  if ((x < (int) sizeof(mypath)) && (mypath[x-1] != '/'))
+   {
+     mypath[x] = '/';
+     mypath[x+1] = '\0';
+--- a/util/neo_hash.c
++++ b/util/neo_hash.c
+@@ -57,7 +57,7 @@ void ne_hash_destroy (NE_HASH **hash)
+ 
+   my_hash = *hash;
+ 
+-  for (x = 0; x < my_hash->size; x++)
++  for (x = 0; x < (int) my_hash->size; x++)
+   {
+     node = my_hash->nodes[x];
+     while (node)
+@@ -111,16 +111,16 @@ void *ne_hash_lookup(NE_HASH *hash, void
+ 
+ void *ne_hash_remove(NE_HASH *hash, void *key)
+ {
+-  NE_HASHNODE **node, *remove;
++  NE_HASHNODE **node, *rem;
+   void *value = NULL;
+ 
+   node = _hash_lookup_node(hash, key, NULL);
+   if (*node)
+   {
+-    remove = *node;
+-    *node = remove->next;
+-    value = remove->value;
+-    free(remove);
++    rem = *node;
++    *node = rem->next;
++    value = rem->value;
++    free(rem);
+     hash->num--;
+   }
+   return value;
+@@ -233,7 +233,7 @@ static NEOERR *_hash_resize(NE_HASH *has
+   hash->size = hash->size*2;
+ 
+   /* Initialize new parts */
+-  for (x = orig_size; x < hash->size; x++)
++  for (x = orig_size; x < (int) hash->size; x++)
+   {
+     hash->nodes[x] = NULL;
+   }
+@@ -248,7 +248,7 @@ static NEOERR *_hash_resize(NE_HASH *has
+ 	 entry; 
+ 	 entry = prev ? prev->next : hash->nodes[x]) 
+     {
+-      if ((entry->hashv & hash_mask) != x)
++      if ((int) (entry->hashv & hash_mask) != x)
+       {
+ 	if (prev)
+ 	{
+--- a/util/neo_hdf.c
++++ b/util/neo_hdf.c
+@@ -54,7 +54,7 @@ static UINT32 hash_hdf_hash(const void *
+ }
+ 
+ static NEOERR *_alloc_hdf (HDF **hdf, const char *name, size_t nlen, 
+-                           const char *value, int dup, int wf, HDF *top)
++                           const char *value, int dupl, int wf, HDF *top)
+ {
+   *hdf = calloc (1, sizeof (HDF));
+   if (*hdf == NULL)
+@@ -80,7 +80,7 @@ static NEOERR *_alloc_hdf (HDF **hdf, co
+   }
+   if (value != NULL)
+   {
+-    if (dup)
++    if (dupl)
+     {
+       (*hdf)->alloc_value = 1;
+       (*hdf)->value = strdup(value);
+@@ -233,7 +233,7 @@ static int _walk_hdf (HDF *hdf, const ch
+ 
+   n = name;
+   s = strchr (n, '.');
+-  x = (s == NULL) ? strlen(n) : s - n;
++  x = (s == NULL) ? (int) strlen(n) : s - n;
+ 
+   while (1)
+   {
+@@ -279,7 +279,7 @@ static int _walk_hdf (HDF *hdf, const ch
+     }
+     n = s + 1;
+     s = strchr (n, '.');
+-    x = (s == NULL) ? strlen(n) : s - n;
++    x = (s == NULL) ? (int) strlen(n) : s - n;
+   } 
+   if (hp->link)
+   {
+@@ -570,7 +570,7 @@ NEOERR* _hdf_hash_level(HDF *hdf)
+ }
+ 
+ static NEOERR* _set_value (HDF *hdf, const char *name, const char *value, 
+-                           int dup, int wf, int link, HDF_ATTR *attr, 
++                           int dupl, int wf, int lnk, HDF_ATTR *attr, 
+                            HDF **set_node)
+ {
+   NEOERR *err;
+@@ -615,7 +615,7 @@ static NEOERR* _set_value (HDF *hdf, con
+       hdf->alloc_value = 0;
+       hdf->value = NULL;
+     }
+-    else if (dup)
++    else if (dupl)
+     {
+       hdf->alloc_value = 1;
+       hdf->value = strdup(value);
+@@ -650,7 +650,7 @@ static NEOERR* _set_value (HDF *hdf, con
+     strcpy(new_name, hdf->value);
+     strcat(new_name, ".");
+     strcat(new_name, name);
+-    err = _set_value (hdf->top, new_name, value, dup, wf, link, attr, set_node);
++    err = _set_value (hdf->top, new_name, value, dupl, wf, lnk, attr, set_node);
+     free(new_name);
+     return nerr_pass(err);
+   }
+@@ -719,8 +719,8 @@ skip_search:
+       }
+       else
+       {
+-	err = _alloc_hdf (&hp, n, x, value, dup, wf, hdf->top);
+-	if (link) hp->link = 1;
++	err = _alloc_hdf (&hp, n, x, value, dupl, wf, hdf->top);
++	if (lnk) hp->link = 1;
+ 	else hp->link = 0;
+ 	hp->attr = attr;
+       }
+@@ -770,7 +770,7 @@ skip_search:
+ 	  hp->alloc_value = 0;
+ 	  hp->value = NULL;
+ 	}
+-	else if (dup)
++	else if (dupl)
+ 	{
+ 	  hp->alloc_value = 1;
+ 	  hp->value = strdup(value);
+@@ -784,7 +784,7 @@ skip_search:
+ 	  hp->value = (char *)value;
+ 	}
+       }
+-      if (link) hp->link = 1;
++      if (lnk) hp->link = 1;
+       else hp->link = 0;
+     }
+     else if (hp->link) 
+@@ -796,7 +796,7 @@ skip_search:
+       }
+       strcpy(new_name, hp->value);
+       strcat(new_name, s);
+-      err = _set_value (hdf->top, new_name, value, dup, wf, link, attr, set_node);
++      err = _set_value (hdf->top, new_name, value, dupl, wf, lnk, attr, set_node);
+       free(new_name);
+       return nerr_pass(err);
+     }
+@@ -1267,6 +1267,8 @@ NEOERR* hdf_dump(HDF *hdf, const char *p
+ 
+ NEOERR* hdf_dump_format (HDF *hdf, int lvl, FILE *fp)
+ {
++  UNUSED(lvl);
++
+   return nerr_pass(hdf_dump_cb(hdf, "", DUMP_TYPE_PRETTY, 0, fp, _fp_dump_cb));
+ }
+ 
+@@ -1357,7 +1359,7 @@ static int _copy_line (const char **s, c
+   int x = 0;
+   const char *st = *s;
+ 
+-  while (*st && x < buf_len-1)
++  while (*st && x < (int) buf_len-1)
+   {
+     buf[x++] = *st;
+     if (*st++ == '\n') break;
+@@ -1398,17 +1400,17 @@ static NEOERR *_copy_line_advance(const
+ 
+ char *_strndup(const char *s, int len) {
+   int x;
+-  char *dup; 
++  char *t;
+   if (s == NULL) return NULL;
+-  dup = (char *) malloc(len+1);
+-  if (dup == NULL) return NULL;
++  t = (char *) malloc(len+1);
++  if (t == NULL) return NULL;
+   for (x = 0; x < len && s[x]; x++)
+   {
+-    dup[x] = s[x];
++    t[x] = s[x];
+   }
+-  dup[x] = '\0';
+-  dup[len] = '\0';
+-  return dup;
++  t[x] = '\0';
++  t[len] = '\0';
++  return t;
+ }
+ 
+ /* attributes are of the form [key1, key2, key3=value, key4="repr"] */
+--- a/util/neo_misc.c
++++ b/util/neo_misc.c
+@@ -34,7 +34,7 @@ void ne_vwarn (const char *fmt, va_list
+ 
+   localtime_r(&now, &my_tm);
+ 
+-  strftime(tbuf, sizeof(tbuf), "%m/%d %T", &my_tm);
++  strftime(tbuf, sizeof(tbuf), "%m/%d %H:%M:%S", &my_tm);
+ 
+   vsnprintf (buf, sizeof(buf), fmt, ap);
+   len = strlen(buf);
+--- a/util/neo_misc.h
++++ b/util/neo_misc.h
+@@ -106,6 +106,10 @@ typedef char BOOL;
+ #define MIN(x,y)        (((x) < (y)) ? (x) : (y))
+ #endif
+ 
++#ifndef UNUSED
++#define UNUSED(x)        ((void)(x))
++#endif
++
+ #ifndef TRUE
+ #define TRUE 1
+ #endif
+--- a/util/neo_net.c
++++ b/util/neo_net.c
+@@ -489,7 +489,7 @@ static NEOERR *_ne_net_read_int(NSOCK *s
+   char buf[32];
+   char *ep = NULL;
+ 
+-  while (x < sizeof(buf))
++  while (x < (int) sizeof(buf))
+   {
+     while (sock->il - sock->ib > 0)
+     {
+--- a/util/neo_server.c
++++ b/util/neo_server.c
+@@ -104,6 +104,8 @@ static int ShutdownPending = 0;
+ 
+ static void sig_term(int sig)
+ {
++  UNUSED(sig);
++
+   ShutdownPending = 1;
+   ne_net_shutdown();
+ }
+--- a/util/neo_str.c
++++ b/util/neo_str.c
+@@ -592,11 +592,11 @@ char *repr_string_alloc (const char *s)
+   return rs;
+ }
+ 
+-// List of all characters that must be escaped
+-// List based on http://www.blooberry.com/indexdot/html/topics/urlencoding.htm
++/* List of all characters that must be escaped
++ * List based on http://www.blooberry.com/indexdot/html/topics/urlencoding.htm */
+ static char EscapedChars[] = "$&+,/:;=?@ \"<>#%{}|\\^~[]`'";
+ 
+-// Check if a single character needs to be escaped
++/* Check if a single character needs to be escaped */
+ static BOOL is_reserved_char(char c)
+ {
+   int i = 0;
+@@ -835,15 +835,15 @@ NEOERR *neos_url_validate (const char *i
+   colonpos = memchr(in, ':', i);
+ 
+   if (colonpos == NULL) {
+-    // no scheme in 'in': so this is a relative url
++    /* no scheme in 'in': so this is a relative url */
+     valid = 1;
+   }
+   else {
+-    for (i = 0; i < num_protocols; i++)
++    for (i = 0; (int) i < num_protocols; i++)
+     {
+       if ((inlen >= strlen(URL_PROTOCOLS[i])) && 
+           strncmp(in, URL_PROTOCOLS[i], strlen(URL_PROTOCOLS[i])) == 0) {
+-        // 'in' starts with one of the allowed protocols
++        /* 'in' starts with one of the allowed protocols */
+         valid = 1;
+         break;
+       }
+@@ -854,7 +854,7 @@ NEOERR *neos_url_validate (const char *i
+   if (valid)
+     return neos_html_escape(in, inlen, esc);
+ 
+-  // 'in' contains an unsupported scheme, replace with '#' 
++  /* 'in' contains an unsupported scheme, replace with '#' */
+   string_init(&out_s);
+   err = string_append (&out_s, "#");
+   if (err) return nerr_pass (err);
+--- a/util/skiplist.c
++++ b/util/skiplist.c
+@@ -409,7 +409,7 @@ NEOERR *skipNewList(skipList *skip, int
+     if (err != STATUS_OK) break;
+ 
+     for(i = 0;                                       /* init header and tail */
+-        i <= list->maxLevel;
++        i <= (UINT32) list->maxLevel;
+         i++) {
+       list->tail->next[i] = NULL;
+       list->header->next[i] = list->tail;
+@@ -444,7 +444,7 @@ static void skipFreeAllItems(skipList li
+   }
+                                                     /* clear header pointers */
+   for(i = 0;
+-      i <= list->maxLevel;
++      i <= (UINT32) list->maxLevel;
+       i++)
+     list->header->next[i] = list->tail;
+ 

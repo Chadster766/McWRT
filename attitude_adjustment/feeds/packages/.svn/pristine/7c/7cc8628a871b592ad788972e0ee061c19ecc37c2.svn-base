@@ -1,0 +1,22 @@
+--- a/libs/esl/Makefile
++++ b/libs/esl/Makefile
+@@ -7,7 +7,7 @@ PICKY=-O2
+ CFLAGS=$(BASE_FLAGS) $(PICKY)
+ CXXFLAGS=$(BASE_FLAGS)
+ MYLIB=libesl.a
+-LIBS=-lncurses -lesl -lpthread -lm
++LIBS=-L$(STAGING_DIR)/usr/lib -lncurses -lesl -lpthread -lm
+ LDFLAGS=-L.
+ OBJS=src/esl.o src/esl_event.o src/esl_threadmutex.o src/esl_config.o src/esl_json.o src/esl_buffer.o
+ SRC=src/esl.c src/esl_json.c src/esl_event.c src/esl_threadmutex.c src/esl_config.c src/esl_oop.cpp src/esl_json.c src/esl_buffer.c
+@@ -19,8 +19,8 @@ OBJS += src/esl_oop.o
+ all: $(MYLIB) fs_cli testclient testserver ivrd
+ 
+ $(MYLIB): $(OBJS) $(HEADERS) $(SRC)
+-	ar rcs $(MYLIB) $(OBJS)
+-	ranlib $(MYLIB)
++	$(AR) rcs $(MYLIB) $(OBJS)
++	$(RANLIB) $(MYLIB)
+ 
+ testserver: $(MYLIB) testserver.c
+ 	$(CC) $(CC_CFLAGS) $(CFLAGS) testserver.c -o testserver $(LDFLAGS) $(LIBS)

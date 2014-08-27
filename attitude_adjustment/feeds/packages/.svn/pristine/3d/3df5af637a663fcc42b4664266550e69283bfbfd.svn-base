@@ -1,0 +1,14 @@
+--- a/configure.in
++++ b/configure.in
+@@ -67,7 +67,10 @@
+ dnl
+ AC_MSG_CHECKING(link-layer packet interface type)
+ 
+-if test -r /dev/bpf0 ; then
++if test -n "$LL_INT_TYPE"; then
++	AC_LIBOBJ($LL_INT_TYPE)
++	AC_MSG_RESULT(found $LL_INT_TYPE (cached))
++elif test -r /dev/bpf0 ; then
+     AC_LIBOBJ([libnet_link_bpf])
+     AC_MSG_RESULT(found bpf)
+ elif test -r /usr/include/net/pfilt.h ; then

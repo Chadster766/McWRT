@@ -1,0 +1,50 @@
+This patch allows one to specify a maximum number of bits
+for the CGA and RSA key size. RFC specifies that an implementation
+may optionnaly honor this setting (5.1.3). This is particularly
+useful on embedded systems where both the entropy and the processing
+power are limited.
+
+--- a/sendd/config.c
++++ b/sendd/config.c
+@@ -82,6 +82,7 @@ struct snd_conf snd_confs[] = {
+ 	SND_CFS(snd_cga_params, NULL, 1),
+ 	SND_CFIB(snd_full_secure, 1, 0),
+ 	SND_CFII(snd_min_key_bits, 1024, "bits", 0),
++	SND_CFII(snd_max_key_bits, 2048, "bits", 0),
+ 	SND_CFII(snd_nonce_cache_gc_intvl, 2, "seconds", 0),
+ 	SND_CFII(snd_pfx_cache_gc_intvl, 40, "seconds", 0),
+ 	SND_CFS(snd_pkixip_conf, NULL, 0),
+--- a/sendd/sig_rfc3971.c
++++ b/sendd/sig_rfc3971.c
+@@ -147,7 +147,7 @@ ver(struct iovec *iov, int iovlen, uint8
+ 	EVP_MD_CTX ctx[1];
+ 	EVP_PKEY *pub;
+ 	int rv = -1;
+-	int i, real_slen, min_bits;
++	int i, real_slen, min_bits, max_bits;
+ 	DEFINE_TIMESTAMP_VARS();
+ 
+ 	DBG_HEXDUMP(&dbg_cryptox, "key: ", key, klen);
+@@ -164,6 +164,12 @@ ver(struct iovec *iov, int iovlen, uint8
+ 		    "minimum: %d)", EVP_PKEY_bits(pub), min_bits);
+ 		return (-1);
+ 	}
++	max_bits = snd_conf_get_int(snd_max_key_bits);
++	if (EVP_PKEY_bits(pub) > max_bits) {
++		DBG(&dbg_snd, "Peer key too strong: %d bits (configured "
++		    "maximum: %d)", EVP_PKEY_bits(pub), max_bits);
++		return (-1);
++	}
+ 
+ 	real_slen = EVP_PKEY_size(pub);
+ 	if (real_slen < slen) {
+--- a/sendd/snd_config.h
++++ b/sendd/snd_config.h
+@@ -42,6 +42,7 @@ enum snd_conf_syms {
+ 	snd_cga_params,
+ 	snd_full_secure,
+ 	snd_min_key_bits,
++	snd_max_key_bits,
+ 	snd_nonce_cache_gc_intvl,
+ 	snd_pfx_cache_gc_intvl,
+ 	snd_pkixip_conf,

@@ -1,0 +1,5256 @@
+From 113c7fc8850bdf0370efacc2f6e198920c0cc924 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Thu, 5 Sep 2013 16:39:21 -0700
+Subject: [PATCH 1/1]  Armada300,crypto: Import new version of crypto code.
+
+---
+ cesa/openswan/README                               |    3 +
+ crypto/ocf/Kconfig                                 |   24 -
+ crypto/ocf/c7108/Makefile                          |   11 -
+ crypto/ocf/criov.c                                 |   10 +-
+ crypto/ocf/crypto.c                                |   76 +--
+ crypto/ocf/cryptocteon/Makefile                    |   16 -
+ crypto/ocf/cryptocteon/README.txt                  |   10 -
+ crypto/ocf/cryptodev.c                             |   27 +-
+ crypto/ocf/cryptodev.h                             |    7 +-
+ crypto/ocf/cryptosoft.c                            |  264 +++--------
+ crypto/ocf/ep80579/Makefile                        |   38 +-
+ crypto/ocf/ep80579/environment.mk                  |    3 -
+ crypto/ocf/ep80579/icp_asym.c                      |  125 +++--
+ crypto/ocf/ep80579/icp_common.c                    |  276 +++++++++--
+ crypto/ocf/ep80579/icp_ocf.h                       |  113 ++++-
+ crypto/ocf/ep80579/icp_sym.c                       |  339 ++++++++++++--
+ crypto/ocf/hifn/hifn7751.c                         |   42 +-
+ crypto/ocf/hifn/hifn7751var.h                      |    1 +
+ crypto/ocf/hifn/hifnHIPP.c                         |    4 +-
+ crypto/ocf/ixp4xx/ixp4xx.c                         |   13 +-
+ crypto/ocf/kirkwood/Makefile                       |   18 -
+ crypto/ocf/kirkwood/mvHal/common/mvTypes.h         |  244 ----------
+ .../mvHal/kw_family/ctrlEnv/sys/mvSysUsb.c         |  495 --------------------
+ .../kirkwood/mvHal/mv_hal/sflash/mvSFlashSpec.h    |  232 ---------
+ crypto/ocf/kirkwood/mvHal/mv_hal/spi/mvSpiCmnd.c   |  248 ----------
+ crypto/ocf/ocf-bench.c                             |  136 ++----
+ crypto/ocf/ocf-compat.h                            |  116 +----
+ crypto/ocf/pasemi/pasemi.c                         |   10 +-
+ crypto/ocf/random.c                                |   10 +-
+ crypto/ocf/rndtest.c                               |    8 +-
+ crypto/ocf/safe/hmachack.h                         |   36 --
+ crypto/ocf/safe/safe.c                             |   76 ++-
+ crypto/ocf/safe/safevar.h                          |    3 +-
+ crypto/ocf/talitos/talitos.c                       |   16 +-
+ crypto/ocf/talitos/talitos_soft.h                  |    1 +
+ crypto/ocf/ubsec_ssb/Makefile                      |   11 -
+ crypto/ocf/ubsec_ssb/ubsecvar.h                    |  227 ---------
+ crypto/ocf/uio.h                                   |    4 +-
+ 38 files changed, 990 insertions(+), 2303 deletions(-)
+
+diff --git a/cesa/openswan/README b/cesa/openswan/README
+index 288ed2c..71c85f3 100644
+--- a/cesa/openswan/README
++++ b/cesa/openswan/README
+@@ -33,6 +33,9 @@ against the routing table. If the best route for the source IP address does not
+ 5. Before tunnel is enabled on target, PMTU discovery must be disabled under procfs, using the following command:
+       - echo 1 > /proc/sys/net/ipv4/ip_no_pmtu_disc
+ 
++5. Before tunnel is enabled on target, PMTU discovery must be disabled under procfs, using the following command:
++      - echo 1 > /proc/sys/net/ipv4/ip_no_pmtu_disc
++
+ IPSec routing using encryption/authentication only:
+ 
+   basic vpn connection:
+diff --git a/crypto/ocf/Kconfig b/crypto/ocf/Kconfig
+index 65a4461..74b98b2 100644
+--- a/crypto/ocf/Kconfig
++++ b/crypto/ocf/Kconfig
+@@ -84,30 +84,6 @@ config OCF_EP80579
+ 	help
+ 	  OCF driver for the Intel EP80579 Integrated Processor Product Line.
+ 
+-config OCF_CRYPTOCTEON
+-	tristate "cryptocteon (HW crypto engine)"
+-	depends on OCF_OCF
+-	help
+-	  OCF driver for the Cavium OCTEON Processors.
+-
+-config OCF_KIRKWOOD
+-	tristate "kirkwood (HW crypto engine)"
+-	depends on OCF_OCF
+-	help
+-	  OCF driver for the Marvell Kirkwood (88F6xxx) Processors.
+-
+-config OCF_C7108
+-	tristate "Micronas 7108 (HW crypto engine)"
+-	depends on OCF_OCF
+-	help
+-	  OCF driver for the Microna 7108 Cipher processors.
+-
+-config OCF_UBSEC_SSB
+-	tristate "uBsec BCM5365 (HW crypto engine)"
+-	depends on OCF_OCF
+-	help
+-	  OCF driver for uBsec BCM5365 hardware crypto accelerator.
+-
+ config OCF_OCFNULL
+ 	tristate "ocfnull (fake crypto engine)"
+ 	depends on OCF_OCF
+diff --git a/crypto/ocf/c7108/Makefile b/crypto/ocf/c7108/Makefile
+index e7e634b..8b13789 100644
+--- a/crypto/ocf/c7108/Makefile
++++ b/crypto/ocf/c7108/Makefile
+@@ -1,12 +1 @@
+-# for SGlinux builds
+--include $(ROOTDIR)/modules/.config
+-
+-obj-$(CONFIG_OCF_C7108) += aes-7108.o
+-
+-obj ?= .
+-EXTRA_CFLAGS += -I$(obj)/.. -I$(obj)/
+-
+-ifdef TOPDIR
+--include $(TOPDIR)/Rules.make
+-endif
+ 
+diff --git a/crypto/ocf/criov.c b/crypto/ocf/criov.c
+index a8c1a8c..2b28d5d 100644
+--- a/crypto/ocf/criov.c
++++ b/crypto/ocf/criov.c
+@@ -1,8 +1,8 @@
+ /*      $OpenBSD: criov.c,v 1.9 2002/01/29 15:48:29 jason Exp $	*/
+ 
+ /*
+- * Linux port done by David McCullough <david_mccullough@mcafee.com>
+- * Copyright (C) 2006-2010 David McCullough
++ * Linux port done by David McCullough <david_mccullough@securecomputing.com>
++ * Copyright (C) 2006-2007 David McCullough
+  * Copyright (C) 2004-2005 Intel Corporation.
+  * The license and original author are listed below.
+  *
+@@ -34,10 +34,6 @@
+ __FBSDID("$FreeBSD: src/sys/opencrypto/criov.c,v 1.5 2006/06/04 22:15:13 pjd Exp $");
+  */
+ 
+-#include <linux/version.h>
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38) && !defined(AUTOCONF_INCLUDED)
+-#include <linux/config.h>
+-#endif
+ #include <linux/module.h>
+ #include <linux/init.h>
+ #include <linux/slab.h>
+@@ -155,7 +151,7 @@ skb_copy_bits_back(struct sk_buff *skb, int offset, caddr_t cp, int len)
+ 	offset -= skb_headlen(skb);
+ 	for (i = 0; len > 0 && i < skb_shinfo(skb)->nr_frags; i++) {
+ 		if (offset < skb_shinfo(skb)->frags[i].size) {
+-			memcpy(page_address(skb_frag_page(&skb_shinfo(skb)->frags[i])) +
++			memcpy(page_address(skb_shinfo(skb)->frags[i].page.p) +
+ 					skb_shinfo(skb)->frags[i].page_offset,
+ 					cp, min_t(int, skb_shinfo(skb)->frags[i].size, len));
+ 			len -= skb_shinfo(skb)->frags[i].size;
+diff --git a/crypto/ocf/crypto.c b/crypto/ocf/crypto.c
+index f48210d..6ef6ae8 100644
+--- a/crypto/ocf/crypto.c
++++ b/crypto/ocf/crypto.c
+@@ -1,6 +1,6 @@
+ /*-
+- * Linux port done by David McCullough <david_mccullough@mcafee.com>
+- * Copyright (C) 2006-2010 David McCullough
++ * Linux port done by David McCullough <david_mccullough@securecomputing.com>
++ * Copyright (C) 2006-2007 David McCullough
+  * Copyright (C) 2004-2005 Intel Corporation.
+  * The license and original author are listed below.
+  *
+@@ -62,11 +62,6 @@ __FBSDID("$FreeBSD: src/sys/opencrypto/crypto.c,v 1.27 2007/03/21 03:42:51 sam E
+ __FBSDID("$FreeBSD: src/sys/opencrypto/crypto.c,v 1.16 2005/01/07 02:29:16 imp Exp $");
+  */
+ 
+-
+-#include <linux/version.h>
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38) && !defined(AUTOCONF_INCLUDED)
+-#include <linux/config.h>
+-#endif
+ #include <linux/module.h>
+ #include <linux/init.h>
+ #include <linux/list.h>
+@@ -74,9 +69,7 @@ __FBSDID("$FreeBSD: src/sys/opencrypto/crypto.c,v 1.16 2005/01/07 02:29:16 imp E
+ #include <linux/wait.h>
+ #include <linux/sched.h>
+ #include <linux/spinlock.h>
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,4)
+-#include <linux/kthread.h>
+-#endif
++#include <linux/version.h>
+ #include <cryptodev.h>
+ 
+ /*
+@@ -84,7 +77,7 @@ __FBSDID("$FreeBSD: src/sys/opencrypto/crypto.c,v 1.16 2005/01/07 02:29:16 imp E
+  * issue if we are linked into the kernel and a driver gets started before
+  * us
+  */
+-static int crypto_initted = 0;
++int crypto_initted = 0;
+ 
+ /*
+  * Crypto drivers register themselves by allocating a slot in the
+@@ -142,9 +135,6 @@ struct cryptocap {
+ #define CRYPTOCAP_F_CLEANUP	0x80000000	/* needs resource cleanup */
+ 	int		cc_qblocked;		/* (q) symmetric q blocked */
+ 	int		cc_kqblocked;		/* (q) asymmetric q blocked */
+-
+-	int		cc_unqblocked;		/* (q) symmetric q blocked */
+-	int		cc_unkqblocked;		/* (q) asymmetric q blocked */
+ };
+ static struct cryptocap *crypto_drivers = NULL;
+ static int crypto_drivers_num = 0;
+@@ -156,8 +146,9 @@ static int crypto_drivers_num = 0;
+  * have one per-queue but having one simplifies handling of block/unblock
+  * operations.
+  */
+-static LIST_HEAD(crp_q);		/* crypto request queue */
+-static LIST_HEAD(crp_kq);		/* asym request queue */
++static	int crp_sleep = 0;
++static LIST_HEAD(crp_q);		/* request queues */
++static LIST_HEAD(crp_kq);
+ 
+ static spinlock_t crypto_q_lock;
+ 
+@@ -804,7 +795,8 @@ int
+ crypto_dispatch(struct cryptop *crp)
+ {
+ 	struct cryptocap *cap;
+-	int result = -1;
++	u_int32_t hid;
++	int result = 0;
+ 	unsigned long q_flags;
+ 
+ 	dprintk("%s()\n", __FUNCTION__);
+@@ -1271,9 +1263,8 @@ crypto_proc(void *arg)
+ 	u_int32_t hid;
+ 	int result, hint;
+ 	unsigned long q_flags;
+-	int loopcount = 0;
+ 
+-	set_current_state(TASK_INTERRUPTIBLE);
++	ocf_daemonize("crypto");
+ 
+ 	CRYPTO_Q_LOCK();
+ 	for (;;) {
+@@ -1332,7 +1323,7 @@ crypto_proc(void *arg)
+ 			hid = CRYPTO_SESID2HID(submit->crp_sid);
+ 			crypto_all_qblocked = 0;
+ 			list_del(&submit->crp_next);
+-			crypto_drivers[hid].cc_unqblocked = 1;
++			crypto_drivers[hid].cc_qblocked = 1;
+ 			cap = crypto_checkdriver(hid);
+ 			CRYPTO_Q_UNLOCK();
+ 			KASSERT(cap != NULL, ("%s:%u Driver disappeared.",
+@@ -1425,12 +1416,13 @@ crypto_proc(void *arg)
+ 					__FUNCTION__,
+ 					list_empty(&crp_q), crypto_all_qblocked,
+ 					list_empty(&crp_kq), crypto_all_kqblocked);
+-			loopcount = 0;
+ 			CRYPTO_Q_UNLOCK();
++			crp_sleep = 1;
+ 			wait_event_interruptible(cryptoproc_wait,
+ 					!(list_empty(&crp_q) || crypto_all_qblocked) ||
+ 					!(list_empty(&crp_kq) || crypto_all_kqblocked) ||
+-					kthread_should_stop());
++					cryptoproc == (pid_t) -1);
++			crp_sleep = 0;
+ 			if (signal_pending (current)) {
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
+ 				spin_lock_irq(&current->sigmask_lock);
+@@ -1473,7 +1465,7 @@ crypto_ret_proc(void *arg)
+ 	struct cryptkop *krpt;
+ 	unsigned long  r_flags;
+ 
+-	set_current_state(TASK_INTERRUPTIBLE);
++	ocf_daemonize("crypto_ret");
+ 
+ 	CRYPTO_RETQ_LOCK();
+ 	for (;;) {
+@@ -1508,9 +1500,9 @@ crypto_ret_proc(void *arg)
+ 			dprintk("%s - sleeping\n", __FUNCTION__);
+ 			CRYPTO_RETQ_UNLOCK();
+ 			wait_event_interruptible(cryptoretproc_wait,
++					cryptoretproc == (pid_t) -1 ||
+ 					!list_empty(&crp_ret_q) ||
+-					!list_empty(&crp_ret_kq) ||
+-					kthread_should_stop());
++					!list_empty(&crp_ret_kq));
+ 			if (signal_pending (current)) {
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
+ 				spin_lock_irq(&current->sigmask_lock);
+@@ -1522,7 +1514,7 @@ crypto_ret_proc(void *arg)
+ 			}
+ 			CRYPTO_RETQ_LOCK();
+ 			dprintk("%s - awake\n", __FUNCTION__);
+-			if (kthread_should_stop()) {
++			if (cryptoretproc == (pid_t) -1) {
+ 				dprintk("%s - EXITING!\n", __FUNCTION__);
+ 				break;
+ 			}
+@@ -1530,7 +1522,7 @@ crypto_ret_proc(void *arg)
+ 		}
+ 	}
+ 	CRYPTO_RETQ_UNLOCK();
+-	return 0;
++	complete_and_exit(&cryptoretproc_exited, 0);
+ }
+ 
+ 
+@@ -1636,9 +1628,8 @@ static int
+ crypto_init(void)
+ {
+ 	int error;
+-	unsigned long cpu;
+ 
+-	dprintk("%s(%p)\n", __FUNCTION__, (void *) crypto_init);
++	dprintk("%s(0x%x)\n", __FUNCTION__, (int) crypto_init);
+ 
+ 	if (crypto_initted)
+ 		return 0;
+@@ -1713,17 +1704,34 @@ bad:
+ static void
+ crypto_exit(void)
+ {
+-	int cpu;
++	pid_t p;
++	unsigned long d_flags;
+ 
+ 	dprintk("%s()\n", __FUNCTION__);
+ 
+ 	/*
+ 	 * Terminate any crypto threads.
+ 	 */
+-	ocf_for_each_cpu(cpu) {
+-		kthread_stop(cryptoproc[cpu]);
+-		kthread_stop(cryptoretproc[cpu]);
+-	}
++
++	CRYPTO_DRIVER_LOCK();
++	p = cryptoproc;
++	cryptoproc = (pid_t) -1;
++	kill_proc_info(SIGTERM, SEND_SIG_PRIV, p);
++	wake_up_interruptible(&cryptoproc_wait);
++	CRYPTO_DRIVER_UNLOCK();
++
++	wait_for_completion(&cryptoproc_exited);
++
++	CRYPTO_DRIVER_LOCK();
++	p = cryptoretproc;
++	cryptoretproc = (pid_t) -1;
++	kill_proc_info(SIGTERM, SEND_SIG_PRIV, p);
++	wake_up_interruptible(&cryptoretproc_wait);
++	CRYPTO_DRIVER_UNLOCK();
++
++	wait_for_completion(&cryptoretproc_exited);
++
++	/* XXX flush queues??? */
+ 
+ 	/* 
+ 	 * Reclaim dynamically allocated resources.
+diff --git a/crypto/ocf/cryptocteon/Makefile b/crypto/ocf/cryptocteon/Makefile
+index eeed0d6..8b13789 100644
+--- a/crypto/ocf/cryptocteon/Makefile
++++ b/crypto/ocf/cryptocteon/Makefile
+@@ -1,17 +1 @@
+-# for SGlinux builds
+--include $(ROOTDIR)/modules/.config
+-
+-obj-$(CONFIG_OCF_CRYPTOCTEON) += cryptocteon.o
+-
+-obj ?= .
+-EXTRA_CFLAGS += -I$(obj)/.. -I$(obj)/
+-
+-ifdef CONFIG_OCF_CRYPTOCTEON
+-# you need the cavium crypto component installed
+-EXTRA_CFLAGS += -I$(ROOTDIR)/prop/include
+-endif
+-
+-ifdef TOPDIR
+--include $(TOPDIR)/Rules.make
+-endif
+ 
+diff --git a/crypto/ocf/cryptocteon/README.txt b/crypto/ocf/cryptocteon/README.txt
+index 807b2e5..8b13789 100644
+--- a/crypto/ocf/cryptocteon/README.txt
++++ b/crypto/ocf/cryptocteon/README.txt
+@@ -1,11 +1 @@
+ 
+-You will need the CRYPTO package installed to build this driver,  and
+-potentially the ADK.
+-
+-cavium_crypto sourced from:
+-
+-	adk/components/source/cavium_ipsec_kame/cavium_ipsec.c
+-
+-and significantly modified to suit use with OCF.  All original
+-copyright/ownership headers retained.
+-
+diff --git a/crypto/ocf/cryptodev.c b/crypto/ocf/cryptodev.c
+index 2ee3618..e168e78 100644
+--- a/crypto/ocf/cryptodev.c
++++ b/crypto/ocf/cryptodev.c
+@@ -1,8 +1,8 @@
+ /*	$OpenBSD: cryptodev.c,v 1.52 2002/06/19 07:22:46 deraadt Exp $	*/
+ 
+ /*-
+- * Linux port done by David McCullough <david_mccullough@mcafee.com>
+- * Copyright (C) 2006-2010 David McCullough
++ * Linux port done by David McCullough <david_mccullough@securecomputing.com>
++ * Copyright (C) 2006-2007 David McCullough
+  * Copyright (C) 2004-2005 Intel Corporation.
+  * The license and original author are listed below.
+  *
+@@ -39,10 +39,6 @@
+ __FBSDID("$FreeBSD: src/sys/opencrypto/cryptodev.c,v 1.34 2007/05/09 19:37:02 gnn Exp $");
+  */
+ 
+-#include <linux/version.h>
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38) && !defined(AUTOCONF_INCLUDED)
+-#include <linux/config.h>
+-#endif
+ #include <linux/types.h>
+ #include <linux/time.h>
+ #include <linux/delay.h>
+@@ -58,6 +54,7 @@ __FBSDID("$FreeBSD: src/sys/opencrypto/cryptodev.c,v 1.34 2007/05/09 19:37:02 gn
+ #include <linux/file.h>
+ #include <linux/mount.h>
+ #include <linux/miscdevice.h>
++#include <linux/version.h>
+ #include <asm/uaccess.h>
+ 
+ #include <cryptodev.h>
+@@ -77,7 +74,6 @@ struct csession_info {
+ 	u_int16_t	keysize;
+ 	/* u_int16_t	hashsize;  */
+ 	u_int16_t	authsize;
+-	u_int16_t	authkey;
+ 	/* u_int16_t	ctxsize; */
+ };
+ 
+@@ -198,7 +194,7 @@ cryptodev_op(struct csession *cse, struct crypt_op *cop)
+ 
+ 	if (cse->uio.uio_iov[0].iov_base == NULL) {
+ 		dprintk("%s: iov_base kmalloc(%d) failed\n", __FUNCTION__,
+-				(int)cse->uio.uio_iov[0].iov_len);
++				cse->uio.uio_iov[0].iov_len);
+ 		return (ENOMEM);
+ 	}
+ 
+@@ -752,27 +748,21 @@ cryptodev_ioctl(
+ 			break;
+ 		case CRYPTO_MD5_HMAC:
+ 			info.authsize = MD5_HASH_LEN;
+-			info.authkey = 16;
+ 			break;
+ 		case CRYPTO_SHA1_HMAC:
+ 			info.authsize = SHA1_HASH_LEN;
+-			info.authkey = 20;
+ 			break;
+ 		case CRYPTO_SHA2_256_HMAC:
+ 			info.authsize = SHA2_256_HASH_LEN;
+-			info.authkey = 32;
+ 			break;
+ 		case CRYPTO_SHA2_384_HMAC:
+ 			info.authsize = SHA2_384_HASH_LEN;
+-			info.authkey = 48;
+   			break;
+ 		case CRYPTO_SHA2_512_HMAC:
+ 			info.authsize = SHA2_512_HASH_LEN;
+-			info.authkey = 64;
+ 			break;
+ 		case CRYPTO_RIPEMD160_HMAC:
+ 			info.authsize = RIPEMD160_HASH_LEN;
+-			info.authkey = 20;
+ 			break;
+ 		default:
+ 			dprintk("%s(%s) - bad mac\n", __FUNCTION__, CIOCGSESSSTR);
+@@ -804,9 +794,10 @@ cryptodev_ioctl(
+ 		if (info.authsize) {
+ 			cria.cri_alg = sop.mac;
+ 			cria.cri_klen = sop.mackeylen * 8;
+-			if (info.authkey && sop.mackeylen != info.authkey) {
+-				dprintk("%s(%s) - mackeylen %d != %d\n", __FUNCTION__,
+-						CIOCGSESSSTR, sop.mackeylen, info.authkey);
++			if ((info.maxkey && sop.mackeylen > info.maxkey) ||
++					sop.keylen < info.minkey) {
++				dprintk("%s(%s) - mackeylen %d\n", __FUNCTION__, CIOCGSESSSTR,
++						sop.mackeylen);
+ 				error = EINVAL;
+ 				goto bail;
+ 			}
+@@ -1065,5 +1056,5 @@ module_init(cryptodev_init);
+ module_exit(cryptodev_exit);
+ 
+ MODULE_LICENSE("BSD");
+-MODULE_AUTHOR("David McCullough <david_mccullough@mcafee.com>");
++MODULE_AUTHOR("David McCullough <david_mccullough@securecomputing.com>");
+ MODULE_DESCRIPTION("Cryptodev (user interface to OCF)");
+diff --git a/crypto/ocf/cryptodev.h b/crypto/ocf/cryptodev.h
+index cca0ec8..3ec926d 100644
+--- a/crypto/ocf/cryptodev.h
++++ b/crypto/ocf/cryptodev.h
+@@ -2,8 +2,8 @@
+ /*	$OpenBSD: cryptodev.h,v 1.31 2002/06/11 11:14:29 beck Exp $	*/
+ 
+ /*-
+- * Linux port done by David McCullough <david_mccullough@mcafee.com>
+- * Copyright (C) 2006-2010 David McCullough
++ * Linux port done by David McCullough <david_mccullough@securecomputing.com>
++ * Copyright (C) 2006-2007 David McCullough
+  * Copyright (C) 2004-2005 Intel Corporation.
+  * The license and original author are listed below.
+  *
+@@ -156,8 +156,7 @@
+ #define CRYPTO_SHA2_384			23
+ #define CRYPTO_SHA2_512			24
+ #define CRYPTO_RIPEMD160		25
+-#define	CRYPTO_LZS_COMP			26
+-#define CRYPTO_ALGORITHM_MAX	26 /* Keep updated - see above */
++#define CRYPTO_ALGORITHM_MAX	25 /* Keep updated - see below */
+ 
+ /* Algorithm flags */
+ #define CRYPTO_ALG_FLAG_SUPPORTED	0x01 /* Algorithm is supported */
+diff --git a/crypto/ocf/cryptosoft.c b/crypto/ocf/cryptosoft.c
+index aa2383d..e570688 100644
+--- a/crypto/ocf/cryptosoft.c
++++ b/crypto/ocf/cryptosoft.c
+@@ -3,8 +3,8 @@
+  * original cryptosoft for BSD by Angelos D. Keromytis (angelos@cis.upenn.edu)
+  * but is mostly unrecognisable,
+  *
+- * Written by David McCullough <david_mccullough@mcafee.com>
+- * Copyright (C) 2004-2011 David McCullough
++ * Written by David McCullough <david_mccullough@securecomputing.com>
++ * Copyright (C) 2004-2007 David McCullough
+  * Copyright (C) 2004-2005 Intel Corporation.
+  *
+  * LICENSE TERMS
+@@ -34,8 +34,7 @@
+  * ---------------------------------------------------------------------------
+  */
+ 
+-#include <linux/version.h>
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38) && !defined(AUTOCONF_INCLUDED)
++#ifndef AUTOCONF_INCLUDED
+ #include <linux/config.h>
+ #endif
+ #include <linux/module.h>
+@@ -48,14 +47,7 @@
+ #include <linux/mm.h>
+ #include <linux/skbuff.h>
+ #include <linux/random.h>
+-#include <linux/interrupt.h>
+-#include <linux/spinlock.h>
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,10)
+-#include <linux/scatterlist.h>
+-#endif
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29)
+-#include <crypto/hash.h>
+-#endif
++#include <asm/scatterlist.h>
+ 
+ #include <cryptodev.h>
+ #include <uio.h>
+@@ -66,33 +58,19 @@ struct {
+ 
+ #define offset_in_page(p) ((unsigned long)(p) & ~PAGE_MASK)
+ 
+-#define SW_TYPE_CIPHER		0x01
+-#define SW_TYPE_HMAC		0x02
+-#define SW_TYPE_HASH		0x04
+-#define SW_TYPE_COMP		0x08
+-#define SW_TYPE_BLKCIPHER	0x10
+-#define SW_TYPE_ALG_MASK	0x1f
+-
+-#define SW_TYPE_ASYNC		0x8000
+-
+-#define SW_TYPE_INUSE		0x10000000
+-
+-/* We change some of the above if we have an async interface */
+-
+-#define SW_TYPE_ALG_AMASK	(SW_TYPE_ALG_MASK | SW_TYPE_ASYNC)
+-
+-#define SW_TYPE_ABLKCIPHER	(SW_TYPE_BLKCIPHER | SW_TYPE_ASYNC)
+-#define SW_TYPE_AHASH		(SW_TYPE_HASH | SW_TYPE_ASYNC)
+-#define SW_TYPE_AHMAC		(SW_TYPE_HMAC | SW_TYPE_ASYNC)
++/* Software session entry */
+ 
+-#define SCATTERLIST_MAX 16
++#define SW_TYPE_CIPHER		0
++#define SW_TYPE_HMAC		1
++#define SW_TYPE_AUTH2		2
++#define SW_TYPE_HASH		3
++#define SW_TYPE_COMP		4
++#define SW_TYPE_BLKCIPHER	5
+ 
+ struct swcr_data {
+-	struct work_struct  workq;
+ 	int					sw_type;
+ 	int					sw_alg;
+ 	struct crypto_tfm	*sw_tfm;
+-	spinlock_t			sw_tfm_lock;
+ 	union {
+ 		struct {
+ 			char *sw_key;
+@@ -104,23 +82,6 @@ struct swcr_data {
+ 	struct swcr_data	*sw_next;
+ };
+ 
+-struct swcr_req {
+-	struct swcr_data	*sw_head;
+-	struct swcr_data	*sw;
+-	struct cryptop		*crp;
+-	struct cryptodesc	*crd;
+-	struct scatterlist	 sg[SCATTERLIST_MAX];
+-	unsigned char		 iv[EALG_MAX_BLOCK_LEN];
+-	char				 result[HASH_MAX_LEN];
+-	void				*crypto_req;
+-};
+-
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20)
+-static kmem_cache_t *swcr_req_cache;
+-#else
+-static struct kmem_cache *swcr_req_cache;
+-#endif
+-
+ #ifndef CRYPTO_TFM_MODE_CBC
+ /*
+  * As of linux-2.6.21 this is no longer defined, and presumably no longer
+@@ -142,8 +103,8 @@ static struct kmem_cache *swcr_req_cache;
+ 		struct crypto_tfm *tfm;
+ 		void *info;
+ 	};
+-	#define ecb(X)								#X , CRYPTO_TFM_MODE_ECB
+-	#define cbc(X)								#X , CRYPTO_TFM_MODE_CBC
++	#define ecb(X)								#X
++	#define cbc(X)								#X
+ 	#define crypto_has_blkcipher(X, Y, Z)		crypto_alg_available(X, 0)
+ 	#define crypto_blkcipher_cast(X)			X
+ 	#define crypto_blkcipher_tfm(X)				X
+@@ -155,17 +116,13 @@ static struct kmem_cache *swcr_req_cache;
+ 				crypto_cipher_encrypt_iv((W)->tfm, X, Y, Z, (u8 *)((W)->info))
+ 	#define crypto_blkcipher_decrypt_iv(W, X, Y, Z)	\
+ 				crypto_cipher_decrypt_iv((W)->tfm, X, Y, Z, (u8 *)((W)->info))
+-	#define crypto_blkcipher_set_flags(x, y)	/* nop */
+-	#define crypto_free_blkcipher(x)			crypto_free_tfm(x)
+-	#define crypto_free_comp					crypto_free_tfm
+-	#define crypto_free_hash					crypto_free_tfm
+ 
+ 	/* Hash/HMAC/Digest */
+ 	struct hash_desc
+ 	{
+ 		struct crypto_tfm *tfm;
+ 	};
+-	#define hmac(X)							#X , 0
++	#define hmac(X)							#X
+ 	#define crypto_has_hash(X, Y, Z)		crypto_alg_available(X, 0)
+ 	#define crypto_hash_cast(X)				X
+ 	#define crypto_hash_tfm(X)				X
+@@ -182,66 +139,53 @@ static struct kmem_cache *swcr_req_cache;
+ 	#define crypto_comp_tfm(X)				X
+ 	#define crypto_comp_cast(X)				X
+ 	#define crypto_alloc_comp(X, Y, Z)		crypto_alloc_tfm(X, mode)
+-	#define plain(X)	#X , 0
+ #else
+-	#define ecb(X)	"ecb(" #X ")" , 0
+-	#define cbc(X)	"cbc(" #X ")" , 0
+-	#define hmac(X)	"hmac(" #X ")" , 0
+-	#define plain(X)	#X , 0
++	#define ecb(X)	"ecb(" #X ")"
++	#define cbc(X)	"cbc(" #X ")"
++	#define hmac(X)	"hmac(" #X ")"
+ #endif /* if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19) */
+ 
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,22)
+-/* no ablkcipher in older kernels */
+-#define crypto_alloc_ablkcipher(a,b,c)		(NULL)
+-#define crypto_ablkcipher_tfm(x)			((struct crypto_tfm *)(x))
+-#define crypto_ablkcipher_set_flags(a, b)	/* nop */
+-#define crypto_ablkcipher_setkey(x, y, z)	(-EINVAL)
+-#define	crypto_has_ablkcipher(a,b,c)		(0)
+-#else
+-#define	HAVE_ABLKCIPHER
+-#endif
+-
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,32)
+-/* no ahash in older kernels */
+-#define crypto_ahash_tfm(x)					((struct crypto_tfm *)(x))
+-#define	crypto_alloc_ahash(a,b,c)			(NULL)
+-#define	crypto_ahash_digestsize(x)			0
+-#else
+-#define	HAVE_AHASH
+-#endif
+-
+-struct crypto_details {
++struct crypto_details
++{
+ 	char *alg_name;
+ 	int mode;
+ 	int sw_type;
+ };
+ 
+-static struct crypto_details crypto_details[] = {
+-	[CRYPTO_DES_CBC]         = { cbc(des),          SW_TYPE_BLKCIPHER, },
+-	[CRYPTO_3DES_CBC]        = { cbc(des3_ede),     SW_TYPE_BLKCIPHER, },
+-	[CRYPTO_BLF_CBC]         = { cbc(blowfish),     SW_TYPE_BLKCIPHER, },
+-	[CRYPTO_CAST_CBC]        = { cbc(cast5),        SW_TYPE_BLKCIPHER, },
+-	[CRYPTO_SKIPJACK_CBC]    = { cbc(skipjack),     SW_TYPE_BLKCIPHER, },
+-	[CRYPTO_MD5_HMAC]        = { hmac(md5),         SW_TYPE_HMAC, },
+-	[CRYPTO_SHA1_HMAC]       = { hmac(sha1),        SW_TYPE_HMAC, },
+-	[CRYPTO_RIPEMD160_HMAC]  = { hmac(ripemd160),   SW_TYPE_HMAC, },
+-	[CRYPTO_MD5_KPDK]        = { plain(md5-kpdk),   SW_TYPE_HASH, },
+-	[CRYPTO_SHA1_KPDK]       = { plain(sha1-kpdk),  SW_TYPE_HASH, },
+-	[CRYPTO_AES_CBC]         = { cbc(aes),          SW_TYPE_BLKCIPHER, },
+-	[CRYPTO_ARC4]            = { ecb(arc4),         SW_TYPE_BLKCIPHER, },
+-	[CRYPTO_MD5]             = { plain(md5),        SW_TYPE_HASH, },
+-	[CRYPTO_SHA1]            = { plain(sha1),       SW_TYPE_HASH, },
+-	[CRYPTO_NULL_HMAC]       = { hmac(digest_null), SW_TYPE_HMAC, },
+-	[CRYPTO_NULL_CBC]        = { cbc(cipher_null),  SW_TYPE_BLKCIPHER, },
+-	[CRYPTO_DEFLATE_COMP]    = { plain(deflate),    SW_TYPE_COMP, },
+-	[CRYPTO_SHA2_256_HMAC]   = { hmac(sha256),      SW_TYPE_HMAC, },
+-	[CRYPTO_SHA2_384_HMAC]   = { hmac(sha384),      SW_TYPE_HMAC, },
+-	[CRYPTO_SHA2_512_HMAC]   = { hmac(sha512),      SW_TYPE_HMAC, },
+-	[CRYPTO_CAMELLIA_CBC]    = { cbc(camellia),     SW_TYPE_BLKCIPHER, },
+-	[CRYPTO_SHA2_256]        = { plain(sha256),     SW_TYPE_HASH, },
+-	[CRYPTO_SHA2_384]        = { plain(sha384),     SW_TYPE_HASH, },
+-	[CRYPTO_SHA2_512]        = { plain(sha512),     SW_TYPE_HASH, },
+-	[CRYPTO_RIPEMD160]       = { plain(ripemd160),  SW_TYPE_HASH, },
++/*
++ * This needs to be kept updated with CRYPTO_xxx list (cryptodev.h).
++ * If the Algorithm is not supported, then insert a {NULL, 0, 0} entry.
++ *
++ * IMPORTANT: The index to the array IS CRYPTO_xxx.
++ */
++static struct crypto_details crypto_details[CRYPTO_ALGORITHM_MAX + 1] = {
++	{ NULL,              0,                   0 },
++	/* CRYPTO_xxx index starts at 1 */
++	{ cbc(des),          CRYPTO_TFM_MODE_CBC, SW_TYPE_BLKCIPHER },
++	{ cbc(des3_ede),     CRYPTO_TFM_MODE_CBC, SW_TYPE_BLKCIPHER },
++	{ cbc(blowfish),     CRYPTO_TFM_MODE_CBC, SW_TYPE_BLKCIPHER },
++	{ cbc(cast5),        CRYPTO_TFM_MODE_CBC, SW_TYPE_BLKCIPHER },
++	{ cbc(skipjack),     CRYPTO_TFM_MODE_CBC, SW_TYPE_BLKCIPHER },
++	{ hmac(md5),         0,                   SW_TYPE_HMAC },
++	{ hmac(sha1),        0,                   SW_TYPE_HMAC },
++	{ hmac(ripemd160),   0,                   SW_TYPE_HMAC },
++	{ "md5-kpdk??",      0,                   SW_TYPE_HASH },
++	{ "sha1-kpdk??",     0,                   SW_TYPE_HASH },
++	{ cbc(aes),          CRYPTO_TFM_MODE_CBC, SW_TYPE_BLKCIPHER },
++	{ ecb(arc4),         CRYPTO_TFM_MODE_ECB, SW_TYPE_BLKCIPHER },
++	{ "md5",             0,                   SW_TYPE_HASH },
++	{ "sha1",            0,                   SW_TYPE_HASH },
++	{ hmac(digest_null), 0,                   SW_TYPE_HMAC },
++	{ cbc(cipher_null),  CRYPTO_TFM_MODE_CBC, SW_TYPE_BLKCIPHER },
++	{ "deflate",         0,                   SW_TYPE_COMP },
++	{ hmac(sha256),      0,                   SW_TYPE_HMAC },
++	{ hmac(sha384),      0,                   SW_TYPE_HMAC },
++	{ hmac(sha512),      0,                   SW_TYPE_HMAC },
++	{ cbc(camellia),     CRYPTO_TFM_MODE_CBC, SW_TYPE_BLKCIPHER },
++	{ "sha256",          0,                   SW_TYPE_HASH },
++	{ "sha384",          0,                   SW_TYPE_HASH },
++	{ "sha512",          0,                   SW_TYPE_HASH },
++	{ "ripemd160",       0,                   SW_TYPE_HASH },
+ };
+ 
+ int32_t swcr_id = -1;
+@@ -253,16 +197,6 @@ module_param(swcr_fail_if_compression_grows, int, 0644);
+ MODULE_PARM_DESC(swcr_fail_if_compression_grows,
+                 "Treat compression that results in more data as a failure");
+ 
+-int swcr_no_ahash = 0;
+-module_param(swcr_no_ahash, int, 0644);
+-MODULE_PARM_DESC(swcr_no_ahash,
+-                "Do not use async hash/hmac even if available");
+-
+-int swcr_no_ablk = 0;
+-module_param(swcr_no_ablk, int, 0644);
+-MODULE_PARM_DESC(swcr_no_ablk,
+-                "Do not use async blk ciphers even if available");
+-
+ static struct swcr_data **swcr_sessions = NULL;
+ static u_int32_t swcr_sesnum = 0;
+ 
+@@ -282,56 +216,6 @@ int swcr_debug = 0;
+ module_param(swcr_debug, int, 0644);
+ MODULE_PARM_DESC(swcr_debug, "Enable debug");
+ 
+-static void swcr_process_req(struct swcr_req *req);
+-
+-/*
+- * somethings just need to be run with user context no matter whether
+- * the kernel compression libs use vmalloc/vfree for example.
+- */
+-
+-typedef struct {
+-	struct work_struct wq;
+-	void	(*func)(void *arg);
+-	void	*arg;
+-} execute_later_t;
+-
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,20)
+-static void
+-doing_it_now(struct work_struct *wq)
+-{
+-	execute_later_t *w = container_of(wq, execute_later_t, wq);
+-	(w->func)(w->arg);
+-	kfree(w);
+-}
+-#else
+-static void
+-doing_it_now(void *arg)
+-{
+-	execute_later_t *w = (execute_later_t *) arg;
+-	(w->func)(w->arg);
+-	kfree(w);
+-}
+-#endif
+-
+-static void
+-execute_later(void (fn)(void *), void *arg)
+-{
+-	execute_later_t *w;
+-
+-	w = (execute_later_t *) kmalloc(sizeof(execute_later_t), SLAB_ATOMIC);
+-	if (w) {
+-		memset(w, '\0', sizeof(w));
+-		w->func = fn;
+-		w->arg = arg;
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,20)
+-		INIT_WORK(&w->wq, doing_it_now);
+-#else
+-		INIT_WORK(&w->wq, doing_it_now, w);
+-#endif
+-		schedule_work(&w->wq);
+-	}
+-}
+-
+ /*
+  * Generate a new software session.
+  */
+@@ -342,7 +226,7 @@ swcr_newsession(device_t dev, u_int32_t *sid, struct cryptoini *cri)
+ 	u_int32_t i;
+ 	int error;
+ 	char *algo;
+-	int mode;
++	int mode, sw_type;
+ 
+ 	dprintk("%s()\n", __FUNCTION__);
+ 	if (sid == NULL || cri == NULL) {
+@@ -399,8 +283,7 @@ swcr_newsession(device_t dev, u_int32_t *sid, struct cryptoini *cri)
+ 		}
+ 		memset(*swd, 0, sizeof(struct swcr_data));
+ 
+-		if (cri->cri_alg < 0 ||
+-				cri->cri_alg>=sizeof(crypto_details)/sizeof(crypto_details[0])){
++		if (cri->cri_alg > CRYPTO_ALGORITHM_MAX) {
+ 			printk("cryptosoft: Unknown algorithm 0x%x\n", cri->cri_alg);
+ 			swcr_freesession(NULL, i);
+ 			return EINVAL;
+@@ -414,10 +297,7 @@ swcr_newsession(device_t dev, u_int32_t *sid, struct cryptoini *cri)
+ 		}
+ 
+ 		mode = crypto_details[cri->cri_alg].mode;
+-		(*swd)->sw_type = crypto_details[cri->cri_alg].sw_type;
+-		(*swd)->sw_alg = cri->cri_alg;
+-
+-		spin_lock_init(&(*swd)->sw_tfm_lock);
++		sw_type = crypto_details[cri->cri_alg].sw_type;
+ 
+ 		/* Algorithm specific configuration */
+ 		switch (cri->cri_alg) {
+@@ -542,11 +422,14 @@ swcr_newsession(device_t dev, u_int32_t *sid, struct cryptoini *cri)
+ 				return ENOBUFS;
+ 			}
+ 		} else {
+-			printk("cryptosoft: Unhandled sw_type %d\n", (*swd)->sw_type);
++			printk("cryptosoft: Unhandled sw_type %d\n", sw_type);
+ 			swcr_freesession(NULL, i);
+ 			return EINVAL;
+ 		}
+ 
++		(*swd)->sw_alg = cri->cri_alg;
++		(*swd)->sw_type = sw_type;
++
+ 		cri = cri->cri_next;
+ 		swd = &((*swd)->sw_next);
+ 	}
+@@ -1240,34 +1123,24 @@ cryptosoft_init(void)
+ 
+ 	dprintk("%s(%p)\n", __FUNCTION__, cryptosoft_init);
+ 
+-	swcr_req_cache = kmem_cache_create("cryptosoft_req",
+-				sizeof(struct swcr_req), 0, SLAB_HWCACHE_ALIGN, NULL
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,23)
+-				, NULL
+-#endif
+-				);
+-	if (!swcr_req_cache) {
+-		printk("cryptosoft: failed to create request cache\n");
+-		return -ENOENT;
+-	}
+-
+ 	softc_device_init(&swcr_softc, "cryptosoft", 0, swcr_methods);
+ 
+ 	swcr_id = crypto_get_driverid(softc_get_device(&swcr_softc),
+ 			CRYPTOCAP_F_SOFTWARE | CRYPTOCAP_F_SYNC);
+ 	if (swcr_id < 0) {
+-		printk("cryptosoft: Software crypto device cannot initialize!");
++		printk("Software crypto device cannot initialize!");
+ 		return -ENODEV;
+ 	}
+ 
+ #define	REGISTER(alg) \
+-		crypto_register(swcr_id, alg, 0,0)
++		crypto_register(swcr_id, alg, 0,0);
+ 
+-	for (i = 0; i < sizeof(crypto_details)/sizeof(crypto_details[0]); i++) {
+-		int found;
++	for (i = CRYPTO_ALGORITHM_MIN; i <= CRYPTO_ALGORITHM_MAX; ++i)
++	{
+ 		
+ 		algo = crypto_details[i].alg_name;
+-		if (!algo || !*algo) {
++		if (!algo || !*algo)
++		{
+ 			dprintk("%s:Algorithm %d not supported\n", __FUNCTION__, i);
+ 			continue;
+ 		}
+@@ -1311,12 +1184,11 @@ cryptosoft_exit(void)
+ 	dprintk("%s()\n", __FUNCTION__);
+ 	crypto_unregister_all(swcr_id);
+ 	swcr_id = -1;
+-	kmem_cache_destroy(swcr_req_cache);
+ }
+ 
+-late_initcall(cryptosoft_init);
++module_init(cryptosoft_init);
+ module_exit(cryptosoft_exit);
+ 
+ MODULE_LICENSE("Dual BSD/GPL");
+-MODULE_AUTHOR("David McCullough <david_mccullough@mcafee.com>");
++MODULE_AUTHOR("David McCullough <david_mccullough@securecomputing.com>");
+ MODULE_DESCRIPTION("Cryptosoft (OCF module for kernel crypto)");
+diff --git a/crypto/ocf/ep80579/Makefile b/crypto/ocf/ep80579/Makefile
+index 9aab295..19ff6eb 100644
+--- a/crypto/ocf/ep80579/Makefile
++++ b/crypto/ocf/ep80579/Makefile
+@@ -13,7 +13,7 @@
+ # 
+ #   GPL LICENSE SUMMARY
+ # 
+-#   Copyright(c) 2007,2008,2009 Intel Corporation. All rights reserved.
++#   Copyright(c) 2007,2008 Intel Corporation. All rights reserved.
+ # 
+ #   This program is free software; you can redistribute it and/or modify 
+ #   it under the terms of version 2 of the GNU General Public License as
+@@ -35,7 +35,7 @@
+ # 
+ #   BSD LICENSE 
+ # 
+-#   Copyright(c) 2007,2008,2009 Intel Corporation. All rights reserved.
++#   Copyright(c) 2007,2008 Intel Corporation. All rights reserved.
+ #   All rights reserved.
+ # 
+ #   Redistribution and use in source and binary forms, with or without 
+@@ -65,55 +65,43 @@
+ #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ # 
+ # 
+-#  version: Security.L.1.0.2-229
++#  version: Security.L.1.0.130
+ ############################################################################
+ 
+ 
+ ####################Common variables and definitions########################
+ 
+-ifndef ICP_ROOT
+-$(warning ICP_ROOT is undefined. Please set the path to EP80579 release package directory \
+-        "-> setenv ICP_ROOT <path>")
+-all fastdep:
+-	:
+-else
+-
+-ifndef KERNEL_SOURCE_ROOT
+-$(error KERNEL_SOURCE_ROOT is undefined. Please set the path to the kernel source directory \
+-        "-> setenv KERNEL_SOURCE_ROOT <path>")
+-endif
+-
+ # Ensure The ENV_DIR environmental var is defined.
+ ifndef ICP_ENV_DIR
+-$(error ICP_ENV_DIR is undefined. Please set the path to EP80579 driver environment.mk file \
++$(error ICP_ENV_DIR is undefined. Please set the path to your environment makefile \
+         "-> setenv ICP_ENV_DIR <path>")
+ endif
+ 
+ #Add your project environment Makefile
+-include ${ICP_ENV_DIR}/environment.mk
++include $(ICP_ENV_DIR)/environment.mk
+ 
+ #include the makefile with all the default and common Make variable definitions
+-include ${ICP_BUILDSYSTEM_PATH}/build_files/common.mk
++include $(ICP_BUILDSYSTEM_PATH)/build_files/common.mk
+ 
+ #Add the name for the executable, Library or Module output definitions
+ OUTPUT_NAME= icp_ocf
+ 
+ # List of Source Files to be compiled 
+-SOURCES= icp_common.c icp_sym.c icp_asym.c icp_ocf_linux.c
++SOURCES= icp_common.c icp_sym.c icp_asym.c
+ 
+ #common includes between all supported OSes
+-INCLUDES= -I ${ICP_API_DIR} -I${ICP_LAC_API} \
+--I${ICP_OCF_SRC_DIR}
++INCLUDES= -I $(ICP_API_DIR) -I$(ICP_LAC_API) \
++-I$(ICP_OCF_SRC_DIR)
+ 
+ # The location of the os level makefile needs to be changed.
+-include ${ICP_ENV_DIR}/${ICP_OS}_${ICP_OS_LEVEL}.mk
++include $(ICP_ENV_DIR)/$(ICP_OS)_$(ICP_OS_LEVEL).mk
+ 
+ # On the line directly below list the outputs you wish to build for,
+-# e.g "lib_static lib_shared exe module" as shown below
++# e.g "lib_static lib_shared exe module" as show below
+ install: module
+ 
+ ###################Include rules makefiles########################
+-include ${ICP_BUILDSYSTEM_PATH}/build_files/rules.mk
++include $(ICP_BUILDSYSTEM_PATH)/build_files/rules.mk
+ ###################End of Rules inclusion#########################
+ 
+-endif
++
+diff --git a/crypto/ocf/ep80579/environment.mk b/crypto/ocf/ep80579/environment.mk
+index 1a663e5..a674b45 100644
+--- a/crypto/ocf/ep80579/environment.mk
++++ b/crypto/ocf/ep80579/environment.mk
+@@ -66,9 +66,6 @@ ICP_LAC_API=$(ICP_ROOT)/Acceleration/include/lac
+ ICP_BTR_API=$(ICP_ROOT)/Acceleration/include/btr
+ ICP_API_DIR=$(ICP_ROOT)/Acceleration/include
+ ICP_OCF_SHIM_DIR?=$(KERNEL_SOURCE_ROOT)/crypto/ocf/
+-ifeq ($(wildcard $(ICP_OCF_SHIM_DIR)),)
+-ICP_OCF_SHIM_DIR?=$(ROOTDIR)/modules/ocf/
+-endif
+ 
+ ICP_OS_LEVEL?=kernel_space
+ 
+diff --git a/crypto/ocf/ep80579/icp_asym.c b/crypto/ocf/ep80579/icp_asym.c
+index d2641c5..f679dd5 100644
+--- a/crypto/ocf/ep80579/icp_asym.c
++++ b/crypto/ocf/ep80579/icp_asym.c
+@@ -5,7 +5,7 @@
+  * 
+  *   GPL LICENSE SUMMARY
+  * 
+- *   Copyright(c) 2007,2008,2009 Intel Corporation. All rights reserved.
++ *   Copyright(c) 2007,2008 Intel Corporation. All rights reserved.
+  * 
+  *   This program is free software; you can redistribute it and/or modify 
+  *   it under the terms of version 2 of the GNU General Public License as
+@@ -27,7 +27,7 @@
+  * 
+  *   BSD LICENSE 
+  * 
+- *   Copyright(c) 2007,2008,2009 Intel Corporation. All rights reserved.
++ *   Copyright(c) 2007,2008 Intel Corporation. All rights reserved.
+  *   All rights reserved.
+  * 
+  *   Redistribution and use in source and binary forms, with or without 
+@@ -57,7 +57,7 @@
+  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  * 
+  * 
+- *  version: Security.L.1.0.2-229
++ *  version: Security.L.1.0.130
+  *
+  ***************************************************************************/
+ 
+@@ -81,6 +81,8 @@ to be changed.*/
+ #define ICP_MOD_EXP_KRP_PARAM_MODULUS_INDEX                     (2)
+ #define ICP_MOD_EXP_KRP_PARAM_RESULT_INDEX                      (3)
+ 
++#define SINGLE_BYTE_VALUE					(4)
++
+ /*MOD EXP CRT buffer index values*/
+ #define ICP_MOD_EXP_CRT_KRP_PARAM_PRIME_P_INDEX                 (0)
+ #define ICP_MOD_EXP_CRT_KRP_PARAM_PRIME_Q_INDEX                 (1)
+@@ -119,45 +121,39 @@ to be changed.*/
+    and not set to zero outside of this module */
+ #define CRYPTO_OP_SUCCESS                                       (0)
+ 
+-/*Function to compute Diffie Hellman (DH) phase 1 or phase 2 key values*/
+ static int icp_ocfDrvDHComputeKey(struct cryptkop *krp);
+ 
+-/*Function to compute a Modular Exponentiation (Mod Exp)*/
+ static int icp_ocfDrvModExp(struct cryptkop *krp);
+ 
+-/*Function to compute a Mod Exp using the Chinease Remainder Theorem*/
+ static int icp_ocfDrvModExpCRT(struct cryptkop *krp);
+ 
+-/*Helper function to compute whether the first big number argument is less than
+- the second big number argument */
+ static int
+ icp_ocfDrvCheckALessThanB(CpaFlatBuffer * pK, CpaFlatBuffer * pQ, int *doCheck);
+ 
+-/*Function to sign an input with DSA R and S keys*/
+ static int icp_ocfDrvDsaSign(struct cryptkop *krp);
+ 
+-/*Function to Verify a DSA buffer signature*/
+ static int icp_ocfDrvDsaVerify(struct cryptkop *krp);
+ 
+-/*Callback function for DH operation*/
+ static void
+ icp_ocfDrvDhP1CallBack(void *callbackTag,
+ 		       CpaStatus status,
+ 		       void *pOpData, CpaFlatBuffer * pLocalOctetStringPV);
+ 
+-/*Callback function for ME operation*/
+ static void
+ icp_ocfDrvModExpCallBack(void *callbackTag,
+ 			 CpaStatus status,
+ 			 void *pOpData, CpaFlatBuffer * pResult);
+ 
+-/*Callback function for ME CRT operation*/
+ static void
+ icp_ocfDrvModExpCRTCallBack(void *callbackTag,
+ 			    CpaStatus status,
+ 			    void *pOpData, CpaFlatBuffer * pOutputData);
+ 
+-/*Callback function for DSA sign operation*/
++static void
++icp_ocfDrvDsaVerifyCallBack(void *callbackTag,
++			    CpaStatus status,
++			    void *pOpData, CpaBoolean verifyStatus);
++
+ static void
+ icp_ocfDrvDsaRSSignCallBack(void *callbackTag,
+ 			    CpaStatus status,
+@@ -165,18 +161,12 @@ icp_ocfDrvDsaRSSignCallBack(void *callbackTag,
+ 			    CpaBoolean protocolStatus,
+ 			    CpaFlatBuffer * pR, CpaFlatBuffer * pS);
+ 
+-/*Callback function for DSA Verify operation*/
+-static void
+-icp_ocfDrvDsaVerifyCallBack(void *callbackTag,
+-			    CpaStatus status,
+-			    void *pOpData, CpaBoolean verifyStatus);
+-
+ /* Name        : icp_ocfDrvPkeProcess
+  *
+  * Description : This function will choose which PKE process to follow
+  * based on the input arguments
+  */
+-int icp_ocfDrvPkeProcess(icp_device_t dev, struct cryptkop *krp, int hint)
++int icp_ocfDrvPkeProcess(device_t dev, struct cryptkop *krp, int hint)
+ {
+ 	CpaStatus lacStatus = CPA_STATUS_SUCCESS;
+ 
+@@ -186,7 +176,7 @@ int icp_ocfDrvPkeProcess(icp_device_t dev, struct cryptkop *krp, int hint)
+ 		return EINVAL;
+ 	}
+ 
+-	if (CPA_TRUE == icp_atomic_read(&icp_ocfDrvIsExiting)) {
++	if (CPA_TRUE == atomic_read(&icp_ocfDrvIsExiting)) {
+ 		krp->krp_status = ECANCELED;
+ 		return ECANCELED;
+ 	}
+@@ -268,7 +258,8 @@ int icp_ocfDrvPkeProcess(icp_device_t dev, struct cryptkop *krp, int hint)
+  * It has been seen that in general we are passed little endian byte order
+  * buffers, but LAC only accepts big endian byte order buffers.
+  */
+-static void inline icp_ocfDrvSwapBytes(u_int8_t * num, u_int32_t buff_len_bytes)
++static void inline
++icp_ocfDrvSwapBytes(u_int8_t * num, u_int32_t buff_len_bytes)
+ {
+ 
+ 	int i;
+@@ -328,9 +319,7 @@ static int icp_ocfDrvDHComputeKey(struct cryptkop *krp)
+ 
+ 	callbackTag = krp;
+ 
+-/*All allocations are set to ICP_M_NOWAIT due to the possibility of getting
+-called in interrupt context*/
+-	pPhase1OpData = icp_kmem_cache_zalloc(drvDH_zone, ICP_M_NOWAIT);
++	pPhase1OpData = kmem_cache_zalloc(drvDH_zone, GFP_KERNEL);
+ 	if (NULL == pPhase1OpData) {
+ 		APRINTK("%s():Failed to get memory for key gen data\n",
+ 			__FUNCTION__);
+@@ -338,12 +327,11 @@ called in interrupt context*/
+ 		return ENOMEM;
+ 	}
+ 
+-	pLocalOctetStringPV =
+-	    icp_kmem_cache_zalloc(drvFlatBuffer_zone, ICP_M_NOWAIT);
++	pLocalOctetStringPV = kmem_cache_zalloc(drvFlatBuffer_zone, GFP_KERNEL);
+ 	if (NULL == pLocalOctetStringPV) {
+ 		APRINTK("%s():Failed to get memory for pLocalOctetStringPV\n",
+ 			__FUNCTION__);
+-		ICP_CACHE_FREE(drvDH_zone, pPhase1OpData);
++		kmem_cache_free(drvDH_zone, pPhase1OpData);
+ 		krp->krp_status = ENOMEM;
+ 		return ENOMEM;
+ 	}
+@@ -391,7 +379,7 @@ called in interrupt context*/
+ 		EPRINTK("%s(): DH Phase 1 Key Gen failed (%d).\n",
+ 			__FUNCTION__, lacStatus);
+ 		icp_ocfDrvFreeFlatBuffer(pLocalOctetStringPV);
+-		ICP_CACHE_FREE(drvDH_zone, pPhase1OpData);
++		kmem_cache_free(drvDH_zone, pPhase1OpData);
+ 	}
+ 
+ 	return lacStatus;
+@@ -430,7 +418,7 @@ static int icp_ocfDrvModExp(struct cryptkop *krp)
+ 
+ 	callbackTag = krp;
+ 
+-	pModExpOpData = icp_kmem_cache_zalloc(drvLnModExp_zone, ICP_M_NOWAIT);
++	pModExpOpData = kmem_cache_zalloc(drvLnModExp_zone, GFP_KERNEL);
+ 	if (NULL == pModExpOpData) {
+ 		APRINTK("%s():Failed to get memory for key gen data\n",
+ 			__FUNCTION__);
+@@ -438,11 +426,11 @@ static int icp_ocfDrvModExp(struct cryptkop *krp)
+ 		return ENOMEM;
+ 	}
+ 
+-	pResult = icp_kmem_cache_zalloc(drvFlatBuffer_zone, ICP_M_NOWAIT);
++	pResult = kmem_cache_zalloc(drvFlatBuffer_zone, GFP_KERNEL);
+ 	if (NULL == pResult) {
+ 		APRINTK("%s():Failed to get memory for ModExp result\n",
+ 			__FUNCTION__);
+-		ICP_CACHE_FREE(drvLnModExp_zone, pModExpOpData);
++		kmem_cache_free(drvLnModExp_zone, pModExpOpData);
+ 		krp->krp_status = ENOMEM;
+ 		return ENOMEM;
+ 	}
+@@ -491,7 +479,7 @@ static int icp_ocfDrvModExp(struct cryptkop *krp)
+ 			__FUNCTION__, lacStatus);
+ 		krp->krp_status = ECANCELED;
+ 		icp_ocfDrvFreeFlatBuffer(pResult);
+-		ICP_CACHE_FREE(drvLnModExp_zone, pModExpOpData);
++		kmem_cache_free(drvLnModExp_zone, pModExpOpData);
+ 	}
+ 
+ 	return lacStatus;
+@@ -507,6 +495,7 @@ static int icp_ocfDrvModExp(struct cryptkop *krp)
+  * numbers. Although basic primality checks are done in LAC, it is up to the
+  * user to do any correct prime number checking before passing the inputs.
+  */
++
+ static int icp_ocfDrvModExpCRT(struct cryptkop *krp)
+ {
+ 	CpaStatus lacStatus = CPA_STATUS_SUCCESS;
+@@ -518,8 +507,7 @@ static int icp_ocfDrvModExpCRT(struct cryptkop *krp)
+ 	   them here. */
+ 	callbackTag = krp;
+ 
+-	rsaDecryptOpData =
+-	    icp_kmem_cache_zalloc(drvRSADecrypt_zone, ICP_M_NOWAIT);
++	rsaDecryptOpData = kmem_cache_zalloc(drvRSADecrypt_zone, GFP_KERNEL);
+ 	if (NULL == rsaDecryptOpData) {
+ 		APRINTK("%s():Failed to get memory"
+ 			" for MOD EXP CRT Op data struct\n", __FUNCTION__);
+@@ -528,11 +516,11 @@ static int icp_ocfDrvModExpCRT(struct cryptkop *krp)
+ 	}
+ 
+ 	rsaDecryptOpData->pRecipientPrivateKey
+-	    = icp_kmem_cache_zalloc(drvRSAPrivateKey_zone, ICP_M_NOWAIT);
++	    = kmem_cache_zalloc(drvRSAPrivateKey_zone, GFP_KERNEL);
+ 	if (NULL == rsaDecryptOpData->pRecipientPrivateKey) {
+ 		APRINTK("%s():Failed to get memory for MOD EXP CRT"
+ 			" private key values struct\n", __FUNCTION__);
+-		ICP_CACHE_FREE(drvRSADecrypt_zone, rsaDecryptOpData);
++		kmem_cache_free(drvRSADecrypt_zone, rsaDecryptOpData);
+ 		krp->krp_status = ENOMEM;
+ 		return ENOMEM;
+ 	}
+@@ -739,8 +727,7 @@ static int icp_ocfDrvDsaSign(struct cryptkop *krp)
+ 		return EDOM;
+ 	}
+ 
+-	dsaRsSignOpData =
+-	    icp_kmem_cache_zalloc(drvDSARSSign_zone, ICP_M_NOWAIT);
++	dsaRsSignOpData = kmem_cache_zalloc(drvDSARSSign_zone, GFP_KERNEL);
+ 	if (NULL == dsaRsSignOpData) {
+ 		APRINTK("%s():Failed to get memory"
+ 			" for DSA RS Sign Op data struct\n", __FUNCTION__);
+@@ -914,8 +901,7 @@ static int icp_ocfDrvDsaVerify(struct cryptkop *krp)
+ 
+ 	callbackTag = krp;
+ 
+-	dsaVerifyOpData =
+-	    icp_kmem_cache_zalloc(drvDSAVerify_zone, ICP_M_NOWAIT);
++	dsaVerifyOpData = kmem_cache_zalloc(drvDSAVerify_zone, GFP_KERNEL);
+ 	if (NULL == dsaVerifyOpData) {
+ 		APRINTK("%s():Failed to get memory"
+ 			" for DSA Verify Op data struct\n", __FUNCTION__);
+@@ -987,13 +973,48 @@ static int icp_ocfDrvDsaVerify(struct cryptkop *krp)
+ 	if (CPA_STATUS_SUCCESS != lacStatus) {
+ 		EPRINTK("%s(): DSA Verify Operation failed (%d).\n",
+ 			__FUNCTION__, lacStatus);
+-		ICP_CACHE_FREE(drvDSAVerify_zone, dsaVerifyOpData);
++		kmem_cache_free(drvDSAVerify_zone, dsaVerifyOpData);
+ 		krp->krp_status = ECANCELED;
+ 	}
+ 
+ 	return lacStatus;
+ }
+ 
++/* Name        : icp_ocfDrvReadRandom
++ *
++ * Description : This function will map RNG functionality calls from OCF
++ * to the LAC API.
++ */
++int icp_ocfDrvReadRandom(void *arg, uint32_t * buf, int maxwords)
++{
++	CpaStatus lacStatus = CPA_STATUS_SUCCESS;
++	CpaCyRandGenOpData randGenOpData;
++	CpaFlatBuffer randData;
++
++	if (NULL == buf) {
++		APRINTK("%s(): Invalid input parameters\n", __FUNCTION__);
++		return EINVAL;
++	}
++
++	/* maxwords here is number of integers to generate data for */
++	randGenOpData.generateBits = CPA_TRUE;
++
++	randGenOpData.lenInBytes = maxwords * sizeof(uint32_t);
++
++	icp_ocfDrvPtrAndLenToFlatBuffer((Cpa8U *) buf,
++					randGenOpData.lenInBytes, &randData);
++
++	lacStatus = cpaCyRandGen(CPA_INSTANCE_HANDLE_SINGLE,
++				 NULL, NULL, &randGenOpData, &randData);
++	if (CPA_STATUS_SUCCESS != lacStatus) {
++		EPRINTK("%s(): icp_LacSymRandGen failed (%d). \n",
++			__FUNCTION__, lacStatus);
++		return RETURN_RAND_NUM_GEN_FAILED;
++	}
++
++	return randGenOpData.lenInBytes / sizeof(uint32_t);
++}
++
+ /* Name        : icp_ocfDrvDhP1Callback
+  *
+  * Description : When this function returns it signifies that the LAC
+@@ -1027,7 +1048,7 @@ icp_ocfDrvDhP1CallBack(void *callbackTag,
+ 		DPRINTK("%s(): Invalid input parameters - "
+ 			"pLocalOctetStringPV Data is NULL\n", __FUNCTION__);
+ 		memset(pPhase1OpData, 0, sizeof(CpaCyDhPhase1KeyGenOpData));
+-		ICP_CACHE_FREE(drvDH_zone, pPhase1OpData);
++		kmem_cache_free(drvDH_zone, pPhase1OpData);
+ 		krp->krp_status = ECANCELED;
+ 		crypto_kdone(krp);
+ 		return;
+@@ -1046,7 +1067,7 @@ icp_ocfDrvDhP1CallBack(void *callbackTag,
+ 
+ 	icp_ocfDrvFreeFlatBuffer(pLocalOctetStringPV);
+ 	memset(pPhase1OpData, 0, sizeof(CpaCyDhPhase1KeyGenOpData));
+-	ICP_CACHE_FREE(drvDH_zone, pPhase1OpData);
++	kmem_cache_free(drvDH_zone, pPhase1OpData);
+ 
+ 	crypto_kdone(krp);
+ 
+@@ -1087,7 +1108,7 @@ icp_ocfDrvModExpCallBack(void *callbackTag,
+ 			"pResult data is NULL\n", __FUNCTION__);
+ 		krp->krp_status = ECANCELED;
+ 		memset(pLnModExpOpData, 0, sizeof(CpaCyLnModExpOpData));
+-		ICP_CACHE_FREE(drvLnModExp_zone, pLnModExpOpData);
++		kmem_cache_free(drvLnModExp_zone, pLnModExpOpData);
+ 		crypto_kdone(krp);
+ 		return;
+ 	}
+@@ -1112,7 +1133,7 @@ icp_ocfDrvModExpCallBack(void *callbackTag,
+ 	}
+ 	icp_ocfDrvFreeFlatBuffer(pResult);
+ 	memset(pLnModExpOpData, 0, sizeof(CpaCyLnModExpOpData));
+-	ICP_CACHE_FREE(drvLnModExp_zone, pLnModExpOpData);
++	kmem_cache_free(drvLnModExp_zone, pLnModExpOpData);
+ 
+ 	crypto_kdone(krp);
+ 
+@@ -1223,7 +1244,7 @@ icp_ocfDrvDsaRSSignCallBack(void *callbackTag,
+ 		DPRINTK("%s(): Invalid input parameter - "
+ 			"pR sign is NULL\n", __FUNCTION__);
+ 		icp_ocfDrvFreeFlatBuffer(pS);
+-		ICP_CACHE_FREE(drvDSARSSign_zone, pSignData);
++		kmem_cache_free(drvDSARSSign_zone, pSignData);
+ 		krp->krp_status = ECANCELED;
+ 		crypto_kdone(krp);
+ 		return;
+@@ -1233,7 +1254,7 @@ icp_ocfDrvDsaRSSignCallBack(void *callbackTag,
+ 		DPRINTK("%s(): Invalid input parameter - "
+ 			"pS sign is NULL\n", __FUNCTION__);
+ 		icp_ocfDrvFreeFlatBuffer(pR);
+-		ICP_CACHE_FREE(drvDSARSSign_zone, pSignData);
++		kmem_cache_free(drvDSARSSign_zone, pSignData);
+ 		krp->krp_status = ECANCELED;
+ 		crypto_kdone(krp);
+ 		return;
+@@ -1263,9 +1284,9 @@ icp_ocfDrvDsaRSSignCallBack(void *callbackTag,
+ 	icp_ocfDrvFreeFlatBuffer(pR);
+ 	icp_ocfDrvFreeFlatBuffer(pS);
+ 	memset(pSignData->K.pData, 0, pSignData->K.dataLenInBytes);
+-	ICP_CACHE_FREE(drvDSARSSignKValue_zone, pSignData->K.pData);
++	kmem_cache_free(drvDSARSSignKValue_zone, pSignData->K.pData);
+ 	memset(pSignData, 0, sizeof(CpaCyDsaRSSignOpData));
+-	ICP_CACHE_FREE(drvDSARSSign_zone, pSignData);
++	kmem_cache_free(drvDSARSSign_zone, pSignData);
+ 	crypto_kdone(krp);
+ 
+ 	return;
+@@ -1327,7 +1348,7 @@ icp_ocfDrvDsaVerifyCallBack(void *callbackTag,
+ 	}
+ 
+ 	memset(pVerData, 0, sizeof(CpaCyDsaVerifyOpData));
+-	ICP_CACHE_FREE(drvDSAVerify_zone, pVerData);
++	kmem_cache_free(drvDSAVerify_zone, pVerData);
+ 	crypto_kdone(krp);
+ 
+ 	return;
+diff --git a/crypto/ocf/ep80579/icp_common.c b/crypto/ocf/ep80579/icp_common.c
+index 5d46c0a..fa824a6 100644
+--- a/crypto/ocf/ep80579/icp_common.c
++++ b/crypto/ocf/ep80579/icp_common.c
+@@ -1,11 +1,11 @@
+-/*************************************************************************
++/***************************************************************************
+  *
+  * This file is provided under a dual BSD/GPLv2 license.  When using or 
+  *   redistributing this file, you may do so under either license.
+  * 
+  *   GPL LICENSE SUMMARY
+  * 
+- *   Copyright(c) 2007,2008,2009 Intel Corporation. All rights reserved.
++ *   Copyright(c) 2007,2008 Intel Corporation. All rights reserved.
+  * 
+  *   This program is free software; you can redistribute it and/or modify 
+  *   it under the terms of version 2 of the GNU General Public License as
+@@ -27,7 +27,7 @@
+  * 
+  *   BSD LICENSE 
+  * 
+- *   Copyright(c) 2007,2008,2009 Intel Corporation. All rights reserved.
++ *   Copyright(c) 2007,2008 Intel Corporation. All rights reserved.
+  *   All rights reserved.
+  * 
+  *   Redistribution and use in source and binary forms, with or without 
+@@ -57,7 +57,7 @@
+  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  * 
+  * 
+- *  version: Security.L.1.0.2-229
++ *  version: Security.L.1.0.130
+  *
+  ***************************************************************************/
+ 
+@@ -134,42 +134,66 @@ int num_dereg_retries = DEFAULT_DEREG_RETRIES;
+ int dereg_retry_delay_in_jiffies = DEFAULT_DEREG_DELAY_IN_JIFFIES;
+ 
+ /* Module parameter - gives the maximum number of sessions possible between
+-   OCF and the OCF EP80579 Driver. If set to zero, there is no limit.*/
++   OCF and the OCF Tolapai Driver. If set to zero, there is no limit.*/
+ int max_sessions = DEFAULT_OCF_TO_DRV_MAX_SESSION_COUNT;
+ 
+ /* This is set when the module is removed from the system, no further
+    processing can take place if this is set */
+-icp_atomic_t icp_ocfDrvIsExiting = ICP_ATOMIC_INIT(0);
++atomic_t icp_ocfDrvIsExiting = ATOMIC_INIT(0);
+ 
+ /* This is used to show how many lac sessions were not deregistered*/
+-icp_atomic_t lac_session_failed_dereg_count = ICP_ATOMIC_INIT(0);
++atomic_t lac_session_failed_dereg_count = ATOMIC_INIT(0);
+ 
+ /* This is used to track the number of registered sessions between OCF and
+- * and the OCF EP80579 driver, when max_session is set to value other than
++ * and the OCF Tolapai driver, when max_session is set to value other than
+  * zero. This ensures that the max_session set for the OCF and the driver
+  * is equal to the LAC registered sessions */
+-icp_atomic_t num_ocf_to_drv_registered_sessions = ICP_ATOMIC_INIT(0);
++atomic_t num_ocf_to_drv_registered_sessions = ATOMIC_INIT(0);
+ 
+ /* Head of linked list used to store session data */
+-icp_drvSessionListHead_t icp_ocfDrvGlobalSymListHead;
+-icp_drvSessionListHead_t icp_ocfDrvGlobalSymListHead_FreeMemList;
++struct list_head icp_ocfDrvGlobalSymListHead;
++struct list_head icp_ocfDrvGlobalSymListHead_FreeMemList;
+ 
+-icp_spinlock_t icp_ocfDrvSymSessInfoListSpinlock;
++spinlock_t icp_ocfDrvSymSessInfoListSpinlock = SPIN_LOCK_UNLOCKED;
++rwlock_t icp_kmem_cache_destroy_alloc_lock = RW_LOCK_UNLOCKED;
+ 
+-/*Below pointer is only used in linux, FreeBSD uses the name to
+-create its own variable name*/
+-icp_workqueue *icp_ocfDrvFreeLacSessionWorkQ = NULL;
+-ICP_WORKQUEUE_DEFINE_THREAD(icp_ocfDrvFreeLacSessionWorkQ);
++struct workqueue_struct *icp_ocfDrvFreeLacSessionWorkQ;
+ 
+ struct icp_drvBuffListInfo defBuffListInfo;
+ 
++static struct {
++	softc_device_decl sc_dev;
++} icpDev;
++
++static device_method_t icp_methods = {
++	/* crypto device methods */
++	DEVMETHOD(cryptodev_newsession, icp_ocfDrvNewSession),
++	DEVMETHOD(cryptodev_freesession, icp_ocfDrvFreeLACSession),
++	DEVMETHOD(cryptodev_process, icp_ocfDrvSymProcess),
++	DEVMETHOD(cryptodev_kprocess, icp_ocfDrvPkeProcess),
++};
++
++module_param(num_dereg_retries, int, S_IRUGO);
++module_param(dereg_retry_delay_in_jiffies, int, S_IRUGO);
++module_param(max_sessions, int, S_IRUGO);
++
++MODULE_PARM_DESC(num_dereg_retries,
++		 "Number of times to retry LAC Sym Session Deregistration. "
++		 "Default 10, Max 100");
++MODULE_PARM_DESC(dereg_retry_delay_in_jiffies, "Delay in jiffies "
++		 "(added to a schedule() function call) before a LAC Sym "
++		 "Session Dereg is retried. Default 10");
++MODULE_PARM_DESC(max_sessions, "This sets the maximum number of sessions "
++		 "between OCF and this driver. If this value is set to zero, "
++		 "max session count checking is disabled. Default is zero(0)");
++
+ /* Name        : icp_ocfDrvInit
+  *
+  * Description : This function will register all the symmetric and asymmetric
+  * functionality that will be accelerated by the hardware. It will also
+  * get a unique driver ID from the OCF and initialise all slab caches
+  */
+-ICP_MODULE_INIT_FUNC(icp_ocfDrvInit)
++static int __init icp_ocfDrvInit(void)
+ {
+ 	int ocfStatus = 0;
+ 
+@@ -179,7 +203,7 @@ ICP_MODULE_INIT_FUNC(icp_ocfDrvInit)
+ 	if (MAX_DEREG_RETRIES < num_dereg_retries) {
+ 		EPRINTK("Session deregistration retry count set to greater "
+ 			"than %d", MAX_DEREG_RETRIES);
+-		icp_module_return_code(EINVAL);
++		return -1;
+ 	}
+ 
+ 	/* Initialize and Start the Cryptographic component */
+@@ -374,7 +398,7 @@ ICP_MODULE_EXIT_FUNC(icp_ocfDrvExit)
+ 					/* Succesfully deregistered */
+ 					break;
+ 				} else if (CPA_STATUS_RETRY != lacStatus) {
+-					icp_atomic_inc
++					atomic_inc
+ 					    (&lac_session_failed_dereg_count);
+ 					break;
+ 				}
+@@ -385,9 +409,8 @@ ICP_MODULE_EXIT_FUNC(icp_ocfDrvExit)
+ 				    dereg_retry_delay_in_jiffies;
+ 				while (0 > remaining_delay_time_in_jiffies) {
+ 					remaining_delay_time_in_jiffies =
+-					    icp_schedule_timeout
+-					    (&icp_ocfDrvSymSessInfoListSpinlock,
+-					     remaining_delay_time_in_jiffies);
++					    schedule_timeout
++					    (remaining_delay_time_in_jiffies);
+ 				}
+ 
+ 				DPRINTK
+@@ -447,7 +470,6 @@ ICP_MODULE_EXIT_FUNC(icp_ocfDrvExit)
+ 			__FUNCTION__, lacStatus);
+ 	}
+ 
+-	return ICP_MODULE_EXIT_FUNC_RETURN_VAL;
+ }
+ 
+ /* Name        : icp_ocfDrvFreeCaches
+@@ -456,7 +478,9 @@ ICP_MODULE_EXIT_FUNC(icp_ocfDrvExit)
+  */
+ static void icp_ocfDrvFreeCaches(void)
+ {
+-	icp_atomic_set(&icp_ocfDrvIsExiting, 1);
++	if (atomic_read(&icp_ocfDrvIsExiting) != CPA_TRUE) {
++		atomic_set(&icp_ocfDrvIsExiting, 1);
++	}
+ 
+ 	/*Sym Zones */
+ 	ICP_CACHE_DESTROY(drvSessionData_zone);
+@@ -482,6 +506,7 @@ static void icp_ocfDrvFreeCaches(void)
+  * off to a work queue. If it fails, nothing more can be done and it
+  * returns an error
+  */
++
+ int icp_ocfDrvDeregRetry(CpaCySymSessionCtx sessionToDeregister)
+ {
+ 	struct icp_ocfDrvFreeLacSession *workstore = NULL;
+@@ -491,11 +516,11 @@ int icp_ocfDrvDeregRetry(CpaCySymSessionCtx sessionToDeregister)
+ 
+ 	/*make sure the session is not available to be allocated during this
+ 	   process */
+-	icp_atomic_inc(&lac_session_failed_dereg_count);
++	atomic_inc(&lac_session_failed_dereg_count);
+ 
+ 	/*Farm off to work queue */
+ 	workstore =
+-	    icp_kmalloc(sizeof(struct icp_ocfDrvFreeLacSession), ICP_M_NOWAIT);
++	    kmalloc(sizeof(struct icp_ocfDrvFreeLacSession), GFP_ATOMIC);
+ 	if (NULL == workstore) {
+ 		DPRINTK("%s(): unable to free session - no memory available "
+ 			"for work queue\n", __FUNCTION__);
+@@ -504,11 +529,9 @@ int icp_ocfDrvDeregRetry(CpaCySymSessionCtx sessionToDeregister)
+ 
+ 	workstore->sessionToDeregister = sessionToDeregister;
+ 
+-	icp_init_work(&(workstore->work),
+-		      icp_ocfDrvDeferedFreeLacSessionTaskFn, workstore);
+-
+-	ICP_WORKQUEUE_ENQUEUE(icp_ocfDrvFreeLacSessionWorkQ,
+-			      &(workstore->work));
++	INIT_WORK(&(workstore->work), icp_ocfDrvDeferedFreeLacSessionProcess,
++		  workstore);
++	queue_work(icp_ocfDrvFreeLacSessionWorkQ, &(workstore->work));
+ 
+ 	return ICP_OCF_DRV_STATUS_SUCCESS;
+ 
+@@ -521,7 +544,7 @@ int icp_ocfDrvDeregRetry(CpaCySymSessionCtx sessionToDeregister)
+  * CPA_STATUS_RETRY message from the LAC component. This function is run in
+  * Thread context because it is called from a worker thread
+  */
+-void icp_ocfDrvDeferedFreeLacSessionProcess(void *arg)
++static void icp_ocfDrvDeferedFreeLacSessionProcess(void *arg)
+ {
+ 	struct icp_ocfDrvFreeLacSession *workstore = NULL;
+ 	CpaCySymSessionCtx sessionToDeregister = NULL;
+@@ -537,10 +560,10 @@ void icp_ocfDrvDeferedFreeLacSessionProcess(void *arg)
+ 	}
+ 
+ 	sessionToDeregister = workstore->sessionToDeregister;
+-	icp_kfree(workstore);
++	kfree(workstore);
+ 
+ 	/*if exiting, give deregistration one more blast only */
+-	if (icp_atomic_read(&icp_ocfDrvIsExiting) == CPA_TRUE) {
++	if (atomic_read(&icp_ocfDrvIsExiting) == CPA_TRUE) {
+ 		lacStatus = cpaCySymRemoveSession(CPA_INSTANCE_HANDLE_SINGLE,
+ 						  sessionToDeregister);
+ 
+@@ -551,7 +574,7 @@ void icp_ocfDrvDeferedFreeLacSessionProcess(void *arg)
+ 			return;
+ 		}
+ 
+-		icp_atomic_dec(&lac_session_failed_dereg_count);
++		atomic_dec(&lac_session_failed_dereg_count);
+ 		return;
+ 	}
+ 
+@@ -560,7 +583,7 @@ void icp_ocfDrvDeferedFreeLacSessionProcess(void *arg)
+ 						  sessionToDeregister);
+ 
+ 		if (lacStatus == CPA_STATUS_SUCCESS) {
+-			icp_atomic_dec(&lac_session_failed_dereg_count);
++			atomic_dec(&lac_session_failed_dereg_count);
+ 			return;
+ 		}
+ 		if (lacStatus != CPA_STATUS_RETRY) {
+@@ -572,17 +595,16 @@ void icp_ocfDrvDeferedFreeLacSessionProcess(void *arg)
+ 		/*schedule_timout returns the time left for completion if this
+ 		   task is set to TASK_INTERRUPTIBLE */
+ 		remaining_delay_time_in_jiffies = dereg_retry_delay_in_jiffies;
+-		while (0 < remaining_delay_time_in_jiffies) {
++		while (0 > remaining_delay_time_in_jiffies) {
+ 			remaining_delay_time_in_jiffies =
+-			    icp_schedule_timeout(NULL,
+-						 remaining_delay_time_in_jiffies);
++			    schedule_timeout(remaining_delay_time_in_jiffies);
+ 		}
+ 
+ 	}
+ 
+ 	DPRINTK("%s(): Unable to deregister session\n", __FUNCTION__);
+ 	DPRINTK("%s(): Number of unavailable LAC sessions = %d\n", __FUNCTION__,
+-		icp_atomic_read(&lac_session_failed_dereg_count));
++		atomic_read(&lac_session_failed_dereg_count));
+ }
+ 
+ /* Name        : icp_ocfDrvPtrAndLenToFlatBuffer 
+@@ -600,6 +622,131 @@ icp_ocfDrvPtrAndLenToFlatBuffer(void *pData, uint32_t len,
+ 	pFlatBuffer->dataLenInBytes = len;
+ }
+ 
++/* Name        : icp_ocfDrvSingleSkBuffToFlatBuffer 
++ *
++ * Description : This function converts a single socket buffer (sk_buff)
++ * structure to a Fredericksburg Flat Buffer (CpaFlatBuffer) format.
++ *
++ * This function assumes that the data passed in are valid.
++ */
++static inline void
++icp_ocfDrvSingleSkBuffToFlatBuffer(struct sk_buff *pSkb,
++				   CpaFlatBuffer * pFlatBuffer)
++{
++	pFlatBuffer->pData = pSkb->data;
++	pFlatBuffer->dataLenInBytes = skb_headlen(pSkb);
++}
++
++/* Name        : icp_ocfDrvSkBuffToBufferList 
++ *
++ * Description : This function converts a socket buffer (sk_buff) structure to
++ * Fredericksburg Scatter/Gather (CpaBufferList) buffer format.
++ *
++ * This function assumes that the bufferlist has been allocated with the correct
++ * number of buffer arrays.
++ * 
++ */
++inline int
++icp_ocfDrvSkBuffToBufferList(struct sk_buff *pSkb, CpaBufferList * bufferList)
++{
++	CpaFlatBuffer *curFlatBuffer = NULL;
++	char *skbuffPageAddr = NULL;
++	struct sk_buff *pCurFrag = NULL;
++	struct skb_shared_info *pShInfo = NULL;
++	uint32_t page_offset = 0, i = 0;
++
++	DPRINTK("%s(): Entry Point\n", __FUNCTION__);
++
++	/*
++	 * In all cases, the first skb needs to be translated to FlatBuffer.
++	 * Perform a buffer translation for the first skbuff
++	 */
++	curFlatBuffer = bufferList->pBuffers;
++	icp_ocfDrvSingleSkBuffToFlatBuffer(pSkb, curFlatBuffer);
++
++	/* Set the userData to point to the original sk_buff */
++	bufferList->pUserData = (void *)pSkb;
++
++	/* We now know we'll have at least one element in the SGL */
++	bufferList->numBuffers = 1;
++
++	if (0 == skb_is_nonlinear(pSkb)) {
++		/* Is a linear buffer - therefore it's a single skbuff */
++		DPRINTK("%s(): Exit Point\n", __FUNCTION__);
++		return ICP_OCF_DRV_STATUS_SUCCESS;
++	}
++
++	curFlatBuffer++;
++	pShInfo = skb_shinfo(pSkb);
++	if (pShInfo->frag_list != NULL && pShInfo->nr_frags != 0) {
++		EPRINTK("%s():"
++			"Translation for a combination of frag_list "
++			"and frags[] array not supported!\n", __FUNCTION__);
++		return ICP_OCF_DRV_STATUS_FAIL;
++	} else if (pShInfo->frag_list != NULL) {
++		/*
++		 * Non linear skbuff supported through frag_list 
++		 * Perform translation for each fragment (sk_buff)
++		 * in the frag_list of the first sk_buff.
++		 */
++		for (pCurFrag = pShInfo->frag_list;
++		     pCurFrag != NULL; pCurFrag = pCurFrag->next) {
++			icp_ocfDrvSingleSkBuffToFlatBuffer(pCurFrag,
++							   curFlatBuffer);
++			curFlatBuffer++;
++			bufferList->numBuffers++;
++		}
++	} else if (pShInfo->nr_frags != 0) {
++		/*
++		 * Perform translation for each fragment in frags array
++		 * and add to the BufferList
++		 */
++		for (i = 0; i < pShInfo->nr_frags; i++) {
++			/* Get the page address and offset of this frag */
++			skbuffPageAddr = (char *)pShInfo->frags[i].page;
++			page_offset = pShInfo->frags[i].page_offset;
++
++			/* Convert a pointer and length to a flat buffer */
++			icp_ocfDrvPtrAndLenToFlatBuffer(skbuffPageAddr +
++							page_offset,
++							pShInfo->frags[i].size,
++							curFlatBuffer);
++			curFlatBuffer++;
++			bufferList->numBuffers++;
++		}
++	} else {
++		EPRINTK("%s():" "Could not recognize skbuff fragments!\n",
++			__FUNCTION__);
++		return ICP_OCF_DRV_STATUS_FAIL;
++	}
++
++	DPRINTK("%s(): Exit Point\n", __FUNCTION__);
++	return ICP_OCF_DRV_STATUS_SUCCESS;
++}
++
++/* Name        : icp_ocfDrvBufferListToSkBuff 
++ *
++ * Description : This function converts a Fredericksburg Scatter/Gather 
++ * (CpaBufferList) buffer format to socket buffer structure.
++ */
++inline int
++icp_ocfDrvBufferListToSkBuff(CpaBufferList * bufferList, struct sk_buff **skb)
++{
++	DPRINTK("%s(): Entry Point\n", __FUNCTION__);
++
++	/* Retrieve the orignal skbuff */
++	*skb = (struct sk_buff *)bufferList->pUserData;
++	if (NULL == *skb) {
++		EPRINTK("%s():"
++			"Error on converting from a BufferList. "
++			"The BufferList does not contain an sk_buff.\n",
++			__FUNCTION__);
++		return ICP_OCF_DRV_STATUS_FAIL;
++	}
++	DPRINTK("%s(): Exit Point\n", __FUNCTION__);
++	return ICP_OCF_DRV_STATUS_SUCCESS;
++}
++
+ /* Name        : icp_ocfDrvPtrAndLenToBufferList
+  *
+  * Description : This function converts a "pointer and length" buffer
+@@ -655,6 +802,45 @@ icp_ocfDrvBufferListMemInfo(uint16_t numBuffers,
+ 	return ICP_OCF_DRV_STATUS_SUCCESS;
+ }
+ 
++/* Name        : icp_ocfDrvGetSkBuffFrags
++ *
++ * Description : This function will determine the number of 
++ * fragments in a socket buffer(sk_buff).
++ */
++inline uint16_t icp_ocfDrvGetSkBuffFrags(struct sk_buff * pSkb)
++{
++	uint16_t numFrags = 0;
++	struct sk_buff *pCurFrag = NULL;
++	struct skb_shared_info *pShInfo = NULL;
++
++	if (NULL == pSkb)
++		return 0;
++
++	numFrags = 1;
++	if (0 == skb_is_nonlinear(pSkb)) {
++		/* Linear buffer - it's a single skbuff */
++		return numFrags;
++	}
++
++	pShInfo = skb_shinfo(pSkb);
++	if (NULL != pShInfo->frag_list && 0 != pShInfo->nr_frags) {
++		EPRINTK("%s(): Combination of frag_list "
++			"and frags[] array not supported!\n", __FUNCTION__);
++		return 0;
++	} else if (0 != pShInfo->nr_frags) {
++		numFrags += pShInfo->nr_frags;
++		return numFrags;
++	} else if (NULL != pShInfo->frag_list) {
++		for (pCurFrag = pShInfo->frag_list;
++		     pCurFrag != NULL; pCurFrag = pCurFrag->next) {
++			numFrags++;
++		}
++		return numFrags;
++	} else {
++		return 0;
++	}
++}
++
+ /* Name        : icp_ocfDrvFreeFlatBuffer
+  *
+  * Description : This function will deallocate flat buffer.
+@@ -663,7 +849,7 @@ inline void icp_ocfDrvFreeFlatBuffer(CpaFlatBuffer * pFlatBuffer)
+ {
+ 	if (pFlatBuffer != NULL) {
+ 		memset(pFlatBuffer, 0, sizeof(CpaFlatBuffer));
+-		ICP_CACHE_FREE(drvFlatBuffer_zone, pFlatBuffer);
++		kmem_cache_free(drvFlatBuffer_zone, pFlatBuffer);
+ 	}
+ }
+ 
+@@ -690,9 +876,8 @@ icp_ocfDrvAllocMetaData(CpaBufferList * pBufferList,
+ 		 * op data.  It has been pre-allocated in memory just after the
+ 		 * icp_drvOpData structure.
+ 		 */
+-		pBufferList->pPrivateMetaData = (void *)(pOpDataStartAddr +
+-							 sizeof(struct
+-								icp_drvOpData));
++		pBufferList->pPrivateMetaData = pOpDataStartAddr +
++		        sizeof(struct icp_drvOpData);
+ 	} else {
+ 		if (CPA_STATUS_SUCCESS !=
+ 		    cpaCyBufferListGetMetaSize(CPA_INSTANCE_HANDLE_SINGLE,
+@@ -708,8 +893,7 @@ icp_ocfDrvAllocMetaData(CpaBufferList * pBufferList,
+ 			return ICP_OCF_DRV_STATUS_SUCCESS;
+ 		}
+ 
+-		pBufferList->pPrivateMetaData =
+-		    icp_kmalloc(metaSize, ICP_M_NOWAIT);
++		pBufferList->pPrivateMetaData = kmalloc(metaSize, GFP_ATOMIC);
+ 	}
+ 	if (NULL == pBufferList->pPrivateMetaData) {
+ 		EPRINTK("%s() Failed to allocate pPrivateMetaData.\n",
+diff --git a/crypto/ocf/ep80579/icp_ocf.h b/crypto/ocf/ep80579/icp_ocf.h
+index d9dde87..cb70680 100644
+--- a/crypto/ocf/ep80579/icp_ocf.h
++++ b/crypto/ocf/ep80579/icp_ocf.h
+@@ -5,7 +5,7 @@
+  * 
+  *   GPL LICENSE SUMMARY
+  * 
+- *   Copyright(c) 2007,2008,2009 Intel Corporation. All rights reserved.
++ *   Copyright(c) 2007,2008 Intel Corporation. All rights reserved.
+  * 
+  *   This program is free software; you can redistribute it and/or modify 
+  *   it under the terms of version 2 of the GNU General Public License as
+@@ -27,7 +27,7 @@
+  * 
+  *   BSD LICENSE 
+  * 
+- *   Copyright(c) 2007,2008,2009 Intel Corporation. All rights reserved.
++ *   Copyright(c) 2007,2008 Intel Corporation. All rights reserved.
+  *   All rights reserved.
+  * 
+  *   Redistribution and use in source and binary forms, with or without 
+@@ -57,34 +57,42 @@
+  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  * 
+  * 
+- *  version: Security.L.1.0.2-229
++ *  version: Security.L.1.0.130
+  *
+  ***************************************************************************/
+ 
+ /*
+- * OCF driver header file for the Intel ICP processor.
++ * OCF drv driver header file for the Intel ICP processor.
+  */
+ 
+-#ifndef ICP_OCF_H_
+-#define ICP_OCF_H_
++#ifndef ICP_OCF_H
++#define ICP_OCF_H
+ 
+-#include <cpa.h>
+-#include <cpa_cy_im.h>
+-#include <cpa_cy_sym.h>
+-#include <cpa_cy_rand.h>
+-#include <cpa_cy_dh.h>
+-#include <cpa_cy_rsa.h>
+-#include <cpa_cy_ln.h>
+-#include <cpa_cy_common.h>
+-#include <cpa_cy_dsa.h>
++#include <linux/crypto.h>
++#include <linux/delay.h>
++#include <linux/skbuff.h>
+ 
+-#include "icp_os.h"
++#include "cryptodev.h"
++#include "uio.h"
++
++#include "cpa.h"
++#include "cpa_cy_im.h"
++#include "cpa_cy_sym.h"
++#include "cpa_cy_rand.h"
++#include "cpa_cy_dh.h"
++#include "cpa_cy_rsa.h"
++#include "cpa_cy_ln.h"
++#include "cpa_cy_common.h"
++#include "cpa_cy_dsa.h"
+ 
+ #define NUM_BITS_IN_BYTE (8)
+ #define NUM_BITS_IN_BYTE_MINUS_ONE (NUM_BITS_IN_BYTE -1)
+ #define INVALID_DRIVER_ID (-1)
+ #define RETURN_RAND_NUM_GEN_FAILED (-1)
+ 
++/*This is define means only one operation can be chained to another
++(resulting in one chain of two operations)*/
++#define MAX_NUM_OF_CHAINED_OPS (1)
+ /*This is the max block cipher initialisation vector*/
+ #define MAX_IV_LEN_IN_BYTES (20)
+ /*This is used to check whether the OCF to this driver session limit has
+@@ -110,10 +118,61 @@
+ #define ICP_OCF_PRINT_KERN_ALERT		(1)
+ #define ICP_OCF_PRINT_KERN_ERRS			(1)
+ 
++/*DSA Prime Q size in bytes (as defined in the standard) */
++#define DSA_RS_SIGN_PRIMEQ_SIZE_IN_BYTES	(20)
++
++/*MACRO DEFINITIONS*/
++
++#define BITS_TO_BYTES(bytes, bits) 					\
++	bytes = (bits + NUM_BITS_IN_BYTE_MINUS_ONE) / NUM_BITS_IN_BYTE
++
++#define ICP_CACHE_CREATE(cache_ID, cache_name) 				\
++	kmem_cache_create(cache_ID, sizeof(cache_name),0, 		\
++		SLAB_HWCACHE_ALIGN, NULL, NULL);
++
++#define ICP_CACHE_NULL_CHECK(slab_zone)					\
++{									\
++	if(NULL == slab_zone){ 						\
++		icp_ocfDrvFreeCaches(); 				\
++		EPRINTK("%s() line %d: Not enough memory!\n", 		\
++			__FUNCTION__, __LINE__); 			\
++		return ENOMEM; 						\
++	}								\
++}
++
++#define ICP_CACHE_DESTROY(slab_zone) 	                                \
++{                                                                       \
++        if(NULL != slab_zone){						\
++                kmem_cache_destroy(slab_zone);				\
++                slab_zone = NULL;					\
++        }								\
++}
++
++#define ICP_REGISTER_SYM_FUNCTIONALITY_WITH_OCF(alg)			\
++{									\
++	if(OCF_REGISTRATION_STATUS_SUCCESS ==				\
++		crypto_register(icp_ocfDrvDriverId,			\
++				    alg,				\
++				    0,					\
++				    0)) {				\
++		ocfStatus++;						\
++	}								\
++}
++
++#define ICP_REGISTER_ASYM_FUNCTIONALITY_WITH_OCF(alg)			\
++{									\
++	if(OCF_REGISTRATION_STATUS_SUCCESS ==				\
++		crypto_kregister(icp_ocfDrvDriverId,			\
++				      alg,				\
++				      0)){				\
++		ocfStatus++;						\
++	}								\
++}
++
+ #if ICP_OCF_PRINT_DEBUG_MESSAGES == 1
+ #define DPRINTK(args...)      \
+ {			      \
+-                ICP_IPRINTK(args); \
++                printk(args); \
+ }
+ 
+ #else				//ICP_OCF_PRINT_DEBUG_MESSAGES == 1
+@@ -125,7 +184,7 @@
+ #if ICP_OCF_PRINT_KERN_ALERT == 1
+ #define APRINTK(args...)      						\
+ {			      						\
+-       ICP_APRINTK(args);						\
++       printk(KERN_ALERT args);						\
+ }
+ 
+ #else				//ICP_OCF_PRINT_KERN_ALERT == 1
+@@ -137,7 +196,7 @@
+ #if ICP_OCF_PRINT_KERN_ERRS == 1
+ #define EPRINTK(args...)      \
+ {			      \
+-       ICP_EPRINTK(args); \
++       printk(KERN_ERR args); \
+ }
+ 
+ #else				//ICP_OCF_PRINT_KERN_ERRS == 1
+@@ -261,13 +320,19 @@ struct icp_drvBuffListInfo {
+ 	Cpa32U metaOffset;
+ 	Cpa32U buffListSize;
+ };
+-
+ extern struct icp_drvBuffListInfo defBuffListInfo;
+ 
+-/* This struct is used to keep a reference to the relevant node in the list
+-   of sessionData structs, to the buffer type required by OCF and to the OCF
+-   provided crp struct that needs to be returned. All this info is needed in
+-   the callback function.*/
++/*
++* This struct is used to keep a reference to the relevant node in the list
++* of sessionData structs, to the buffer type required by OCF and to the OCF
++* provided crp struct that needs to be returned. All this info is needed in
++* the callback function.
++*
++* IV can sometimes be stored in non-contiguous memory (e.g. skbuff
++* linked/frag list, therefore a contiguous memory space for the IV data must be
++* created and passed to LAC
++*
++*/
+ struct icp_drvOpData {
+ 	CpaCySymOpData lacOpData;
+ 	uint32_t digestSizeInBytes;
+diff --git a/crypto/ocf/ep80579/icp_sym.c b/crypto/ocf/ep80579/icp_sym.c
+index e1c7148..9374be6 100644
+--- a/crypto/ocf/ep80579/icp_sym.c
++++ b/crypto/ocf/ep80579/icp_sym.c
+@@ -5,7 +5,7 @@
+  * 
+  *   GPL LICENSE SUMMARY
+  * 
+- *   Copyright(c) 2007,2008,2009 Intel Corporation. All rights reserved.
++ *   Copyright(c) 2007,2008 Intel Corporation. All rights reserved.
+  * 
+  *   This program is free software; you can redistribute it and/or modify 
+  *   it under the terms of version 2 of the GNU General Public License as
+@@ -27,7 +27,7 @@
+  * 
+  *   BSD LICENSE 
+  * 
+- *   Copyright(c) 2007,2008,2009 Intel Corporation. All rights reserved.
++ *   Copyright(c) 2007,2008 Intel Corporation. All rights reserved.
+  *   All rights reserved.
+  * 
+  *   Redistribution and use in source and binary forms, with or without 
+@@ -57,7 +57,7 @@
+  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  * 
+  * 
+- *  version: Security.L.1.0.2-229
++ *  version: Security.L.1.0.130
+  *
+  ***************************************************************************/
+ /*
+@@ -96,6 +96,38 @@ static int
+ icp_ocfDrvAlgorithmSetup(struct cryptoini *cri,
+ 			 CpaCySymSessionSetupData * lacSessCtx);
+ 
++/*This top level function is used to find a pointer to where a digest is 
++  stored/needs to be inserted. */
++static uint8_t *icp_ocfDrvDigestPointerFind(struct icp_drvOpData *drvOpData,
++					    struct cryptodesc *crp_desc);
++
++/*This function is called when a digest pointer has to be found within a
++  SKBUFF.*/
++static inline uint8_t *icp_ocfDrvSkbuffDigestPointerFind(struct icp_drvOpData
++							 *drvOpData,
++							 int offsetInBytes,
++							 uint32_t
++							 digestSizeInBytes);
++
++/*The following two functions are called if the SKBUFF digest pointer is not 
++  positioned in the linear portion of the buffer (i.e. it is in a linked SKBUFF
++   or page fragment).*/
++/*This function takes care of the page fragment case.*/
++static inline uint8_t *icp_ocfDrvDigestSkbNRFragsCheck(struct sk_buff *skb,
++						       struct skb_shared_info
++						       *skb_shared,
++						       int offsetInBytes,
++						       uint32_t
++						       digestSizeInBytes);
++
++/*This function takes care of the linked list case.*/
++static inline uint8_t *icp_ocfDrvDigestSkbFragListCheck(struct sk_buff *skb,
++							struct skb_shared_info
++							*skb_shared,
++							int offsetInBytes,
++							uint32_t
++							digestSizeInBytes);
++
+ /*This function is used to free an OCF->OCF_DRV session object*/
+ static void icp_ocfDrvFreeOCFSession(struct icp_drvSessionData *sessionData);
+ 
+@@ -110,7 +142,7 @@ static void icp_ocfDrvFreeOCFSession(struct icp_drvSessionData *sessionData);
+  * Notes : The callbackTag is a pointer to an icp_drvOpData. This memory
+  * object was passed to LAC for the cryptographic processing and contains all
+  * the relevant information for cleaning up buffer handles etc. so that the
+- * OCF EP80579 Driver portion of this crypto operation can be fully completed.
++ * OCF Tolapai Driver portion of this crypto operation can be fully completed.
+  */
+ static void
+ icp_ocfDrvSymCallBack(void *callbackTag,
+@@ -182,10 +214,10 @@ icp_ocfDrvSymCallBack(void *callbackTag,
+ 
+ 	if (temp_drvOpData->numBufferListArray >
+ 	    ICP_OCF_DRV_DEFAULT_BUFFLIST_ARRAYS) {
+-		icp_kfree(pDstBuffer->pBuffers);
++		kfree(pDstBuffer->pBuffers);
+ 	}
+ 	icp_ocfDrvFreeMetaData(pDstBuffer);
+-	ICP_CACHE_FREE(drvOpData_zone, temp_drvOpData);
++	kmem_cache_free(drvOpData_zone, temp_drvOpData);
+ 
+ 	/* Invoke the OCF callback function */
+ 	crypto_done(crp);
+@@ -200,8 +232,7 @@ icp_ocfDrvSymCallBack(void *callbackTag,
+  * Notes : LAC session registration happens during the first perform call.
+  * That is the first time we know all information about a given session.
+  */
+-int icp_ocfDrvNewSession(icp_device_t dev, uint32_t * sid,
+-			 struct cryptoini *cri)
++int icp_ocfDrvNewSession(device_t dev, uint32_t * sid, struct cryptoini *cri)
+ {
+ 	struct icp_drvSessionData *sessionData = NULL;
+ 	uint32_t delete_session = 0;
+@@ -228,44 +259,44 @@ int icp_ocfDrvNewSession(icp_device_t dev, uint32_t * sid,
+ 		return EINVAL;
+ 	}
+ 
+-	sessionData = icp_kmem_cache_zalloc(drvSessionData_zone, ICP_M_NOWAIT);
++	sessionData = kmem_cache_zalloc(drvSessionData_zone, GFP_ATOMIC);
+ 	if (NULL == sessionData) {
+ 		DPRINTK("%s():No memory for Session Data\n", __FUNCTION__);
+ 		return ENOMEM;
+ 	}
+ 
+ 	/*ENTER CRITICAL SECTION */
+-	icp_spin_lockbh_lock(&icp_ocfDrvSymSessInfoListSpinlock);
++	spin_lock_bh(&icp_ocfDrvSymSessInfoListSpinlock);
+ 	/*put this check in the spinlock so no new sessions can be added to the
+ 	   linked list when we are exiting */
+-	if (CPA_TRUE == icp_atomic_read(&icp_ocfDrvIsExiting)) {
++	if (CPA_TRUE == atomic_read(&icp_ocfDrvIsExiting)) {
+ 		delete_session++;
+ 
+ 	} else if (NO_OCF_TO_DRV_MAX_SESSIONS != max_sessions) {
+-		if (icp_atomic_read(&num_ocf_to_drv_registered_sessions) >=
++		if (atomic_read(&num_ocf_to_drv_registered_sessions) >=
+ 		    (max_sessions -
+-		     icp_atomic_read(&lac_session_failed_dereg_count))) {
++		     atomic_read(&lac_session_failed_dereg_count))) {
+ 			delete_session++;
+ 		} else {
+-			icp_atomic_inc(&num_ocf_to_drv_registered_sessions);
++			atomic_inc(&num_ocf_to_drv_registered_sessions);
+ 			/* Add to session data linked list */
+-			ICP_LIST_ADD(sessionData, &icp_ocfDrvGlobalSymListHead,
+-				     listNode);
++			list_add(&(sessionData->listNode),
++				 &icp_ocfDrvGlobalSymListHead);
+ 		}
+ 
+ 	} else if (NO_OCF_TO_DRV_MAX_SESSIONS == max_sessions) {
+-		ICP_LIST_ADD(sessionData, &icp_ocfDrvGlobalSymListHead,
+-			     listNode);
++		list_add(&(sessionData->listNode),
++			 &icp_ocfDrvGlobalSymListHead);
+ 	}
+ 
+ 	sessionData->inUse = ICP_SESSION_INITIALISED;
+ 
+ 	/*EXIT CRITICAL SECTION */
+-	icp_spin_lockbh_unlock(&icp_ocfDrvSymSessInfoListSpinlock);
++	spin_unlock_bh(&icp_ocfDrvSymSessInfoListSpinlock);
+ 
+ 	if (delete_session) {
+ 		DPRINTK("%s():No Session handles available\n", __FUNCTION__);
+-		ICP_CACHE_FREE(drvSessionData_zone, sessionData);
++		kmem_cache_free(drvSessionData_zone, sessionData);
+ 		return EPERM;
+ 	}
+ 
+@@ -530,27 +561,27 @@ static void icp_ocfDrvFreeOCFSession(struct icp_drvSessionData *sessionData)
+ 	sessionData->inUse = ICP_SESSION_DEREGISTERED;
+ 
+ 	/*ENTER CRITICAL SECTION */
+-	icp_spin_lockbh_lock(&icp_ocfDrvSymSessInfoListSpinlock);
++	spin_lock_bh(&icp_ocfDrvSymSessInfoListSpinlock);
+ 
+-	if (CPA_TRUE == icp_atomic_read(&icp_ocfDrvIsExiting)) {
++	if (CPA_TRUE == atomic_read(&icp_ocfDrvIsExiting)) {
+ 		/*If the Driver is exiting, allow that process to
+ 		   handle any deletions */
+ 		/*EXIT CRITICAL SECTION */
+-		icp_spin_lockbh_unlock(&icp_ocfDrvSymSessInfoListSpinlock);
++		spin_unlock_bh(&icp_ocfDrvSymSessInfoListSpinlock);
+ 		return;
+ 	}
+ 
+-	icp_atomic_dec(&num_ocf_to_drv_registered_sessions);
++	atomic_dec(&num_ocf_to_drv_registered_sessions);
+ 
+-	ICP_LIST_DEL(sessionData, listNode);
++	list_del(&(sessionData->listNode));
+ 
+ 	/*EXIT CRITICAL SECTION */
+-	icp_spin_lockbh_unlock(&icp_ocfDrvSymSessInfoListSpinlock);
++	spin_unlock_bh(&icp_ocfDrvSymSessInfoListSpinlock);
+ 
+ 	if (NULL != sessionData->sessHandle) {
+-		icp_kfree(sessionData->sessHandle);
++		kfree(sessionData->sessHandle);
+ 	}
+-	ICP_CACHE_FREE(drvSessionData_zone, sessionData);
++	kmem_cache_free(drvSessionData_zone, sessionData);
+ }
+ 
+ /* Name        : icp_ocfDrvFreeLACSession
+@@ -558,7 +589,7 @@ static void icp_ocfDrvFreeOCFSession(struct icp_drvSessionData *sessionData)
+  * Description : This attempts to deregister a LAC session. If it fails, the
+  * deregistation retry function is called.
+  */
+-int icp_ocfDrvFreeLACSession(icp_device_t dev, uint64_t sid)
++int icp_ocfDrvFreeLACSession(device_t dev, uint64_t sid)
+ {
+ 	CpaCySymSessionCtx sessionToDeregister = NULL;
+ 	struct icp_drvSessionData *sessionData = NULL;
+@@ -574,14 +605,14 @@ int icp_ocfDrvFreeLACSession(icp_device_t dev, uint64_t sid)
+ 
+ 	sessionToDeregister = sessionData->sessHandle;
+ 
+-	if ((ICP_SESSION_INITIALISED != sessionData->inUse) &&
+-	    (ICP_SESSION_RUNNING != sessionData->inUse) &&
+-	    (ICP_SESSION_DEREGISTERED != sessionData->inUse)) {
+-		DPRINTK("%s() Session not initialised.\n", __FUNCTION__);
++	if (ICP_SESSION_INITIALISED == sessionData->inUse) {
++		DPRINTK("%s() Session not registered with LAC\n", __FUNCTION__);
++	} else if (NULL == sessionData->sessHandle) {
++		EPRINTK
++		    ("%s(): OCF Free session called with Null Session Handle.\n",
++		     __FUNCTION__);
+ 		return EINVAL;
+-	}
+-
+-	if (ICP_SESSION_RUNNING == sessionData->inUse) {
++	} else {
+ 		lacStatus = cpaCySymRemoveSession(CPA_INSTANCE_HANDLE_SINGLE,
+ 						  sessionToDeregister);
+ 		if (CPA_STATUS_RETRY == lacStatus) {
+@@ -599,12 +630,9 @@ int icp_ocfDrvFreeLACSession(icp_device_t dev, uint64_t sid)
+ 			DPRINTK("%s(): LAC failed to deregister the session. "
+ 				"localSessionId= %p, lacStatus = %d\n",
+ 				__FUNCTION__, sessionToDeregister, lacStatus);
+-			icp_atomic_inc(&lac_session_failed_dereg_count);
++			atomic_inc(&lac_session_failed_dereg_count);
+ 			retval = EPERM;
+ 		}
+-	} else {
+-		DPRINTK("%s() Session not registered with LAC.\n",
+-			__FUNCTION__);
+ 	}
+ 
+ 	icp_ocfDrvFreeOCFSession(sessionData);
+@@ -641,12 +669,13 @@ static int icp_ocfDrvAlgCheck(struct cryptodesc *crp_desc)
+  * to whether session paramaters have changed (e.g. alg chain order) are
+  * done.
+  */
+-int icp_ocfDrvSymProcess(icp_device_t dev, struct cryptop *crp, int hint)
++int icp_ocfDrvSymProcess(device_t dev, struct cryptop *crp, int hint)
+ {
+ 	struct icp_drvSessionData *sessionData = NULL;
+ 	struct icp_drvOpData *drvOpData = NULL;
+ 	CpaStatus lacStatus = CPA_STATUS_SUCCESS;
+ 	Cpa32U sessionCtxSizeInBytes = 0;
++	uint16_t numBufferListArray = 0;
+ 
+ 	if (NULL == crp) {
+ 		DPRINTK("%s(): Invalid input parameters, cryptop is NULL\n",
+@@ -668,7 +697,7 @@ int icp_ocfDrvSymProcess(icp_device_t dev, struct cryptop *crp, int hint)
+ 		return EINVAL;
+ 	}
+ 
+-	if (CPA_TRUE == icp_atomic_read(&icp_ocfDrvIsExiting)) {
++	if (CPA_TRUE == atomic_read(&icp_ocfDrvIsExiting)) {
+ 		crp->crp_etype = EFAULT;
+ 		return EFAULT;
+ 	}
+@@ -765,16 +794,14 @@ int icp_ocfDrvSymProcess(icp_device_t dev, struct cryptop *crp, int hint)
+ 		if (CPA_STATUS_SUCCESS != lacStatus) {
+ 			EPRINTK("%s(): cpaCySymSessionCtxGetSize failed - %d\n",
+ 				__FUNCTION__, lacStatus);
+-			crp->crp_etype = EINVAL;
+ 			return EINVAL;
+ 		}
+ 		sessionData->sessHandle =
+-		    icp_kmalloc(sessionCtxSizeInBytes, ICP_M_NOWAIT);
++		    kmalloc(sessionCtxSizeInBytes, GFP_ATOMIC);
+ 		if (NULL == sessionData->sessHandle) {
+ 			EPRINTK
+ 			    ("%s(): Failed to get memory for SymSessionCtx\n",
+ 			     __FUNCTION__);
+-			crp->crp_etype = ENOMEM;
+ 			return ENOMEM;
+ 		}
+ 
+@@ -786,14 +813,13 @@ int icp_ocfDrvSymProcess(icp_device_t dev, struct cryptop *crp, int hint)
+ 		if (CPA_STATUS_SUCCESS != lacStatus) {
+ 			EPRINTK("%s(): cpaCySymInitSession failed -%d \n",
+ 				__FUNCTION__, lacStatus);
+-			crp->crp_etype = EFAULT;
+ 			return EFAULT;
+ 		}
+ 
+ 		sessionData->inUse = ICP_SESSION_RUNNING;
+ 	}
+ 
+-	drvOpData = icp_kmem_cache_zalloc(drvOpData_zone, ICP_M_NOWAIT);
++	drvOpData = kmem_cache_zalloc(drvOpData_zone, GFP_ATOMIC);
+ 	if (NULL == drvOpData) {
+ 		EPRINTK("%s():Failed to get memory for drvOpData\n",
+ 			__FUNCTION__);
+@@ -902,6 +928,21 @@ int icp_ocfDrvSymProcess(icp_device_t dev, struct cryptop *crp, int hint)
+ 		drvOpData->bufferType = CRYPTO_BUF_CONTIG;
+ 	}
+ 
++	if (ICP_OCF_DRV_STATUS_SUCCESS !=
++	    icp_ocfDrvProcessDataSetup(drvOpData, drvOpData->crp->crp_desc)) {
++		crp->crp_etype = EINVAL;
++		goto err;
++	}
++
++	if (drvOpData->crp->crp_desc->crd_next != NULL) {
++		if (icp_ocfDrvProcessDataSetup(drvOpData, drvOpData->crp->
++					       crp_desc->crd_next)) {
++			crp->crp_etype = EINVAL;
++			goto err;
++		}
++
++	}
++
+ 	/* Allocate srcBuffer's private meta data */
+ 	if (ICP_OCF_DRV_STATUS_SUCCESS !=
+ 	    icp_ocfDrvAllocMetaData(&(drvOpData->srcBuffer), drvOpData)) {
+@@ -922,7 +963,7 @@ int icp_ocfDrvSymProcess(icp_device_t dev, struct cryptop *crp, int hint)
+ 		DPRINTK("%s(): cpaCySymPerformOp retry, lacStatus = %d\n",
+ 			__FUNCTION__, lacStatus);
+ 		memset(&(drvOpData->lacOpData), 0, sizeof(CpaCySymOpData));
+-		crp->crp_etype = ERESTART;
++		crp->crp_etype = EINVAL;
+ 		goto err;
+ 	}
+ 	if (CPA_STATUS_SUCCESS != lacStatus) {
+@@ -937,10 +978,10 @@ int icp_ocfDrvSymProcess(icp_device_t dev, struct cryptop *crp, int hint)
+ 
+       err:
+ 	if (drvOpData->numBufferListArray > ICP_OCF_DRV_DEFAULT_BUFFLIST_ARRAYS) {
+-		icp_kfree(drvOpData->srcBuffer.pBuffers);
++		kfree(drvOpData->srcBuffer.pBuffers);
+ 	}
+ 	icp_ocfDrvFreeMetaData(&(drvOpData->srcBuffer));
+-	ICP_CACHE_FREE(drvOpData_zone, drvOpData);
++	kmem_cache_free(drvOpData_zone, drvOpData);
+ 
+ 	return crp->crp_etype;
+ }
+@@ -1151,3 +1192,201 @@ uint8_t *icp_ocfDrvDigestPointerFind(struct icp_drvOpData * drvOpData,
+ 	DPRINTK("%s() Should not reach this point\n", __FUNCTION__);
+ 	return NULL;
+ }
++
++/* Name        : icp_ocfDrvSkbuffDigestPointerFind
++ *
++ * Description : This function is used by icp_ocfDrvDigestPointerFind to process
++ * the non-linear portion of the skbuff if the fragmentation type is a linked
++ * list (frag_list is not NULL in the skb_shared_info structure)
++ */
++static inline uint8_t *icp_ocfDrvSkbuffDigestPointerFind(struct icp_drvOpData
++							 *drvOpData,
++							 int offsetInBytes,
++							 uint32_t
++							 digestSizeInBytes)
++{
++
++	struct sk_buff *skb = NULL;
++	struct skb_shared_info *skb_shared = NULL;
++
++	uint32_t skbuffisnonlinear = 0;
++
++	uint32_t skbheadlen = 0;
++
++	skb = (struct sk_buff *)(drvOpData->crp->crp_buf);
++	skbuffisnonlinear = skb_is_nonlinear(skb);
++
++	skbheadlen = skb_headlen(skb);
++
++	/*Linear skb checks */
++	if (skbheadlen > offsetInBytes) {
++
++		if (skbheadlen >= (offsetInBytes + digestSizeInBytes)) {
++			return (uint8_t *) (skb->data + offsetInBytes);
++		} else {
++			DPRINTK("%s() Auth payload stretches "
++				"accross contiguous memory\n", __FUNCTION__);
++			return NULL;
++		}
++	} else {
++		if (skbuffisnonlinear) {
++			offsetInBytes -= skbheadlen;
++		} else {
++			DPRINTK("%s() Offset outside of buffer boundaries\n",
++				__FUNCTION__);
++			return NULL;
++		}
++	}
++
++	/*Non Linear checks */
++	skb_shared = (struct skb_shared_info *)(skb->end);
++	if (unlikely(NULL == skb_shared)) {
++		DPRINTK("%s() skbuff shared info stucture is NULL! \n",
++			__FUNCTION__);
++		return NULL;
++	} else if ((0 != skb_shared->nr_frags) &&
++		   (skb_shared->frag_list != NULL)) {
++		DPRINTK("%s() skbuff nr_frags AND "
++			"frag_list not supported \n", __FUNCTION__);
++		return NULL;
++	}
++
++	/*TCP segmentation more likely than IP fragmentation */
++	if (likely(0 != skb_shared->nr_frags)) {
++		return icp_ocfDrvDigestSkbNRFragsCheck(skb, skb_shared,
++						       offsetInBytes,
++						       digestSizeInBytes);
++	} else if (skb_shared->frag_list != NULL) {
++		return icp_ocfDrvDigestSkbFragListCheck(skb, skb_shared,
++							offsetInBytes,
++							digestSizeInBytes);
++	} else {
++		DPRINTK("%s() skbuff is non-linear but does not show any "
++			"linked data\n", __FUNCTION__);
++		return NULL;
++	}
++
++}
++
++/* Name        : icp_ocfDrvDigestSkbNRFragsCheck
++ *
++ * Description : This function is used by icp_ocfDrvSkbuffDigestPointerFind to
++ * process the non-linear portion of the skbuff, if the fragmentation type is
++ * page fragments
++ */
++static inline uint8_t *icp_ocfDrvDigestSkbNRFragsCheck(struct sk_buff *skb,
++						       struct skb_shared_info
++						       *skb_shared,
++						       int offsetInBytes,
++						       uint32_t
++						       digestSizeInBytes)
++{
++	int i = 0;
++	/*nr_frags starts from 1 */
++	if (MAX_SKB_FRAGS < skb_shared->nr_frags) {
++		DPRINTK("%s error processing skbuff "
++			"page frame -- MAX FRAGS exceeded \n", __FUNCTION__);
++		return NULL;
++	}
++
++	for (i = 0; i < skb_shared->nr_frags; i++) {
++
++		if (offsetInBytes >= skb_shared->frags[i].size) {
++			/*offset still greater than data position */
++			offsetInBytes -= skb_shared->frags[i].size;
++		} else {
++			/* found the page containing start of hash */
++
++			if (NULL == skb_shared->frags[i].page) {
++				DPRINTK("%s() Linked page is NULL!\n",
++					__FUNCTION__);
++				return NULL;
++			}
++
++			if (offsetInBytes + digestSizeInBytes >
++			    skb_shared->frags[i].size) {
++				DPRINTK("%s() Auth payload stretches accross "
++					"contiguous memory\n", __FUNCTION__);
++				return NULL;
++			} else {
++				return (uint8_t *) (skb_shared->frags[i].page +
++						    skb_shared->frags[i].
++						    page_offset +
++						    offsetInBytes);
++			}
++		}
++		/*only possible if internal page sizes are set wrong */
++		if (offsetInBytes < 0) {
++			DPRINTK("%s error processing skbuff page frame "
++				"-- offset calculation \n", __FUNCTION__);
++			return NULL;
++		}
++	}
++	/*only possible if internal page sizes are set wrong */
++	DPRINTK("%s error processing skbuff page frame "
++		"-- ran out of page fragments, remaining offset = %d \n",
++		__FUNCTION__, offsetInBytes);
++	return NULL;
++
++}
++
++/* Name        : icp_ocfDrvDigestSkbFragListCheck
++ *
++ * Description : This function is used by icp_ocfDrvSkbuffDigestPointerFind to 
++ * process the non-linear portion of the skbuff, if the fragmentation type is 
++ * a linked list
++ * 
++ */
++static inline uint8_t *icp_ocfDrvDigestSkbFragListCheck(struct sk_buff *skb,
++							struct skb_shared_info
++							*skb_shared,
++							int offsetInBytes,
++							uint32_t
++							digestSizeInBytes)
++{
++
++	struct sk_buff *skb_list = skb_shared->frag_list;
++	/*check added for readability */
++	if (NULL == skb_list) {
++		DPRINTK("%s error processing skbuff "
++			"-- no more list! \n", __FUNCTION__);
++		return NULL;
++	}
++
++	for (; skb_list; skb_list = skb_list->next) {
++		if (NULL == skb_list) {
++			DPRINTK("%s error processing skbuff "
++				"-- no more list! \n", __FUNCTION__);
++			return NULL;
++		}
++
++		if (offsetInBytes >= skb_list->len) {
++			offsetInBytes -= skb_list->len;
++
++		} else {
++			if (offsetInBytes + digestSizeInBytes > skb_list->len) {
++				DPRINTK("%s() Auth payload stretches accross "
++					"contiguous memory\n", __FUNCTION__);
++				return NULL;
++			} else {
++				return (uint8_t *)
++				    (skb_list->data + offsetInBytes);
++			}
++
++		}
++
++		/*This check is only needed if internal skb_list length values
++		   are set wrong. */
++		if (0 > offsetInBytes) {
++			DPRINTK("%s() error processing skbuff object -- offset "
++				"calculation \n", __FUNCTION__);
++			return NULL;
++		}
++
++	}
++
++	/*catch all for unusual for-loop exit. 
++	   This code should never be reached */
++	DPRINTK("%s() Catch-All hit! Process error.\n", __FUNCTION__);
++	return NULL;
++}
+diff --git a/crypto/ocf/hifn/hifn7751.c b/crypto/ocf/hifn/hifn7751.c
+index d554f16..6459f35 100644
+--- a/crypto/ocf/hifn/hifn7751.c
++++ b/crypto/ocf/hifn/hifn7751.c
+@@ -46,8 +46,7 @@ __FBSDID("$FreeBSD: src/sys/dev/hifn/hifn7751.c,v 1.40 2007/03/21 03:42:49 sam E
+ /*
+  * Driver for various Hifn encryption processors.
+  */
+-#include <linux/version.h>
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38) && !defined(AUTOCONF_INCLUDED)
++#ifndef AUTOCONF_INCLUDED
+ #include <linux/config.h>
+ #endif
+ #include <linux/module.h>
+@@ -61,6 +60,7 @@ __FBSDID("$FreeBSD: src/sys/dev/hifn/hifn7751.c,v 1.40 2007/03/21 03:42:49 sam E
+ #include <linux/interrupt.h>
+ #include <linux/spinlock.h>
+ #include <linux/random.h>
++#include <linux/version.h>
+ #include <linux/skbuff.h>
+ #include <asm/io.h>
+ 
+@@ -98,10 +98,6 @@ int hifn_maxbatch = 1;
+ module_param(hifn_maxbatch, int, 0644);
+ MODULE_PARM_DESC(hifn_maxbatch, "max ops to batch w/o interrupt");
+ 
+-int hifn_cache_linesize = 0x10;
+-module_param(hifn_cache_linesize, int, 0444);
+-MODULE_PARM_DESC(hifn_cache_linesize, "PCI config cache line size");
+-
+ #ifdef MODULE_PARM
+ char *hifn_pllconfig = NULL;
+ MODULE_PARM(hifn_pllconfig, "s");
+@@ -241,7 +237,7 @@ pci_map_skb(struct hifn_softc *sc,struct hifn_operand *buf,struct sk_buff *skb)
+ 	for (i = 0; i < skb_shinfo(skb)->nr_frags; ) {
+ 		buf->segs[buf->nsegs].ds_len = skb_shinfo(skb)->frags[i].size;
+ 		buf->segs[buf->nsegs].ds_addr = pci_map_single(sc->sc_pcidev,
+-				page_address(skb_frag_page(&skb_shinfo(skb)->frags[i])) +
++				page_address(skb_shinfo(skb)->frags[i].page) +
+ 					skb_shinfo(skb)->frags[i].page_offset,
+ 				buf->segs[buf->nsegs].ds_len, PCI_DMA_BIDIRECTIONAL);
+ 		buf->mapsize += buf->segs[buf->nsegs].ds_len;
+@@ -868,9 +864,7 @@ hifn_set_retry(struct hifn_softc *sc)
+ 	DPRINTF("%s()\n", __FUNCTION__);
+ 	/* NB: RETRY only responds to 8-bit reads/writes */
+ 	pci_write_config_byte(sc->sc_pcidev, HIFN_RETRY_TIMEOUT, 0);
+-	pci_write_config_byte(sc->sc_pcidev, HIFN_TRDY_TIMEOUT, 0);
+-	/* piggy back the cache line setting here */
+-	pci_write_config_byte(sc->sc_pcidev, PCI_CACHE_LINE_SIZE, hifn_cache_linesize);
++	pci_write_config_dword(sc->sc_pcidev, HIFN_TRDY_TIMEOUT, 0);
+ }
+ 
+ /*
+@@ -2375,6 +2369,11 @@ hifn_newsession(device_t dev, u_int32_t *sidp, struct cryptoini *cri)
+ 		case CRYPTO_DES_CBC:
+ 		case CRYPTO_3DES_CBC:
+ 		case CRYPTO_AES_CBC:
++			/* XXX this may read fewer, does it matter? */
++			read_random(ses->hs_iv,
++				c->cri_alg == CRYPTO_AES_CBC ?
++					HIFN_AES_IV_LENGTH : HIFN_IV_LENGTH);
++			/*FALLTHROUGH*/
+ 		case CRYPTO_ARC4:
+ 			if (cry) {
+ 				DPRINTF("%s,%d: %s - EINVAL\n",__FILE__,__LINE__,__FUNCTION__);
+@@ -2570,7 +2569,8 @@ hifn_process(device_t dev, struct cryptop *crp, int hint)
+ 				if (enccrd->crd_flags & CRD_F_IV_EXPLICIT)
+ 					bcopy(enccrd->crd_iv, cmd->iv, ivlen);
+ 				else
+-					read_random(cmd->iv, ivlen);
++					bcopy(sc->sc_sessions[session].hs_iv,
++					    cmd->iv, ivlen);
+ 
+ 				if ((enccrd->crd_flags & CRD_F_IV_PRESENT)
+ 				    == 0) {
+@@ -2775,7 +2775,7 @@ hifn_callback(struct hifn_softc *sc, struct hifn_command *cmd, u_int8_t *macbuf)
+ 	struct hifn_dma *dma = sc->sc_dma;
+ 	struct cryptop *crp = cmd->crp;
+ 	struct cryptodesc *crd;
+-	int i, u;
++	int i, u, ivlen;
+ 
+ 	DPRINTF("%s()\n", __FUNCTION__);
+ 
+@@ -2840,6 +2840,22 @@ hifn_callback(struct hifn_softc *sc, struct hifn_command *cmd, u_int8_t *macbuf)
+ 
+ 	hifnstats.hst_obytes += cmd->dst_mapsize;
+ 
++	if ((cmd->base_masks & (HIFN_BASE_CMD_CRYPT | HIFN_BASE_CMD_DECODE)) ==
++	    HIFN_BASE_CMD_CRYPT) {
++		for (crd = crp->crp_desc; crd; crd = crd->crd_next) {
++			if (crd->crd_alg != CRYPTO_DES_CBC &&
++			    crd->crd_alg != CRYPTO_3DES_CBC &&
++			    crd->crd_alg != CRYPTO_AES_CBC)
++				continue;
++			ivlen = ((crd->crd_alg == CRYPTO_AES_CBC) ?
++				HIFN_AES_IV_LENGTH : HIFN_IV_LENGTH);
++			crypto_copydata(crp->crp_flags, crp->crp_buf,
++			    crd->crd_skip + crd->crd_len - ivlen, ivlen,
++			    cmd->softc->sc_sessions[cmd->session_num].hs_iv);
++			break;
++		}
++	}
++
+ 	if (macbuf != NULL) {
+ 		for (crd = crp->crp_desc; crd; crd = crd->crd_next) {
+                         int len;
+@@ -2950,5 +2966,5 @@ module_init(hifn_init);
+ module_exit(hifn_exit);
+ 
+ MODULE_LICENSE("BSD");
+-MODULE_AUTHOR("David McCullough <david_mccullough@mcafee.com>");
++MODULE_AUTHOR("David McCullough <david_mccullough@securecomputing.com>");
+ MODULE_DESCRIPTION("OCF driver for hifn PCI crypto devices");
+diff --git a/crypto/ocf/hifn/hifn7751var.h b/crypto/ocf/hifn/hifn7751var.h
+index c5d30f9..9a5f231 100644
+--- a/crypto/ocf/hifn/hifn7751var.h
++++ b/crypto/ocf/hifn/hifn7751var.h
+@@ -113,6 +113,7 @@ struct hifn_dma {
+ struct hifn_session {
+ 	int hs_used;
+ 	int hs_mlen;
++	u_int8_t hs_iv[HIFN_MAX_IV_LENGTH];
+ };
+ 
+ #define	HIFN_RING_SYNC(sc, r, i, f)					\
+diff --git a/crypto/ocf/hifn/hifnHIPP.c b/crypto/ocf/hifn/hifnHIPP.c
+index a69e630..cf55a0f 100644
+--- a/crypto/ocf/hifn/hifnHIPP.c
++++ b/crypto/ocf/hifn/hifnHIPP.c
+@@ -32,8 +32,7 @@
+ /*
+  * Driver for various Hifn encryption processors.
+  */
+-#include <linux/version.h>
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38) && !defined(AUTOCONF_INCLUDED)
++#ifndef AUTOCONF_INCLUDED
+ #include <linux/config.h>
+ #endif
+ #include <linux/module.h>
+@@ -47,6 +46,7 @@
+ #include <linux/interrupt.h>
+ #include <linux/spinlock.h>
+ #include <linux/random.h>
++#include <linux/version.h>
+ #include <linux/skbuff.h>
+ #include <linux/uio.h>
+ #include <linux/sysfs.h>
+diff --git a/crypto/ocf/ixp4xx/ixp4xx.c b/crypto/ocf/ixp4xx/ixp4xx.c
+index ede598f..d83d8cc 100644
+--- a/crypto/ocf/ixp4xx/ixp4xx.c
++++ b/crypto/ocf/ixp4xx/ixp4xx.c
+@@ -3,8 +3,8 @@
+  * This driver requires the IXP400 Access Library that is available
+  * from Intel in order to operate (or compile).
+  *
+- * Written by David McCullough <david_mccullough@mcafee.com>
+- * Copyright (C) 2006-2011 David McCullough
++ * Written by David McCullough <david_mccullough@securecomputing.com>
++ * Copyright (C) 2006-2007 David McCullough
+  * Copyright (C) 2004-2005 Intel Corporation.
+  *
+  * LICENSE TERMS
+@@ -33,8 +33,7 @@
+  * and/or fitness for purpose.
+  */
+ 
+-#include <linux/version.h>
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38) && !defined(AUTOCONF_INCLUDED)
++#ifndef AUTOCONF_INCLUDED
+ #include <linux/config.h>
+ #endif
+ #include <linux/module.h>
+@@ -374,6 +373,9 @@ ixp_freesession(device_t dev, u_int64_t tid)
+ 			ixCryptoAccCtxUnregister(ixp_sessions[sid]->ixp_ctx_id);
+ 			ixp_sessions[sid]->ixp_ctx_id = -1;
+ 		}
++
++		flush_scheduled_work();
++
+ 		kfree(ixp_sessions[sid]);
+ 	}
+ 	ixp_sessions[sid] = NULL;
+@@ -607,7 +609,8 @@ ixp_process_pending(void *arg)
+ static void
+ ixp_process_pending_wq(struct work_struct *work)
+ {
+-	struct ixp_data *ixp = container_of(work, struct ixp_data, ixp_pending_work);
++	struct ixp_data *ixp = container_of(work, struct ixp_data,
++								ixp_pending_work);
+ 	ixp_process_pending(ixp);
+ }
+ #endif
+diff --git a/crypto/ocf/kirkwood/Makefile b/crypto/ocf/kirkwood/Makefile
+index 6dafd00..8b13789 100644
+--- a/crypto/ocf/kirkwood/Makefile
++++ b/crypto/ocf/kirkwood/Makefile
+@@ -1,19 +1 @@
+-# for SGlinux builds
+--include $(ROOTDIR)/modules/.config
+-
+-obj-$(CONFIG_OCF_KIRKWOOD) += mv_cesa.o
+-
+-mv_cesa-y := cesa/mvCesa.o cesa/mvLru.o cesa/mvMD5.o cesa/mvSHA1.o cesa/AES/mvAesAlg.o cesa/AES/mvAesApi.o cesa/mvCesaDebug.o cesa_ocf_drv.o
+-
+-# Extra objects required by the CESA driver
+-mv_cesa-y += mvHal/kw_family/ctrlEnv/mvCtrlEnvLib.o mvHal/kw_family/boardEnv/mvBoardEnvLib.o mvHal/mv_hal/twsi/mvTwsi.o mvHal/kw_family/ctrlEnv/sys/mvCpuIf.o mvHal/kw_family/ctrlEnv/sys/mvAhbToMbus.o mvHal/kw_family/ctrlEnv/sys/mvSysDram.o mvHal/linux_oss/mvOs.o mvHal/kw_family/ctrlEnv/mvCtrlEnvAddrDec.o mvHal/mv_hal/gpp/mvGpp.o mvHal/kw_family/ctrlEnv/sys/mvSysPex.o mvHal/mv_hal/pex/mvPex.o mvHal/kw_family/boardEnv/mvBoardEnvSpec.o mvHal/common/mvCommon.o mvHal/common/mvDebug.o mvHal/kw_family/ctrlEnv/sys/mvSysCesa.o
+-
+-ifdef src
+-EXTRA_CFLAGS += -I$(src)/.. -I$(src)/cesa -I$(src)/mvHal -I$(src)/mvHal/common -I$(src)/mvHal/kw_family -I$(src)/mvHal/mv_hal -I$(src)/mvHal/linux_oss -I$(src)
+-endif
+-
+-EXTRA_CFLAGS += -DMV_LINUX -DMV_CPU_LE -DMV_ARM -DMV_INCLUDE_CESA -DMV_INCLUDE_PEX -DMV_CACHE_COHERENCY=3
+-ifdef TOPDIR
+--include $(TOPDIR)/Rules.make
+-endif
+ 
+diff --git a/crypto/ocf/kirkwood/mvHal/common/mvTypes.h b/crypto/ocf/kirkwood/mvHal/common/mvTypes.h
+index de212a1..8b13789 100644
+--- a/crypto/ocf/kirkwood/mvHal/common/mvTypes.h
++++ b/crypto/ocf/kirkwood/mvHal/common/mvTypes.h
+@@ -1,245 +1 @@
+-/*******************************************************************************
+-Copyright (C) Marvell International Ltd. and its affiliates
+-
+-This software file (the "File") is owned and distributed by Marvell
+-International Ltd. and/or its affiliates ("Marvell") under the following
+-alternative licensing terms.  Once you have made an election to distribute the
+-File under one of the following license alternatives, please (i) delete this
+-introductory statement regarding license alternatives, (ii) delete the two
+-license alternatives that you have not elected to use and (iii) preserve the
+-Marvell copyright notice above.
+-
+-********************************************************************************
+-Marvell Commercial License Option
+-
+-If you received this File from Marvell and you have entered into a commercial
+-license agreement (a "Commercial License") with Marvell, the File is licensed
+-to you under the terms of the applicable Commercial License.
+-
+-********************************************************************************
+-Marvell GPL License Option
+-
+-If you received this File from Marvell, you may opt to use, redistribute and/or
+-modify this File in accordance with the terms and conditions of the General
+-Public License Version 2, June 1991 (the "GPL License"), a copy of which is
+-available along with the File in the license.txt file or by writing to the Free
+-Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
+-on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
+-
+-THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+-WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
+-DISCLAIMED.  The GPL License provides additional details about this warranty
+-disclaimer.
+-********************************************************************************
+-Marvell BSD License Option
+-
+-If you received this File from Marvell, you may opt to use, redistribute and/or
+-modify this File under the following licensing terms.
+-Redistribution and use in source and binary forms, with or without modification,
+-are permitted provided that the following conditions are met:
+-
+-    *   Redistributions of source code must retain the above copyright notice,
+-	    this list of conditions and the following disclaimer.
+-
+-    *   Redistributions in binary form must reproduce the above copyright
+-        notice, this list of conditions and the following disclaimer in the
+-        documentation and/or other materials provided with the distribution.
+-
+-    *   Neither the name of Marvell nor the names of its contributors may be
+-        used to endorse or promote products derived from this software without
+-        specific prior written permission.
+-
+-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-
+-*******************************************************************************/
+-
+-
+-#ifndef __INCmvTypesh
+-#define __INCmvTypesh
+-
+-/* Defines */
+-
+-/* The following is a list of Marvell status    */
+-#define MV_ERROR		    (-1)
+-#define MV_OK			    (0x00)  /* Operation succeeded                   */
+-#define MV_FAIL			    (0x01)	/* Operation failed                      */
+-#define MV_BAD_VALUE        (0x02)  /* Illegal value (general)               */
+-#define MV_OUT_OF_RANGE     (0x03)  /* The value is out of range             */
+-#define MV_BAD_PARAM        (0x04)  /* Illegal parameter in function called  */
+-#define MV_BAD_PTR          (0x05)  /* Illegal pointer value                 */
+-#define MV_BAD_SIZE         (0x06)  /* Illegal size                          */
+-#define MV_BAD_STATE        (0x07)  /* Illegal state of state machine        */
+-#define MV_SET_ERROR        (0x08)  /* Set operation failed                  */
+-#define MV_GET_ERROR        (0x09)  /* Get operation failed                  */
+-#define MV_CREATE_ERROR     (0x0A)  /* Fail while creating an item           */
+-#define MV_NOT_FOUND        (0x0B)  /* Item not found                        */
+-#define MV_NO_MORE          (0x0C)  /* No more items found                   */
+-#define MV_NO_SUCH          (0x0D)  /* No such item                          */
+-#define MV_TIMEOUT          (0x0E)  /* Time Out                              */
+-#define MV_NO_CHANGE        (0x0F)  /* Parameter(s) is already in this value */
+-#define MV_NOT_SUPPORTED    (0x10)  /* This request is not support           */
+-#define MV_NOT_IMPLEMENTED  (0x11)  /* Request supported but not implemented */
+-#define MV_NOT_INITIALIZED  (0x12)  /* The item is not initialized           */
+-#define MV_NO_RESOURCE      (0x13)  /* Resource not available (memory ...)   */
+-#define MV_FULL             (0x14)  /* Item is full (Queue or table etc...)  */
+-#define MV_EMPTY            (0x15)  /* Item is empty (Queue or table etc...) */
+-#define MV_INIT_ERROR       (0x16)  /* Error occured while INIT process      */
+-#define MV_HW_ERROR         (0x17)  /* Hardware error                        */
+-#define MV_TX_ERROR         (0x18)  /* Transmit operation not succeeded      */
+-#define MV_RX_ERROR         (0x19)  /* Recieve operation not succeeded       */
+-#define MV_NOT_READY	    (0x1A)	/* The other side is not ready yet       */
+-#define MV_ALREADY_EXIST    (0x1B)  /* Tried to create existing item         */
+-#define MV_OUT_OF_CPU_MEM   (0x1C)  /* Cpu memory allocation failed.         */
+-#define MV_NOT_STARTED      (0x1D)  /* Not started yet         */
+-#define MV_BUSY             (0x1E)  /* Item is busy.                         */
+-#define MV_TERMINATE        (0x1F)  /* Item terminates it's work.            */
+-#define MV_NOT_ALIGNED      (0x20)  /* Wrong alignment                       */
+-#define MV_NOT_ALLOWED      (0x21)  /* Operation NOT allowed                 */
+-#define MV_WRITE_PROTECT    (0x22)  /* Write protected                       */
+-
+-
+-#define MV_INVALID  (int)(-1)
+-
+-#define MV_FALSE	0
+-#define MV_TRUE     (!(MV_FALSE))
+-
+-
+-#ifndef NULL
+-#define NULL ((void*)0)
+-#endif
+-
+-
+-#ifndef MV_ASMLANGUAGE
+-/* typedefs */
+-
+-typedef char  MV_8;
+-typedef unsigned char	MV_U8;
+-
+-typedef int		MV_32;
+-typedef unsigned int	MV_U32;
+-
+-typedef short		MV_16;
+-typedef unsigned short	MV_U16;
+-
+-#ifdef MV_PPC64
+-typedef long		MV_64;
+-typedef unsigned long	MV_U64;
+-#else
+-typedef long long		MV_64;
+-typedef unsigned long long	MV_U64;
+-#endif
+-
+-typedef long		MV_LONG;	/* 32/64 */
+-typedef unsigned long	MV_ULONG;	/* 32/64 */
+-
+-typedef int     MV_STATUS;
+-typedef int     MV_BOOL;
+-typedef void    MV_VOID;
+-typedef float   MV_FLOAT;
+-
+-typedef int 	(*MV_FUNCPTR) (void);	  /* ptr to function returning int   */
+-typedef void 	(*MV_VOIDFUNCPTR) (void); /* ptr to function returning void  */
+-typedef double 	(*MV_DBLFUNCPTR) (void);  /* ptr to function returning double*/
+-typedef float 	(*MV_FLTFUNCPTR) (void);  /* ptr to function returning float */
+-
+-typedef MV_U32 MV_KHZ;
+-typedef MV_U32 MV_MHZ;
+-typedef MV_U32 MV_HZ;
+-
+-
+-/* This enumerator describes the set of commands that can be applied on   	*/
+-/* an engine (e.g. IDMA, XOR). Appling a comman depends on the current   	*/
+-/* status (see MV_STATE enumerator)                      					*/
+-/* Start can be applied only when status is IDLE                         */
+-/* Stop can be applied only when status is IDLE, ACTIVE or PAUSED        */
+-/* Pause can be applied only when status is ACTIVE                          */
+-/* Restart can be applied only when status is PAUSED                        */
+-typedef enum _mvCommand
+-{
+-    MV_START,              /* Start	*/
+-    MV_STOP,               /* Stop     */
+-    MV_PAUSE,              /* Pause    */
+-    MV_RESTART             /* Restart  */
+-} MV_COMMAND;
+-
+-/* This enumerator describes the set of state conditions.					*/
+-/* Moving from one state to other is stricted.   							*/
+-typedef enum _mvState
+-{
+-    MV_IDLE,
+-    MV_ACTIVE,
+-    MV_PAUSED,
+-    MV_UNDEFINED_STATE
+-} MV_STATE;
+-
+-
+-/* This structure describes address space window. Window base can be        */
+-/* 64 bit, window size up to 4GB                                            */
+-typedef struct _mvAddrWin
+-{
+-    MV_U32      baseLow;    /* 32bit base low       */
+-    MV_U32      baseHigh;   /* 32bit base high      */
+-    MV_U32      size;       /* 32bit size           */
+-}MV_ADDR_WIN;
+-
+-/* This binary enumerator describes protection attribute status             */
+-typedef enum _mvProtRight
+-{
+-    ALLOWED,        /* Protection attribute allowed                         */
+-    FORBIDDEN       /* Protection attribute forbidden                       */
+-}MV_PROT_RIGHT;
+-
+-/* Unified struct for Rx and Tx packet operations. The user is required to 	*/
+-/* be familier only with Tx/Rx descriptor command status.               	*/
+-typedef struct _bufInfo
+-{
+-    MV_U32   cmdSts;        /* Tx/Rx command status                                     */
+-        MV_U16   byteCnt;       /* Size of valid data in the buffer     */
+-    MV_U16   bufSize;       /* Total size of the buffer             */
+-    MV_U8    *pBuff;            /* Pointer to Buffer                    */
+-    MV_U8    *pData;            /* Pointer to data in the Buffer        */
+-    MV_U32   userInfo1;         /* Tx/Rx attached user information 1    */
+-    MV_U32   userInfo2;         /* Tx/Rx attached user information 2    */
+-    struct _bufInfo *pNextBufInfo;  /* Next buffer in packet            */
+-} BUF_INFO;
+-
+-/* This structure contains information describing one of buffers
+- * (fragments) they are built Ethernet packet.
+- */
+-typedef struct
+-{
+-     MV_U8*	    bufVirtPtr;
+-     MV_ULONG	bufPhysAddr;
+-     MV_U32   	bufSize;
+-     MV_U32     dataSize;
+-     MV_U32		memHandle;
+-	 MV_32      bufAddrShift;
+-} MV_BUF_INFO;
+-
+-/* This structure contains information describing Ethernet packet.
+- * The packet can be divided for few buffers (fragments)
+- */
+-typedef struct
+-{
+-    MV_ULONG   	osInfo;
+-    MV_BUF_INFO *pFrags;
+-    MV_U32      status;
+-    MV_U16      pktSize;
+-    MV_U16      numFrags;
+-    MV_U32      ownerId;
+-    MV_U32      fragIP;
+-} MV_PKT_INFO;
+-
+-#endif /* MV_ASMLANGUAGE */
+-
+-#endif /* __INCmvTypesh */
+ 
+diff --git a/crypto/ocf/kirkwood/mvHal/kw_family/ctrlEnv/sys/mvSysUsb.c b/crypto/ocf/kirkwood/mvHal/kw_family/ctrlEnv/sys/mvSysUsb.c
+index 195b5e1..139597f 100644
+--- a/crypto/ocf/kirkwood/mvHal/kw_family/ctrlEnv/sys/mvSysUsb.c
++++ b/crypto/ocf/kirkwood/mvHal/kw_family/ctrlEnv/sys/mvSysUsb.c
+@@ -1,497 +1,2 @@
+-/*******************************************************************************
+-Copyright (C) Marvell International Ltd. and its affiliates
+-
+-This software file (the "File") is owned and distributed by Marvell
+-International Ltd. and/or its affiliates ("Marvell") under the following
+-alternative licensing terms.  Once you have made an election to distribute the
+-File under one of the following license alternatives, please (i) delete this
+-introductory statement regarding license alternatives, (ii) delete the two
+-license alternatives that you have not elected to use and (iii) preserve the
+-Marvell copyright notice above.
+-
+-********************************************************************************
+-Marvell Commercial License Option
+-
+-If you received this File from Marvell and you have entered into a commercial
+-license agreement (a "Commercial License") with Marvell, the File is licensed
+-to you under the terms of the applicable Commercial License.
+-
+-********************************************************************************
+-Marvell GPL License Option
+-
+-If you received this File from Marvell, you may opt to use, redistribute and/or
+-modify this File in accordance with the terms and conditions of the General
+-Public License Version 2, June 1991 (the "GPL License"), a copy of which is
+-available along with the File in the license.txt file or by writing to the Free
+-Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
+-on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
+-
+-THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+-WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
+-DISCLAIMED.  The GPL License provides additional details about this warranty
+-disclaimer.
+-********************************************************************************
+-Marvell BSD License Option
+-
+-If you received this File from Marvell, you may opt to use, redistribute and/or
+-modify this File under the following licensing terms.
+-Redistribution and use in source and binary forms, with or without modification,
+-are permitted provided that the following conditions are met:
+-
+-    *   Redistributions of source code must retain the above copyright notice,
+-        this list of conditions and the following disclaimer.
+-
+-    *   Redistributions in binary form must reproduce the above copyright
+-        notice, this list of conditions and the following disclaimer in the
+-        documentation and/or other materials provided with the distribution.
+-
+-    *   Neither the name of Marvell nor the names of its contributors may be
+-        used to endorse or promote products derived from this software without
+-        specific prior written permission.
+-
+-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-
+-*******************************************************************************/
+-
+-#include "ctrlEnv/sys/mvSysUsb.h"
+-
+-MV_TARGET usbAddrDecPrioTab[] =
+-{
+-#if defined(MV_INCLUDE_SDRAM_CS0)
+-    SDRAM_CS0,
+-#endif
+-#if defined(MV_INCLUDE_SDRAM_CS1)
+-    SDRAM_CS1,
+-#endif
+-#if defined(MV_INCLUDE_SDRAM_CS2)
+-    SDRAM_CS2,
+-#endif
+-#if defined(MV_INCLUDE_SDRAM_CS3)
+-    SDRAM_CS3,
+-#endif
+-#if defined(MV_INCLUDE_CESA) && defined(USB_UNDERRUN_WA)
+-    CRYPT_ENG,
+-#endif
+-#if defined(MV_INCLUDE_PEX)
+-    PEX0_MEM,
+-#endif
+-    TBL_TERM
+-};
+-
+-
+-
+-MV_STATUS   mvUsbInit(int dev, MV_BOOL isHost)
+-{
+-    MV_STATUS       status;
+-
+-    status = mvUsbWinInit(dev);
+-    if(status != MV_OK)
+-        return status;
+-
+-    return mvUsbHalInit(dev, isHost);
+-}
+-
+-
+-/*******************************************************************************
+-* usbWinOverlapDetect - Detect USB address windows overlapping
+-*
+-* DESCRIPTION:
+-*       An unpredicted behaviur is expected in case USB address decode
+-*       windows overlapps.
+-*       This function detects USB address decode windows overlapping of a
+-*       specified window. The function does not check the window itself for
+-*       overlapping. The function also skipps disabled address decode windows.
+-*
+-* INPUT:
+-*       winNum      - address decode window number.
+-*       pAddrDecWin - An address decode window struct.
+-*
+-* OUTPUT:
+-*       None.
+-*
+-* RETURN:
+-*       MV_TRUE if the given address window overlap current address
+-*       decode map, MV_FALSE otherwise, MV_ERROR if reading invalid data
+-*       from registers.
+-*
+-*******************************************************************************/
+-static MV_STATUS usbWinOverlapDetect(int dev, MV_U32 winNum,
+-                                     MV_ADDR_WIN *pAddrWin)
+-{
+-    MV_U32          winNumIndex;
+-    MV_DEC_WIN      addrDecWin;
+-
+-    for(winNumIndex=0; winNumIndex<MV_USB_MAX_ADDR_DECODE_WIN; winNumIndex++)
+-    {
+-        /* Do not check window itself       */
+-        if (winNumIndex == winNum)
+-        {
+-            continue;
+-        }
+-
+-        /* Get window parameters    */
+-        if (MV_OK != mvUsbWinGet(dev, winNumIndex, &addrDecWin))
+-        {
+-            mvOsPrintf("%s: ERR. TargetWinGet failed\n", __FUNCTION__);
+-            return MV_ERROR;
+-        }
+-
+-        /* Do not check disabled windows    */
+-        if(addrDecWin.enable == MV_FALSE)
+-        {
+-            continue;
+-        }
+-
+-        if (MV_TRUE == ctrlWinOverlapTest(pAddrWin, &(addrDecWin.addrWin)))
+-        {
+-            return MV_TRUE;
+-        }
+-    }
+-    return MV_FALSE;
+-}
+-
+-/*******************************************************************************
+-* mvUsbWinSet - Set USB target address window
+-*
+-* DESCRIPTION:
+-*       This function sets a peripheral target (e.g. SDRAM bank0, PCI_MEM0)
+-*       address window, also known as address decode window.
+-*       After setting this target window, the USB will be able to access the
+-*       target within the address window.
+-*
+-* INPUT:
+-*       winNum      - USB target address decode window number.
+-*       pAddrDecWin - USB target window data structure.
+-*
+-* OUTPUT:
+-*       None.
+-*
+-* RETURN:
+-*       MV_ERROR if address window overlapps with other address decode windows.
+-*       MV_BAD_PARAM if base address is invalid parameter or target is
+-*       unknown.
+-*
+-*******************************************************************************/
+-MV_STATUS mvUsbWinSet(int dev, MV_U32 winNum, MV_DEC_WIN *pDecWin)
+-{
+-    MV_DEC_WIN_PARAMS   winParams;
+-    MV_U32              sizeReg, baseReg;
+-
+-    /* Parameter checking   */
+-    if (winNum >= MV_USB_MAX_ADDR_DECODE_WIN)
+-    {
+-        mvOsPrintf("%s: ERR. Invalid win num %d\n",__FUNCTION__, winNum);
+-        return MV_BAD_PARAM;
+-    }
+-
+-    /* Check if the requested window overlapps with current windows         */
+-    if (MV_TRUE == usbWinOverlapDetect(dev, winNum, &pDecWin->addrWin))
+-    {
+-        mvOsPrintf("%s: ERR. Window %d overlap\n", __FUNCTION__, winNum);
+-        return MV_ERROR;
+-    }
+-
+-    /* check if address is aligned to the size */
+-    if(MV_IS_NOT_ALIGN(pDecWin->addrWin.baseLow, pDecWin->addrWin.size))
+-    {
+-        mvOsPrintf("mvUsbWinSet:Error setting USB window %d to "\
+-                   "target %s.\nAddress 0x%08x is unaligned to size 0x%x.\n",
+-                   winNum,
+-                   mvCtrlTargetNameGet(pDecWin->target),
+-                   pDecWin->addrWin.baseLow,
+-                   pDecWin->addrWin.size);
+-        return MV_ERROR;
+-    }
+-
+-    if(MV_OK != mvCtrlAddrDecToParams(pDecWin, &winParams))
+-    {
+-        mvOsPrintf("%s: mvCtrlAddrDecToParams Failed\n", __FUNCTION__);
+-        return MV_ERROR;
+-    }
+-
+-    /* set Size, Attributes and TargetID */
+-    sizeReg = (((winParams.targetId << MV_USB_WIN_TARGET_OFFSET) & MV_USB_WIN_TARGET_MASK) |
+-               ((winParams.attrib   << MV_USB_WIN_ATTR_OFFSET)   & MV_USB_WIN_ATTR_MASK)   |
+-               ((winParams.size << MV_USB_WIN_SIZE_OFFSET) & MV_USB_WIN_SIZE_MASK));
+-
+-#if defined(MV645xx) || defined(MV646xx)
+-    /* If window is DRAM with HW cache coherency, make sure bit2 is set */
+-    sizeReg &= ~MV_USB_WIN_BURST_WR_LIMIT_MASK;
+-
+-    if((MV_TARGET_IS_DRAM(pDecWin->target)) &&
+-       (pDecWin->addrWinAttr.cachePolicy != NO_COHERENCY))
+-    {
+-        sizeReg |= MV_USB_WIN_BURST_WR_32BIT_LIMIT;
+-    }
+-    else
+-    {
+-        sizeReg |= MV_USB_WIN_BURST_WR_NO_LIMIT;
+-    }
+-#endif /* MV645xx || MV646xx */
+-
+-    if (pDecWin->enable == MV_TRUE)
+-    {
+-        sizeReg |= MV_USB_WIN_ENABLE_MASK;
+-    }
+-    else
+-    {
+-        sizeReg &= ~MV_USB_WIN_ENABLE_MASK;
+-    }
+-
+-    /* Update Base value  */
+-    baseReg = (winParams.baseAddr & MV_USB_WIN_BASE_MASK);
+-
+-    MV_REG_WRITE( MV_USB_WIN_CTRL_REG(dev, winNum), sizeReg);
+-    MV_REG_WRITE( MV_USB_WIN_BASE_REG(dev, winNum), baseReg);
+-
+-    return MV_OK;
+-}
+-
+-/*******************************************************************************
+-* mvUsbWinGet - Get USB peripheral target address window.
+-*
+-* DESCRIPTION:
+-*       Get USB peripheral target address window.
+-*
+-* INPUT:
+-*       winNum - USB target address decode window number.
+-*
+-* OUTPUT:
+-*       pDecWin - USB target window data structure.
+-*
+-* RETURN:
+-*       MV_ERROR if register parameters are invalid.
+-*
+-*******************************************************************************/
+-MV_STATUS mvUsbWinGet(int dev, MV_U32 winNum, MV_DEC_WIN *pDecWin)
+-{
+-    MV_DEC_WIN_PARAMS   winParam;
+-    MV_U32              sizeReg, baseReg;
+-
+-    /* Parameter checking   */
+-    if (winNum >= MV_USB_MAX_ADDR_DECODE_WIN)
+-    {
+-        mvOsPrintf("%s (dev=%d): ERR. Invalid winNum %d\n",
+-                    __FUNCTION__, dev, winNum);
+-        return MV_NOT_SUPPORTED;
+-    }
+-
+-    baseReg = MV_REG_READ( MV_USB_WIN_BASE_REG(dev, winNum) );
+-    sizeReg = MV_REG_READ( MV_USB_WIN_CTRL_REG(dev, winNum) );
+-
+-   /* Check if window is enabled   */
+-    if(sizeReg & MV_USB_WIN_ENABLE_MASK)
+-    {
+-        pDecWin->enable = MV_TRUE;
+-
+-        /* Extract window parameters from registers */
+-        winParam.targetId = (sizeReg & MV_USB_WIN_TARGET_MASK) >> MV_USB_WIN_TARGET_OFFSET;
+-        winParam.attrib   = (sizeReg & MV_USB_WIN_ATTR_MASK) >> MV_USB_WIN_ATTR_OFFSET;
+-        winParam.size     = (sizeReg & MV_USB_WIN_SIZE_MASK) >> MV_USB_WIN_SIZE_OFFSET;
+-        winParam.baseAddr = (baseReg & MV_USB_WIN_BASE_MASK);
+-
+-        /* Translate the decode window parameters to address decode struct */
+-        if (MV_OK != mvCtrlParamsToAddrDec(&winParam, pDecWin))
+-        {
+-            mvOsPrintf("Failed to translate register parameters to USB address" \
+-                       " decode window structure\n");
+-            return MV_ERROR;
+-        }
+-    }
+-    else
+-    {
+-        pDecWin->enable = MV_FALSE;
+-    }
+-    return MV_OK;
+-}
+-
+-/*******************************************************************************
+-* mvUsbWinInit -
+-*
+-* INPUT:
+-*
+-* OUTPUT:
+-*
+-* RETURN:
+-*       MV_ERROR if register parameters are invalid.
+-*
+-*******************************************************************************/
+-MV_STATUS   mvUsbWinInit(int dev)
+-{
+-    MV_STATUS       status;
+-    MV_DEC_WIN      usbWin;
+-    MV_CPU_DEC_WIN  cpuAddrDecWin;
+-    int             winNum;
+-    MV_U32          winPrioIndex = 0;
+-
+-    /* First disable all address decode windows */
+-    for(winNum = 0; winNum < MV_USB_MAX_ADDR_DECODE_WIN; winNum++)
+-    {
+-        MV_REG_BIT_RESET(MV_USB_WIN_CTRL_REG(dev, winNum), MV_USB_WIN_ENABLE_MASK);
+-    }
+-
+-    /* Go through all windows in user table until table terminator          */
+-    winNum = 0;
+-    while( (usbAddrDecPrioTab[winPrioIndex] != TBL_TERM) &&
+-           (winNum < MV_USB_MAX_ADDR_DECODE_WIN) )
+-    {
+-        /* first get attributes from CPU If */
+-        status = mvCpuIfTargetWinGet(usbAddrDecPrioTab[winPrioIndex],
+-                                     &cpuAddrDecWin);
+-
+-        if(MV_NO_SUCH == status)
+-        {
+-            winPrioIndex++;
+-            continue;
+-        }
+-        if (MV_OK != status)
+-        {
+-            mvOsPrintf("%s: ERR. mvCpuIfTargetWinGet failed\n", __FUNCTION__);
+-            return MV_ERROR;
+-        }
+-
+-        if (cpuAddrDecWin.enable == MV_TRUE)
+-        {
+-            usbWin.addrWin.baseHigh = cpuAddrDecWin.addrWin.baseHigh;
+-            usbWin.addrWin.baseLow  = cpuAddrDecWin.addrWin.baseLow;
+-            usbWin.addrWin.size     = cpuAddrDecWin.addrWin.size;
+-            usbWin.enable           = MV_TRUE;
+-            usbWin.target           = usbAddrDecPrioTab[winPrioIndex];
+-
+-#if defined(MV645xx) || defined(MV646xx)
+-            /* Get the default attributes for that target window */
+-            mvCtrlDefAttribGet(usbWin.target, &usbWin.addrWinAttr);
+-#endif /* MV645xx || MV646xx */
+-
+-            if(MV_OK != mvUsbWinSet(dev, winNum, &usbWin))
+-            {
+-                return MV_ERROR;
+-            }
+-            winNum++;
+-        }
+-        winPrioIndex++;
+-    }
+-    return MV_OK;
+-}
+-
+-/*******************************************************************************
+-* mvUsbAddrDecShow - Print the USB address decode map.
+-*
+-* DESCRIPTION:
+-*       This function print the USB address decode map.
+-*
+-* INPUT:
+-*       None.
+-*
+-* OUTPUT:
+-*       None.
+-*
+-* RETURN:
+-*       None.
+-*
+-*******************************************************************************/
+-MV_VOID mvUsbAddrDecShow(MV_VOID)
+-{
+-    MV_DEC_WIN  addrDecWin;
+-    int         i, winNum;
+-
+-    mvOsOutput( "\n" );
+-    mvOsOutput( "USB:\n" );
+-    mvOsOutput( "----\n" );
+-
+-    for(i=0; i<mvCtrlUsbMaxGet(); i++)
+-    {
+-        mvOsOutput( "Device %d:\n", i);
+-
+-        for(winNum = 0; winNum < MV_USB_MAX_ADDR_DECODE_WIN; winNum++)
+-        {
+-            memset(&addrDecWin, 0, sizeof(MV_DEC_WIN) );
+-
+-            mvOsOutput( "win%d - ", winNum );
+-
+-            if( mvUsbWinGet(i, winNum, &addrDecWin ) == MV_OK )
+-            {
+-                if( addrDecWin.enable )
+-                {
+-                    mvOsOutput( "%s base %08x, ",
+-                        mvCtrlTargetNameGet(addrDecWin.target), addrDecWin.addrWin.baseLow );
+-
+-                    mvSizePrint( addrDecWin.addrWin.size );
+-
+-#if defined(MV645xx) || defined(MV646xx)
+-                    switch( addrDecWin.addrWinAttr.swapType)
+-                    {
+-                        case MV_BYTE_SWAP:
+-                            mvOsOutput( "BYTE_SWAP, " );
+-                            break;
+-                        case MV_NO_SWAP:
+-                            mvOsOutput( "NO_SWAP  , " );
+-                            break;
+-                        case MV_BYTE_WORD_SWAP:
+-                            mvOsOutput( "BYTE_WORD_SWAP, " );
+-                            break;
+-                        case MV_WORD_SWAP:
+-                            mvOsOutput( "WORD_SWAP, " );
+-                            break;
+-                        default:
+-                            mvOsOutput( "SWAP N/A , " );
+-                    }
+-
+-                    switch( addrDecWin.addrWinAttr.cachePolicy )
+-                    {
+-                        case NO_COHERENCY:
+-                            mvOsOutput( "NO_COHERENCY , " );
+-                            break;
+-                        case WT_COHERENCY:
+-                            mvOsOutput( "WT_COHERENCY , " );
+-                            break;
+-                        case WB_COHERENCY:
+-                            mvOsOutput( "WB_COHERENCY , " );
+-                            break;
+-                        default:
+-                            mvOsOutput( "COHERENCY N/A, " );
+-                    }
+-
+-                    switch( addrDecWin.addrWinAttr.pcixNoSnoop )
+-                    {
+-                        case 0:
+-                            mvOsOutput( "PCI-X NS inactive, " );
+-                            break;
+-                        case 1:
+-                            mvOsOutput( "PCI-X NS active  , " );
+-                            break;
+-                        default:
+-                            mvOsOutput( "PCI-X NS N/A     , " );
+-                    }
+-
+-                    switch( addrDecWin.addrWinAttr.p2pReq64 )
+-                    {
+-                        case 0:
+-                            mvOsOutput( "REQ64 force" );
+-                            break;
+-                        case 1:
+-                            mvOsOutput( "REQ64 detect" );
+-                            break;
+-                        default:
+-                            mvOsOutput( "REQ64 N/A" );
+-                    }
+-#endif /* MV645xx || MV646xx */
+-                    mvOsOutput( "\n" );
+-                }
+-                else
+-                    mvOsOutput( "disable\n" );
+-            }
+-        }
+-    }
+-}
+ 
+ 
+diff --git a/crypto/ocf/kirkwood/mvHal/mv_hal/sflash/mvSFlashSpec.h b/crypto/ocf/kirkwood/mvHal/mv_hal/sflash/mvSFlashSpec.h
+index eeb4426..8b13789 100644
+--- a/crypto/ocf/kirkwood/mvHal/mv_hal/sflash/mvSFlashSpec.h
++++ b/crypto/ocf/kirkwood/mvHal/mv_hal/sflash/mvSFlashSpec.h
+@@ -1,233 +1 @@
+-/*******************************************************************************
+-Copyright (C) Marvell International Ltd. and its affiliates
+-
+-This software file (the "File") is owned and distributed by Marvell
+-International Ltd. and/or its affiliates ("Marvell") under the following
+-alternative licensing terms.  Once you have made an election to distribute the
+-File under one of the following license alternatives, please (i) delete this
+-introductory statement regarding license alternatives, (ii) delete the two
+-license alternatives that you have not elected to use and (iii) preserve the
+-Marvell copyright notice above.
+-
+-********************************************************************************
+-Marvell Commercial License Option
+-
+-If you received this File from Marvell and you have entered into a commercial
+-license agreement (a "Commercial License") with Marvell, the File is licensed
+-to you under the terms of the applicable Commercial License.
+-
+-********************************************************************************
+-Marvell GPL License Option
+-
+-If you received this File from Marvell, you may opt to use, redistribute and/or
+-modify this File in accordance with the terms and conditions of the General
+-Public License Version 2, June 1991 (the "GPL License"), a copy of which is
+-available along with the File in the license.txt file or by writing to the Free
+-Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
+-on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
+-
+-THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+-WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
+-DISCLAIMED.  The GPL License provides additional details about this warranty
+-disclaimer.
+-********************************************************************************
+-Marvell BSD License Option
+-
+-If you received this File from Marvell, you may opt to use, redistribute and/or
+-modify this File under the following licensing terms.
+-Redistribution and use in source and binary forms, with or without modification,
+-are permitted provided that the following conditions are met:
+-
+-    *   Redistributions of source code must retain the above copyright notice,
+-	    this list of conditions and the following disclaimer.
+-
+-    *   Redistributions in binary form must reproduce the above copyright
+-        notice, this list of conditions and the following disclaimer in the
+-        documentation and/or other materials provided with the distribution.
+-
+-    *   Neither the name of Marvell nor the names of its contributors may be
+-        used to endorse or promote products derived from this software without
+-        specific prior written permission.
+-
+-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-
+-*******************************************************************************/
+-
+-#ifndef __INCmvSFlashSpecH
+-#define __INCmvSFlashSpecH
+-
+-/* Constants */
+-#define		MV_SFLASH_READ_CMND_LENGTH		    4		/* 1B opcode + 3B address */
+-#define		MV_SFLASH_SE_CMND_LENGTH		    4		/* 1B opcode + 3B address */
+-#define		MV_SFLASH_BE_CMND_LENGTH		    1		/* 1B opcode */
+-#define		MV_SFLASH_PP_CMND_LENGTH		    4		/* 1B opcode + 3B address */
+-#define		MV_SFLASH_WREN_CMND_LENGTH		    1		/* 1B opcode */
+-#define		MV_SFLASH_WRDI_CMND_LENGTH		    1		/* 1B opcode */
+-#define		MV_SFLASH_RDID_CMND_LENGTH		    1		/* 1B opcode */
+-#define		MV_SFLASH_RDID_REPLY_LENGTH		    3		/* 1B manf ID and 2B device ID */
+-#define		MV_SFLASH_RDSR_CMND_LENGTH		    1		/* 1B opcode */
+-#define		MV_SFLASH_RDSR_REPLY_LENGTH		    1		/* 1B status */
+-#define		MV_SFLASH_WRSR_CMND_LENGTH		    2		/* 1B opcode + 1B status value */
+-#define		MV_SFLASH_DP_CMND_LENGTH		    1		/* 1B opcode */
+-#define		MV_SFLASH_RES_CMND_LENGTH		    1		/* 1B opcode */
+-
+-/* Status Register Bit Masks */
+-#define		MV_SFLASH_STATUS_REG_WIP_OFFSET	    0	    /* bit 0; write in progress */
+-#define		MV_SFLASH_STATUS_REG_WP_OFFSET	    2       /* bit 2-4; write protect option */
+-#define		MV_SFLASH_STATUS_REG_SRWD_OFFSET	7	    /* bit 7; lock status register write */
+-#define		MV_SFLASH_STATUS_REG_WIP_MASK	    (0x1 << MV_SFLASH_STATUS_REG_WIP_OFFSET)
+-#define		MV_SFLASH_STATUS_REG_SRWD_MASK	    (0x1 << MV_SFLASH_STATUS_REG_SRWD_OFFSET)
+-
+-#define		MV_SFLASH_MAX_WAIT_LOOP			    1000000
+-#define     MV_SFLASH_CHIP_ERASE_MAX_WAIT_LOOP  0x50000000
+-
+-#define		MV_SFLASH_DEFAULT_RDID_OPCD		    0x9F	/* Default Read ID */
+-#define     MV_SFLASH_DEFAULT_WREN_OPCD         0x06	/* Default Write Enable */
+-#define     MV_SFLASH_NO_SPECIFIC_OPCD          0x00
+-
+-/********************************/
+-/*  ST M25Pxxx Device Specific  */
+-/********************************/
+-
+-/* Manufacturer IDs and Device IDs for SFLASHs supported by the driver */
+-#define     MV_M25PXXX_ST_MANF_ID               0x20
+-#define     MV_M25P32_DEVICE_ID                 0x2016
+-#define     MV_M25P32_MAX_SPI_FREQ              20000000    /* 20MHz */
+-#define     MV_M25P32_MAX_FAST_SPI_FREQ         50000000    /* 50MHz */
+-#define     MV_M25P32_FAST_READ_DUMMY_BYTES     1
+-#define     MV_M25P64_DEVICE_ID                 0x2017
+-#define     MV_M25P64_MAX_SPI_FREQ              20000000    /* 20MHz */
+-#define     MV_M25P64_MAX_FAST_SPI_FREQ         50000000    /* 50MHz */
+-#define     MV_M25P64_FAST_READ_DUMMY_BYTES     1
+-#define     MV_M25P128_DEVICE_ID                0x2018
+-#define     MV_M25P128_MAX_SPI_FREQ             20000000    /* 20MHz */
+-#define     MV_M25P128_MAX_FAST_SPI_FREQ        50000000    /* 50MHz */
+-#define     MV_M25P128_FAST_READ_DUMMY_BYTES    1
+-
+-
+-/* Sector Sizes and population per device model*/
+-#define     MV_M25P32_SECTOR_SIZE               0x10000 /* 64K */
+-#define     MV_M25P64_SECTOR_SIZE               0x10000 /* 64K */
+-#define     MV_M25P128_SECTOR_SIZE              0x40000 /* 256K */
+-#define     MV_M25P32_SECTOR_NUMBER             64
+-#define     MV_M25P64_SECTOR_NUMBER             128
+-#define     MV_M25P128_SECTOR_NUMBER            64
+-#define		MV_M25P_PAGE_SIZE				    0x100   /* 256 byte */
+-
+-#define		MV_M25P_WREN_CMND_OPCD			    0x06	/* Write Enable */
+-#define		MV_M25P_WRDI_CMND_OPCD			    0x04	/* Write Disable */
+-#define		MV_M25P_RDID_CMND_OPCD			    0x9F	/* Read ID */
+-#define		MV_M25P_RDSR_CMND_OPCD			    0x05	/* Read Status Register */
+-#define		MV_M25P_WRSR_CMND_OPCD			    0x01	/* Write Status Register */
+-#define		MV_M25P_READ_CMND_OPCD			    0x03	/* Sequential Read */
+-#define		MV_M25P_FAST_RD_CMND_OPCD		    0x0B	/* Fast Read */
+-#define		MV_M25P_PP_CMND_OPCD			    0x02	/* Page Program */
+-#define		MV_M25P_SE_CMND_OPCD			    0xD8	/* Sector Erase */
+-#define		MV_M25P_BE_CMND_OPCD			    0xC7	/* Bulk Erase */
+-#define		MV_M25P_RES_CMND_OPCD			    0xAB	/* Read Electronic Signature */
+-
+-/* Status Register Write Protect Bit Masks - 3bits */
+-#define		MV_M25P_STATUS_REG_WP_MASK	        (0x07 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     MV_M25P_STATUS_BP_NONE              (0x00 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     MV_M25P_STATUS_BP_1_OF_64           (0x01 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     MV_M25P_STATUS_BP_1_OF_32           (0x02 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     MV_M25P_STATUS_BP_1_OF_16           (0x03 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     MV_M25P_STATUS_BP_1_OF_8            (0x04 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     MV_M25P_STATUS_BP_1_OF_4            (0x05 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     MV_M25P_STATUS_BP_1_OF_2            (0x06 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     MV_M25P_STATUS_BP_ALL               (0x07 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-
+-/************************************/
+-/*  MXIC MX25L6405 Device Specific  */
+-/************************************/
+-
+-/* Manufacturer IDs and Device IDs for SFLASHs supported by the driver */
+-#define     MV_MXIC_MANF_ID                     0xC2
+-#define     MV_MX25L6405_DEVICE_ID              0x2017
+-#define     MV_MX25L6405_MAX_SPI_FREQ           20000000    /* 20MHz */
+-#define     MV_MX25L6405_MAX_FAST_SPI_FREQ      50000000    /* 50MHz */
+-#define     MV_MX25L6405_FAST_READ_DUMMY_BYTES  1
+-#define     MV_MXIC_DP_EXIT_DELAY               30          /* 30 ms */
+-
+-/* Sector Sizes and population per device model*/
+-#define     MV_MX25L6405_SECTOR_SIZE            0x10000 /* 64K */
+-#define     MV_MX25L6405_SECTOR_NUMBER          128
+-#define		MV_MXIC_PAGE_SIZE			        0x100   /* 256 byte */
+-
+-#define		MV_MX25L_WREN_CMND_OPCD			    0x06	/* Write Enable */
+-#define		MV_MX25L_WRDI_CMND_OPCD			    0x04	/* Write Disable */
+-#define		MV_MX25L_RDID_CMND_OPCD			    0x9F	/* Read ID */
+-#define		MV_MX25L_RDSR_CMND_OPCD			    0x05	/* Read Status Register */
+-#define		MV_MX25L_WRSR_CMND_OPCD			    0x01	/* Write Status Register */
+-#define		MV_MX25L_READ_CMND_OPCD			    0x03	/* Sequential Read */
+-#define		MV_MX25L_FAST_RD_CMND_OPCD		    0x0B	/* Fast Read */
+-#define		MV_MX25L_PP_CMND_OPCD			    0x02	/* Page Program */
+-#define		MV_MX25L_SE_CMND_OPCD			    0xD8	/* Sector Erase */
+-#define		MV_MX25L_BE_CMND_OPCD			    0xC7	/* Bulk Erase */
+-#define     MV_MX25L_DP_CMND_OPCD               0xB9    /* Deep Power Down */
+-#define		MV_MX25L_RES_CMND_OPCD			    0xAB	/* Read Electronic Signature */
+-
+-/* Status Register Write Protect Bit Masks - 4bits */
+-#define		MV_MX25L_STATUS_REG_WP_MASK	        (0x0F << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     MV_MX25L_STATUS_BP_NONE             (0x00 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     MV_MX25L_STATUS_BP_1_OF_128         (0x01 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     MV_MX25L_STATUS_BP_1_OF_64          (0x02 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     MV_MX25L_STATUS_BP_1_OF_32          (0x03 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     MV_MX25L_STATUS_BP_1_OF_16          (0x04 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     MV_MX25L_STATUS_BP_1_OF_8           (0x05 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     MV_MX25L_STATUS_BP_1_OF_4           (0x06 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     MV_MX25L_STATUS_BP_1_OF_2           (0x07 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     MV_MX25L_STATUS_BP_ALL              (0x0F << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-
+-/************************************/
+-/*  SPANSION S25FL128P Device Specific  */
+-/************************************/
+-
+-/* Manufacturer IDs and Device IDs for SFLASHs supported by the driver */
+-#define     MV_SPANSION_MANF_ID                     	0x01
+-#define     MV_S25FL128_DEVICE_ID              		0x2018
+-#define     MV_S25FL128_MAX_SPI_FREQ           		33000000    /* 33MHz */
+-#define     MV_S25FL128_MAX_FAST_SPI_FREQ        	104000000    /* 104MHz */
+-#define     MV_S25FL128_FAST_READ_DUMMY_BYTES    	1
+-
+-/* Sector Sizes and population per device model*/
+-#define     MV_S25FL128_SECTOR_SIZE            			0x40000 /* 256K */
+-#define     MV_S25FL128_SECTOR_NUMBER          			64
+-#define	    MV_S25FL_PAGE_SIZE			        	0x100   /* 256 byte */
+-
+-#define		MV_S25FL_WREN_CMND_OPCD			    0x06	/* Write Enable */
+-#define		MV_S25FL_WRDI_CMND_OPCD			    0x04	/* Write Disable */
+-#define		MV_S25FL_RDID_CMND_OPCD			    0x9F	/* Read ID */
+-#define		MV_S25FL_RDSR_CMND_OPCD			    0x05	/* Read Status Register */
+-#define		MV_S25FL_WRSR_CMND_OPCD			    0x01	/* Write Status Register */
+-#define		MV_S25FL_READ_CMND_OPCD			    0x03	/* Sequential Read */
+-#define		MV_S25FL_FAST_RD_CMND_OPCD		    0x0B	/* Fast Read */
+-#define		MV_S25FL_PP_CMND_OPCD			    0x02	/* Page Program */
+-#define		MV_S25FL_SE_CMND_OPCD			    0xD8	/* Sector Erase */
+-#define		MV_S25FL_BE_CMND_OPCD			    0xC7	/* Bulk Erase */
+-#define     	MV_S25FL_DP_CMND_OPCD               	    0xB9    	/* Deep Power Down */
+-#define		MV_S25FL_RES_CMND_OPCD			    0xAB	/* Read Electronic Signature */
+-
+-/* Status Register Write Protect Bit Masks - 4bits */
+-#define		MV_S25FL_STATUS_REG_WP_MASK	        (0x0F << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     	MV_S25FL_STATUS_BP_NONE             	(0x00 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     	MV_S25FL_STATUS_BP_1_OF_128         	(0x01 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     	MV_S25FL_STATUS_BP_1_OF_64          	(0x02 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     	MV_S25FL_STATUS_BP_1_OF_32          	(0x03 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     	MV_S25FL_STATUS_BP_1_OF_16          	(0x04 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     	MV_S25FL_STATUS_BP_1_OF_8           	(0x05 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     	MV_S25FL_STATUS_BP_1_OF_4           	(0x06 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     	MV_S25FL_STATUS_BP_1_OF_2           	(0x07 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-#define     	MV_S25FL_STATUS_BP_ALL              	(0x0F << MV_SFLASH_STATUS_REG_WP_OFFSET)
+-
+-#endif /* __INCmvSFlashSpecH */
+ 
+diff --git a/crypto/ocf/kirkwood/mvHal/mv_hal/spi/mvSpiCmnd.c b/crypto/ocf/kirkwood/mvHal/mv_hal/spi/mvSpiCmnd.c
+index a5d5a64..8b13789 100644
+--- a/crypto/ocf/kirkwood/mvHal/mv_hal/spi/mvSpiCmnd.c
++++ b/crypto/ocf/kirkwood/mvHal/mv_hal/spi/mvSpiCmnd.c
+@@ -1,249 +1 @@
+-/*******************************************************************************
+-Copyright (C) Marvell International Ltd. and its affiliates
+-
+-This software file (the "File") is owned and distributed by Marvell
+-International Ltd. and/or its affiliates ("Marvell") under the following
+-alternative licensing terms.  Once you have made an election to distribute the
+-File under one of the following license alternatives, please (i) delete this
+-introductory statement regarding license alternatives, (ii) delete the two
+-license alternatives that you have not elected to use and (iii) preserve the
+-Marvell copyright notice above.
+-
+-********************************************************************************
+-Marvell Commercial License Option
+-
+-If you received this File from Marvell and you have entered into a commercial
+-license agreement (a "Commercial License") with Marvell, the File is licensed
+-to you under the terms of the applicable Commercial License.
+-
+-********************************************************************************
+-Marvell GPL License Option
+-
+-If you received this File from Marvell, you may opt to use, redistribute and/or
+-modify this File in accordance with the terms and conditions of the General
+-Public License Version 2, June 1991 (the "GPL License"), a copy of which is
+-available along with the File in the license.txt file or by writing to the Free
+-Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
+-on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
+-
+-THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+-WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
+-DISCLAIMED.  The GPL License provides additional details about this warranty
+-disclaimer.
+-********************************************************************************
+-Marvell BSD License Option
+-
+-If you received this File from Marvell, you may opt to use, redistribute and/or
+-modify this File under the following licensing terms.
+-Redistribution and use in source and binary forms, with or without modification,
+-are permitted provided that the following conditions are met:
+-
+-    *   Redistributions of source code must retain the above copyright notice,
+-	    this list of conditions and the following disclaimer.
+-
+-    *   Redistributions in binary form must reproduce the above copyright
+-        notice, this list of conditions and the following disclaimer in the
+-        documentation and/or other materials provided with the distribution.
+-
+-    *   Neither the name of Marvell nor the names of its contributors may be
+-        used to endorse or promote products derived from this software without
+-        specific prior written permission.
+-
+-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-
+-*******************************************************************************/
+-
+-#include "spi/mvSpi.h"
+-#include "spi/mvSpiSpec.h"
+-
+-/*#define MV_DEBUG*/
+-#ifdef MV_DEBUG
+-#define DB(x) x
+-#else
+-#define DB(x)
+-#endif
+-
+-
+-/*******************************************************************************
+-* mvSpiReadAndWrite - Read and Write a buffer simultanuousely
+-*
+-* DESCRIPTION:
+-*       Transmit and receive a buffer over the SPI in 16bit chunks. If the
+-*		buffer size is odd, then the last chunk will be 8bits.
+-*
+-* INPUT:
+-*       pRxBuff: Pointer to the buffer to write the RX info in
+-*		pTxBuff: Pointer to the buffer holding the TX info
+-*		buffSize: length of both the pTxBuff and pRxBuff
+-*
+-* OUTPUT:
+-*       pRxBuff: Pointer of the buffer holding the RX data
+-*
+-* RETURN:
+-*       Success or Error code.
+-*
+-*
+-*******************************************************************************/
+-MV_STATUS mvSpiReadAndWrite(MV_U8* pRxBuff, MV_U8* pTxBuff, MV_U32 buffSize)
+-{
+-    MV_STATUS ret;
+-
+-    /* check for null parameters */
+-    if ((pRxBuff == NULL) || (pTxBuff == NULL) || (buffSize == 0))
+-    {
+-        mvOsPrintf("%s ERROR: Null pointer parameter!\n", __FUNCTION__);
+-        return MV_BAD_PARAM;
+-    }
+-
+-	/* First assert the chip select */
+-	mvSpiCsAssert();
+-
+-    ret = mvSpiReadWrite(pRxBuff, pTxBuff, buffSize);
+-
+-	/* Finally deassert the chip select */
+-	mvSpiCsDeassert();
+-
+-	return ret;
+-}
+-
+-/*******************************************************************************
+-* mvSpiWriteThenWrite - Serialize a command followed by the data over the TX line
+-*
+-* DESCRIPTION:
+-*       Assert the chip select line. Transmit the command buffer followed by
+-*       the data buffer. Then deassert the CS line.
+-*
+-* INPUT:
+-*       pCmndBuff: Pointer to the command buffer to transmit
+-*       cmndSize: length of the command size
+-*		pTxDataBuff: Pointer to the data buffer to transmit
+-*		txDataSize: length of the data buffer
+-*
+-* OUTPUT:
+-*       None.
+-*
+-* RETURN:
+-*       Success or Error code.
+-*
+-*
+-*******************************************************************************/
+-MV_STATUS	mvSpiWriteThenWrite (MV_U8* pCmndBuff, MV_U32 cmndSize, MV_U8* pTxDataBuff,
+-                                 MV_U32 txDataSize)
+-{
+-    MV_STATUS ret = MV_OK, tempRet;
+-
+-    /* check for null parameters */
+-#ifndef CONFIG_MARVELL
+-    if(NULL == pTxDataBuff)
+-    {
+-        mvOsPrintf("%s ERROR: Null pointer parameter!\n", __FUNCTION__);
+-        return MV_BAD_PARAM;
+-    }
+-#endif
+-
+-    if (pCmndBuff == NULL)
+-    {
+-        mvOsPrintf("%s ERROR: Null pointer parameter!\n", __FUNCTION__);
+-        return MV_BAD_PARAM;
+-    }
+-
+-	/* First assert the chip select */
+-	mvSpiCsAssert();
+-
+-    /* first write the command */
+-    if ((cmndSize) && (pCmndBuff != NULL))
+-    {
+-        if ((tempRet = mvSpiWrite(pCmndBuff, cmndSize)) != MV_OK)
+-            ret = tempRet;
+-    }
+-
+-    /* Then write the data buffer */
+-#ifndef CONFIG_MARVELL
+-    if (txDataSize)
+-#else
+-    if ((txDataSize) && (pTxDataBuff != NULL))
+-#endif
+-    {
+-        if ((tempRet = mvSpiWrite(pTxDataBuff, txDataSize)) != MV_OK)
+-            ret = tempRet;
+-    }
+-
+-	/* Finally deassert the chip select */
+-	mvSpiCsDeassert();
+-
+-	return ret;
+-}
+-
+-/*******************************************************************************
+-* mvSpiWriteThenRead - Serialize a command then read a data buffer
+-*
+-* DESCRIPTION:
+-*       Assert the chip select line. Transmit the command buffer then read
+-*       the data buffer. Then deassert the CS line.
+-*
+-* INPUT:
+-*       pCmndBuff: Pointer to the command buffer to transmit
+-*       cmndSize: length of the command size
+-*		pRxDataBuff: Pointer to the buffer to read the data in
+-*		txDataSize: length of the data buffer
+-*
+-* OUTPUT:
+-*		pRxDataBuff: Pointer to the buffer holding the data
+-*
+-* RETURN:
+-*       Success or Error code.
+-*
+-*
+-*******************************************************************************/
+-MV_STATUS mvSpiWriteThenRead (MV_U8* pCmndBuff, MV_U32 cmndSize, MV_U8* pRxDataBuff,
+-                              MV_U32 rxDataSize,MV_U32 dummyBytesToRead)
+-{
+-    MV_STATUS ret = MV_OK, tempRet;
+-    MV_U8   dummyByte;
+-
+-    /* check for null parameters */
+-    if ((pCmndBuff == NULL) && (pRxDataBuff == NULL))
+-    {
+-        mvOsPrintf("%s ERROR: Null pointer parameter!\n", __FUNCTION__);
+-        return MV_BAD_PARAM;
+-    }
+-
+-	/* First assert the chip select */
+-	mvSpiCsAssert();
+-
+-    /* first write the command */
+-    if ((cmndSize) && (pCmndBuff != NULL))
+-    {
+-        if ((tempRet = mvSpiWrite(pCmndBuff, cmndSize)) != MV_OK)
+-            ret = tempRet;
+-    }
+-
+-    /* Read dummy bytes before real data.   */
+-    while(dummyBytesToRead)
+-    {
+-        mvSpiRead(&dummyByte,1);
+-        dummyBytesToRead--;
+-    }
+-
+-    /* Then write the data buffer */
+-    if ((rxDataSize) && (pRxDataBuff != NULL))
+-    {
+-        if ((tempRet = mvSpiRead(pRxDataBuff, rxDataSize)) != MV_OK)
+-            ret = tempRet;
+-    }
+-
+-	/* Finally deassert the chip select */
+-	mvSpiCsDeassert();
+-
+-	return ret;
+-}
+ 
+diff --git a/crypto/ocf/ocf-bench.c b/crypto/ocf/ocf-bench.c
+index f3fe9d0..5eef6b1 100644
+--- a/crypto/ocf/ocf-bench.c
++++ b/crypto/ocf/ocf-bench.c
+@@ -1,7 +1,7 @@
+ /*
+  * A loadable module that benchmarks the OCF crypto speed from kernel space.
+  *
+- * Copyright (C) 2004-2010 David McCullough <david_mccullough@mcafee.com>
++ * Copyright (C) 2004-2007 David McCullough <david_mccullough@securecomputing.com>
+  *
+  * LICENSE TERMS
+  *
+@@ -30,8 +30,7 @@
+  */
+ 
+ 
+-#include <linux/version.h>
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38) && !defined(AUTOCONF_INCLUDED)
++#ifndef AUTOCONF_INCLUDED
+ #include <linux/config.h>
+ #endif
+ #include <linux/module.h>
+@@ -41,6 +40,7 @@
+ #include <linux/wait.h>
+ #include <linux/sched.h>
+ #include <linux/spinlock.h>
++#include <linux/version.h>
+ #include <linux/interrupt.h>
+ #include <cryptodev.h>
+ 
+@@ -67,39 +67,23 @@
+ /*
+  * the number of simultaneously active requests
+  */
+-static int request_q_len = 40;
++static int request_q_len = 20;
+ module_param(request_q_len, int, 0);
+ MODULE_PARM_DESC(request_q_len, "Number of outstanding requests");
+-
+ /*
+  * how many requests we want to have processed
+  */
+ static int request_num = 1024;
+ module_param(request_num, int, 0);
+ MODULE_PARM_DESC(request_num, "run for at least this many requests");
+-
+ /*
+  * the size of each request
+  */
+-static int request_size = 1488;
++static int request_size = 1500;
+ module_param(request_size, int, 0);
+ MODULE_PARM_DESC(request_size, "size of each request");
+ 
+ /*
+- * OCF batching of requests
+- */
+-static int request_batch = 1;
+-module_param(request_batch, int, 0);
+-MODULE_PARM_DESC(request_batch, "enable OCF request batching");
+-
+-/*
+- * OCF immediate callback on completion
+- */
+-static int request_cbimm = 1;
+-module_param(request_cbimm, int, 0);
+-MODULE_PARM_DESC(request_cbimm, "enable OCF immediate callback on completion");
+-
+-/*
+  * a structure for each request
+  */
+ typedef struct  {
+@@ -112,7 +96,6 @@ typedef struct  {
+ 
+ static request_t *requests;
+ 
+-static spinlock_t ocfbench_counter_lock;
+ static int outstanding;
+ static int total;
+ 
+@@ -122,8 +105,6 @@ static int total;
+  */
+ 
+ static uint64_t ocf_cryptoid;
+-static unsigned long jstart, jstop;
+-
+ static int ocf_init(void);
+ static int ocf_cb(struct cryptop *crp);
+ static void ocf_request(void *arg);
+@@ -147,15 +128,13 @@ ocf_init(void)
+ 	cria.cri_klen = 20 * 8;
+ 	cria.cri_key  = "0123456789abcdefghij";
+ 
+-	//crie.cri_alg  = CRYPTO_3DES_CBC;
+-	crie.cri_alg  = CRYPTO_AES_CBC;
++	crie.cri_alg  = CRYPTO_3DES_CBC;
+ 	crie.cri_klen = 24 * 8;
+ 	crie.cri_key  = "0123456789abcdefghijklmn";
+ 
+ 	crie.cri_next = &cria;
+ 
+-	error = crypto_newsession(&ocf_cryptoid, &crie,
+-				CRYPTOCAP_F_HARDWARE | CRYPTOCAP_F_SOFTWARE);
++	error = crypto_newsession(&ocf_cryptoid, &crie, 0);
+ 	if (error) {
+ 		printk("crypto_newsession failed %d\n", error);
+ 		return -1;
+@@ -167,23 +146,23 @@ static int
+ ocf_cb(struct cryptop *crp)
+ {
+ 	request_t *r = (request_t *) crp->crp_opaque;
+-	unsigned long flags;
+ 
+ 	if (crp->crp_etype)
+ 		printk("Error in OCF processing: %d\n", crp->crp_etype);
++	total++;
+ 	crypto_freereq(crp);
+ 	crp = NULL;
+ 
+-	/* do all requests  but take at least 1 second */
+-	spin_lock_irqsave(&ocfbench_counter_lock, flags);
+-	total++;
+-	if (total > request_num && jstart + HZ < jiffies) {
++	if (total > request_num) {
+ 		outstanding--;
+-		spin_unlock_irqrestore(&ocfbench_counter_lock, flags);
+ 		return 0;
+ 	}
+-	spin_unlock_irqrestore(&ocfbench_counter_lock, flags);
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,20)
++	INIT_WORK(&r->work, ocf_request_wq);
++#else
++	INIT_WORK(&r->work, ocf_request, r);
++#endif
+ 	schedule_work(&r->work);
+ 	return 0;
+ }
+@@ -195,12 +174,9 @@ ocf_request(void *arg)
+ 	request_t *r = arg;
+ 	struct cryptop *crp = crypto_getreq(2);
+ 	struct cryptodesc *crde, *crda;
+-	unsigned long flags;
+ 
+ 	if (!crp) {
+-		spin_lock_irqsave(&ocfbench_counter_lock, flags);
+ 		outstanding--;
+-		spin_unlock_irqrestore(&ocfbench_counter_lock, flags);
+ 		return;
+ 	}
+ 
+@@ -219,17 +195,12 @@ ocf_request(void *arg)
+ 	crde->crd_flags = CRD_F_IV_EXPLICIT | CRD_F_ENCRYPT;
+ 	crde->crd_len = request_size;
+ 	crde->crd_inject = request_size;
+-	//crde->crd_alg = CRYPTO_3DES_CBC;
+-	crde->crd_alg = CRYPTO_AES_CBC;
++	crde->crd_alg = CRYPTO_3DES_CBC;
+ 	crde->crd_key = "0123456789abcdefghijklmn";
+ 	crde->crd_klen = 24 * 8;
+ 
+ 	crp->crp_ilen = request_size + 64;
+-	crp->crp_flags = 0;
+-	if (request_batch)
+-		crp->crp_flags |= CRYPTO_F_BATCH;
+-	if (request_cbimm)
+-		crp->crp_flags |= CRYPTO_F_CBIMM;
++	crp->crp_flags = CRYPTO_F_CBIMM;
+ 	crp->crp_buf = (caddr_t) r->buffer;
+ 	crp->crp_callback = ocf_cb;
+ 	crp->crp_sid = ocf_cryptoid;
+@@ -246,12 +217,6 @@ ocf_request_wq(struct work_struct *work)
+ }
+ #endif
+ 
+-static void
+-ocf_done(void)
+-{
+-	crypto_freesession(ocf_cryptoid);
+-}
+-
+ /*************************************************************************/
+ #ifdef BENCH_IXP_ACCESS_LIB
+ /*************************************************************************/
+@@ -338,25 +303,24 @@ ixp_perform_cb(
+ 	IxCryptoAccStatus status)
+ {
+ 	request_t *r = NULL;
+-	unsigned long flags;
+ 
+-	/* do all requests  but take at least 1 second */
+-	spin_lock_irqsave(&ocfbench_counter_lock, flags);
+ 	total++;
+-	if (total > request_num && jstart + HZ < jiffies) {
++	if (total > request_num) {
+ 		outstanding--;
+-		spin_unlock_irqrestore(&ocfbench_counter_lock, flags);
+ 		return;
+ 	}
+ 
+ 	if (!sbufp || !(r = IX_MBUF_PRIV(sbufp))) {
+ 		printk("crappo %p %p\n", sbufp, r);
+ 		outstanding--;
+-		spin_unlock_irqrestore(&ocfbench_counter_lock, flags);
+ 		return;
+ 	}
+-	spin_unlock_irqrestore(&ocfbench_counter_lock, flags);
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,20)
++	INIT_WORK(&r->work, ixp_request_wq);
++#else
++	INIT_WORK(&r->work, ixp_request, r);
++#endif
+ 	schedule_work(&r->work);
+ }
+ 
+@@ -365,7 +329,6 @@ ixp_request(void *arg)
+ {
+ 	request_t *r = arg;
+ 	IxCryptoAccStatus status;
+-	unsigned long flags;
+ 
+ 	memset(&r->mbuf, 0, sizeof(r->mbuf));
+ 	IX_MBUF_MLEN(&r->mbuf) = IX_MBUF_PKT_LEN(&r->mbuf) = request_size + 64;
+@@ -375,9 +338,7 @@ ixp_request(void *arg)
+ 			0, request_size, 0, request_size, request_size, r->buffer);
+ 	if (IX_CRYPTO_ACC_STATUS_SUCCESS != status) {
+ 		printk("status1 = %d\n", status);
+-		spin_lock_irqsave(&ocfbench_counter_lock, flags);
+ 		outstanding--;
+-		spin_unlock_irqrestore(&ocfbench_counter_lock, flags);
+ 		return;
+ 	}
+ 	return;
+@@ -392,12 +353,6 @@ ixp_request_wq(struct work_struct *work)
+ }
+ #endif
+ 
+-static void
+-ixp_done(void)
+-{
+-	/* we should free the session here but I am lazy :-) */
+-}
+-
+ /*************************************************************************/
+ #endif /* BENCH_IXP_ACCESS_LIB */
+ /*************************************************************************/
+@@ -405,9 +360,7 @@ ixp_done(void)
+ int
+ ocfbench_init(void)
+ {
+-	int i;
+-	unsigned long mbps;
+-	unsigned long flags;
++	int i, jstart, jstop;
+ 
+ 	printk("Crypto Speed tests\n");
+ 
+@@ -419,11 +372,6 @@ ocfbench_init(void)
+ 
+ 	for (i = 0; i < request_q_len; i++) {
+ 		/* +64 for return data */
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,20)
+-		INIT_WORK(&requests[i].work, ocf_request_wq);
+-#else
+-		INIT_WORK(&requests[i].work, ocf_request, &requests[i]);
+-#endif
+ 		requests[i].buffer = kmalloc(request_size + 128, GFP_DMA);
+ 		if (!requests[i].buffer) {
+ 			printk("malloc failed\n");
+@@ -436,31 +384,19 @@ ocfbench_init(void)
+ 	 * OCF benchmark
+ 	 */
+ 	printk("OCF: testing ...\n");
+-	if (ocf_init() == -1)
+-		return -EINVAL;
+-
+-	spin_lock_init(&ocfbench_counter_lock);
++	ocf_init();
+ 	total = outstanding = 0;
+ 	jstart = jiffies;
+ 	for (i = 0; i < request_q_len; i++) {
+-		spin_lock_irqsave(&ocfbench_counter_lock, flags);
+ 		outstanding++;
+-		spin_unlock_irqrestore(&ocfbench_counter_lock, flags);
+ 		ocf_request(&requests[i]);
+ 	}
+ 	while (outstanding > 0)
+ 		schedule();
+ 	jstop = jiffies;
+ 
+-	mbps = 0;
+-	if (jstop > jstart) {
+-		mbps = (unsigned long) total * (unsigned long) request_size * 8;
+-		mbps /= ((jstop - jstart) * 1000) / HZ;
+-	}
+-	printk("OCF: %d requests of %d bytes in %d jiffies (%d.%03d Mbps)\n",
+-			total, request_size, (int)(jstop - jstart),
+-			((int)mbps) / 1000, ((int)mbps) % 1000);
+-	ocf_done();
++	printk("OCF: %d requests of %d bytes in %d jiffies\n", total, request_size,
++			jstop - jstart);
+ 
+ #ifdef BENCH_IXP_ACCESS_LIB
+ 	/*
+@@ -471,29 +407,15 @@ ocfbench_init(void)
+ 	total = outstanding = 0;
+ 	jstart = jiffies;
+ 	for (i = 0; i < request_q_len; i++) {
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,20)
+-		INIT_WORK(&requests[i].work, ixp_request_wq);
+-#else
+-		INIT_WORK(&requests[i].work, ixp_request, &requests[i]);
+-#endif
+-		spin_lock_irqsave(&ocfbench_counter_lock, flags);
+ 		outstanding++;
+-		spin_unlock_irqrestore(&ocfbench_counter_lock, flags);
+ 		ixp_request(&requests[i]);
+ 	}
+ 	while (outstanding > 0)
+ 		schedule();
+ 	jstop = jiffies;
+ 
+-	mbps = 0;
+-	if (jstop > jstart) {
+-		mbps = (unsigned long) total * (unsigned long) request_size * 8;
+-		mbps /= ((jstop - jstart) * 1000) / HZ;
+-	}
+-	printk("IXP: %d requests of %d bytes in %d jiffies (%d.%03d Mbps)\n",
+-			total, request_size, jstop - jstart,
+-			((int)mbps) / 1000, ((int)mbps) % 1000);
+-	ixp_done();
++	printk("IXP: %d requests of %d bytes in %d jiffies\n", total, request_size,
++			jstop - jstart);
+ #endif /* BENCH_IXP_ACCESS_LIB */
+ 
+ 	for (i = 0; i < request_q_len; i++)
+@@ -510,5 +432,5 @@ module_init(ocfbench_init);
+ module_exit(ocfbench_exit);
+ 
+ MODULE_LICENSE("BSD");
+-MODULE_AUTHOR("David McCullough <david_mccullough@mcafee.com>");
++MODULE_AUTHOR("David McCullough <david_mccullough@securecomputing.com>");
+ MODULE_DESCRIPTION("Benchmark various in-kernel crypto speeds");
+diff --git a/crypto/ocf/ocf-compat.h b/crypto/ocf/ocf-compat.h
+index 4ad1223..53f8b0c 100644
+--- a/crypto/ocf/ocf-compat.h
++++ b/crypto/ocf/ocf-compat.h
+@@ -4,8 +4,8 @@
+ /*
+  * Provide compat routines for older linux kernels and BSD kernels
+  *
+- * Written by David McCullough <david_mccullough@mcafee.com>
+- * Copyright (C) 2010 David McCullough <david_mccullough@mcafee.com>
++ * Written by David McCullough <david_mccullough@securecomputing.com>
++ * Copyright (C) 2007 David McCullough <david_mccullough@securecomputing.com>
+  *
+  * LICENSE TERMS
+  *
+@@ -34,11 +34,6 @@
+  */
+ /****************************************************************************/
+ #ifdef __KERNEL__
+-#include <linux/version.h>
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38) && !defined(AUTOCONF_INCLUDED)
+-#include <linux/config.h>
+-#endif
+-
+ /*
+  * fake some BSD driver interface stuff specifically for OCF use
+  */
+@@ -189,33 +184,11 @@ struct ocf_device {
+ #define DMA_32BIT_MASK  0x00000000ffffffffULL
+ #endif
+ 
+-#ifndef htole32
+ #define htole32(x)	cpu_to_le32(x)
+-#endif
+-#ifndef htobe32
+ #define htobe32(x)	cpu_to_be32(x)
+-#endif
+-#ifndef htole16
+ #define htole16(x)	cpu_to_le16(x)
+-#endif
+-#ifndef htobe16
+ #define htobe16(x)	cpu_to_be16(x)
+-#endif
+ 
+-/* older kernels don't have these */
+-
+-#include <asm/irq.h>
+-#if !defined(IRQ_NONE) && !defined(IRQ_RETVAL)
+-#define IRQ_NONE
+-#define IRQ_HANDLED
+-#define IRQ_WAKE_THREAD
+-#define IRQ_RETVAL
+-#define irqreturn_t void
+-typedef irqreturn_t (*irq_handler_t)(int irq, void *arg, struct pt_regs *regs);
+-#endif
+-#ifndef IRQF_SHARED
+-#define IRQF_SHARED	SA_SHIRQ
+-#endif
+ 
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(2,5,0)
+ # define strlcpy(dest,src,len) \
+@@ -226,13 +199,8 @@ typedef irqreturn_t (*irq_handler_t)(int irq, void *arg, struct pt_regs *regs);
+ #define MAX_ERRNO	4095
+ #endif
+ #ifndef IS_ERR_VALUE
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,5)
+-#include <linux/err.h>
+-#endif
+-#ifndef IS_ERR_VALUE
+ #define IS_ERR_VALUE(x) ((unsigned long)(x) >= (unsigned long)-MAX_ERRNO)
+ #endif
+-#endif
+ 
+ /*
+  * common debug for all
+@@ -269,7 +237,6 @@ typedef irqreturn_t (*irq_handler_t)(int irq, void *arg, struct pt_regs *regs);
+ 
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24)
+ 
+-#include <linux/mm.h>
+ #include <asm/scatterlist.h>
+ 
+ static inline void sg_set_page(struct scatterlist *sg,  struct page *page,
+@@ -285,85 +252,6 @@ static inline void *sg_virt(struct scatterlist *sg)
+ 	return page_address(sg->page) + sg->offset;
+ }
+ 
+-#define sg_init_table(sg, n)
+-
+-#define sg_mark_end(sg)
+-
+-#endif
+-
+-#ifndef late_initcall
+-#define late_initcall(init) module_init(init)
+-#endif
+-
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,4) || !defined(CONFIG_SMP)
+-#define ocf_for_each_cpu(cpu) for ((cpu) = 0; (cpu) == 0; (cpu)++)
+-#else
+-#define ocf_for_each_cpu(cpu) for_each_present_cpu(cpu)
+-#endif
+-
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27)
+-#include <linux/sched.h>
+-#define	kill_proc(p,s,v)	send_sig(s,find_task_by_vpid(p),0)
+-#endif
+-
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,4)
+-
+-struct ocf_thread {
+-	struct task_struct	*task;
+-	int					(*func)(void *arg);
+-	void				*arg;
+-};
+-
+-/* thread startup helper func */
+-static inline int ocf_run_thread(void *arg)
+-{
+-	struct ocf_thread *t = (struct ocf_thread *) arg;
+-	if (!t)
+-		return -1; /* very bad */
+-	t->task = current;
+-	daemonize();
+-	spin_lock_irq(&current->sigmask_lock);
+-	sigemptyset(&current->blocked);
+-	recalc_sigpending(current);
+-	spin_unlock_irq(&current->sigmask_lock);
+-	return (*t->func)(t->arg);
+-}
+-
+-#define kthread_create(f,a,fmt...) \
+-	({ \
+-		struct ocf_thread t; \
+-		pid_t p; \
+-		t.task = NULL; \
+-		t.func = (f); \
+-		t.arg = (a); \
+-		p = kernel_thread(ocf_run_thread, &t, CLONE_FS|CLONE_FILES); \
+-		while (p != (pid_t) -1 && t.task == NULL) \
+-			schedule(); \
+-		if (t.task) \
+-			snprintf(t.task->comm, sizeof(t.task->comm), fmt); \
+-		(t.task); \
+-	})
+-
+-#define kthread_bind(t,cpu)	/**/
+-
+-#define kthread_should_stop()	(strcmp(current->comm, "stopping") == 0)
+-
+-#define kthread_stop(t) \
+-	({ \
+-		strcpy((t)->comm, "stopping"); \
+-		kill_proc((t)->pid, SIGTERM, 1); \
+-		do { \
+-			schedule(); \
+-		} while (kill_proc((t)->pid, SIGTERM, 1) == 0); \
+-	})
+-
+-#else
+-#include <linux/kthread.h>
+-#endif
+-
+-
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0)
+-#define	skb_frag_page(x)	((x)->page)
+ #endif
+ 
+ #endif /* __KERNEL__ */
+diff --git a/crypto/ocf/pasemi/pasemi.c b/crypto/ocf/pasemi/pasemi.c
+index 1b4333c..c3bb931 100644
+--- a/crypto/ocf/pasemi/pasemi.c
++++ b/crypto/ocf/pasemi/pasemi.c
+@@ -17,8 +17,7 @@
+  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+  */
+ 
+-#include <linux/version.h>
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38) && !defined(AUTOCONF_INCLUDED)
++#ifndef AUTOCONF_INCLUDED
+ #include <linux/config.h>
+ #endif
+ #include <linux/module.h>
+@@ -238,6 +237,11 @@ pasemi_newsession(device_t dev, u_int32_t *sidp, struct cryptoini *cri)
+ 
+ 	if (encini) {
+ 		ses->ccmd = ccmd;
++
++		/* get an IV */
++		/* XXX may read fewer than requested */
++		get_random_bytes(ses->civ, sizeof(ses->civ));
++
+ 		ses->keysz = (encini->cri_klen - 63) / 64;
+ 		memcpy(ses->key, encini->cri_key, (ses->keysz + 1) * 8);
+ 
+@@ -444,8 +448,6 @@ pasemi_process(device_t dev, struct cryptop *crp, int hint)
+ 		if (enccrd->crd_flags & CRD_F_ENCRYPT) {
+ 			if (enccrd->crd_flags & CRD_F_IV_EXPLICIT)
+ 				memcpy(ivp, enccrd->crd_iv, ivsize);
+-			else
+-				read_random(ivp, ivsize);
+ 			/* If IV is not present in the buffer already, it has to be copied there */
+ 			if ((enccrd->crd_flags & CRD_F_IV_PRESENT) == 0)
+ 				crypto_copyback(crp->crp_flags, crp->crp_buf,
+diff --git a/crypto/ocf/random.c b/crypto/ocf/random.c
+index 4bb773f..118575a 100644
+--- a/crypto/ocf/random.c
++++ b/crypto/ocf/random.c
+@@ -5,8 +5,8 @@
+  *
+  * This should be fast and callable from timers/interrupts
+  *
+- * Written by David McCullough <david_mccullough@mcafee.com>
+- * Copyright (C) 2006-2010 David McCullough
++ * Written by David McCullough <david_mccullough@securecomputing.com>
++ * Copyright (C) 2006-2007 David McCullough
+  * Copyright (C) 2004-2005 Intel Corporation.
+  *
+  * LICENSE TERMS
+@@ -35,8 +35,7 @@
+  * and/or fitness for purpose.
+  */
+ 
+-#include <linux/version.h>
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38) && !defined(AUTOCONF_INCLUDED)
++#ifndef AUTOCONF_INCLUDED
+ #include <linux/config.h>
+ #endif
+ #include <linux/module.h>
+@@ -46,6 +45,7 @@
+ #include <linux/wait.h>
+ #include <linux/sched.h>
+ #include <linux/spinlock.h>
++#include <linux/version.h>
+ #include <linux/unistd.h>
+ #include <linux/poll.h>
+ #include <linux/random.h>
+@@ -172,7 +172,7 @@ crypto_runregister_all(u_int32_t driverid)
+ 
+ 	spin_lock_irqsave(&random_lock, flags);
+ 	if (list_empty(&random_ops) && started)
+-		kill_proc(randomproc, SIGKILL, 1);
++		kill_proc_info(SIGKILL, SEND_SIG_PRIV, randomproc);
+ 	spin_unlock_irqrestore(&random_lock, flags);
+ 	return(0);
+ }
+diff --git a/crypto/ocf/rndtest.c b/crypto/ocf/rndtest.c
+index 7bed6a1..34b68d8 100644
+--- a/crypto/ocf/rndtest.c
++++ b/crypto/ocf/rndtest.c
+@@ -1,8 +1,8 @@
+ /*	$OpenBSD$	*/
+ 
+ /*
+- * OCF/Linux port done by David McCullough <david_mccullough@mcafee.com>
+- * Copyright (C) 2006-2010 David McCullough
++ * OCF/Linux port done by David McCullough <david_mccullough@securecomputing.com>
++ * Copyright (C) 2006-2007 David McCullough
+  * Copyright (C) 2004-2005 Intel Corporation.
+  * The license and original author are listed below.
+  *
+@@ -36,14 +36,14 @@
+  * POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+-#include <linux/version.h>
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38) && !defined(AUTOCONF_INCLUDED)
++#ifndef AUTOCONF_INCLUDED
+ #include <linux/config.h>
+ #endif
+ #include <linux/module.h>
+ #include <linux/list.h>
+ #include <linux/wait.h>
+ #include <linux/time.h>
++#include <linux/version.h>
+ #include <linux/unistd.h>
+ #include <linux/kernel.h>
+ #include <linux/string.h>
+diff --git a/crypto/ocf/safe/hmachack.h b/crypto/ocf/safe/hmachack.h
+index 598c958..8b13789 100644
+--- a/crypto/ocf/safe/hmachack.h
++++ b/crypto/ocf/safe/hmachack.h
+@@ -1,37 +1 @@
+-/*
+- * until we find a cleaner way, include the BSD md5/sha1 code
+- * here
+- */
+-#ifdef HMAC_HACK
+-#define LITTLE_ENDIAN 1234
+-#define BIG_ENDIAN 4321
+-#ifdef __LITTLE_ENDIAN
+-#define BYTE_ORDER LITTLE_ENDIAN
+-#endif
+-#ifdef __BIG_ENDIAN
+-#define BYTE_ORDER BIG_ENDIAN
+-#endif
+-
+-u_int8_t hmac_ipad_buffer[64] = {
+-    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
+-    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
+-    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
+-    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
+-    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
+-    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
+-    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
+-    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36
+-};
+-
+-u_int8_t hmac_opad_buffer[64] = {
+-    0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C,
+-    0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C,
+-    0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C,
+-    0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C,
+-    0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C,
+-    0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C,
+-    0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C,
+-    0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C
+-};
+-#endif /* HMAC_HACK */
+ 
+diff --git a/crypto/ocf/safe/safe.c b/crypto/ocf/safe/safe.c
+index 141640e..a77e3a2 100644
+--- a/crypto/ocf/safe/safe.c
++++ b/crypto/ocf/safe/safe.c
+@@ -1,6 +1,6 @@
+ /*-
+- * Linux port done by David McCullough <david_mccullough@mcafee.com>
+- * Copyright (C) 2004-2010 David McCullough
++ * Linux port done by David McCullough <david_mccullough@securecomputing.com>
++ * Copyright (C) 2004-2007 David McCullough
+  * The license and original author are listed below.
+  *
+  * Copyright (c) 2003 Sam Leffler, Errno Consulting
+@@ -31,8 +31,7 @@
+ __FBSDID("$FreeBSD: src/sys/dev/safe/safe.c,v 1.18 2007/03/21 03:42:50 sam Exp $");
+  */
+ 
+-#include <linux/version.h>
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38) && !defined(AUTOCONF_INCLUDED)
++#ifndef AUTOCONF_INCLUDED
+ #include <linux/config.h>
+ #endif
+ #include <linux/module.h>
+@@ -47,6 +46,7 @@ __FBSDID("$FreeBSD: src/sys/dev/safe/safe.c,v 1.18 2007/03/21 03:42:50 sam Exp $
+ #include <linux/interrupt.h>
+ #include <linux/spinlock.h>
+ #include <linux/random.h>
++#include <linux/version.h>
+ #include <linux/skbuff.h>
+ #include <asm/io.h>
+ 
+@@ -77,11 +77,40 @@ __FBSDID("$FreeBSD: src/sys/dev/safe/safe.c,v 1.18 2007/03/21 03:42:50 sam Exp $
+  */
+ #define HMAC_HACK 1
+ #ifdef HMAC_HACK
+-#include <safe/hmachack.h>
++#define LITTLE_ENDIAN 1234
++#define BIG_ENDIAN 4321
++#ifdef __LITTLE_ENDIAN
++#define BYTE_ORDER LITTLE_ENDIAN
++#endif
++#ifdef __BIG_ENDIAN
++#define BYTE_ORDER BIG_ENDIAN
++#endif
+ #include <safe/md5.h>
+ #include <safe/md5.c>
+ #include <safe/sha1.h>
+ #include <safe/sha1.c>
++
++u_int8_t hmac_ipad_buffer[64] = {
++    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
++    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
++    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
++    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
++    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
++    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
++    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
++    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36
++};
++
++u_int8_t hmac_opad_buffer[64] = {
++    0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C,
++    0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C,
++    0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C,
++    0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C,
++    0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C,
++    0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C,
++    0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C,
++    0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C
++};
+ #endif /* HMAC_HACK */
+ 
+ /* add proc entry for this */
+@@ -208,7 +237,7 @@ pci_map_skb(struct safe_softc *sc,struct safe_operand *buf,struct sk_buff *skb)
+ 
+ 	for (i = 0; i < skb_shinfo(skb)->nr_frags; i++) {
+ 		pci_map_linear(sc, buf,
+-				page_address(skb_frag_page(&skb_shinfo(skb)->frags[i])) +
++				page_address(skb_shinfo(skb)->frags[i].page) +
+ 				                        skb_shinfo(skb)->frags[i].page_offset,
+ 				skb_shinfo(skb)->frags[i].size);
+ 	}
+@@ -532,6 +561,10 @@ safe_newsession(device_t dev, u_int32_t *sidp, struct cryptoini *cri)
+ 	ses->ses_used = 1;
+ 
+ 	if (encini) {
++		/* get an IV */
++		/* XXX may read fewer than requested */
++		read_random(ses->ses_iv, sizeof(ses->ses_iv));
++
+ 		ses->ses_klen = encini->cri_klen;
+ 		if (encini->cri_key != NULL)
+ 			safe_setup_enckey(ses, encini->cri_key);
+@@ -594,7 +627,7 @@ safe_process(device_t dev, struct cryptop *crp, int hint)
+ 	struct safe_ringentry *re;
+ 	struct safe_sarec *sa;
+ 	struct safe_pdesc *pd;
+-	u_int32_t cmd0, cmd1, staterec, rand_iv[4];
++	u_int32_t cmd0, cmd1, staterec;
+ 	unsigned long flags;
+ 
+ 	DPRINTF(("%s()\n", __FUNCTION__));
+@@ -743,7 +776,7 @@ safe_process(device_t dev, struct cryptop *crp, int hint)
+ 			if (enccrd->crd_flags & CRD_F_IV_EXPLICIT)
+ 				iv = enccrd->crd_iv;
+ 			else
+-				read_random((iv = (caddr_t) &rand_iv[0]), sizeof(rand_iv));
++				iv = (caddr_t) ses->ses_iv;
+ 			if ((enccrd->crd_flags & CRD_F_IV_PRESENT) == 0) {
+ 				crypto_copyback(crp->crp_flags, crp->crp_buf,
+ 				    enccrd->crd_inject, ivsize, iv);
+@@ -1093,6 +1126,31 @@ safe_callback(struct safe_softc *sc, struct safe_ringentry *re)
+ 		return;
+ 	}
+ 
++	if (re->re_flags & SAFE_QFLAGS_COPYOUTIV) {
++		/* copy out IV for future use */
++		for (crd = crp->crp_desc; crd; crd = crd->crd_next) {
++			int i;
++			int ivsize;
++
++			if (crd->crd_alg == CRYPTO_DES_CBC ||
++			    crd->crd_alg == CRYPTO_3DES_CBC) {
++				ivsize = 2*sizeof(u_int32_t);
++			} else if (crd->crd_alg == CRYPTO_AES_CBC) {
++				ivsize = 4*sizeof(u_int32_t);
++			} else
++				continue;
++			crypto_copydata(crp->crp_flags, crp->crp_buf,
++			    crd->crd_skip + crd->crd_len - ivsize, ivsize,
++			    (caddr_t)sc->sc_sessions[re->re_sesn].ses_iv);
++			for (i = 0;
++					i < ivsize/sizeof(sc->sc_sessions[re->re_sesn].ses_iv[0]);
++					i++)
++				sc->sc_sessions[re->re_sesn].ses_iv[i] =
++					cpu_to_le32(sc->sc_sessions[re->re_sesn].ses_iv[i]);
++			break;
++		}
++	}
++
+ 	if (re->re_flags & SAFE_QFLAGS_COPYOUTICV) {
+ 		/* copy out ICV result */
+ 		for (crd = crp->crp_desc; crd; crd = crd->crd_next) {
+@@ -2226,5 +2284,5 @@ module_init(safe_init);
+ module_exit(safe_exit);
+ 
+ MODULE_LICENSE("BSD");
+-MODULE_AUTHOR("David McCullough <david_mccullough@mcafee.com>");
++MODULE_AUTHOR("David McCullough <david_mccullough@securecomputing.com>");
+ MODULE_DESCRIPTION("OCF driver for safenet PCI crypto devices");
+diff --git a/crypto/ocf/safe/safevar.h b/crypto/ocf/safe/safevar.h
+index 11d8304..f5b7394 100644
+--- a/crypto/ocf/safe/safevar.h
++++ b/crypto/ocf/safe/safevar.h
+@@ -1,6 +1,6 @@
+ /*-
+  * The linux port of this code done by David McCullough
+- * Copyright (C) 2004-2010 David McCullough <david_mccullough@mcafee.com>
++ * Copyright (C) 2004-2007 David McCullough <david_mccullough@securecomputing.com>
+  * The license and original author are listed below.
+  *
+  * Copyright (c) 2003 Sam Leffler, Errno Consulting
+@@ -145,6 +145,7 @@ struct safe_session {
+ 	u_int32_t	ses_mlen;		/* hmac length in bytes */
+ 	u_int32_t	ses_hminner[5];		/* hmac inner state */
+ 	u_int32_t	ses_hmouter[5];		/* hmac outer state */
++	u_int32_t	ses_iv[4];		/* DES/3DES/AES iv */
+ };
+ 
+ struct safe_pkq {
+diff --git a/crypto/ocf/talitos/talitos.c b/crypto/ocf/talitos/talitos.c
+index c4bc8c0..eaf3f30 100644
+--- a/crypto/ocf/talitos/talitos.c
++++ b/crypto/ocf/talitos/talitos.c
+@@ -8,7 +8,7 @@
+  *
+  * This code written by Kim A. B. Phillips <kim.phillips@freescale.com>
+  * some code copied from files with the following:
+- * Copyright (C) 2004-2007 David McCullough <david_mccullough@mcafee.com>
++ * Copyright (C) 2004-2007 David McCullough <david_mccullough@securecomputing.com
+  *
+  * Redistribution and use in source and binary forms, with or without
+  * modification, are permitted provided that the following conditions
+@@ -107,8 +107,7 @@
+  * o add statistics
+  */
+ 
+-#include <linux/version.h>
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38) && !defined(AUTOCONF_INCLUDED)
++#ifndef AUTOCONF_INCLUDED
+ #include <linux/config.h>
+ #endif
+ #include <linux/module.h>
+@@ -121,6 +120,7 @@
+ #include <linux/dma-mapping.h>  /* dma_map_single() */
+ #include <linux/moduleparam.h>
+ 
++#include <linux/version.h>
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,15)
+ #include <linux/platform_device.h>
+ #endif
+@@ -418,6 +418,10 @@ talitos_newsession(device_t dev, u_int32_t *sidp, struct cryptoini *cri)
+ 	ses->ses_used = 1;
+ 
+ 	if (encini) {
++		/* get an IV */
++		/* XXX may read fewer than requested */
++		read_random(ses->ses_iv, sizeof(ses->ses_iv));
++
+ 		ses->ses_klen = (encini->cri_klen + 7) / 8;
+ 		memcpy(ses->ses_key, encini->cri_key, ses->ses_klen);
+ 		if (macini) {
+@@ -507,7 +511,6 @@ talitos_process(device_t dev, struct cryptop *crp, int hint)
+ 	int hmac_key, hmac_data, cipher_iv, cipher_key, 
+ 		in_fifo, out_fifo, cipher_iv_out;
+ 	static int chsel = -1;
+-	u_int32_t rand_iv[4];
+ 
+ 	DPRINTF("%s()\n", __FUNCTION__);
+ 
+@@ -749,7 +752,7 @@ talitos_process(device_t dev, struct cryptop *crp, int hint)
+ 			if (enccrd->crd_flags & CRD_F_IV_EXPLICIT)
+ 				iv = enccrd->crd_iv;
+ 			else
+-				read_random((iv = (caddr_t) rand_iv), sizeof(rand_iv));
++				iv = (caddr_t) ses->ses_iv;
+ 			if ((enccrd->crd_flags & CRD_F_IV_PRESENT) == 0) {
+ 				crypto_copyback(crp->crp_flags, crp->crp_buf,
+ 				    enccrd->crd_inject, ivsize, iv);
+@@ -758,8 +761,9 @@ talitos_process(device_t dev, struct cryptop *crp, int hint)
+ 			td->hdr |= TALITOS_DIR_INBOUND; 
+ 			if (enccrd->crd_flags & CRD_F_IV_EXPLICIT) {
+ 				iv = enccrd->crd_iv;
++				bcopy(enccrd->crd_iv, iv, ivsize);
+ 			} else {
+-				iv = (caddr_t) rand_iv;
++				iv = (caddr_t) ses->ses_iv;
+ 				crypto_copydata(crp->crp_flags, crp->crp_buf,
+ 				    enccrd->crd_inject, ivsize, iv);
+ 			}
+diff --git a/crypto/ocf/talitos/talitos_soft.h b/crypto/ocf/talitos/talitos_soft.h
+index eda9c2e..79efdbd 100644
+--- a/crypto/ocf/talitos/talitos_soft.h
++++ b/crypto/ocf/talitos/talitos_soft.h
+@@ -69,6 +69,7 @@ struct talitos_session {
+ 	u_int32_t	ses_key[8];		/* DES/3DES/AES key */
+ 	u_int32_t	ses_hmac[5];		/* hmac inner state */
+ 	u_int32_t	ses_hmac_len;		/* hmac length */
++	u_int32_t	ses_iv[4];		/* DES/3DES/AES iv */
+ 	u_int32_t	ses_mlen;		/* desired hash result len (12=ipsec or 16) */
+ };
+ 
+diff --git a/crypto/ocf/ubsec_ssb/Makefile b/crypto/ocf/ubsec_ssb/Makefile
+index f973efd..8b13789 100644
+--- a/crypto/ocf/ubsec_ssb/Makefile
++++ b/crypto/ocf/ubsec_ssb/Makefile
+@@ -1,12 +1 @@
+-# for SGlinux builds
+--include $(ROOTDIR)/modules/.config
+-
+-obj-$(CONFIG_OCF_UBSEC_SSB) += ubsec_ssb.o
+-
+-obj ?= .
+-EXTRA_CFLAGS += -I$(obj)/.. -I$(obj)/
+-
+-ifdef TOPDIR
+--include $(TOPDIR)/Rules.make
+-endif
+ 
+diff --git a/crypto/ocf/ubsec_ssb/ubsecvar.h b/crypto/ocf/ubsec_ssb/ubsecvar.h
+index c808f95..8b13789 100644
+--- a/crypto/ocf/ubsec_ssb/ubsecvar.h
++++ b/crypto/ocf/ubsec_ssb/ubsecvar.h
+@@ -1,228 +1 @@
+ 
+-/*
+- * Copyright (c) 2008 Daniel Mueller (daniel@danm.de)
+- * Copyright (c) 2000 Theo de Raadt
+- * Copyright (c) 2001 Patrik Lindergren (patrik@ipunplugged.com)
+- *
+- * Redistribution and use in source and binary forms, with or without
+- * modification, are permitted provided that the following conditions
+- * are met:
+- *
+- * 1. Redistributions of source code must retain the above copyright
+- *    notice, this list of conditions and the following disclaimer.
+- * 2. Redistributions in binary form must reproduce the above copyright
+- *    notice, this list of conditions and the following disclaimer in the
+- *    documentation and/or other materials provided with the distribution.
+- *
+- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+- *
+- * Effort sponsored in part by the Defense Advanced Research Projects
+- * Agency (DARPA) and Air Force Research Laboratory, Air Force
+- * Materiel Command, USAF, under agreement number F30602-01-2-0537.
+- *
+- */
+-
+-/* Maximum queue length */
+-#ifndef UBS_MAX_NQUEUE
+-#define UBS_MAX_NQUEUE      60
+-#endif
+-
+-#define UBS_MAX_SCATTER     64  /* Maximum scatter/gather depth */
+-
+-#ifndef UBS_MAX_AGGR
+-#define UBS_MAX_AGGR        5   /* Maximum aggregation count */
+-#endif
+-
+-#define UBSEC_CARD(sid)     (((sid) & 0xf0000000) >> 28)
+-#define UBSEC_SESSION(sid)  ( (sid) & 0x0fffffff)
+-#define UBSEC_SID(crd, sesn)    (((crd) << 28) | ((sesn) & 0x0fffffff))
+-
+-#define UBS_DEF_RTY     0xff    /* PCI Retry Timeout */
+-#define UBS_DEF_TOUT        0xff    /* PCI TRDY Timeout */
+-#define UBS_DEF_CACHELINE   0x01    /* Cache Line setting */
+-
+-#define DEFAULT_HMAC_LEN     12
+-
+-struct ubsec_dma_alloc {
+-    dma_addr_t      dma_paddr;
+-    void            *dma_vaddr;
+-    /*
+-    bus_dmamap_t            dma_map;
+-    bus_dma_segment_t       dma_seg;
+-    */
+-    size_t          dma_size;
+-    /*
+-    int             dma_nseg;
+-    */
+-};
+-
+-struct ubsec_q2 {
+-    BSD_SIMPLEQ_ENTRY(ubsec_q2)     q_next;
+-    struct ubsec_dma_alloc      q_mcr;
+-    struct ubsec_dma_alloc      q_ctx;
+-    u_int               q_type;
+-};
+-
+-struct ubsec_q2_rng {
+-    struct ubsec_q2         rng_q;
+-    struct ubsec_dma_alloc      rng_buf;
+-    int             rng_used;
+-};
+-
+-/* C = (M ^ E) mod N */
+-#define UBS_MODEXP_PAR_M    0
+-#define UBS_MODEXP_PAR_E    1
+-#define UBS_MODEXP_PAR_N    2
+-struct ubsec_q2_modexp {
+-    struct ubsec_q2         me_q;
+-    struct cryptkop *       me_krp;
+-    struct ubsec_dma_alloc      me_M;
+-    struct ubsec_dma_alloc      me_E;
+-    struct ubsec_dma_alloc      me_C;
+-    struct ubsec_dma_alloc      me_epb;
+-    int             me_modbits;
+-    int             me_shiftbits;
+-    int             me_normbits;
+-};
+-
+-#define UBS_RSAPRIV_PAR_P   0
+-#define UBS_RSAPRIV_PAR_Q   1
+-#define UBS_RSAPRIV_PAR_DP  2
+-#define UBS_RSAPRIV_PAR_DQ  3
+-#define UBS_RSAPRIV_PAR_PINV    4
+-#define UBS_RSAPRIV_PAR_MSGIN   5
+-#define UBS_RSAPRIV_PAR_MSGOUT  6
+-struct ubsec_q2_rsapriv {
+-    struct ubsec_q2         rpr_q;
+-    struct cryptkop *       rpr_krp;
+-    struct ubsec_dma_alloc      rpr_msgin;
+-    struct ubsec_dma_alloc      rpr_msgout;
+-};
+-
+-#define UBSEC_RNG_BUFSIZ    16      /* measured in 32bit words */
+-
+-struct ubsec_dmachunk {
+-    struct ubsec_mcr    d_mcr;
+-    struct ubsec_mcr_add    d_mcradd[UBS_MAX_AGGR-1];
+-    struct ubsec_pktbuf d_sbuf[UBS_MAX_SCATTER-1];
+-    struct ubsec_pktbuf d_dbuf[UBS_MAX_SCATTER-1];
+-    u_int32_t       d_macbuf[5];
+-    union {
+-        struct ubsec_pktctx_aes256 ctxaes256;
+-        struct ubsec_pktctx_aes192 ctxaes192;
+-        struct ubsec_pktctx_des ctxdes;
+-        struct ubsec_pktctx_aes128 ctxaes128;
+-        struct ubsec_pktctx     ctx;
+-    } d_ctx;
+-};
+-
+-struct ubsec_dma {
+-    BSD_SIMPLEQ_ENTRY(ubsec_dma)    d_next;
+-    struct ubsec_dmachunk       *d_dma;
+-    struct ubsec_dma_alloc      d_alloc;
+-};
+-
+-#define UBS_FLAGS_KEY       0x01        /* has key accelerator */
+-#define UBS_FLAGS_LONGCTX   0x02        /* uses long ipsec ctx */
+-#define UBS_FLAGS_BIGKEY    0x04        /* 2048bit keys */
+-#define UBS_FLAGS_HWNORM    0x08        /* hardware normalization */
+-#define UBS_FLAGS_RNG       0x10        /* hardware rng */
+-#define UBS_FLAGS_AES       0x20        /* hardware AES support */
+-
+-struct ubsec_q {
+-    BSD_SIMPLEQ_ENTRY(ubsec_q)      q_next;
+-    int             q_nstacked_mcrs;
+-    struct ubsec_q          *q_stacked_mcr[UBS_MAX_AGGR-1];
+-    struct cryptop          *q_crp;
+-    struct ubsec_dma        *q_dma;
+-
+-    //struct mbuf           *q_src_m, *q_dst_m;
+-    struct sk_buff      *q_src_m, *q_dst_m;
+-    struct uio          *q_src_io, *q_dst_io;
+-
+-    /*
+-    bus_dmamap_t            q_src_map;
+-    bus_dmamap_t            q_dst_map;
+-    */
+-
+-    /* DMA addresses for In-/Out packages */
+-    int q_src_len;
+-    int q_dst_len;
+-    struct ubsec_dma_alloc  q_src_map[UBS_MAX_SCATTER];
+-    struct ubsec_dma_alloc  q_dst_map[UBS_MAX_SCATTER];
+-    int q_has_dst;
+-
+-    int             q_sesn;
+-    int             q_flags;
+-};
+-
+-struct ubsec_softc {
+-    softc_device_decl   sc_dev;
+-    struct ssb_device   *sdev;      /* device backpointer */
+-
+-    struct device       *sc_dv;     /* generic device */
+-    void                *sc_ih;     /* interrupt handler cookie */
+-    int                 sc_flags;   /* device specific flags */
+-    u_int32_t           sc_statmask;    /* interrupt status mask */
+-    int32_t             sc_cid;     /* crypto tag */
+-    BSD_SIMPLEQ_HEAD(,ubsec_q)  sc_queue;   /* packet queue, mcr1 */
+-    int                 sc_nqueue;  /* count enqueued, mcr1 */
+-    BSD_SIMPLEQ_HEAD(,ubsec_q)  sc_qchip;   /* on chip, mcr1 */
+-    BSD_SIMPLEQ_HEAD(,ubsec_q)  sc_freequeue;   /* list of free queue elements */
+-    BSD_SIMPLEQ_HEAD(,ubsec_q2) sc_queue2;  /* packet queue, mcr2 */
+-    int                 sc_nqueue2; /* count enqueued, mcr2 */
+-    BSD_SIMPLEQ_HEAD(,ubsec_q2) sc_qchip2;  /* on chip, mcr2 */
+-    int                 sc_nsessions;   /* # of sessions */
+-    struct ubsec_session        *sc_sessions;   /* sessions */
+-    int                 sc_rnghz;   /* rng poll time */
+-    struct ubsec_q2_rng sc_rng;
+-    struct ubsec_dma    sc_dmaa[UBS_MAX_NQUEUE];
+-    struct ubsec_q      *sc_queuea[UBS_MAX_NQUEUE];
+-    BSD_SIMPLEQ_HEAD(,ubsec_q2) sc_q2free;  /* free list */
+-    spinlock_t          sc_ringmtx; /* PE ring lock */
+-};
+-
+-#define UBSEC_QFLAGS_COPYOUTIV      0x1
+-
+-struct ubsec_session {
+-    u_int32_t   ses_used;
+-    u_int32_t   ses_key[8];         /* 3DES/AES key */
+-    u_int32_t   ses_hminner[5];     /* hmac inner state */
+-    u_int32_t   ses_hmouter[5];     /* hmac outer state */
+-    u_int32_t   ses_iv[4];          /* [3]DES/AES iv */
+-    u_int32_t   ses_keysize;        /* AES key size */
+-    u_int32_t   ses_mlen;           /* hmac/hash length */
+-};
+-
+-struct ubsec_stats {
+-    u_int64_t hst_ibytes;
+-    u_int64_t hst_obytes;
+-    u_int32_t hst_ipackets;
+-    u_int32_t hst_opackets;
+-    u_int32_t hst_invalid;
+-    u_int32_t hst_nomem;
+-    u_int32_t hst_queuefull;
+-    u_int32_t hst_dmaerr;
+-    u_int32_t hst_mcrerr;
+-    u_int32_t hst_nodmafree;
+-};
+-
+-struct ubsec_generic_ctx {
+-    u_int32_t   pc_key[8];      /* [3]DES/AES key */
+-    u_int32_t   pc_hminner[5];  /* hmac inner state */
+-    u_int32_t   pc_hmouter[5];  /* hmac outer state */
+-    u_int32_t   pc_iv[4];       /* [3]DES/AES iv */
+-    u_int16_t   pc_flags;       /* flags, below */
+-    u_int16_t   pc_offset;      /* crypto offset */
+-    u_int16_t   pc_type;        /* Cryptographic operation */
+-};
+-
+diff --git a/crypto/ocf/uio.h b/crypto/ocf/uio.h
+index 03a6249..e82e46c 100644
+--- a/crypto/ocf/uio.h
++++ b/crypto/ocf/uio.h
+@@ -8,8 +8,8 @@
+  * with the BSD cryptodev,  we need to keep this around.  Perhaps this can
+  * be moved back into the linux/uio.h
+  *
+- * Linux port done by David McCullough <david_mccullough@mcafee.com>
+- * Copyright (C) 2006-2010 David McCullough
++ * Linux port done by David McCullough <david_mccullough@securecomputing.com>
++ * Copyright (C) 2006-2007 David McCullough
+  * Copyright (C) 2004-2005 Intel Corporation.
+  *
+  * LICENSE TERMS
+-- 
+1.7.9.5
+

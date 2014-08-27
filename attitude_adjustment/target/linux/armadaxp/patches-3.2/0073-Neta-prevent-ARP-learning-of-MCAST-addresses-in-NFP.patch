@@ -1,0 +1,35 @@
+From 5d65a074f5ef64aaaa54d15ff5c931d44b1a383c Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Sun, 15 Jul 2012 17:19:39 +0300
+Subject: [PATCH 073/609] Neta: prevent ARP learning of MCAST addresses in NFP
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index e1a88c4..27717f2 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -1873,7 +1873,7 @@ int mv_eth_tx_tso(struct sk_buff *skb, struct net_device *dev,
+ 
+ 		/* Move to next segment */
+ 		frag_size = skb_frag_ptr->size;
+-		frag_ptr = page_address(skb_frag_ptr->page) + skb_frag_ptr->page_offset;
++		frag_ptr = page_address(skb_frag_ptr->page.p) + skb_frag_ptr->page_offset;
+ 		frag++;
+ 	}
+ 	totalDescNum = 0;
+@@ -1935,7 +1935,7 @@ int mv_eth_tx_tso(struct sk_buff *skb, struct net_device *dev,
+ 
+ 				/* Move to next segment */
+ 				frag_size = skb_frag_ptr->size;
+-				frag_ptr = page_address(skb_frag_ptr->page) + skb_frag_ptr->page_offset;
++				frag_ptr = page_address(skb_frag_ptr->page.p) + skb_frag_ptr->page_offset;
+ 				frag++;
+ 			}
+ 		}		/* of while data_left > 0 */
+-- 
+1.7.9.5
+

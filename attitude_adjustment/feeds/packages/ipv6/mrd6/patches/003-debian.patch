@@ -1,0 +1,71 @@
+--- mrd6-0.9.6.orig/src/log.cpp
++++ mrd6-0.9.6/src/log.cpp
+@@ -667,3 +667,12 @@
+ 	os.nprintf(32, "%p", val);
+ }
+ 
++#ifdef __s390__
++const char *stream_type_format_parameter(size_t) {
++	return "u";
++}
++
++void stream_push_formated_type(base_stream &os, size_t val) {
++	os.nprintf(32, "%z", val);
++}
++#endif
+--- mrd6-0.9.6.orig/src/mrd.cpp
++++ mrd6-0.9.6/src/mrd.cpp
+@@ -44,6 +44,7 @@
+ #include <cstdarg>
+ #include <cstdlib>
+ #include <errno.h>
++#include <climits>
+ 
+ #include <unistd.h>
+ #include <fcntl.h>
+@@ -2338,7 +2339,8 @@
+ 
+ 	out.xprintf("Uptime: %{duration}\n", time_duration((time(0) - m_startup) * 1000));
+ 	out.xprintf("Performed tasks: %u (spent %llu ms)\n", m_tasks_stat, m_tasks_time_spent);
+-	out.xprintf("Registered sockets: %u reading, %u writing\n", m_read.size(), m_write.size());
++	out.xprintf("Registered sockets: %u reading, %u writing\n",
++		(uint32_t)m_read.size(), (uint32_t)m_write.size());
+ 	out.xprintf("MRIB prefix count: %u\n", mrib().registry_prefix_count());
+ 	out.xprintf("Interface count: %u\n", m_intflist.size());
+ 	out.xprintf("Group state count: %u\n", m_grplist.size());
+--- mrd6-0.9.6.orig/src/bgp/bgp.cpp
++++ mrd6-0.9.6/src/bgp/bgp.cpp
+@@ -35,6 +35,7 @@
+ #include <fcntl.h>
+ #include <errno.h>
+ #include <unistd.h>
++#include <limits.h>
+ 
+ #include <map>
+ 
+--- mrd6-0.9.6.orig/src/linux/mrd_components.cpp
++++ mrd6-0.9.6/src/linux/mrd_components.cpp
+@@ -92,8 +92,6 @@
+ #if defined(__GLIBC__)
+ #if defined(__i386__)
+ 	return (void *)base->uc_mcontext.gregs[REG_EIP];
+-#elif defined(__mips__)
+-	return (void *)base->uc_mcontext.gpregs[CTX_EPC];
+ #endif
+ #endif
+ 	return 0;
+--- mrd6-0.9.6.orig/include/mrd/log.h
++++ mrd6-0.9.6/include/mrd/log.h
+@@ -53,6 +53,12 @@
+ void stream_push_formated_type(base_stream &, const char *val);
+ void stream_push_formated_type(base_stream &, const void *val);
+ 
++
++#ifdef __s390__
++const char *stream_type_format_parameter(size_t);
++void stream_push_formated_type(base_stream &, size_t val);
++#endif
++
+ /*!
+  * base log stream
+  */

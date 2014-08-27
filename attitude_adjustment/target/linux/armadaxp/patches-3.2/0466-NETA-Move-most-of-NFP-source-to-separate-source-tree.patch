@@ -1,0 +1,3155 @@
+From cbdf6561c967f8e19457f2acca916674c62b5a17 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Thu, 3 Jan 2013 06:21:48 -0500
+Subject: [PATCH 466/609] NETA: Move most of NFP source to separate source
+ tree
+
+Change-Id: Ifbcac7e540c6896c0b1a6a32e651e17bcb1c5b23
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/Makefile                    |   48 -
+ arch/arm/mach-armadaxp/export.c                    |    3 +-
+ .../arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig |  211 +---
+ .../mv_drivers_lsp/mv_neta/net_dev/Makefile        |   17 +-
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_eth_nfp.c    | 1067 ++++++++++++++++++++
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |   43 +-
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h     |   21 +-
+ .../plat-armada/mv_drivers_lsp/mv_network/Kconfig  |    2 +-
+ arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h      |   56 +-
+ drivers/net/ppp/pppoe.c                            |   12 +-
+ include/linux/mv_nfp.h                             |   15 +-
+ include/linux/netfilter/ipt_NFP.h                  |    4 +-
+ include/net/ip6_fib.h                              |    4 +-
+ include/net/neighbour.h                            |    4 +-
+ include/net/netfilter/nf_conntrack_tuple.h         |    4 +-
+ include/net/route.h                                |    4 +-
+ net/8021q/vlan.c                                   |   16 +-
+ net/bridge/br_fdb.c                                |   23 +-
+ net/bridge/br_if.c                                 |   12 +-
+ net/bridge/br_private.h                            |    4 +-
+ net/core/Makefile                                  |    3 -
+ net/core/dev.c                                     |   26 +-
+ net/core/mv_nfp.c                                  |    4 +-
+ net/core/neighbour.c                               |   37 +-
+ net/ipv4/netfilter/Kconfig                         |    3 +-
+ net/ipv4/netfilter/ipt_NFP.c                       |  217 ++++
+ .../netfilter/nf_conntrack_l3proto_ipv4_compat.c   |    4 +-
+ net/ipv4/route.c                                   |   57 +-
+ net/ipv6/ip6_fib.c                                 |   21 +-
+ net/ipv6/netfilter/Kconfig                         |    2 +-
+ net/ipv6/netfilter/ip6t_NFP.c                      |  152 +++
+ net/ipv6/route.c                                   |    8 +-
+ net/netfilter/nf_conntrack_core.c                  |   33 +-
+ net/netfilter/nf_conntrack_proto_tcp.c             |   20 +-
+ net/netfilter/nf_conntrack_standalone.c            |    4 +-
+ 35 files changed, 1710 insertions(+), 451 deletions(-)
+ create mode 100755 arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_nfp.c
+ create mode 100644 net/ipv4/netfilter/ipt_NFP.c
+ create mode 100644 net/ipv6/netfilter/ip6t_NFP.c
+
+diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
+index 3c357f1..de803f4 100644
+--- a/arch/arm/mach-armadaxp/Makefile
++++ b/arch/arm/mach-armadaxp/Makefile
+@@ -153,51 +153,3 @@ obj-$(CONFIG_FB_DOVE_CLCD)		+= clcd.o
+ obj-$(CONFIG_PM)			+= pm.o
+ 
+ 
+-ifdef CONFIG_MV_ETH_NFP
+-NFP_OBJS += $(LSP_NFP_MGR_DIR)/mv_nfp_mgr.o $(LSP_NFP_MGR_DIR)/nfp_sysfs.o
+-NFP_OBJS += $(LSP_NET_DEV_DIR)/mv_eth_nfp.o $(HAL_ETH_NFP_DIR)/mvNfp.o
+-endif
+-
+-ifdef CONFIG_MV_ETH_NFP_FIB
+-NFP_OBJS += $(LSP_NFP_MGR_DIR)/nfp_fib_arp_sysfs.o
+-NFP_OBJS += $(HAL_ETH_NFP_DIR)/mvNfpFib.o
+-ifdef CONFIG_IPV6
+-NFP_OBJS += $(LSP_NFP_MGR_DIR)/ipv6_parsing.o $(LSP_NFP_MGR_DIR)/nfp_fib6_arp_sysfs.o
+-endif
+-endif
+-
+-ifdef CONFIG_MV_ETH_NFP_CT
+-NFP_OBJS += $(LSP_NFP_MGR_DIR)/nfp_ct_sysfs.o
+-NFP_OBJS += $(HAL_ETH_NFP_DIR)/mvNfpCt.o
+-ifdef CONFIG_IPV6
+-NFP_OBJS += $(LSP_NFP_MGR_DIR)/nfp_ct6_sysfs.o
+-endif
+-endif
+-
+-ifdef CONFIG_MV_ETH_NFP_CLASSIFY
+-NFP_OBJS += $(LSP_NFP_MGR_DIR)/nfp_classification_sysfs.o $(LSP_NFP_MGR_DIR)/nfp_exact_classification_sysfs.o \
+-	   $(LSP_NFP_MGR_DIR)/nfp_prio_classification_sysfs.o
+-endif
+-
+-ifdef CONFIG_MV_ETH_NFP_BRIDGE
+-NFP_OBJS += $(LSP_NFP_MGR_DIR)/nfp_bridge_sysfs.o
+-ifdef CONFIG_MV_ETH_NFP_FDB_MODE
+-NFP_OBJS += $(HAL_ETH_NFP_DIR)/mvNfpFdb.o
+-else
+-NFP_OBJS += $(HAL_ETH_NFP_DIR)/mvNfpBridge.o
+-endif
+-endif
+-
+-ifdef CONFIG_MV_ETH_NFP_VLAN
+-NFP_OBJS += $(LSP_NFP_MGR_DIR)/nfp_vlan_sysfs.o
+-endif
+-
+-ifdef CONFIG_MV_ETH_NFP_PPP
+-NFP_OBJS += $(LSP_NFP_MGR_DIR)/nfp_ppp_sysfs.o
+-endif
+-
+-nfp-objs = $(NFP_OBJS)
+-obj-$(CONFIG_MV_ETH_NFP) += nfp.o
+-
+-nfp_learn-objs = $(LSP_NFP_MGR_DIR)/mv_nfp_hooks.o
+-obj-$(CONFIG_MV_ETH_NFP_LEARN) += nfp_learn.o
+diff --git a/arch/arm/mach-armadaxp/export.c b/arch/arm/mach-armadaxp/export.c
+index 1d01e61..9f74008 100644
+--- a/arch/arm/mach-armadaxp/export.c
++++ b/arch/arm/mach-armadaxp/export.c
+@@ -206,12 +206,11 @@ EXPORT_SYMBOL(TRC_START);
+ EXPORT_SYMBOL(TRC_RELEASE);
+ #endif
+ 
+-#ifdef CONFIG_MV_ETH_NFP_MODULE
+ #ifdef CONFIG_MV_ETH_BM
+ #include "bm/mvBm.h"
+ EXPORT_SYMBOL(mvBmVirtBase);
+ #endif
++
+ #include "mvList.h"
+ EXPORT_SYMBOL(mvListCreate);
+ EXPORT_SYMBOL(mvListDestroy);
+-#endif
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
+index dfba7c2..5d90b81 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
+@@ -668,213 +668,37 @@ config MV_ETH_EXTRA_BUF_NUM
+ 	Number of extra buffers allocated for each port
+ endmenu
+ 
+-menu "NFP support"
++menu "Network Fast Processing (NFP) support"
+ 
+ config  MV_ETH_NFP
+-        tristate "Use Network Fast Processing (NFP)"
++	depends on MV_ETH_NETA
++        bool "NFP support"
+ 	default n
+         ---help---
+         Choosing this option will enable Network Fast Processing.
+ 
+-config MV_ETH_NFP_DEF
+-        depends on MV_ETH_NFP
+-        int "Default value for NFP state:  0 - OFF, 1 - ON"
+-        default 0
+-
+-config MV_ETH_NFP_LEARN
+-        tristate "NFP Dynamic Learning"
+-		depends on MV_ETH_NFP
+-	default n
+-        ---help---
+-        Choosing this option will enable NFP Dynamic Learning.
+-
+-config MV_ETH_NFP_MODE_DEF
+-        depends on MV_ETH_NFP
+-        int "Default value for NFP mode:  1 - 2 tuple mode, 2 - 5 tuple mode"
+-        default 1
+-	range 1 2
+-        ---help---
+-
+-config  MV_ETH_NFP_EXT
+-        bool "Support NFP for External (non GBE) network interfaces"
+-        depends on MV_ETH_NFP
+-        default n
+-         ---help---
+-        Choosing this option will enable NFP for non-GBE network interfaces.
+-
+-config  MV_ETH_NFP_EXT_NUM
+-        int "Maximum number of External (non-Gbe) interfaces"
+-        depends on MV_ETH_NFP_EXT
+-        default 1
+-	range 1 4
+-         ---help---
+-
+-config MV_ETH_NFP_BRIDGE
+-        bool "Support NFP Bridging"
+-        default y
+-        depends on MV_ETH_NFP
+-        ---help---
+-        Choosing this option will enable NFP bridging support.
+-
+-choice
+-        prompt "NFP Bridging Mode"
+-        depends on MV_ETH_NFP_BRIDGE
+-        default MV_ETH_NFP_FDB_MODE
+-
+-config	MV_ETH_NFP_FDB_MODE
+-	bool "NFP FDB"
+-	depends on MV_ETH_NFP_BRIDGE
+-	---help---
+-	  enable NFP FDB mode
+-
+-config  MV_ETH_NFP_BRIDGE_MODE
+-	bool "NFP Bridge"
+-	depends on MV_ETH_NFP_BRIDGE
+-	---help---
+-	  enable NFP Bridge Mode
+-
+-endchoice
+-
+-config	MV_ETH_NFP_FDB_LEARN
+-	depends on MV_ETH_NFP_BRIDGE && MV_ETH_NFP_FDB_MODE && BRIDGE && MV_ETH_NFP_LEARN
+-	bool "Support NFP FDB Dynamic Learning"
+-	default y
+-	---help---
+-	  enable NFP bridging dynamic learning via NFP hooks
+-
+-config MV_ETH_NFP_FDB_LEARN_DEF
+-        depends on MV_ETH_NFP_FDB_LEARN
+-        int "Default value for NFP FDB Dynamic Learning:  0 - disable, 1 - enable"
+-        default 1
+-	range 0 1
+-        ---help---
+-
+-config MV_ETH_NFP_VLAN
+-        bool "Support NFP VLANs processing"
+-        default y
+-        depends on MV_ETH_NFP
+-        ---help---
+-        Choosing this option will enable NFP VLANs support.
+-
+-config MV_ETH_NFP_VLAN_LEARN
+-        depends on MV_ETH_NFP_VLAN && VLAN_8021Q && MV_ETH_NFP_LEARN
+-        bool "Support NFP VLAN Dynamic Learning"
+-        default y
+-        ---help---
+-        Choosing this option will enable NFP VLAN dynamic learning via NFP hooks
+-	in Linux Network stack.
+-
+-config MV_ETH_NFP_VLAN_LEARN_DEF
+-        depends on MV_ETH_NFP_VLAN_LEARN
+-        int "Default value for NFP VLAN Dynamic Learning:  0 - disable, 1 - enable"
+-        default 1
+-	range 0 1
+-        ---help---
+-
+-config MV_ETH_NFP_FIB
+-        bool "Support NFP Routing"
+-	default y
+-        depends on MV_ETH_NFP
+-        ---help---
+-        Choosing this option will enable NFP routing support.
+-
+-config MV_ETH_NFP_FIB_LEARN
+-        depends on MV_ETH_NFP_FIB && MV_ETH_NFP_LEARN
+-        bool "Support NFP Routing Dynamic Learning"
+-        default y
+-        ---help---
+-        Choosing this option will enable NFP Routing dynamic learning via NFP hooks
+-	in Linux Network stack.
+-
+-config MV_ETH_NFP_FIB_LEARN_DEF
+-        depends on MV_ETH_NFP_FIB_LEARN
+-        int "Default value for NFP Routing Dynamic Learning:  0 - disable, 1 - enable"
+-        default 1
+-	range 0 1
+-        ---help---
+-
+-config MV_ETH_NFP_CT
+-        bool "Support NFP 5 Tuple Rules"
+-        depends on MV_ETH_NFP_FIB
+-	default y
+-        ---help---
+-        Choosing this option will enable NFP 5 Tuple Rules support.
+-
+-config MV_ETH_NFP_CT_LEARN
+-        depends on MV_ETH_NFP_CT && NF_CONNTRACK && MV_ETH_NFP_LEARN
+-        bool "Support NFP 5 Tuple Dynamic Learning"
+-        default y
+-        ---help---
+-        Choosing this option will enable NFP 5 Tuple dynamic learning via NFP hooks
+-	in Linux Network stack.
+-
+-config MV_ETH_NFP_CT_LEARN_DEF
+-        depends on MV_ETH_NFP_CT_LEARN
+-        int "Default value for NFP 5 Tuple Dynamic Learning:  0 - disable, 1 - enable"
+-        default 1
+-	range 0 1
+-        ---help---
+-
+-config MV_ETH_NFP_NAT
+-        bool "Support NFP NAT"
+-        depends on MV_ETH_NFP_CT
+-	default y
+-        ---help---
+-        Choosing this option will enable NFP NAT support.
+-
+-config MV_ETH_NFP_LIMIT
+-        bool "Support NFP Ingress Rate Limiting"
+-        depends on MV_ETH_NFP_CT
+-	default n
+-        ---help---
+-        Choosing this option will enable NFP rate limitation support based on 5 tuple rule.
+-
+-config  MV_ETH_NFP_CLASSIFY
+-	bool "Support NFP Classification rules"
+-	depends on MV_ETH_NFP_CT || MV_ETH_NFP_BRIDGE
+-	default y
+-	---help---
+-	Choosing this option will enable NFP classification rules (DSCP and VLAN modification and Tx queue selection)
+-
+-config  MV_ETH_NFP_PPP
+-	bool "Support NFP PPPoE"
+-	depends on MV_ETH_NFP_FIB && MV_ETH_PNC
+-	default n
+-	 ---help---
+-	Choosing this option will enable NFP PPPoE protocol.
+-
+-config MV_ETH_NFP_PPP_LEARN
+-        depends on MV_ETH_NFP_PPP && PPPOE && MV_ETH_NFP_LEARN
+-        bool "Support NFP PPPoE Dynamic Learning"
+-        default y
+-        ---help---
+-        Choosing this option will enable NFP PPPoE dynamic learning via NFP hooks
+-	in Linux Network stack.
+-
+-config MV_ETH_NFP_PPP_LEARN_DEF
+-        depends on MV_ETH_NFP_PPP_LEARN
+-        int "Default value for NFP PPPoE Dynamic Learning:  0 - disable, 1 - enable"
+-        default 1
+-	range 0 1
+-        ---help---
+-
+-config  MV_ETH_NFP_STATS
+-        bool "Collect NFP Statistics"
++config MV_ETH_NFP_HOOKS
++        bool "NFP IP stack Hooks"
+ 	depends on MV_ETH_NFP
+-        default n
++	default y
+         ---help---
+-        Collect NFP statistics. Can be displayed using mv_eth_tool.
++        Choosing this option will enable NFP Dynamic Learning.
+ 
+-config  MV_ETH_NFP_DEBUG
+-	bool "Add NFP debug code"
++config MV_ETH_NFP_EXT
++	bool "Support NFP for External (non GBE) network interfaces"
+ 	depends on MV_ETH_NFP
+ 	default n
+-        ---help---
+-	Add NFP sanity check code
+ 
++config MV_ETH_NFP_EXT_NUM
++	depends on MV_ETH_NFP_EXT
++	int "Maximum number of External (non-Gbe) interfaces"
++	default 1
++	range 1 4
+ endmenu
+ 
+-menu "NAPI Groups"
++menuconfig MV_ETH_NAPI
++        bool "NAPI configuration"
++        default y
+ 
+ config  MV_ETH_NAPI_GROUPS
+         int "Number of NAPI instances can be used per port"
+@@ -950,7 +774,6 @@ config MV_ETH_GROUP3_RXQ
+ 	range 0x0 0xff
+ 	default 0x0
+ endmenu
+-endmenu
+ 
+ menu "PON support for Network driver"
+ 
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile
+index 4b9d12d..9c090ff 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile
+@@ -6,16 +6,9 @@ ifneq ($(MACHINE),)
+ include $(srctree)/$(MACHINE)/config/mvRules.mk
+ endif
+ 
+-ifeq ($(CONFIG_MV_ETH_NFP_LIB),y)
+-	obj-$(CONFIG_MV_ETHERNET) += mv_netdev.o mv_ethernet.o mv_eth_sysfs.o
+-	obj-$(CONFIG_MV_PON)      += mv_pon_sysfs.o
+-	obj-$(CONFIG_MV_ETH_SWITCH) +=  mv_eth_switch.o
+-	obj-$(CONFIG_MV_ETH_TOOL) += mv_eth_tool.o
+-	obj-y += ../nfplib.a
+-else
+-	obj-$(CONFIG_MV_ETHERNET) += mv_netdev.o mv_ethernet.o mv_eth_sysfs.o
+-	obj-$(CONFIG_MV_PON)      += mv_pon_sysfs.o
+-	obj-$(CONFIG_MV_ETH_SWITCH) +=  mv_eth_switch.o
+-	obj-$(CONFIG_MV_ETH_TOOL) += mv_eth_tool.o
+-endif
++obj-$(CONFIG_MV_ETH_NFP) += mv_eth_nfp.o
++obj-$(CONFIG_MV_ETHERNET) += mv_netdev.o mv_ethernet.o mv_eth_sysfs.o
++obj-$(CONFIG_MV_PON)      += mv_pon_sysfs.o
++obj-$(CONFIG_MV_ETH_SWITCH) +=  mv_eth_switch.o
++obj-$(CONFIG_MV_ETH_TOOL) += mv_eth_tool.o
+ 
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_nfp.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_nfp.c
+new file mode 100755
+index 0000000..698c147
+--- /dev/null
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_nfp.c
+@@ -0,0 +1,1067 @@
++/*******************************************************************************
++Copyright (C) Marvell International Ltd. and its affiliates
++
++This software file (the "File") is owned and distributed by Marvell
++International Ltd. and/or its affiliates ("Marvell") under the following
++alternative licensing terms.  Once you have made an election to distribute the
++File under one of the following license alternatives, please (i) delete this
++introductory statement regarding license alternatives, (ii) delete the two
++license alternatives that you have not elected to use and (iii) preserve the
++Marvell copyright notice above.
++
++********************************************************************************
++Marvell GPL License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File in accordance with the terms and conditions of the General
++Public License Version 2, June 1991 (the "GPL License"), a copy of which is
++available along with the File in the license.txt file or by writing to the Free
++Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
++on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++
++THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
++DISCLAIMED.  The GPL License provides additional details about this warranty
++disclaimer.
++*******************************************************************************/
++
++#include "mvCommon.h"
++#include <linux/kernel.h>
++#include <linux/version.h>
++#include <linux/module.h>
++#include <linux/netdevice.h>
++#include <linux/etherdevice.h>
++#include <linux/platform_device.h>
++#include <linux/skbuff.h>
++#include <linux/inetdevice.h>
++#include <linux/mv_nfp.h>
++#include <net/ip.h>
++#include <net/ipv6.h>
++
++#include "mvOs.h"
++#include "mvDebug.h"
++#include "dbg-trace.h"
++#include "mvSysHwConfig.h"
++#include "boardEnv/mvBoardEnvLib.h"
++#include "ctrlEnv/mvCtrlEnvLib.h"
++#include "eth-phy/mvEthPhy.h"
++#include "mvSysEthPhyApi.h"
++#include "mvSysNetaApi.h"
++
++#include "gbe/mvNeta.h"
++#include "bm/mvBm.h"
++#include "pnc/mvPnc.h"
++#include "pnc/mvTcam.h"
++#include "pmt/mvPmt.h"
++
++#include "mv_switch.h"
++#include "mv_netdev.h"
++#include "mv_eth_tool.h"
++#include "cpu/mvCpuCntrs.h"
++
++extern int mv_ctrl_txdone;
++
++#ifdef CONFIG_MV_ETH_NFP_EXT
++int                mv_ctrl_nfp_ext_port[NFP_EXT_NUM];
++int                mv_ctrl_nfp_ext_en[NFP_EXT_NUM];
++struct net_device *mv_ctrl_nfp_ext_netdev[NFP_EXT_NUM];
++
++static void mv_eth_nfp_ext_skb_destructor(struct sk_buff *skb)
++{
++	consume_skb(skb_shinfo(skb)->destructor_arg);
++}
++
++static int mv_eth_nfp_ext_tx(struct eth_port *pp, struct eth_pbuf *pkt, MV_NFP_RESULT *res);
++#endif /* CONFIG_MV_ETH_NFP_EXT */
++
++static INLINE int mv_eth_nfp_need_fragment(MV_NFP_RESULT *res)
++{
++	if (res->flags & MV_NFP_RES_IP_INFO_VALID)
++		return (res->ipInfo.ipLen > res->mtu);
++
++	return 0;
++}
++
++/* Enable NFP */
++int mv_eth_nfp_ctrl(struct net_device *dev, int en)
++{
++	struct eth_port *pp = MV_ETH_PRIV(dev);
++
++	if (pp == NULL)
++		return 1;
++
++	if (en) {
++		pp->flags |= MV_ETH_F_NFP_EN;
++		printk(KERN_INFO "%s: NFP enabled\n", dev->name);
++	} else {
++		pp->flags &= ~MV_ETH_F_NFP_EN;
++		printk(KERN_INFO "%s: NFP disabled\n", dev->name);
++	}
++	return 0;
++}
++EXPORT_SYMBOL(mv_eth_nfp_ctrl);
++
++#ifdef CONFIG_MV_ETH_NFP_EXT
++int mv_eth_nfp_ext_add(struct net_device *dev, int port)
++{
++	int i;
++
++	/* find free place in mv_ctrl_nfp_ext_netdev */
++	for (i = 0; i < NFP_EXT_NUM; i++) {
++		if (mv_ctrl_nfp_ext_netdev[i] == NULL) {
++			mv_ctrl_nfp_ext_netdev[i] = dev;
++			mv_ctrl_nfp_ext_port[i] = port;
++			mv_ctrl_nfp_ext_en[i] = 0;
++			return 0;
++		}
++	}
++	printk(KERN_INFO "External interface %s can't be bound to NFP\n", dev->name);
++	return 1;
++}
++
++int mv_eth_nfp_ext_del(struct net_device *dev)
++{
++	int i;
++
++	/* find free place in mv_ctrl_nfp_ext_netdev */
++	for (i = 0; i < NFP_EXT_NUM; i++) {
++		if (mv_ctrl_nfp_ext_netdev[i] == dev) {
++			mv_ctrl_nfp_ext_netdev[i] = NULL;
++			return 0;
++		}
++	}
++	printk(KERN_INFO "External interface %s is not bound to NFP\n", dev->name);
++	return 1;
++}
++
++int mv_eth_nfp_ext_ctrl(struct net_device *dev, int en)
++{
++	int i;
++
++	/* find net_device in mv_ctrl_nfp_ext_netdev */
++	for (i = 0; i < NFP_EXT_NUM; i++) {
++		if (mv_ctrl_nfp_ext_netdev[i] == dev) {
++			if (en)
++				printk(KERN_INFO "%s: NFP enabled for external interface\n", dev->name);
++			 else
++				printk(KERN_INFO "%s: NFP disabled for external interface\n", dev->name);
++
++			mv_ctrl_nfp_ext_en[i] = en;
++			return 0;
++		}
++	}
++	printk(KERN_INFO "External interface %s is not bind to NFP\n", dev->name);
++	return 1;
++}
++#else
++int mv_eth_nfp_ext_add(struct net_device *dev, int port)
++{
++	printk(KERN_INFO "NFP doesn't support external interfaces\n");
++	return 1;
++}
++
++int mv_eth_nfp_ext_del(struct net_device *dev)
++{
++	printk(KERN_INFO "NFP doesn't support external interfaces\n");
++	return 1;
++}
++
++int mv_eth_nfp_ext_ctrl(struct net_device *dev, int en)
++{
++	printk(KERN_INFO "NFP doesn't support external interfaces\n");
++	return 1;
++}
++#endif /* CONFIG_MV_ETH_NFP_EXT */
++
++EXPORT_SYMBOL(mv_eth_nfp_ext_add);
++EXPORT_SYMBOL(mv_eth_nfp_ext_del);
++EXPORT_SYMBOL(mv_eth_nfp_ext_ctrl);
++
++static inline int mv_eth_frag_build_hdr_desc(struct eth_port *priv, struct tx_queue *txq_ctrl,
++					MV_U8 *pktData, int mac_hdr_len, int ip_hdr_len,
++					     int frag_size, int left_len, int frag_offset)
++{
++	struct neta_tx_desc *tx_desc;
++	struct iphdr        *iph;
++	MV_U8               *data;
++	int                 align;
++	MV_U16              frag_ctrl;
++
++	tx_desc = mv_eth_tx_desc_get(txq_ctrl, 1);
++	if (tx_desc == NULL)
++		return -1;
++
++	txq_ctrl->txq_count++;
++
++	data = mv_eth_extra_pool_get(priv);
++	if (data == NULL)
++		return -1;
++
++	tx_desc->command = mvNetaTxqDescCsum(mac_hdr_len, MV_16BIT_BE(MV_IP_TYPE), ip_hdr_len, 0);
++	tx_desc->command |= NETA_TX_F_DESC_MASK;
++	tx_desc->dataSize = mac_hdr_len + ip_hdr_len;
++
++	txq_ctrl->shadow_txq[txq_ctrl->shadow_txq_put_i] = ((MV_ULONG)data | MV_ETH_SHADOW_EXT);
++	mv_eth_shadow_inc_put(txq_ctrl);
++
++	/* Check for IP header alignment */
++	align = 4 - (mac_hdr_len & 3);
++	data += align;
++	memcpy(data, pktData, mac_hdr_len + ip_hdr_len);
++
++	iph = (struct iphdr *)(data + mac_hdr_len);
++
++	iph->tot_len = htons(frag_size + ip_hdr_len);
++
++	/* update frag_offset and MF flag in IP header - packet can be already fragmented */
++	frag_ctrl = ntohs(iph->frag_off);
++	frag_offset += ((frag_ctrl & IP_OFFSET) << 3);
++	frag_ctrl &= ~IP_OFFSET;
++	frag_ctrl |= ((frag_offset >> 3) & IP_OFFSET);
++
++	if (((frag_ctrl & IP_MF) == 0) && (left_len != frag_size))
++		frag_ctrl |= IP_MF;
++
++	iph->frag_off = htons(frag_ctrl);
++
++	/* if it was PPPoE, update the PPPoE payload fields  */
++	if ((*((char *)iph - MV_PPPOE_HDR_SIZE - 1) == 0x64) &&
++		(*((char *)iph - MV_PPPOE_HDR_SIZE - 2) == 0x88)) {
++		PPPoE_HEADER *pPPPNew = (PPPoE_HEADER *)((char *)iph - MV_PPPOE_HDR_SIZE);
++		pPPPNew->len = htons(frag_size + ip_hdr_len + MV_PPP_HDR_SIZE);
++	}
++	tx_desc->bufPhysAddr = mvOsCacheFlush(NULL, data, tx_desc->dataSize);
++	mv_eth_tx_desc_flush(tx_desc);
++
++	return 0;
++}
++
++static inline int mv_eth_frag_build_data_desc(struct tx_queue *txq_ctrl, MV_U8 *frag_ptr, int frag_size,
++						int data_left, struct eth_pbuf *pkt)
++{
++	struct neta_tx_desc *tx_desc;
++
++	tx_desc = mv_eth_tx_desc_get(txq_ctrl, 1);
++	if (tx_desc == NULL)
++		return -1;
++
++	txq_ctrl->txq_count++;
++	tx_desc->dataSize = frag_size;
++	tx_desc->bufPhysAddr = pkt->physAddr + (frag_ptr - pkt->pBuf);
++	tx_desc->command = (NETA_TX_L_DESC_MASK | NETA_TX_Z_PAD_MASK);
++
++	if (frag_size == data_left)
++		txq_ctrl->shadow_txq[txq_ctrl->shadow_txq_put_i] = (u32) pkt;
++	else
++		txq_ctrl->shadow_txq[txq_ctrl->shadow_txq_put_i] = 0;
++
++	mv_eth_shadow_inc_put(txq_ctrl);
++	mv_eth_tx_desc_flush(tx_desc);
++
++	return 0;
++}
++
++static int mv_eth_nfp_fragment_tx(struct eth_port *pp, struct net_device *dev, MV_NFP_RESULT* res,
++					   struct tx_queue *txq_ctrl, struct eth_pbuf *pkt)
++{
++	MV_IP_HEADER_INFO *pIpInfo = &res->ipInfo;
++	int   pkt_offset = (pkt->offset + res->shift);
++	int   ip_offset = (pIpInfo->ipOffset - res->shift);
++	int   frag_size = MV_ALIGN_DOWN((res->mtu - res->ipInfo.ipHdrLen), 8);
++	int   data_left = pIpInfo->ipLen - res->ipInfo.ipHdrLen;
++	int   pktNum = (data_left / frag_size) + ((data_left % frag_size) ? 1 : 0);
++	MV_U8 *pData = pkt->pBuf + pkt_offset;
++	MV_U8 *payloadStart = pData + ip_offset + pIpInfo->ipHdrLen;
++	MV_U8 *frag_ptr = payloadStart;
++	int   i, total_bytes = 0;
++	int   save_txq_count = txq_ctrl->txq_count;
++
++	if ((txq_ctrl->txq_count + (pktNum * 2)) >= txq_ctrl->txq_size) {
++/*
++		printk(KERN_ERR "%s: no TX descriptors - txq_count=%d, len=%d, frag_size=%d\n",
++					__func__, txq_ctrl->txq_count, data_left, frag_size);
++*/
++		STAT_ERR(txq_ctrl->stats.txq_err++);
++		goto outNoTxDesc;
++	}
++
++	for (i = 0; i < pktNum; i++) {
++
++		if (mv_eth_frag_build_hdr_desc(pp, txq_ctrl, pData, ip_offset, pIpInfo->ipHdrLen,
++					frag_size, data_left, frag_ptr - payloadStart))
++			goto outNoTxDesc;
++
++		total_bytes += (ip_offset + pIpInfo->ipHdrLen);
++
++		if (mv_eth_frag_build_data_desc(txq_ctrl, frag_ptr, frag_size, data_left, pkt))
++			goto outNoTxDesc;
++
++		total_bytes += frag_size;
++		frag_ptr += frag_size;
++		data_left -= frag_size;
++		frag_size = MV_MIN(frag_size, data_left);
++	}
++	/* Flush + Invalidate cache for MAC + IP header + L4 header */
++	pData = pkt->pBuf + pkt->offset;
++	if (res->shift < 0)
++		pData += res->shift;
++
++	mvOsCacheMultiLineFlushInv(NULL, pData, (res->pWrite - pData));
++
++#ifdef CONFIG_MV_PON
++	if (MV_PON_PORT(pp->port))
++		mvNetaPonTxqBytesAdd(pp->port, txq_ctrl->txp, txq_ctrl->txq, total_bytes);
++#endif /* CONFIG_MV_PON */
++
++	dev->stats.tx_packets += pktNum;
++	dev->stats.tx_bytes += total_bytes;
++	STAT_DBG(txq_ctrl->stats.txq_tx += (pktNum * 2));
++
++	mvNetaTxqPendDescAdd(pp->port, txq_ctrl->txp, txq_ctrl->txq, pktNum * 2);
++
++	return (pktNum * 2);
++
++outNoTxDesc:
++	while (save_txq_count < txq_ctrl->txq_count) {
++		txq_ctrl->txq_count--;
++		mv_eth_shadow_dec_put(txq_ctrl);
++		mvNetaTxqPrevDescGet(txq_ctrl->q);
++	}
++	/* Invalidate cache for MAC + IP header + L4 header */
++	pData = pkt->pBuf + pkt->offset;
++	if (res->shift < 0)
++		pData += res->shift;
++
++	mvOsCacheMultiLineInv(NULL, pData, (res->pWrite - pData));
++
++	return 0;
++}
++
++
++static MV_STATUS mv_eth_nfp_tx(struct eth_pbuf *pkt, MV_NFP_RESULT *res)
++{
++	struct net_device *dev = (struct net_device *)res->dev;
++	struct eth_port *pp = MV_ETH_PRIV(dev);
++	struct neta_tx_desc *tx_desc;
++	u32 tx_cmd, physAddr;
++	MV_STATUS status = MV_OK;
++	struct tx_queue *txq_ctrl;
++	int use_bm, pkt_offset, frags = 1;
++
++	if (!test_bit(MV_ETH_F_STARTED_BIT, &(pp->flags))) {
++		STAT_INFO(pp->stats.netdev_stop++);
++#ifdef CONFIG_MV_ETH_DEBUG_CODE
++		if (pp->flags & MV_ETH_F_DBG_TX)
++			printk(KERN_ERR "%s: STARTED_BIT = 0 , packet is dropped.\n", __func__);
++#endif /* CONFIG_MV_ETH_DEBUG_CODE */
++		return MV_DROPPED;
++	}
++
++	/* Get TxQ to send packet */
++	/* Check TXQ classification */
++	if ((res->flags & MV_NFP_RES_TXQ_VALID) == 0)
++		res->txq = pp->cpu_config[smp_processor_id()]->txq;
++
++	if ((res->flags & MV_NFP_RES_TXP_VALID) == 0)
++		res->txp = pp->txp;
++
++	txq_ctrl = &pp->txq_ctrl[res->txp * CONFIG_MV_ETH_TXQ + res->txq];
++
++	if (txq_ctrl->flags & MV_ETH_F_TX_SHARED)
++		spin_lock(&txq_ctrl->queue_lock);
++
++	/* Do fragmentation if needed */
++	if (mv_eth_nfp_need_fragment(res)) {
++		frags = mv_eth_nfp_fragment_tx(pp, dev, res, txq_ctrl, pkt);
++		if (frags == 0) {
++			dev->stats.tx_dropped++;
++			status = MV_DROPPED;
++		}
++		STAT_INFO(pp->stats.tx_fragment++);
++		goto out;
++	}
++
++	/* Get next descriptor for tx, single buffer, so FIRST & LAST */
++	tx_desc = mv_eth_tx_desc_get(txq_ctrl, 1);
++	if (tx_desc == NULL) {
++
++		/* No resources: Drop */
++		dev->stats.tx_dropped++;
++		status = MV_DROPPED;
++		goto out;
++	}
++
++	if (res->flags & MV_NFP_RES_L4_CSUM_NEEDED) {
++		MV_U8 *pData = pkt->pBuf + pkt->offset;
++
++		if (res->shift < 0)
++			pData += res->shift;
++
++		mvOsCacheMultiLineFlushInv(NULL, pData, (res->pWrite - pData));
++	}
++
++	txq_ctrl->txq_count++;
++
++	/* tx_cmd - word accumulated by NFP processing */
++	tx_cmd = res->tx_cmd;
++
++	if (res->flags & MV_NFP_RES_IP_INFO_VALID) {
++		if (res->ipInfo.family == MV_INET) {
++			tx_cmd |= NETA_TX_L3_IP4 | NETA_TX_IP_CSUM_MASK |
++				((res->ipInfo.ipOffset - res->shift) << NETA_TX_L3_OFFSET_OFFS) |
++				((res->ipInfo.ipHdrLen >> 2) << NETA_TX_IP_HLEN_OFFS);
++		} else {
++			tx_cmd |= NETA_TX_L3_IP6 |
++				((res->ipInfo.ipOffset - res->shift) << NETA_TX_L3_OFFSET_OFFS) |
++				((res->ipInfo.ipHdrLen >> 2) << NETA_TX_IP_HLEN_OFFS);
++		}
++	}
++
++#ifdef CONFIG_MV_ETH_BM_CPU
++	use_bm = 1;
++#else
++	use_bm = 0;
++#endif /* CONFIG_MV_ETH_BM_CPU */
++
++	pkt_offset = pkt->offset + res->shift;
++	physAddr = pkt->physAddr;
++	if (pkt_offset > NETA_TX_PKT_OFFSET_MAX) {
++		use_bm = 0;
++		physAddr += pkt_offset;
++		pkt_offset = 0;
++	}
++
++	if ((pkt->pool >= 0) && (pkt->pool < MV_ETH_BM_POOLS)) {
++		if (use_bm) {
++			tx_cmd |= NETA_TX_BM_ENABLE_MASK | NETA_TX_BM_POOL_ID_MASK(pkt->pool);
++			txq_ctrl->shadow_txq[txq_ctrl->shadow_txq_put_i] = (u32) NULL;
++		} else
++			txq_ctrl->shadow_txq[txq_ctrl->shadow_txq_put_i] = (u32) pkt;
++	} else {
++		/* skb from external interface */
++		txq_ctrl->shadow_txq[txq_ctrl->shadow_txq_put_i] = ((u32)pkt->osInfo | MV_ETH_SHADOW_SKB);
++	}
++
++	mv_eth_shadow_inc_put(txq_ctrl);
++
++	tx_cmd |= NETA_TX_PKT_OFFSET_MASK(pkt_offset);
++
++	tx_desc->command = tx_cmd | NETA_TX_FLZ_DESC_MASK;
++	tx_desc->dataSize = pkt->bytes;
++	tx_desc->bufPhysAddr = physAddr;
++
++	/* FIXME: PON only? --BK */
++	tx_desc->hw_cmd = pp->hw_cmd;
++
++#ifdef CONFIG_MV_ETH_DEBUG_CODE
++	if (pp->flags & MV_ETH_F_DBG_TX) {
++		printk(KERN_ERR "%s - nfp_tx_%lu: port=%d, txp=%d, txq=%d\n",
++		       dev->name, dev->stats.tx_packets, pp->port, res->txp, res->txq);
++		mv_eth_tx_desc_print(tx_desc);
++		mv_eth_pkt_print(pkt);
++	}
++#endif /* CONFIG_MV_ETH_DEBUG_CODE */
++
++	mv_eth_tx_desc_flush(tx_desc);
++
++#ifdef CONFIG_MV_PON
++	if (MV_PON_PORT(pp->port))
++		mvNetaPonTxqBytesAdd(pp->port, res->txp, res->txq, pkt->bytes);
++#endif /* CONFIG_MV_PON */
++
++	/* Enable transmit by update PENDING counter */
++	mvNetaTxqPendDescAdd(pp->port, res->txp, res->txq, 1);
++
++	/* FIXME: stats includes MH --BK */
++	dev->stats.tx_packets++;
++	dev->stats.tx_bytes += pkt->bytes;
++	STAT_DBG(txq_ctrl->stats.txq_tx++);
++
++out:
++#ifndef CONFIG_MV_ETH_TXDONE_ISR
++	if (txq_ctrl->txq_count >= mv_ctrl_txdone) {
++		u32 tx_done = mv_eth_txq_done(pp, txq_ctrl);
++
++		STAT_DIST(if (tx_done < pp->dist_stats.tx_done_dist_size)
++			pp->dist_stats.tx_done_dist[tx_done]++);
++	}
++	/* If after calling mv_eth_txq_done, txq_ctrl->txq_count equals frags, we need to set the timer */
++	if ((txq_ctrl->txq_count == frags) && (frags > 0))
++		mv_eth_add_tx_done_timer(pp->cpu_config[smp_processor_id()]);
++
++#endif /* CONFIG_MV_ETH_TXDONE_ISR */
++
++	if (txq_ctrl->flags & MV_ETH_F_TX_SHARED)
++		spin_unlock(&txq_ctrl->queue_lock);
++
++	return status;
++}
++
++/* Main NFP function returns the following error codes:
++ *  MV_OK - packet processed and sent successfully by NFP
++ *  MV_TERMINATE - packet can't be processed by NFP - pass to Linux processing
++ *  MV_DROPPED - packet processed by NFP, but not sent (dropped)
++ */
++MV_STATUS mv_eth_nfp(struct eth_port *pp, int rxq, struct neta_rx_desc *rx_desc,
++				struct eth_pbuf *pkt, struct bm_pool *pool)
++{
++	MV_STATUS       status;
++	MV_NFP_RESULT   res;
++	bool            tx_external = false;
++
++#ifdef CONFIG_MV_ETH_DEBUG_CODE
++	if (pp->flags & MV_ETH_F_DBG_RX) {
++		mv_eth_rx_desc_print(rx_desc);
++		mv_eth_pkt_print(pkt);
++	}
++#endif /* CONFIG_MV_ETH_DEBUG_CODE */
++
++	status = nfp_core_p->nfp_rx(pp->port, rx_desc, pkt, &res);
++	tx_external = (res.flags & MV_NFP_RES_NETDEV_EXT);
++
++	if (status == MV_OK) {
++
++		if (res.flags & MV_NFP_RES_L4_CSUM_NEEDED) {
++			MV_IP_HEADER_INFO *pIpInfo = &res.ipInfo;
++			MV_U8 *pIpHdr = pIpInfo->ip_hdr.l3;
++
++			if (pIpInfo->ipProto == MV_IP_PROTO_TCP) {
++				MV_TCP_HEADER *pTcpHdr = (MV_TCP_HEADER *) ((char *)pIpHdr + pIpInfo->ipHdrLen);
++
++				pTcpHdr->chksum = csum_fold(csum_partial((char *)res.diffL4, sizeof(res.diffL4),
++									~csum_unfold(pTcpHdr->chksum)));
++				res.pWrite = (MV_U8 *)pTcpHdr + sizeof(MV_TCP_HEADER);
++			} else {
++				MV_UDP_HEADER *pUdpHdr = (MV_UDP_HEADER *) ((char *)pIpHdr + pIpInfo->ipHdrLen);
++
++				pUdpHdr->check = csum_fold(csum_partial((char *)res.diffL4, sizeof(res.diffL4),
++									~csum_unfold(pUdpHdr->check)));
++				res.pWrite = (MV_U8 *)pUdpHdr + sizeof(MV_UDP_HEADER);
++			}
++		}
++
++#ifdef CONFIG_MV_ETH_NFP_EXT
++		if  (tx_external) {
++			/* INT RX -> EXT TX */
++			mv_eth_nfp_ext_tx(pp, pkt, &res);
++			status = MV_OK;
++		} else
++#endif /* CONFIG_MV_ETH_NFP_EXT */
++			/* INT RX -> INT TX */
++			status = mv_eth_nfp_tx(pkt, &res);
++	}
++	if (status == MV_OK) {
++		STAT_DBG(pp->stats.rx_nfp++);
++
++		/* Packet transmited - refill now */
++		if (!tx_external && mv_eth_pool_bm(pool)) {
++			/* BM - no refill */
++			mvOsCacheLineInv(NULL, rx_desc);
++			return MV_OK;
++		}
++
++		if (!tx_external || mv_eth_is_recycle())
++			pkt = NULL;
++
++		if (mv_eth_refill(pp, rxq, pkt, pool, rx_desc)) {
++			printk(KERN_ERR "Linux processing - Can't refill\n");
++			pp->rxq_ctrl[rxq].missed++;
++			mv_eth_add_cleanup_timer(pp->cpu_config[smp_processor_id()]);
++			return MV_FAIL;
++		}
++		return MV_OK;
++	}
++	if (status == MV_DROPPED) {
++		/* Refill the same buffer */
++		STAT_DBG(pp->stats.rx_nfp_drop++);
++		mv_eth_rxq_refill(pp, rxq, pkt, pool, rx_desc);
++		return MV_OK;
++	}
++	return status;
++}
++
++#ifdef CONFIG_MV_ETH_NFP_EXT
++static int mv_eth_nfp_ext_tx_fragment(struct net_device *dev, struct sk_buff *skb, MV_NFP_RESULT *res)
++{
++	unsigned int      dlen, doff, error, flen, fsize, l, max_dlen, max_plen;
++	unsigned int      hdrlen, offset;
++	struct iphdr      *ip, *nip;
++	struct sk_buff    *new;
++	struct page       *page;
++	int               mac_header_len;
++	MV_IP_HEADER_INFO *pIpInfo = &res->ipInfo;
++
++	max_plen = dev->mtu + dev->hard_header_len;
++
++	SKB_LINEAR_ASSERT(skb);
++
++	mac_header_len = (pIpInfo->ipOffset - res->shift);
++	ip = (struct iphdr *)(skb->data + mac_header_len);
++
++	hdrlen = mac_header_len + res->ipInfo.ipHdrLen;
++
++	doff = hdrlen;
++	dlen = skb_headlen(skb) - hdrlen;
++	offset = ntohs(ip->frag_off) & IP_OFFSET;
++	max_dlen = (max_plen - hdrlen) & ~0x07;
++
++	do {
++		new = dev_alloc_skb(hdrlen);
++		if (!new)
++			break;
++
++		/* Setup new packet metadata */
++		new->protocol = IPPROTO_IP;
++		new->ip_summed = CHECKSUM_PARTIAL;
++		skb_set_network_header(new, mac_header_len);
++
++		/* Copy original IP header */
++		memcpy(skb_put(new, hdrlen), skb->data, hdrlen);
++
++		/* Append data portion */
++		fsize = flen = min(max_dlen, dlen);
++
++		skb_get(skb);
++		skb_shinfo(new)->destructor_arg = skb;
++		new->destructor = mv_eth_nfp_ext_skb_destructor;
++
++		while (fsize) {
++			l = PAGE_SIZE - ((unsigned long)(skb->data + doff) & ~PAGE_MASK);
++			if (l > fsize)
++				l = fsize;
++
++			page = virt_to_page(skb->data + doff);
++			get_page(page);
++			skb_add_rx_frag(new, skb_shinfo(new)->nr_frags, page,
++					(unsigned long)(skb->data + doff) &
++								~PAGE_MASK, l);
++			dlen -= l;
++			doff += l;
++			fsize -= l;
++		}
++
++		/* Fixup IP header */
++		nip = ip_hdr(new);
++		nip->tot_len = htons((4 * ip->ihl) + flen);
++		nip->frag_off = htons(offset |
++				(dlen ? IP_MF : (IP_MF & ntohs(ip->frag_off))));
++
++		/* if it was PPPoE, update the PPPoE payload fields
++		adapted from  mv_eth_frag_build_hdr_desc */
++		if ((*((char *)nip - MV_PPPOE_HDR_SIZE - 1) == 0x64) &&
++			(*((char *)nip - MV_PPPOE_HDR_SIZE - 2) == 0x88)) {
++			PPPoE_HEADER *pPPPNew = (PPPoE_HEADER *)((char *)nip - MV_PPPOE_HDR_SIZE);
++			pPPPNew->len = htons(flen + 4*ip->ihl + MV_PPP_HDR_SIZE);
++	    }
++
++		offset += flen / 8;
++
++		/* Recalculate IP checksum */
++		new->ip_summed = CHECKSUM_NONE;
++		nip->check = 0;
++		nip->check = ip_fast_csum(nip, nip->ihl);
++
++		/* TX packet */
++		error = dev->netdev_ops->ndo_start_xmit(new, dev);
++		if (error)
++			break;
++	} while (dlen);
++
++	if (!new)
++		return -ENOMEM;
++
++	if (error) {
++		consume_skb(new);
++		return error;
++	}
++
++	/* We are no longer use original skb */
++	consume_skb(skb);
++	return 0;
++}
++
++static int mv_eth_nfp_ext_tx(struct eth_port *pp, struct eth_pbuf *pkt, MV_NFP_RESULT *res)
++{
++	struct sk_buff *skb;
++	struct net_device *dev = (struct net_device *)res->dev;
++
++	/* prepare SKB for transmit */
++	skb = (struct sk_buff *)(pkt->osInfo);
++
++	skb->data += res->shift;
++	skb->tail = skb->data + pkt->bytes ;
++	skb->len = pkt->bytes;
++
++	skb_reset_mac_header(skb);
++	skb_reset_network_header(skb);
++
++	if (res->flags & MV_NFP_RES_IP_INFO_VALID) {
++
++		if (res->ipInfo.family == MV_INET) {
++			struct iphdr *iph = (struct iphdr *)res->ipInfo.ip_hdr.ip4;
++
++			if (mv_eth_nfp_need_fragment(res))
++				return mv_eth_nfp_ext_tx_fragment(dev, skb, res);
++
++			/* Recalculate IP checksum for IPv4 if necessary */
++			skb->ip_summed = CHECKSUM_NONE;
++			iph->check = 0;
++			iph->check = ip_fast_csum((unsigned char *)iph, iph->ihl);
++		}
++		skb_set_network_header(skb, res->ipInfo.ipOffset - res->shift);
++	}
++
++	if (pp) {
++		/* ingress port is GBE */
++#ifdef ETH_SKB_DEBUG
++		mv_eth_skb_check(skb);
++#endif /* ETH_SKB_DEBUG */
++
++#ifdef CONFIG_NET_SKB_RECYCLE
++		if (mv_eth_is_recycle()) {
++			skb->skb_recycle = mv_eth_skb_recycle;
++			skb->hw_cookie = pkt;
++		}
++#endif /* CONFIG_NET_SKB_RECYCLE */
++	}
++	return dev->netdev_ops->ndo_start_xmit(skb, dev);
++}
++
++
++static MV_STATUS mv_eth_nfp_ext_rxd_from_info(MV_EXT_PKT_INFO *pktInfo, struct neta_rx_desc *rxd)
++{
++	if (pktInfo->flags & MV_EXT_VLAN_EXIST_MASK)
++		NETA_RX_SET_VLAN(rxd);
++
++	if (pktInfo->flags & MV_EXT_PPP_EXIST_MASK)
++		NETA_RX_SET_PPPOE(rxd);
++
++	if (pktInfo->l3_type == ETH_P_IP)
++		NETA_RX_L3_SET_IP4(rxd);
++	else if (pktInfo->l3_type == ETH_P_IPV6)
++		NETA_RX_L3_SET_IP6(rxd);
++	else {
++		NETA_RX_L3_SET_UN(rxd);
++		return MV_OK;
++	}
++
++	if (pktInfo->flags & MV_EXT_IP_FRAG_MASK)
++		NETA_RX_IP_SET_FRAG(rxd);
++
++
++	if (!pktInfo->l3_offset || !pktInfo->l3_hdrlen)
++		return -1;
++
++	NETA_RX_SET_IPHDR_OFFSET(rxd, pktInfo->l3_offset + MV_ETH_MH_SIZE);
++	NETA_RX_SET_IPHDR_HDRLEN(rxd, (pktInfo->l3_hdrlen >> 2));
++
++	if ((pktInfo->flags & MV_EXT_L3_VALID_MASK) == 0) {
++		NETA_RX_L3_SET_IP4_ERR(rxd);
++		return MV_OK;
++	}
++
++	switch (pktInfo->l4_proto) {
++	case IPPROTO_TCP:
++		NETA_RX_L4_SET_TCP(rxd);
++		break;
++
++	case IPPROTO_UDP:
++		NETA_RX_L4_SET_UDP(rxd);
++		break;
++
++	default:
++		NETA_RX_L4_SET_OTHER(rxd);
++		break;
++	}
++
++	if (pktInfo->flags & MV_EXT_L4_VALID_MASK)
++		NETA_RX_L4_CSUM_SET_OK(rxd);
++
++	return MV_OK;
++}
++
++
++static MV_STATUS mv_eth_nfp_ext_rxd_from_ipv4(int ofs, struct iphdr *iph, struct sk_buff *skb, struct neta_rx_desc *rxd)
++{
++	int l4_proto = 0;
++	int hdrlen;
++	int tmp;
++
++	NETA_RX_L3_SET_IP4(rxd);
++	hdrlen = iph->ihl << 2;
++	NETA_RX_SET_IPHDR_HDRLEN(rxd, iph->ihl);
++
++	if (ip_fast_csum((unsigned char *)iph, iph->ihl)) {
++		NETA_RX_L3_SET_IP4_ERR(rxd);
++		return MV_OK;
++	}
++
++	switch ((l4_proto = iph->protocol)) {
++	case IPPROTO_TCP:
++		NETA_RX_L4_SET_TCP(rxd);
++		break;
++	case IPPROTO_UDP:
++		NETA_RX_L4_SET_UDP(rxd);
++		break;
++	default:
++		NETA_RX_L4_SET_OTHER(rxd);
++		l4_proto = 0;
++		break;
++	}
++
++	tmp = ntohs(iph->frag_off);
++	if ((tmp & IP_MF) != 0 || (tmp & IP_OFFSET) != 0) {
++		NETA_RX_IP_SET_FRAG(rxd);
++		return MV_OK; /* cannot checksum fragmented */
++	}
++
++	if (!l4_proto)
++		return MV_OK; /* can't proceed without l4_proto in {UDP, TCP} */
++
++	if (skb->ip_summed == CHECKSUM_UNNECESSARY) {
++		NETA_RX_L4_CSUM_SET_OK(rxd);
++		return MV_OK;
++	}
++
++	if (l4_proto == IPPROTO_UDP) {
++		struct udphdr *uh = (struct udphdr *)((char *)iph + hdrlen);
++
++		if (uh->check == 0)
++			NETA_RX_L4_CSUM_SET_OK(rxd);
++	}
++
++	/* Complete checksum with pseudo header */
++	if (skb->ip_summed == CHECKSUM_COMPLETE) {
++		if (!csum_tcpudp_magic(iph->saddr, iph->daddr, skb->len - hdrlen - ofs,
++			       l4_proto, skb->csum)) {
++			NETA_RX_L4_CSUM_SET_OK(rxd);
++			return MV_OK;
++		}
++	}
++
++	return MV_OK;
++}
++
++static MV_STATUS mv_eth_nfp_ext_rxd_from_ipv6(int ofs, struct sk_buff *skb, struct neta_rx_desc *rxd)
++{
++	struct ipv6hdr *ip6h;
++	int l4_proto = 0;
++	int hdrlen;
++	__u8 nexthdr;
++
++	NETA_RX_L3_SET_IP6(rxd);
++
++	hdrlen = sizeof(struct ipv6hdr);
++	NETA_RX_SET_IPHDR_HDRLEN(rxd, (hdrlen >> 2));
++
++	ip6h = (struct ipv6hdr *)(skb->data + ofs);
++
++	nexthdr = ip6h->nexthdr;
++
++	/* No support for extension headers. Only TCP or UDP */
++	if (nexthdr == NEXTHDR_TCP) {
++		l4_proto = IPPROTO_TCP;
++		NETA_RX_L4_SET_TCP(rxd);
++	} else if (nexthdr == NEXTHDR_UDP) {
++		l4_proto = IPPROTO_UDP;
++		NETA_RX_L4_SET_UDP(rxd);
++	} else {
++		NETA_RX_L4_SET_OTHER(rxd);
++		return MV_OK;
++	}
++
++	if (skb->ip_summed == CHECKSUM_COMPLETE) {
++		if (!csum_ipv6_magic(&ip6h->saddr, &ip6h->daddr, skb->len,
++				      l4_proto , skb->csum)) {
++			NETA_RX_L4_CSUM_SET_OK(rxd);
++			return MV_OK;
++		}
++	}
++	return MV_OK;
++}
++
++
++static MV_STATUS mv_eth_nfp_ext_rxd_build(struct sk_buff *skb, MV_EXT_PKT_INFO *pktInfo, struct neta_rx_desc *rxd)
++{
++	struct iphdr *iph;
++	int l3_proto = 0;
++	int ofs = 0;
++	MV_U16 tmp;
++
++	rxd->status = 0;
++	rxd->pncInfo = 0;
++
++	if (pktInfo)
++		return mv_eth_nfp_ext_rxd_from_info(pktInfo, rxd);
++
++	tmp = ntohs(skb->protocol);
++
++ ll:
++	switch (tmp) {
++	case ETH_P_IP:
++	case ETH_P_IPV6:
++		l3_proto = tmp;
++		break;
++
++	case ETH_P_PPP_SES:
++		NETA_RX_SET_PPPOE(rxd);
++		ofs += MV_PPPOE_HDR_SIZE;
++		switch (tmp = ntohs(*((MV_U16 *)&skb->data[ofs - 2]))) {
++		case 0x0021:
++			l3_proto = ETH_P_IP;
++			break;
++		case 0x0057:
++			l3_proto = ETH_P_IPV6;
++			break;
++		default:
++			goto non_ip;
++		}
++		break;
++
++	case ETH_P_8021Q:
++		/* Don't support double VLAN for now */
++		if (NETA_RX_IS_VLAN(rxd))
++			goto non_ip;
++
++		NETA_RX_SET_VLAN(rxd);
++		ofs = MV_VLAN_HLEN;
++
++		tmp = ntohs(*((MV_U16 *)&skb->data[2]));
++			goto ll;
++
++	default:
++	  goto non_ip;
++	}
++
++#ifndef CONFIG_MV_ETH_PNC
++	rxd->status |= ETH_RX_NOT_LLC_SNAP_FORMAT_MASK;
++#endif /* CONFIG_MV_ETH_PNC */
++
++	NETA_RX_SET_IPHDR_OFFSET(rxd, ETH_HLEN + MV_ETH_MH_SIZE + ofs);
++
++	iph = (struct iphdr *)(skb->data + ofs);
++
++	if (l3_proto == ETH_P_IP)
++		return mv_eth_nfp_ext_rxd_from_ipv4(ofs, iph, skb, rxd);
++
++	return mv_eth_nfp_ext_rxd_from_ipv6(ofs, skb, rxd);
++
++non_ip:
++	 NETA_RX_L3_SET_UN(rxd);
++	 return MV_OK;
++}
++
++void mv_eth_nfp_ext_pkt_info_print(MV_EXT_PKT_INFO *pktInfo)
++{
++	if (pktInfo == NULL)
++		return;
++
++	if (pktInfo->flags & MV_EXT_VLAN_EXIST_MASK)
++		printk(KERN_INFO "VLAN");
++
++	if (pktInfo->flags & MV_EXT_PPP_EXIST_MASK)
++		printk(KERN_INFO " PPPoE");
++
++	if (pktInfo->l3_type == ETH_P_IP)
++		printk(KERN_INFO " ipv4");
++	else if (pktInfo->l3_type == ETH_P_IPV6)
++		printk(KERN_INFO " ipv6");
++	else
++		printk(KERN_INFO " non-ip");
++
++	if (pktInfo->flags & MV_EXT_IP_FRAG_MASK)
++		printk(KERN_INFO " FRAG");
++
++	if (pktInfo->flags & MV_EXT_L3_VALID_MASK)
++		printk(KERN_INFO " L3CSUM_OK");
++
++	printk(" offset=%d, hdrlen=%d", pktInfo->l3_offset, pktInfo->l3_hdrlen);
++
++	if (pktInfo->l4_proto == IPPROTO_TCP)
++		printk(KERN_INFO " TCP");
++	else if (pktInfo->l4_proto == IPPROTO_UDP)
++		printk(KERN_INFO " UDP");
++
++	if (pktInfo->flags & MV_EXT_L4_VALID_MASK)
++		printk(KERN_INFO " L4CSUM_OK");
++
++	printk(KERN_INFO "\n");
++}
++
++
++/* Return values:   0 - packet successfully processed by NFP (transmitted or dropped) */
++/*                  1 - packet can't be processed by NFP  */
++/*                  2 - skb is not valid for NFP (not enough headroom or nonlinear) */
++/*                  3 - not enough info in pktInfo   */
++int mv_eth_nfp_ext(struct net_device *dev, struct sk_buff *skb, MV_EXT_PKT_INFO *pktInfo)
++{
++	MV_STATUS           status;
++	MV_NFP_RESULT       res;
++	struct neta_rx_desc rx_desc;
++	struct eth_pbuf     pkt;
++	int                 err = 1;
++	int                 i, port = -1;
++
++#define NEEDED_HEADROOM (MV_PPPOE_HDR_SIZE + MV_VLAN_HLEN)
++
++	/* Check that NFP is enabled for this external interface */
++	for (i = 0; i < NFP_EXT_NUM; i++) {
++		if ((mv_ctrl_nfp_ext_netdev[i] == dev) && (mv_ctrl_nfp_ext_en[i])) {
++			port = mv_ctrl_nfp_ext_port[i];
++			break;
++		}
++	}
++	if (port == -1) /* NFP is disabled */
++		return 1;
++
++	if (skb_is_nonlinear(skb)) {
++		printk(KERN_ERR "%s: skb=%p is nonlinear\n", __func__, skb);
++		return 2;
++	}
++
++	/* Prepare pkt structure */
++	pkt.offset = skb_headroom(skb) - (ETH_HLEN + MV_ETH_MH_SIZE);
++	if (pkt.offset < NEEDED_HEADROOM) {
++		/* we don't know at this stage if there will be added any of vlans or pppoe or both */
++		printk(KERN_ERR "%s: Possible problem: not enough headroom: %d < %d\n",
++				__func__, pkt.offset, NEEDED_HEADROOM);
++		return 2;
++	}
++
++	pkt.pBuf = skb->head;
++	pkt.bytes = skb->len + ETH_HLEN + MV_ETH_MH_SIZE;
++
++	/* Set invalid pool to prevent BM usage */
++	pkt.pool = MV_ETH_BM_POOLS;
++	pkt.physAddr = mvOsIoVirtToPhys(NULL, skb->head);
++	pkt.osInfo = (void *)skb;
++
++	/* prepare rx_desc structure */
++	status = mv_eth_nfp_ext_rxd_build(skb, pktInfo,  &rx_desc);
++	if (status != MV_OK)
++		return 3;
++
++/*	read_lock(&nfp_lock);*/
++	status = nfp_core_p->nfp_rx(port, &rx_desc, &pkt, &res);
++
++/*	read_unlock(&nfp_lock);*/
++
++	if (status == MV_OK) {
++		if  (res.flags & MV_NFP_RES_NETDEV_EXT) {
++			/* EXT RX -> EXT TX */
++			mv_eth_nfp_ext_tx(NULL, &pkt, &res);
++		} else {
++			/* EXT RX -> INT TX */
++			mvOsCacheFlush(NULL, pkt.pBuf + pkt.offset, pkt.bytes);
++			status = mv_eth_nfp_tx(&pkt, &res);
++			if (status != MV_OK)
++				dev_kfree_skb_any(skb);
++		}
++		err = 0;
++	} else if (status == MV_DROPPED) {
++		dev_kfree_skb_any(skb);
++		err = 0;
++	}
++	return err;
++}
++#endif /* CONFIG_MV_ETH_NFP_EXT */
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 689cfb9..7605582 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -166,27 +166,6 @@ __setup("mv_port2_config=", mv_eth_cmdline_port2_config);
+ int mv_eth_cmdline_port3_config(char *s);
+ __setup("mv_port3_config=", mv_eth_cmdline_port3_config);
+ 
+-#if defined(CONFIG_MV_ETH_NFP) || defined(CONFIG_MV_ETH_NFP_MODULE)
+-struct mv_eth_nfp_ops *mv_eth_nfp_ops = NULL;
+-int mv_eth_nfp_register(mv_eth_nfp_func_t *func)
+-{
+-	mv_eth_nfp_ops = kmalloc(sizeof(struct mv_eth_nfp_ops), GFP_ATOMIC);
+-	if (mv_eth_nfp_ops == NULL) {
+-		printk(KERN_ERR "%s: Error allocating memory for mv_eth_nfp_ops\n", __func__);
+-		return -ENOMEM;
+-	}
+-	mv_eth_nfp_ops->mv_eth_nfp = func;
+-	return 0;
+-}
+-EXPORT_SYMBOL(mv_eth_nfp_register);
+-
+-void mv_eth_nfp_unregister(void)
+-{
+-	kfree(mv_eth_nfp_ops);
+-	mv_eth_nfp_ops = NULL;
+-}
+-EXPORT_SYMBOL(mv_eth_nfp_unregister);
+-#endif /* CONFIG_MV_ETH_NFP || CONFIG_MV_ETH_NFP_MODULE */
+ 
+ int mv_eth_cmdline_port0_config(char *s)
+ {
+@@ -1672,14 +1651,14 @@ static inline int mv_eth_rx(struct eth_port *pp, int rx_todo, int rxq)
+ 		}
+ #endif /* CONFIG_MV_ETH_PNC && CONFIG_MV_ETH_RX_SPECIAL */
+ 
+-#if defined(CONFIG_MV_ETH_NFP) || defined(CONFIG_MV_ETH_NFP_MODULE)
++#if defined(CONFIG_MV_ETH_NFP)
+ 		if (pp->flags & MV_ETH_F_NFP_EN) {
+ 			MV_STATUS status;
+ 
+ 			pkt->bytes = rx_bytes + MV_ETH_MH_SIZE;
+ 			pkt->offset = NET_SKB_PAD;
+ 
+-			status = mv_eth_nfp_ops->mv_eth_nfp(pp, rxq, rx_desc, pkt, pool);
++			status = mv_eth_nfp(pp, rxq, rx_desc, pkt, pool);
+ 			if (status == MV_OK)
+ 				continue;
+ 			if (status == MV_FAIL) {
+@@ -1688,7 +1667,7 @@ static inline int mv_eth_rx(struct eth_port *pp, int rx_todo, int rxq)
+ 			}
+ 			/* MV_TERMINATE - packet returned to slow path */
+ 		}
+-#endif /* CONFIG_MV_ETH_NFP || CONFIG_MV_ETH_NFP_MODULE */
++#endif /* CONFIG_MV_ETH_NFP */
+ 
+ 		/* Linux processing */
+ 		skb = (struct sk_buff *)(pkt->osInfo);
+@@ -3793,9 +3772,17 @@ void mv_eth_config_show(void)
+ 	printk(KERN_ERR "  o Transmit checksum offload supported\n");
+ #endif
+ 
+-#if defined(CONFIG_MV_ETH_NFP) || defined(CONFIG_MV_ETH_NFP_MODULE)
+-	printk(KERN_ERR "  o Network Fast Processing (NFP) supported\n");
+-#endif /* CONFIG_MV_ETH_NFP || CONFIG_MV_ETH_NFP_MODULE */
++#if defined(CONFIG_MV_ETH_NFP)
++	printk(KERN_ERR "  o NFP is supported\n");
++#endif /* CONFIG_MV_ETH_NFP */
++
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
++	printk(KERN_ERR "  o NFP Hooks are supported\n");
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
++
++#if defined(CONFIG_MV_ETH_NFP_EXT)
++	printk(KERN_ERR "  o NFP External drivers supported: up to %d interfaces\n", NFP_EXT_NUM);
++#endif /* CONFIG_MV_ETH_NFP_EXT */
+ 
+ #ifdef CONFIG_MV_ETH_STAT_ERR
+ 	printk(KERN_ERR "  o Driver ERROR statistics enabled\n");
+@@ -4268,6 +4255,7 @@ int mv_eth_start_internals(struct eth_port *pp, int mtu)
+ 				err = -EINVAL;
+ 				goto out;
+ 			}
++
+ 			if (mv_eth_ctrl_txq_cpu_own(pp->port, pp->txp, cpuCtrl->txq, 1, cpu) < 0) {
+ 				err = -EINVAL;
+ 				goto out;
+@@ -4312,6 +4300,7 @@ int mv_eth_start_internals(struct eth_port *pp, int mtu)
+ 
+ #ifdef CONFIG_MV_ETH_BM_CPU
+ 	mvNetaBmPoolBufSizeSet(pp->port, pp->pool_long->pool, RX_BUF_SIZE(pp->pool_long->pkt_size));
++
+ 	if (pp->pool_short == NULL) {
+ 		int short_pool = mv_eth_bm_config_short_pool_get(pp->port);
+ 
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+index 955e9d1..809ae64 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+@@ -95,8 +95,6 @@ int mv_eth_skb_recycle(struct sk_buff *skb);
+ #define mv_eth_is_recycle()     0
+ #endif /* CONFIG_NET_SKB_RECYCLE */
+ 
+-
+-
+ /******************************************************
+  * interrupt control --                               *
+  ******************************************************/
+@@ -738,17 +736,6 @@ int         mv_eth_pm_mode_set(int port, int mode);
+ 
+ int	    mv_eth_cpu_txq_mask_set(int port, int cpu, int txqMask);
+ 
+-#if defined(CONFIG_MV_ETH_NFP) || defined(CONFIG_MV_ETH_NFP_MODULE)
+-typedef MV_STATUS mv_eth_nfp_func_t(struct eth_port *pp, int rxq, struct neta_rx_desc *rx_desc,
+-					struct eth_pbuf *pkt, struct bm_pool *pool);
+-struct mv_eth_nfp_ops {
+-	MV_STATUS (*mv_eth_nfp)(struct eth_port *pp, int rxq, struct neta_rx_desc *rx_desc,
+-					struct eth_pbuf *pkt, struct bm_pool *pool);
+-};
+-int         mv_eth_nfp_register(mv_eth_nfp_func_t *func);
+-void        mv_eth_nfp_unregister(void);
+-#endif /* CONFIG_MV_ETH_NFP || CONFIG_MV_ETH_NFP_MODULE */
+-
+ irqreturn_t mv_eth_isr(int irq, void *dev_id);
+ int         mv_eth_start_internals(struct eth_port *pp, int mtu);
+ int         mv_eth_stop_internals(struct eth_port *pp);
+@@ -852,5 +839,13 @@ void      mv_hwf_bm_dump(void);
+ #endif /* CONFIG_MV_ETH_HWF && !CONFIG_MV_ETH_BM_CPU */
+ 
+ 
++#ifdef CONFIG_MV_ETH_NFP
++int         mv_eth_nfp_ctrl(struct net_device *dev, int en);
++int         mv_eth_nfp_ext_ctrl(struct net_device *dev, int en);
++int         mv_eth_nfp_ext_add(struct net_device *dev, int port);
++int         mv_eth_nfp_ext_del(struct net_device *dev);
++MV_STATUS   mv_eth_nfp(struct eth_port *pp, int rxq, struct neta_rx_desc *rx_desc,
++					struct eth_pbuf *pkt, struct bm_pool *pool);
++#endif /* CONFIG_MV_ETH_NFP */
+ 
+ #endif /* __mv_netdev_h__ */
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_network/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_network/Kconfig
+index a67f8c2..102412b 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_network/Kconfig
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_network/Kconfig
+@@ -196,7 +196,7 @@ config NET_SKB_RECYCLE_DEF
+         ---help---
+ 
+ config  MV_ETH_NFP
+-        tristate "Use Network Fast Processing (NFP)"
++        bool "Use Network Fast Processing (NFP)"
+ 	default y
+         ---help---
+         Choosing this option will include NFP support in the image.
+diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
+index 35dccc5..03ca62f 100755
+--- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
++++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
+@@ -80,15 +80,50 @@ extern "C" {
+ # include "pnc/mvPnc.h"
+ #endif /* CONFIG_MV_ETH_PNC */
+ 
++#ifdef CONFIG_MV_ETH_NFP
++
++#ifdef CONFIG_MV_ETH_NFP_EXT
++# define NFP_EXT_NUM 	CONFIG_MV_ETH_NFP_EXT_NUM
++#else
++# define NFP_EXT_NUM 	0
++#endif
++
++#define NFP_MAX_PORTS   (MV_ETH_MAX_PORTS + NFP_EXT_NUM)
++
++#ifdef CONFIG_MV_ETH_SWITCH
++# define NFP_MAX_SWITCH_GROUPS  CONFIG_MV_ETH_SWITCH_NETDEV_NUM
++#else
++# define NFP_MAX_SWITCH_GROUPS  1
++#endif /* CONFIG_MV_ETH_SWITCH */
++
++typedef struct {
++	void   *dev;
++	MV_U32 tx_cmd;
++	MV_U32 diffL4[2];
++	MV_U8  *pWrite;
++	MV_U16 flags;
++	MV_U16 mtu;
++	short  shift;
++	MV_U8  txp;
++	MV_U8  txq;
++	MV_IP_HEADER_INFO ipInfo;
++	void   *privateData;
++} MV_NFP_RESULT;
++
++#define MV_NFP_RES_TXP_VALID       0x0001
++#define MV_NFP_RES_TXQ_VALID       0x0002
++#define MV_NFP_RES_IP_INFO_VALID   0x0004
++#define MV_NFP_RES_NETDEV_EXT      0x0010
++#define MV_NFP_RES_L4_CSUM_NEEDED  0x0020
++
++#endif /* CONFIG_MV_ETH_NFP */
++
+ #define NETA_RX_IP_IS_FRAG(status)     ((status) & NETA_RX_IP4_FRAG_MASK)
+ #define NETA_RX_IP_SET_FRAG(rxd)       ((rxd)->status |= NETA_RX_IP4_FRAG_MASK)
+ 
+ #define NETA_RX_L4_CSUM_IS_OK(status)  ((status) & NETA_RX_L4_CSUM_OK_MASK)
+ #define	NETA_RX_L4_CSUM_SET_OK(rxd)    ((rxd)->status |= NETA_RX_L4_CSUM_OK_MASK)
+ 
+-#define NETA_RX_IS_PPPOE(rxd)          ((rxd)->pncInfo & NETA_PNC_PPPOE)
+-#define NETA_RX_SET_PPPOE(rxd)         ((rxd)->pncInfo |= NETA_PNC_PPPOE)
+-
+ #define NETA_RX_GET_IPHDR_OFFSET(rxd)       (((rxd)->status & NETA_RX_L3_OFFSET_MASK) >> NETA_RX_L3_OFFSET_OFFS)
+ #define NETA_RX_SET_IPHDR_OFFSET(rxd, offs) ((rxd)->status |= ((offs) << NETA_RX_L3_OFFSET_OFFS) & NETA_RX_L3_OFFSET_MASK)
+ 
+@@ -97,6 +132,9 @@ extern "C" {
+ 
+ #ifdef CONFIG_MV_ETH_PNC
+ 
++#define NETA_RX_IS_PPPOE(rxd)          ((rxd)->pncInfo & NETA_PNC_PPPOE)
++#define NETA_RX_SET_PPPOE(rxd)         ((rxd)->pncInfo |= NETA_PNC_PPPOE)
++
+ #define NETA_RX_IS_VLAN(rxd)           ((rxd)->pncInfo & NETA_PNC_VLAN)
+ #define NETA_RX_SET_VLAN(rxd)          ((rxd)->pncInfo |= NETA_PNC_VLAN)
+ 
+@@ -123,6 +161,9 @@ extern "C" {
+ 
+ #else /* LEGACY parser */
+ 
++#define NETA_RX_IS_PPPOE(rxd)          (MV_FALSE)
++#define NETA_RX_SET_PPPOE(rxd)
++
+ #define NETA_RX_IS_VLAN(rxd)           ((rxd)->status & ETH_RX_VLAN_TAGGED_FRAME_MASK)
+ #define NETA_RX_SET_VLAN(rxd)          ((rxd)->status |= ETH_RX_VLAN_TAGGED_FRAME_MASK)
+ 
+@@ -256,14 +297,15 @@ typedef struct {
+ #ifdef CONFIG_MV_ETH_BM
+ 	MV_ULONG bmPhysBase;
+ 	MV_U8 *bmVirtBase;
+-#endif				/* CONFIG_MV_ETH_BM */
++#endif /* CONFIG_MV_ETH_BM */
+ 
+ #ifdef CONFIG_MV_ETH_PNC
+ 	MV_ULONG pncPhysBase;
+ 	MV_U8 *pncVirtBase;
+-#endif				/* CONFIG_MV_ETH_PNC */
+-        MV_U32 portMask;
+-        MV_U32 cpuMask;
++#endif /* CONFIG_MV_ETH_PNC */
++
++	MV_U32 portMask;
++	MV_U32 cpuMask;
+ } MV_NETA_HAL_DATA;
+ 
+ typedef struct eth_pbuf {
+diff --git a/drivers/net/ppp/pppoe.c b/drivers/net/ppp/pppoe.c
+index 1108867..dfaba34 100644
+--- a/drivers/net/ppp/pppoe.c
++++ b/drivers/net/ppp/pppoe.c
+@@ -351,7 +351,7 @@ static int pppoe_device_event(struct notifier_block *this,
+ 
+ 	/* Only look at sockets that are using this specific device. */
+ 	switch (event) {
+-#if defined(CONFIG_MV_ETH_NFP_PPP_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	case NETDEV_UP: {
+ 		struct net_device *ppp_netdev;
+ 		struct pppoe_net *pn;
+@@ -382,7 +382,7 @@ static int pppoe_device_event(struct notifier_block *this,
+ 		write_unlock_bh(&pn->hash_lock);
+ 	}
+ 	break;
+-#endif /* CONFIG_MV_ETH_NFP_PPP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 
+ 	case NETDEV_CHANGEADDR:
+ 	case NETDEV_CHANGEMTU:
+@@ -617,7 +617,7 @@ static int pppoe_release(struct socket *sock)
+ 		po->pppoe_dev = NULL;
+ 	}
+ 
+-#if defined(CONFIG_MV_ETH_NFP_PPP_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	if (ppp_dev_name(&po->chan)) {
+ 		struct net_device *ppp_netdev = NULL;
+ 		int ppp_netdev_ifindex = 0;
+@@ -629,7 +629,7 @@ static int pppoe_release(struct socket *sock)
+ 			nfp_mgr_p->nfp_hook_ppp_del(ppp_netdev_ifindex);
+ 	}
+ 
+-#endif
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 
+ 	pppox_unbind_sock(sk);
+ 
+@@ -1183,7 +1183,7 @@ static const struct pppox_proto pppoe_proto = {
+ 	.owner	= THIS_MODULE,
+ };
+ 
+-#if defined(CONFIG_MV_ETH_NFP_PPP_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ void nfp_ppp_sync(void)
+ {
+ 	int i;
+@@ -1216,7 +1216,7 @@ void nfp_ppp_sync(void)
+ }
+ EXPORT_SYMBOL(nfp_ppp_sync);
+ 
+-#endif /* CONFIG_MV_ETH_NFP_PPP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 
+ static __net_init int pppoe_init_net(struct net *net)
+ {
+diff --git a/include/linux/mv_nfp.h b/include/linux/mv_nfp.h
+index eec1405..7cc7144 100644
+--- a/include/linux/mv_nfp.h
++++ b/include/linux/mv_nfp.h
+@@ -73,8 +73,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #include <linux/types.h>
+ #include <linux/netdevice.h>
+ 
+-
+-#if defined(CONFIG_MV_ETH_NFP) || defined(CONFIG_MV_ETH_NFP_MODULE)
++#if defined(CONFIG_MV_ETH_NFP)
+ 
+ /* Supported flags */
+ #define MV_EXT_L3_VALID_MASK	0x0001
+@@ -92,12 +91,15 @@ typedef struct {
+ } MV_EXT_PKT_INFO;
+ 
+ struct nfp_core_ops {
+-	int (*nfp_rx_ext)(struct net_device *dev, struct sk_buff *skb, MV_EXT_PKT_INFO *pktInfo);
++	int (*nfp_rx)(unsigned int port, void *rx_desc, void *pkt, void *res);
+ };
+ 
+ extern struct nfp_core_ops *nfp_core_p;
+ int nfp_core_ops_init(void);
+ 
++#endif /* CONFIG_MV_ETH_NFP */
++
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ struct nfp_hook_ops {
+ 	int (*nfp_is_learning_enabled)(void);
+ 
+@@ -137,6 +139,11 @@ struct nfp_hook_ops {
+ extern struct nfp_hook_ops *nfp_mgr_p;
+ int nfp_hook_ops_init(void);
+ 
+-#endif /* CONFIG_MV_ETH_NFP || CONFIG_MV_ETH_NFP_MODULE */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
++
++#ifdef CONFIG_MV_ETH_NFP_EXT
++int mv_eth_nfp_ext(struct net_device *dev, struct sk_buff *skb, MV_EXT_PKT_INFO *pktInfo);
++#endif /* CONFIG_MV_ETH_NFP_EXT */
++
+ 
+ #endif /* LINUX_MV_NFP_H */
+diff --git a/include/linux/netfilter/ipt_NFP.h b/include/linux/netfilter/ipt_NFP.h
+index 6e0e11d..b1831e1 100644
+--- a/include/linux/netfilter/ipt_NFP.h
++++ b/include/linux/netfilter/ipt_NFP.h
+@@ -121,8 +121,8 @@ static inline void nfp_update_tuple_info(struct ipt_nfp_info *dst, struct ipt_nf
+ 	}
+ 
+ 	if (src->flags & IPT_NFP_F_SET_TXQ) {
+-		dst->txq_map[src->dscp].txq = src->txq;
+-		dst->txq_map[src->dscp].valid = 1;
++		dst->txq_map[src->dscp_txq].txq = src->txq;
++		dst->txq_map[src->dscp_txq].valid = 1;
+ 	}
+ 
+ 	if (src->flags & IPT_NFP_F_SET_TXQ_DEF) {
+diff --git a/include/net/ip6_fib.h b/include/net/ip6_fib.h
+index 5de0af5..1b7485d 100644
+--- a/include/net/ip6_fib.h
++++ b/include/net/ip6_fib.h
+@@ -120,10 +120,10 @@ struct rt6_info {
+ 
+ 	u8				rt6i_protocol;
+ 
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	int				rt6i_iifindex;
+ 	bool 			nfp;
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ };
+ 
+ static inline struct inet6_dev *ip6_dst_idev(struct dst_entry *dst)
+diff --git a/include/net/neighbour.h b/include/net/neighbour.h
+index 8a842e3..bcae018 100644
+--- a/include/net/neighbour.h
++++ b/include/net/neighbour.h
+@@ -113,9 +113,9 @@ struct neighbour {
+ 	const struct neigh_ops	*ops;
+ 	struct rcu_head		rcu;
+ 	struct net_device	*dev;
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	bool 			nfp;
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 	u8			primary_key[0];
+ };
+ 
+diff --git a/include/net/netfilter/nf_conntrack_tuple.h b/include/net/netfilter/nf_conntrack_tuple.h
+index 5bb729b..0443678 100644
+--- a/include/net/netfilter/nf_conntrack_tuple.h
++++ b/include/net/netfilter/nf_conntrack_tuple.h
+@@ -71,14 +71,14 @@ struct nf_conntrack_tuple {
+ 		u_int8_t dir;
+ 	} dst;
+ 
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	/* If true, this connection is handled by NFP */
+ 	bool nfp;
+ 	int ifindex;
+ 	bool nfpCapable;
+ 	bool udpCsum;
+ 	struct ipt_nfp_info *info;
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ };
+ 
+ struct nf_conntrack_tuple_mask {
+diff --git a/include/net/route.h b/include/net/route.h
+index fc0ff7a..33e4958 100644
+--- a/include/net/route.h
++++ b/include/net/route.h
+@@ -70,9 +70,9 @@ struct rtable {
+ 	struct inet_peer	*peer; /* long-living peer info */
+ 	struct fib_info		*fi; /* for client ref to shared metrics */
+ 
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	bool 			nfp;
+-#endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ };
+ 
+ static inline bool rt_is_input_route(const struct rtable *rt)
+diff --git a/net/8021q/vlan.c b/net/8021q/vlan.c
+index 39d713f..7991a07 100644
+--- a/net/8021q/vlan.c
++++ b/net/8021q/vlan.c
+@@ -123,10 +123,12 @@ void unregister_vlan_dev(struct net_device *dev, struct list_head *head)
+ 
+ 	if (vlan->flags & VLAN_FLAG_GVRP)
+ 		vlan_gvrp_request_leave(dev);
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	if (nfp_mgr_p->nfp_hook_vlan_del)
+ 		nfp_mgr_p->nfp_hook_vlan_del(dev->ifindex);
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
++
+ 	vlan_group_set_device(grp, vlan_id, NULL);
+ 	/* Because unregister_netdevice_queue() makes sure at least one rcu
+ 	 * grace period is respected before device freeing,
+@@ -292,10 +294,12 @@ static int register_vlan_device(struct net_device *real_dev, u16 vlan_id)
+ 	err = register_vlan_dev(new_dev);
+ 	if (err < 0)
+ 		goto out_free_newdev;
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	if (nfp_mgr_p->nfp_hook_vlan_add)
+ 		nfp_mgr_p->nfp_hook_vlan_add(new_dev->ifindex, new_dev, real_dev->ifindex, vlan_id);
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
++
+ 	return 0;
+ 
+ out_free_newdev:
+@@ -720,7 +724,7 @@ static void __exit vlan_cleanup_module(void)
+ 	vlan_gvrp_uninit();
+ }
+ 
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ void vlan_sync(void)
+ {
+ 	struct net_device *dev;
+@@ -739,7 +743,7 @@ void vlan_sync(void)
+ 	rtnl_unlock();
+ }
+ EXPORT_SYMBOL(vlan_sync);
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 
+ 
+ module_init(vlan_proto_init);
+diff --git a/net/bridge/br_fdb.c b/net/bridge/br_fdb.c
+index 043aaef..47e4d28 100644
+--- a/net/bridge/br_fdb.c
++++ b/net/bridge/br_fdb.c
+@@ -66,14 +66,15 @@ static inline int has_expired(const struct net_bridge *br,
+ {
+ 	if (fdb->is_static)
+ 		return 0;
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	if (fdb->nfp) {
+ 		if (nfp_mgr_p->nfp_hook_fdb_rule_age)
+ 			if (nfp_mgr_p->nfp_hook_fdb_rule_age(fdb->dst->br->dev->ifindex,
+ 					fdb->dst->dev->ifindex, fdb->addr.addr) > 0)
+-			fdb->updated = jiffies + fdb->dst->br->forward_delay;
++				fdb->updated = jiffies + fdb->dst->br->forward_delay;
+ 	}
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 
+ 	return time_before_eq(fdb->updated + hold_time(br), jiffies);
+ }
+@@ -94,13 +95,13 @@ static void fdb_rcu_free(struct rcu_head *head)
+ 
+ static inline void fdb_delete(struct net_bridge_fdb_entry *f)
+ {
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	if (f->nfp) {
+ 		if (nfp_mgr_p->nfp_hook_fdb_rule_del)
+ 			nfp_mgr_p->nfp_hook_fdb_rule_del(f->dst->br->dev->ifindex,
+ 					f->dst->dev->ifindex, f->addr.addr);
+ 	}
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 
+ 	fdb_notify(f, RTM_DELNEIGH);
+ 	hlist_del_rcu(&f->hlist);
+@@ -163,14 +164,14 @@ void br_fdb_cleanup(unsigned long _data)
+ 			if (f->is_static)
+ 				continue;
+ 
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 			if (f->nfp) {
+ 				if (nfp_mgr_p->nfp_hook_fdb_rule_age)
+ 					if (nfp_mgr_p->nfp_hook_fdb_rule_age(f->dst->br->dev->ifindex,
+ 							f->dst->dev->ifindex, f->addr.addr) > 0)
+ 					f->updated = jiffies + f->dst->br->forward_delay;
+ 			}
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 
+ 			this_timer = f->updated + delay;
+ 			if (time_before_eq(this_timer, jiffies))
+@@ -378,12 +379,12 @@ static struct net_bridge_fdb_entry *fdb_create(struct hlist_head *head,
+ 		fdb->updated = fdb->used = jiffies;
+ 		hlist_add_head_rcu(&fdb->hlist, head);
+ 
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 		fdb->nfp = false;
+ 		if (nfp_mgr_p->nfp_hook_fdb_rule_add)
+ 			if (!nfp_mgr_p->nfp_hook_fdb_rule_add(fdb->dst->br->dev->ifindex, fdb->dst->dev->ifindex, (u8 *)addr, is_local))
+ 				fdb->nfp = true;
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 	}
+ 	return fdb;
+ }
+@@ -740,7 +741,7 @@ int br_fdb_delete(struct sk_buff *skb, struct nlmsghdr *nlh, void *arg)
+ 	return err;
+ }
+ 
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ void fdb_sync(void)
+ {
+ 	struct net_device *dev;
+@@ -775,4 +776,4 @@ void fdb_sync(void)
+ }
+ EXPORT_SYMBOL(fdb_sync);
+ 
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+diff --git a/net/bridge/br_if.c b/net/bridge/br_if.c
+index 425e7a4..2588abb 100644
+--- a/net/bridge/br_if.c
++++ b/net/bridge/br_if.c
+@@ -169,20 +169,20 @@ void br_dev_delete(struct net_device *dev, struct list_head *head)
+ 
+ 	list_for_each_entry_safe(p, n, &br->port_list, list) {
+ 
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	if (nfp_mgr_p->nfp_hook_br_port_del)
+ 		nfp_mgr_p->nfp_hook_br_port_del(br->dev->ifindex, p->dev->ifindex);
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 
+ 		del_nbp(p);
+ 	}
+ 
+ 	del_timer_sync(&br->gc_timer);
+ 
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	if (nfp_mgr_p->nfp_hook_br_del)
+ 		nfp_mgr_p->nfp_hook_br_del(br->dev->ifindex);
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 
+ 	br_sysfs_delbr(br->dev);
+ 	unregister_netdevice_queue(br->dev, head);
+@@ -438,10 +438,10 @@ int br_del_if(struct net_bridge *br, struct net_device *dev)
+ 	if (!p || p->br != br)
+ 		return -EINVAL;
+ 
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	if (nfp_mgr_p->nfp_hook_br_port_del)
+ 		nfp_mgr_p->nfp_hook_br_port_del(br->dev->ifindex, p->dev->ifindex);
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 
+ 	del_nbp(p);
+ 
+diff --git a/net/bridge/br_private.h b/net/bridge/br_private.h
+index 2043387..58518d5 100644
+--- a/net/bridge/br_private.h
++++ b/net/bridge/br_private.h
+@@ -75,9 +75,9 @@ struct net_bridge_fdb_entry
+ 	unsigned char			is_local;
+ 	unsigned char			is_static;
+ 
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	bool 			nfp;
+-#endif /* CONFIG_MV_ETH_NFP_FDB_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ };
+ 
+ struct net_bridge_port_group {
+diff --git a/net/core/Makefile b/net/core/Makefile
+index 4609e29..93d81b7 100644
+--- a/net/core/Makefile
++++ b/net/core/Makefile
+@@ -23,6 +23,3 @@ obj-$(CONFIG_NETWORK_PHY_TIMESTAMPING) += timestamping.o
+ ifeq ($(CONFIG_MV_ETH_NFP),y)
+ obj-y += mv_nfp.o
+ endif
+-ifeq ($(CONFIG_MV_ETH_NFP),m)
+-obj-y += mv_nfp.o
+-endif
+diff --git a/net/core/dev.c b/net/core/dev.c
+index f75d3b6..354ecea 100644
+--- a/net/core/dev.c
++++ b/net/core/dev.c
+@@ -139,9 +139,9 @@
+ #include <linux/net_tstamp.h>
+ #include "net-sysfs.h"
+ 
+-#if defined(CONFIG_MV_ETH_NFP) || defined(CONFIG_MV_ETH_NFP_MODULE)
++#if defined(CONFIG_MV_ETH_NFP)
+ #include <linux/mv_nfp.h>
+-#endif /* CONFIG_MV_ETH_NFP || CONFIG_MV_ETH_NFP_MODULE */
++#endif /* CONFIG_MV_ETH_NFP */
+ 
+ /* Instead of increasing this, you should create a hash table. */
+ #define MAX_GRO_SKBS 8
+@@ -3223,16 +3223,15 @@ EXPORT_SYMBOL_GPL(netdev_rx_handler_unregister);
+ #ifdef CONFIG_MV_ETH_NFP_EXT
+ static struct sk_buff *handle_nfp_extrcv(struct sk_buff *skb, struct net_device *dev)
+ {
+-	if (nfp_core_p->nfp_rx_ext) {
++	MV_EXT_PKT_INFO *pktInfo;
+ 
+-		MV_EXT_PKT_INFO *pktInfo;
++	pktInfo = (MV_EXT_PKT_INFO *)&skb->cb;
++	if (pktInfo->flags == 0)
++		pktInfo = NULL;
+ 
+-		pktInfo = (MV_EXT_PKT_INFO *)&skb->cb;
+-		if (pktInfo->flags == 0)
+-			pktInfo = NULL;
+-
+-		if (!nfp_core_p->nfp_rx_ext(skb->dev, skb, pktInfo))
+-			return NULL;
++	if (!mv_eth_nfp_ext(skb->dev, skb, pktInfo)) {
++		/* packet processed by NFP */
++		return NULL;
+ 	}
+ 	return skb;
+ }
+@@ -6680,10 +6679,13 @@ static int __init net_dev_init(void)
+ 	dev_mcast_init();
+ 	rc = 0;
+ 
+-#if defined(CONFIG_MV_ETH_NFP) || defined(CONFIG_MV_ETH_NFP_MODULE)
++#if defined(CONFIG_MV_ETH_NFP)
+ 	nfp_core_ops_init();
++#endif /* CONFIG_MV_ETH_NFP */
++
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	nfp_hook_ops_init();
+-#endif /* CONFIG_MV_ETH_NFP || CONFIG_MV_ETH_NFP_MODULE */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 
+ out:
+ 	return rc;
+diff --git a/net/core/mv_nfp.c b/net/core/mv_nfp.c
+index 3b44107..8ce1ff5 100644
+--- a/net/core/mv_nfp.c
++++ b/net/core/mv_nfp.c
+@@ -67,7 +67,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #include <linux/mv_nfp.h>
+ 
+ struct nfp_core_ops *nfp_core_p = NULL;
+-struct nfp_hook_ops *nfp_mgr_p = NULL;
+ 
+ int nfp_core_ops_init(void)
+ {
+@@ -81,6 +80,8 @@ int nfp_core_ops_init(void)
+ }
+ EXPORT_SYMBOL(nfp_core_p);
+ 
++#ifdef CONFIG_MV_ETH_NFP_HOOKS
++struct nfp_hook_ops *nfp_mgr_p = NULL;
+ int nfp_hook_ops_init(void)
+ {
+ 	nfp_mgr_p = kzalloc(sizeof(struct nfp_hook_ops), GFP_KERNEL);
+@@ -93,3 +94,4 @@ int nfp_hook_ops_init(void)
+ 	return 0;
+ }
+ EXPORT_SYMBOL(nfp_mgr_p);
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+diff --git a/net/core/neighbour.c b/net/core/neighbour.c
+index 42b457d..a4a3a82 100644
+--- a/net/core/neighbour.c
++++ b/net/core/neighbour.c
+@@ -701,14 +701,16 @@ void neigh_destroy(struct neighbour *neigh)
+ 	if (neigh_del_timer(neigh))
+ 		printk(KERN_WARNING "Impossible event.\n");
+ 
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+-       if (neigh->nfp) {
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
++	if (neigh->nfp) {
+ 		if (nfp_mgr_p->nfp_hook_arp_delete)
+ 			nfp_mgr_p->nfp_hook_arp_delete(neigh->tbl->family, neigh->primary_key);
+-               NEIGH_PRINTK2("0x%8lx: neigh %p, ref=%d, state=%d, nfp=%d is connected in %s.\n",
+-                       jiffies, neigh, atomic_read(&neigh->refcnt), neigh->nud_state, neigh->nfp, __func__);
+-       }
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++
++		NEIGH_PRINTK2("0x%8lx: neigh %p, ref=%d, state=%d, nfp=%d is connected in %s.\n",
++			jiffies, neigh, atomic_read(&neigh->refcnt), neigh->nud_state, neigh->nfp, __func__);
++	}
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
++
+ 
+ 	skb_queue_purge(&neigh->arp_queue);
+ 
+@@ -741,15 +743,18 @@ static void neigh_suspect(struct neighbour *neigh)
+  */
+ static void neigh_connect(struct neighbour *neigh)
+ {
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	neigh->nfp = false;
+ 	if (nfp_mgr_p->nfp_hook_arp_add)
+ 		if (!nfp_mgr_p->nfp_hook_arp_add(neigh->tbl->family, neigh->primary_key, neigh->ha, neigh->dev->ifindex)) {
+ 			neigh->nfp = true;
+-               NEIGH_PRINTK2("0x%8lx: neigh %p, ref=%d, state=%d, nfp=%d is connected in %s.\n",
+-                       jiffies, neigh, atomic_read(&neigh->refcnt), neigh->nud_state, neigh->nfp, __func__);
+-       }
+-#endif /* CONFIG_MV_ETH_NFP_LEARN  */
++
++		NEIGH_PRINTK2("0x%8lx: neigh %p, ref=%d, state=%d, nfp=%d is connected in %s.\n",
++			jiffies, neigh, atomic_read(&neigh->refcnt), neigh->nud_state, neigh->nfp, __func__);
++	}
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
++
+ 	neigh->output = neigh->ops->connected_output;
+ }
+ 
+@@ -796,7 +801,8 @@ static void neigh_periodic_work(struct work_struct *work)
+ 
+ 			if (time_before(n->used, n->confirmed))
+ 				n->used = n->confirmed;
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 			if ((atomic_read(&n->refcnt) == 1) && (state != NUD_FAILED) &&
+ 				time_after(jiffies, n->used + n->parms->gc_staletime)) {
+ 				if (n->nfp) {
+@@ -808,7 +814,8 @@ static void neigh_periodic_work(struct work_struct *work)
+ 						jiffies, n, atomic_read(&n->refcnt), n->nud_state, __func__);
+ 				}
+ 			}
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
++
+ 			if (atomic_read(&n->refcnt) == 1 &&
+ 			    (state == NUD_FAILED ||
+ 			     time_after(jiffies, n->used + n->parms->gc_staletime))) {
+@@ -2891,7 +2898,7 @@ EXPORT_SYMBOL(neigh_sysctl_unregister);
+ 
+ #endif	/* CONFIG_SYSCTL */
+ 
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ void neigh_sync(int family)
+ {
+ 	struct neigh_table *tbl;
+@@ -2927,7 +2934,7 @@ void neigh_sync(int family)
+ 	read_unlock(&neigh_tbl_lock);
+ }
+ EXPORT_SYMBOL(neigh_sync);
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 
+ static int __init neigh_init(void)
+ {
+diff --git a/net/ipv4/netfilter/Kconfig b/net/ipv4/netfilter/Kconfig
+index 713cb58..4922c4d 100644
+--- a/net/ipv4/netfilter/Kconfig
++++ b/net/ipv4/netfilter/Kconfig
+@@ -185,9 +185,10 @@ config IP_NF_TARGET_NETMAP
+ config IP_NF_TARGET_NFP
+ 	tristate "NFP target support"
+ 	default y
+-	depends on NF_CONNTRACK_IPV4 && MV_ETH_NFP_CT && MV_ETH_NFP_LEARN
++	depends on NF_CONNTRACK_IPV4 && MV_ETH_NFP_HOOKS
+ 	help
+ 	  This target allows to process selected connections in NFP.
++
+ 	  To compile it as a module, choose M here.  If unsure, say N.
+ 
+ config IP_NF_TARGET_REDIRECT
+diff --git a/net/ipv4/netfilter/ipt_NFP.c b/net/ipv4/netfilter/ipt_NFP.c
+new file mode 100644
+index 0000000..9fbc24a
+--- /dev/null
++++ b/net/ipv4/netfilter/ipt_NFP.c
+@@ -0,0 +1,217 @@
++/*
++ * Copyright (C) 2009, 2010 Semihalf.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ */
++#include <linux/module.h>
++#include <linux/skbuff.h>
++#include <linux/in.h>
++#include <linux/ip.h>
++#include <linux/udp.h>
++
++MODULE_AUTHOR("Semihalf, Piotr Ziecik <kosmo@semihalf.com>");
++MODULE_DESCRIPTION("IP tables NFP target module");
++MODULE_LICENSE("GPL");
++
++#include <linux/mv_nfp.h>
++#include <linux/netfilter/x_tables.h>
++#include <linux/netfilter/nf_conntrack_tcp.h>
++#include <linux/netfilter/ipt_NFP.h>
++#include <net/netfilter/nf_nat.h>
++#include <net/netfilter/nf_conntrack.h>
++#include <net/netfilter/ipv4/nf_conntrack_ipv4.h>
++
++/* for debug */
++void nfp_print_info(struct ipt_nfp_info *info)
++{
++	int i;
++
++	printk(KERN_INFO "info = %p: mode = %d, flags = 0x%X, burst = %d, limit = %d, entry = %p\n",
++		info, info->mode, info->flags, info->burst, info->limit, info->entry);
++
++	printk(KERN_INFO "dscp = %d, new_dscp = %d\n", info->dscp, info->new_dscp);
++	for (i = 0; i < IPT_NFP_DSCP_MAP_SIZE; i++) {
++		if (info->dscp_map[i].valid)
++			printk(KERN_INFO "dscp_map[%d] = %d\n", i, info->dscp_map[i].new_dscp);
++	}
++	printk(KERN_INFO "vlanprio = %d, new_vlanprio = %d\n", info->vlanprio, info->new_vlanprio);
++	for (i = 0; i < IPT_NFP_VPRI_MAP_SIZE; i++) {
++		if (info->vpri_map[i].valid)
++			printk(KERN_INFO "vpri_map[%d] = %d\n", i, info->vpri_map[i].new_prio);
++	}
++	printk(KERN_INFO "dscp_txq=%d, txq = %d, txp = %d, mh = 0x%02X\n",
++			info->dscp_txq, info->txq, info->txp, info->mh);
++	for (i = 0; i <= IPT_NFP_DSCP_MAP_SIZE; i++) {
++		if (info->txq_map[i].valid)
++			printk(KERN_INFO "txq_map[%d] = %d\n", i, info->txq_map[i].txq);
++	}
++}
++
++
++static unsigned int
++target(struct sk_buff *skb, const struct xt_action_param *param)
++{
++	struct nf_conntrack_tuple target_tuple;
++	struct nf_conntrack_tuple *tuple;
++	enum ip_conntrack_info ctinfo;
++	enum ip_conntrack_dir dir;
++	struct ipt_nfp_info *info;
++	struct nf_conn *ct;
++	unsigned long status;
++
++	ct = nf_ct_get(skb, &ctinfo);
++	info = (struct ipt_nfp_info *)param->targinfo;
++
++	if (!ct || !skb->dev)
++		return XT_CONTINUE;
++
++	dir = CTINFO2DIR(ctinfo);
++	tuple = &ct->tuplehash[dir].tuple;
++
++	if (tuple->info == NULL) {
++		tuple->info = kmalloc(sizeof(struct ipt_nfp_info), GFP_ATOMIC);
++		if (tuple->info == NULL) {
++			printk(KERN_ERR "%s: OOM\n", __func__);
++			return XT_CONTINUE;
++		}
++		memset(tuple->info, 0, sizeof(struct ipt_nfp_info));
++	}
++
++	nfp_update_tuple_info(tuple->info, info);
++
++	tuple->nfpCapable = true;
++	tuple->ifindex = skb->dev->ifindex;
++
++	if ((!nfp_mgr_p->nfp_ct_is_learning_enabled) || (!nfp_mgr_p->nfp_is_learning_enabled))
++		return XT_CONTINUE;
++	if (!nfp_mgr_p->nfp_ct_is_learning_enabled() || !nfp_mgr_p->nfp_is_learning_enabled())
++		return XT_CONTINUE;
++
++	/* NFP handles TCP or UDP packets only */
++	if (tuple->dst.protonum != IPPROTO_TCP &&
++	    tuple->dst.protonum != IPPROTO_UDP)
++		return XT_CONTINUE;
++
++	/* If packet should be dropped, no need for further checks */
++	if (tuple->info->mode == IPT_NFP_DROP) {
++		tuple->nfp = true;
++		if (nfp_mgr_p->nfp_hook_ct_fwd_add)
++			nfp_mgr_p->nfp_hook_ct_fwd_add(tuple, 0);
++		return NF_DROP;
++	}
++	/* do not handle IP_CT_RELATED connections to avoid ICMP error messages */
++	if ((ctinfo == IP_CT_RELATED) || (ctinfo == IP_CT_RELATED + IP_CT_IS_REPLY))
++		return XT_CONTINUE;
++
++	/* NFP handles established or reply TCP connections */
++	if (tuple->dst.protonum == IPPROTO_TCP) {
++		if ((ctinfo != IP_CT_ESTABLISHED) && (ctinfo != (IP_CT_ESTABLISHED + IP_CT_IS_REPLY)))
++			return XT_CONTINUE;
++
++	    if (ct->proto.tcp.state != TCP_CONNTRACK_ESTABLISHED)
++			return XT_CONTINUE;
++	}
++
++	/* Make sure connection is confirmed so we have all relevant NAT information */
++	if (!(ct->status & IPS_CONFIRMED))
++		return XT_CONTINUE;
++
++	/* We've already handled IPT_NFP_DROP, so continue handling only if mode is IPT_NFP_FWD */
++	if (tuple->info->mode != IPT_NFP_FWD)
++		return XT_CONTINUE;
++
++	tuple->nfp = true;
++	status = ct->status;
++
++	if ((status & IPS_NAT_MASK) && nfp_mgr_p->nfp_hook_ct_nat_add) {
++		/* status says if the original direction requires SNAT or DNAT (or both) */
++		/* if we currently work on the reply direction, we need to "reverse" the NAT status, */
++		/* e.g. if original direction was SNAT, reply should be DNAT. */
++		if (dir != IP_CT_DIR_ORIGINAL)
++			status ^= IPS_NAT_MASK;
++
++		nf_ct_invert_tuplepr(&target_tuple, &ct->tuplehash[!dir].tuple);
++
++		if (tuple->dst.protonum == IPPROTO_UDP) {
++			struct iphdr *iph = (struct iphdr *)skb_network_header(skb);
++
++			if (iph->protocol == IPPROTO_UDP) {
++				struct udphdr *uh = (struct udphdr *)((u32 *)iph + iph->ihl);
++
++				if (uh->check)
++					tuple->udpCsum = 1;
++				else
++					tuple->udpCsum = 0;
++			}
++		}
++
++		if ((status & IPS_NAT_MASK) == IPS_DST_NAT) {
++			/* DNAT only */
++			nfp_mgr_p->nfp_hook_ct_nat_add(tuple, &target_tuple, IP_NAT_MANIP_DST);
++		} else if ((status & IPS_NAT_MASK) == IPS_SRC_NAT) {
++			/* SNAT only */
++			nfp_mgr_p->nfp_hook_ct_nat_add(tuple, &target_tuple, IP_NAT_MANIP_SRC);
++		} else {
++			/* DNAT and SNAT */
++			nfp_mgr_p->nfp_hook_ct_nat_add(tuple, &target_tuple, IP_NAT_MANIP_DST);
++			nfp_mgr_p->nfp_hook_ct_nat_add(tuple, &target_tuple, IP_NAT_MANIP_SRC);
++		}
++		return NF_ACCEPT;
++	}
++
++	/* If we got till here, it must be IPT_NFP_FWD */
++	if (nfp_mgr_p->nfp_hook_ct_fwd_add)
++		nfp_mgr_p->nfp_hook_ct_fwd_add(tuple, 1);
++
++	return NF_ACCEPT;
++}
++
++
++static int check(const struct xt_tgchk_param *par)
++{
++	struct ipt_nfp_info *info = par->targinfo;
++
++	info->entry = (struct ipt_entry *)par->entryinfo;
++
++	return 0;
++}
++
++static struct xt_target xt_nfp_target[] = {
++	{
++		.name		= "NFP",
++		.family		= AF_INET,
++		.checkentry	= check,
++		.target		= target,
++		.hooks		= (1 << NF_INET_FORWARD),
++		.targetsize	= XT_ALIGN(sizeof(struct ipt_nfp_info)),
++		.me		= THIS_MODULE,
++	},
++};
++
++static int __init xt_nfp_init(void)
++{
++	need_conntrack();
++	return xt_register_targets(xt_nfp_target,
++				   ARRAY_SIZE(xt_nfp_target));
++}
++
++static void __exit xt_nfp_fini(void)
++{
++	xt_unregister_targets(xt_nfp_target,
++			      ARRAY_SIZE(xt_nfp_target));
++}
++
++module_init(xt_nfp_init);
++module_exit(xt_nfp_fini);
+diff --git a/net/ipv4/netfilter/nf_conntrack_l3proto_ipv4_compat.c b/net/ipv4/netfilter/nf_conntrack_l3proto_ipv4_compat.c
+index 94ae40b..6f2a4dd 100644
+--- a/net/ipv4/netfilter/nf_conntrack_l3proto_ipv4_compat.c
++++ b/net/ipv4/netfilter/nf_conntrack_l3proto_ipv4_compat.c
+@@ -179,7 +179,7 @@ static int ct_seq_show(struct seq_file *s, void *v)
+ 	if (ct_show_secctx(s, ct))
+ 		goto release;
+ 
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	if ((ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple.nfp) && (ct->tuplehash[IP_CT_DIR_REPLY].tuple.nfp)) {
+ 		if (seq_printf(s, "[NFP (both)] "))
+ 			goto release;
+@@ -190,7 +190,7 @@ static int ct_seq_show(struct seq_file *s, void *v)
+ 		if (seq_printf(s, "[NFP (reply)] "))
+ 			goto release;
+ 	}
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 
+ 	if (seq_printf(s, "use=%u\n", atomic_read(&ct->ct_general.use)))
+ 		goto release;
+diff --git a/net/ipv4/route.c b/net/ipv4/route.c
+index 0ac50fa..720d252 100644
+--- a/net/ipv4/route.c
++++ b/net/ipv4/route.c
+@@ -661,12 +661,13 @@ static inline int ip_rt_proc_init(void)
+ 
+ static inline void rt_free(struct rtable *rt)
+ {
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+-		if (rt->nfp)
+-			if (nfp_mgr_p->nfp_hook_fib_rule_del)
+-				nfp_mgr_p->nfp_hook_fib_rule_del(AF_INET, (u8 *)(&rt->rt_src), (u8*)(&rt->rt_dst),
+-							rt->rt_iif, rt->dst.dev->ifindex);
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
++	if (rt->nfp)
++		if (nfp_mgr_p->nfp_hook_fib_rule_del)
++			nfp_mgr_p->nfp_hook_fib_rule_del(AF_INET, (u8 *)(&rt->rt_src), (u8*)(&rt->rt_dst),
++						rt->rt_iif, rt->dst.dev->ifindex);
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
++
+ 	call_rcu_bh(&rt->dst.rcu_head, dst_rcu_free);
+ }
+ 
+@@ -694,16 +695,19 @@ static int rt_may_expire(struct rtable *rth, unsigned long tmo1, unsigned long t
+ {
+ 	unsigned long age;
+ 	int ret = 0;
++
+ 	if (atomic_read(&rth->dst.__refcnt))
+ 		goto out;
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	if (rth->nfp) {
+ 		if (nfp_mgr_p->nfp_hook_fib_rule_age)
+ 			if (nfp_mgr_p->nfp_hook_fib_rule_age(AF_INET, (u8 *)(&rth->rt_src), (u8 *)(&rth->rt_dst),
+ 						rth->rt_iif, rth->dst.dev->ifindex))
+-			rth->dst.lastuse = jiffies;
++				rth->dst.lastuse = jiffies;
+ 	}
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
++
+ 	age = jiffies - rth->dst.lastuse;
+ 	if ((age <= tmo1 && !rt_fast_clean(rth)) ||
+ 	    (age <= tmo2 && rt_valuable(rth)))
+@@ -818,7 +822,7 @@ static void rt_do_flush(struct net *net, int process_context)
+ 	}
+ }
+ 
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ void nfp_fib_sync(void)
+ {
+ 	struct rtable *rt;
+@@ -846,7 +850,7 @@ void nfp_fib_sync(void)
+ 	}
+ }
+ EXPORT_SYMBOL(nfp_fib_sync);
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 
+ /*
+  * While freeing expired entries, we compute average chain length
+@@ -2095,9 +2099,11 @@ static int ip_route_input_mc(struct sk_buff *skb, __be32 daddr, __be32 saddr,
+ 			   IN_DEV_CONF_GET(in_dev, NOPOLICY), false);
+ 	if (!rth)
+ 		goto e_nobufs;
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	rth->nfp = false;
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
++
+ #ifdef CONFIG_IP_ROUTE_CLASSID
+ 	rth->dst.tclassid = itag;
+ #endif
+@@ -2260,15 +2266,16 @@ static int __mkroute_input(struct sk_buff *skb,
+ 	rth->dst.output = ip_output;
+ 
+ 	rt_set_nexthop(rth, NULL, res, res->fi, res->type, itag);
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	rth->nfp = false;
+ 	if (!(rth->rt_flags & (RTCF_MULTICAST | RTCF_BROADCAST | RTCF_LOCAL | RTCF_REJECT))) {
+ 		if (nfp_mgr_p->nfp_hook_fib_rule_add)
+ 			if (!nfp_mgr_p->nfp_hook_fib_rule_add(AF_INET, (u8 *)(&rth->rt_src), (u8 *)(&rth->rt_dst),
+ 					(u8 *)(&rth->rt_gateway), rth->rt_iif, rth->dst.dev->ifindex))
+-			rth->nfp = true;
++				rth->nfp = true;
+ 	}
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 
+ 	*result = rth;
+ 	err = 0;
+@@ -2420,9 +2427,11 @@ local_input:
+ 			   IN_DEV_CONF_GET(in_dev, NOPOLICY), false);
+ 	if (!rth)
+ 		goto e_nobufs;
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	rth->nfp = false;
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
++
+ 	rth->dst.input= ip_local_deliver;
+ 	rth->dst.output= ip_rt_bug;
+ #ifdef CONFIG_IP_ROUTE_CLASSID
+@@ -2633,9 +2642,11 @@ static struct rtable *__mkroute_output(const struct fib_result *res,
+ 			   IN_DEV_CONF_GET(in_dev, NOXFRM));
+ 	if (!rth)
+ 		return ERR_PTR(-ENOBUFS);
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	rth->nfp = false;
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
++
+ 	rth->dst.output = ip_output;
+ 
+ 	rth->rt_key_dst	= orig_daddr;
+@@ -2974,9 +2985,11 @@ struct dst_entry *ipv4_blackhole_route(struct net *net, struct dst_entry *dst_or
+ 		new->dev = ort->dst.dev;
+ 		if (new->dev)
+ 			dev_hold(new->dev);
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 		rt->nfp = false;
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
++
+ 		rt->rt_key_dst = ort->rt_key_dst;
+ 		rt->rt_key_src = ort->rt_key_src;
+ 		rt->rt_key_tos = ort->rt_key_tos;
+diff --git a/net/ipv6/ip6_fib.c b/net/ipv6/ip6_fib.c
+index 87eefc3..9488909 100644
+--- a/net/ipv6/ip6_fib.c
++++ b/net/ipv6/ip6_fib.c
+@@ -418,7 +418,7 @@ out:
+ }
+ 
+ 
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ static int fib6_add_node(struct fib6_walker_t *w)
+ {
+ 	struct rt6_info *rt;
+@@ -464,8 +464,7 @@ void nfp_fib6_sync(void)
+ 
+ }
+ EXPORT_SYMBOL(nfp_fib6_sync);
+-
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 
+ /*
+  *	Routing Table
+@@ -720,7 +719,7 @@ static int fib6_add_rt2node(struct fib6_node *fn, struct rt6_info *rt,
+ 		fn->fn_flags |= RTN_RTINFO;
+ 	}
+ 
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	rt->nfp = false;
+ 	if (rt->rt6i_flags & RTF_CACHE)	{
+ 		if (nfp_mgr_p->nfp_hook_fib_rule_add)
+@@ -729,7 +728,8 @@ static int fib6_add_rt2node(struct fib6_node *fn, struct rt6_info *rt,
+ 					rt->rt6i_iifindex, rt->rt6i_dev->ifindex))
+ 				rt->nfp = true;
+ 	}
+-#endif
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
++
+ 	return 0;
+ }
+ 
+@@ -1218,13 +1218,15 @@ static void fib6_del_route(struct fib6_node *fn, struct rt6_info **rtp,
+ 	}
+ 
+ 	inet6_rt_notify(RTM_DELROUTE, rt, info);
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	if (rt->rt6i_flags & RTF_CACHE)
+ 		if (rt->nfp)
+ 			if (nfp_mgr_p->nfp_hook_fib_rule_del)
+ 				nfp_mgr_p->nfp_hook_fib_rule_del(AF_INET6, (u8 *)&rt->rt6i_src.addr, (u8 *)&rt->rt6i_dst.addr,
+ 							rt->rt6i_iifindex, rt->rt6i_dev->ifindex);
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
++
+ 	rt6_release(rt);
+ }
+ 
+@@ -1525,14 +1527,15 @@ static int fib6_age(struct rt6_info *rt, void *arg)
+ 				  rt);
+ 			return -1;
+ 		}
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 		if (rt->nfp) {
+ 			if (nfp_mgr_p->nfp_hook_fib_rule_age)
+ 				if (nfp_mgr_p->nfp_hook_fib_rule_age(AF_INET6, (u8 *)(&rt->rt6i_src.addr), (u8 *)(&rt->rt6i_dst.addr),
+ 					rt->rt6i_iifindex, rt->rt6i_dev->ifindex))
+ 				rt->dst.lastuse = now;
+ 		}
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
++
+ 		gc_args.more++;
+ 	}
+ 
+diff --git a/net/ipv6/netfilter/Kconfig b/net/ipv6/netfilter/Kconfig
+index 0381a24..8352210 100644
+--- a/net/ipv6/netfilter/Kconfig
++++ b/net/ipv6/netfilter/Kconfig
+@@ -197,7 +197,7 @@ config IP6_NF_RAW
+ config IP6_NF_TARGET_NFP
+ 	tristate "NFP target support for IPv6"
+ 	default y
+-	depends on NF_CONNTRACK_IPV6 && MV_ETH_NFP_CT && MV_ETH_NFP_LEARN
++	depends on NF_CONNTRACK_IPV6 && MV_ETH_NFP_HOOKS
+ 	help
+ 	  This target allows to process selected connections in NFP.
+ 
+diff --git a/net/ipv6/netfilter/ip6t_NFP.c b/net/ipv6/netfilter/ip6t_NFP.c
+new file mode 100644
+index 0000000..bb0ecd5
+--- /dev/null
++++ b/net/ipv6/netfilter/ip6t_NFP.c
+@@ -0,0 +1,152 @@
++/*
++ * Copyright (C) 2009, 2010 Semihalf.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ */
++#include <linux/module.h>
++#include <linux/skbuff.h>
++#include <linux/in.h>
++
++MODULE_AUTHOR("Semihalf, Piotr Ziecik <kosmo@semihalf.com>");
++MODULE_DESCRIPTION("IP tables NFP target module");
++MODULE_LICENSE("GPL");
++
++#include <linux/netfilter/x_tables.h>
++#include <linux/netfilter/nf_conntrack_tcp.h>
++#include <linux/netfilter/ipt_NFP.h>
++#include <linux/mv_nfp.h>
++#include <net/netfilter/nf_nat.h>
++#include <net/netfilter/nf_conntrack.h>
++
++static unsigned int
++target(struct sk_buff *skb, const struct xt_action_param *param)
++{
++	struct nf_conntrack_tuple *tuple;
++	enum ip_conntrack_info ctinfo;
++	enum ip_conntrack_dir dir;
++	struct ipt_nfp_info *info;
++	struct nf_conn *ct;
++	unsigned long status;
++
++	ct = nf_ct_get(skb, &ctinfo);
++	info = (struct ipt_nfp_info *)param->targinfo;
++
++	if (!ct || !skb->dev)
++		return XT_CONTINUE;
++
++	dir = CTINFO2DIR(ctinfo);
++	tuple = &ct->tuplehash[dir].tuple;
++
++	if (tuple->info == NULL) {
++		tuple->info = kmalloc(sizeof(struct ipt_nfp_info), GFP_ATOMIC);
++		if (tuple->info == NULL) {
++			printk(KERN_ERR "%s: OOM\n", __func__);
++			return XT_CONTINUE;
++		}
++		memset(tuple->info, 0, sizeof(struct ipt_nfp_info));
++	}
++
++	nfp_update_tuple_info(tuple->info, info);
++	tuple->nfpCapable = true;
++	tuple->ifindex = skb->dev->ifindex;
++
++	if ((!nfp_mgr_p->nfp_ct_is_learning_enabled) || (!nfp_mgr_p->nfp_is_learning_enabled))
++		return XT_CONTINUE;
++	if (!nfp_mgr_p->nfp_ct_is_learning_enabled() || !nfp_mgr_p->nfp_is_learning_enabled())
++		return XT_CONTINUE;
++
++	/* NFP handles TCP or UDP packets only */
++	if (tuple->dst.protonum != IPPROTO_TCP &&
++	    tuple->dst.protonum != IPPROTO_UDP)
++		return XT_CONTINUE;
++
++	/* If packet should be dropped, no need for further checks */
++	if (tuple->info->mode == IPT_NFP_DROP) {
++		tuple->nfp = true;
++		if (nfp_mgr_p->nfp_hook_ct_fwd_add)
++			nfp_mgr_p->nfp_hook_ct_fwd_add(tuple, 0);
++		return NF_DROP;
++	}
++
++	/* do not handle IP_CT_RELATED connections to avoid ICMP error messages */
++	if ((ctinfo == IP_CT_RELATED) || (ctinfo == IP_CT_RELATED + IP_CT_IS_REPLY))
++		return XT_CONTINUE;
++
++	/* NFP handles established or reply TCP connections */
++	if (tuple->dst.protonum == IPPROTO_TCP) {
++		if ((ctinfo != IP_CT_ESTABLISHED) && (ctinfo != (IP_CT_ESTABLISHED + IP_CT_IS_REPLY)))
++			return XT_CONTINUE;
++
++	    if (ct->proto.tcp.state != TCP_CONNTRACK_ESTABLISHED)
++			return XT_CONTINUE;
++	}
++
++	/* Make sure connection is confirmed so we have all relevant NAT information */
++	if (!(ct->status & IPS_CONFIRMED))
++		return XT_CONTINUE;
++
++	/* We've already handled IPT_NFP_DROP, so continue handling only if mode is IPT_NFP_FWD */
++	if (tuple->info->mode != IPT_NFP_FWD)
++		return XT_CONTINUE;
++
++	tuple->nfp = true;
++	status = ct->status;
++
++	if (status & IPS_NAT_MASK) {
++		tuple->nfp = false;
++		return XT_CONTINUE;
++	}
++	if (nfp_mgr_p->nfp_hook_ct_fwd_add)
++		nfp_mgr_p->nfp_hook_ct_fwd_add(tuple, 1);
++	return NF_ACCEPT;
++}
++
++
++static int check(const struct xt_tgchk_param *par)
++{
++	struct ipt_nfp_info *info = par->targinfo;
++
++	info->entry = (struct ipt_entry *)par->entryinfo;
++
++	return 0;
++}
++
++static struct xt_target xt_nfp6_target[] = {
++	{
++		.name		= "NFP",
++		.family		= AF_INET6,
++		.checkentry	= check,
++		.target		= target,
++		.hooks		= (1 << NF_INET_FORWARD),
++		.targetsize	= XT_ALIGN(sizeof(struct ipt_nfp_info)),
++		.me		= THIS_MODULE,
++	},
++};
++
++static int __init xt_nfp6_init(void)
++{
++	need_conntrack();
++	return xt_register_targets(xt_nfp6_target,
++				   ARRAY_SIZE(xt_nfp6_target));
++}
++
++static void __exit xt_nfp6_fini(void)
++{
++	xt_unregister_targets(xt_nfp6_target,
++			      ARRAY_SIZE(xt_nfp6_target));
++}
++
++module_init(xt_nfp6_init);
++module_exit(xt_nfp6_fini);
+diff --git a/net/ipv6/route.c b/net/ipv6/route.c
+index 532c4d7..a518fc7 100644
+--- a/net/ipv6/route.c
++++ b/net/ipv6/route.c
+@@ -251,9 +251,9 @@ static inline struct rt6_info *ip6_dst_alloc(struct dst_ops *ops,
+ 		memset(&rt->rt6i_table, 0,
+ 			sizeof(*rt) - sizeof(struct dst_entry));
+ 
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	rt->nfp = false;
+-#endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 
+ 	return rt;
+ }
+@@ -835,13 +835,13 @@ restart:
+ 
+ 	dst_hold(&rt->dst);
+ 	if (nrt) {
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 			if ((rt->rt6i_flags & RTF_CACHE)) {
+ 				ipv6_addr_copy(&rt->rt6i_src.addr, &fl6->saddr);
+ 				rt->rt6i_src.plen = 128;
+ 				rt->rt6i_iifindex = fl6->flowi6_iif;
+ 			}
+-#endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 
+ 		err = ip6_ins_rt(nrt);
+ 		if (!err)
+diff --git a/net/netfilter/nf_conntrack_core.c b/net/netfilter/nf_conntrack_core.c
+index ce06147..d45357e 100644
+--- a/net/netfilter/nf_conntrack_core.c
++++ b/net/netfilter/nf_conntrack_core.c
+@@ -307,7 +307,7 @@ static void death_by_timeout(unsigned long ul_conntrack)
+ 	struct nf_conn *ct = (void *)ul_conntrack;
+ 	struct nf_conn_tstamp *tstamp;
+ 
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	struct nf_conntrack_tuple *t0 = &ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple;
+ 	struct nf_conntrack_tuple *t1 = &ct->tuplehash[IP_CT_DIR_REPLY].tuple;
+ 	int confirmed_org = 0, confirmed_reply = 0;
+@@ -388,7 +388,7 @@ static void death_by_timeout(unsigned long ul_conntrack)
+ 					ntohs(t1->dst.u.all),
+ 					t1->dst.protonum);
+ 	}
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 
+ 	tstamp = nf_conn_tstamp_find(ct);
+ 	if (tstamp && tstamp->stop == 0)
+@@ -796,7 +796,7 @@ __nf_conntrack_alloc(struct net *net, u16 zone,
+ 	}
+ #endif
+ 
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple.nfp = false;
+ 	ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple.ifindex = -1;
+ 	ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple.nfpCapable = false;
+@@ -806,7 +806,7 @@ __nf_conntrack_alloc(struct net *net, u16 zone,
+ 	ct->tuplehash[IP_CT_DIR_REPLY].tuple.ifindex = -1;
+ 	ct->tuplehash[IP_CT_DIR_REPLY].tuple.nfpCapable = false;
+ 	ct->tuplehash[IP_CT_DIR_REPLY].tuple.info = NULL;
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 
+ 	/*
+ 	 * changes to lookup keys must be done before setting refcnt to 1
+@@ -835,13 +835,13 @@ void nf_conntrack_free(struct nf_conn *ct)
+ {
+ 	struct net *net = nf_ct_net(ct);
+ 
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	if (ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple.info)
+ 		kfree(ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple.info);
+ 
+ 	if (ct->tuplehash[IP_CT_DIR_REPLY].tuple.info)
+ 		kfree(ct->tuplehash[IP_CT_DIR_REPLY].tuple.info);
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 
+ 	nf_ct_ext_destroy(ct);
+ 	atomic_dec(&net->ct.count);
+@@ -1544,7 +1544,7 @@ void nf_ct_untracked_status_or(unsigned long bits)
+ }
+ EXPORT_SYMBOL_GPL(nf_ct_untracked_status_or);
+ 
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ void nfp_ct_sync(int family)
+ {
+ 	struct nf_conntrack_tuple_hash *h;
+@@ -1585,8 +1585,7 @@ void nfp_ct_sync(int family)
+ 
+ 			status = ct->status;
+ 
+-#ifdef CONFIG_MV_ETH_NFP_NAT
+-			if (status & IPS_NAT_MASK) {
++			if ((status & IPS_NAT_MASK) && nfp_mgr_p->nfp_hook_ct_nat_add) {
+ 				/* NFP NAT is supported only in IPv4 */
+ 				if (tuple->src.l3num == AF_INET) {
+ 					/* status says if the original direction requires SNAT or DNAT (or both) */
+@@ -1598,17 +1597,13 @@ void nfp_ct_sync(int family)
+ 					nf_ct_invert_tuplepr(&target_tuple, &ct->tuplehash[!dir].tuple);
+ 
+ 					if ((status & IPS_NAT_MASK) == IPS_DST_NAT) {
+-						if (nfp_mgr_p->nfp_hook_ct_nat_add)
+-							nfp_mgr_p->nfp_hook_ct_nat_add(tuple, &target_tuple, IP_NAT_MANIP_DST);
++						nfp_mgr_p->nfp_hook_ct_nat_add(tuple, &target_tuple, IP_NAT_MANIP_DST);
+ 					} else if ((status & IPS_NAT_MASK) == IPS_SRC_NAT) {
+-						if (nfp_mgr_p->nfp_hook_ct_nat_add)
+-							nfp_mgr_p->nfp_hook_ct_nat_add(tuple, &target_tuple, IP_NAT_MANIP_SRC);
++						nfp_mgr_p->nfp_hook_ct_nat_add(tuple, &target_tuple, IP_NAT_MANIP_SRC);
+ 					} else {
+-						if (nfp_mgr_p->nfp_hook_ct_nat_add)
+-							nfp_mgr_p->nfp_hook_ct_nat_add(tuple, &target_tuple, IP_NAT_MANIP_DST);
+-							nfp_mgr_p->nfp_hook_ct_nat_add(tuple, &target_tuple, IP_NAT_MANIP_SRC);
++						nfp_mgr_p->nfp_hook_ct_nat_add(tuple, &target_tuple, IP_NAT_MANIP_DST);
++						nfp_mgr_p->nfp_hook_ct_nat_add(tuple, &target_tuple, IP_NAT_MANIP_SRC);
+ 					}
+-
+ 					continue;
+ 				} else {
+ 					/* NFP does not support NAT for IPv6, so nothing to do with this tuple */
+@@ -1616,17 +1611,15 @@ void nfp_ct_sync(int family)
+ 					continue;
+ 				}
+ 			}
+-#endif /* CONFIG_MV_ETH_NFP_NAT */
+ 			/* If we got till here, it must be IPT_NFP_FWD */
+ 			if (nfp_mgr_p->nfp_hook_ct_fwd_add)
+ 				nfp_mgr_p->nfp_hook_ct_fwd_add(tuple, 1);
+ 		}
+ 	}
+-
+ 	spin_unlock_bh(&nf_conntrack_lock);
+ }
+ EXPORT_SYMBOL(nfp_ct_sync);
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 
+ static int nf_conntrack_init_init_net(void)
+ {
+diff --git a/net/netfilter/nf_conntrack_proto_tcp.c b/net/netfilter/nf_conntrack_proto_tcp.c
+index 1f3ba7d..051e6da 100644
+--- a/net/netfilter/nf_conntrack_proto_tcp.c
++++ b/net/netfilter/nf_conntrack_proto_tcp.c
+@@ -821,9 +821,6 @@ static int tcp_packet(struct nf_conn *ct,
+ {
+ 	struct net *net = nf_ct_net(ct);
+ 	struct nf_conntrack_tuple *tuple;
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+-	struct nf_conntrack_tuple *tupleInverseDir;
+-#endif
+ 	enum tcp_conntrack new_state, old_state;
+ 	enum ip_conntrack_dir dir;
+ 	const struct tcphdr *th;
+@@ -840,9 +837,7 @@ static int tcp_packet(struct nf_conn *ct,
+ 	index = get_conntrack_index(th);
+ 	new_state = tcp_conntracks[dir][index][old_state];
+ 	tuple = &ct->tuplehash[dir].tuple;
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+-	tupleInverseDir	= &ct->tuplehash[!dir].tuple;
+-#endif
++
+ 	switch (new_state) {
+ 	case TCP_CONNTRACK_SYN_SENT:
+ 		if (old_state < TCP_CONNTRACK_TIME_WAIT)
+@@ -994,14 +989,19 @@ static int tcp_packet(struct nf_conn *ct,
+ 		break;
+ 	}
+ 
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	/*
+ 	 * When connection is handled by NFP, we have to relax TCP tracking
+ 	 * rules as not all packets goes through Linux conntrack.
+ 	 */
+-	if ((tuple->nfp) || (tupleInverseDir->nfp))
+-		goto in_window;
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++	{
++		struct nf_conntrack_tuple *tupleInverseDir;
++
++		tupleInverseDir	= &ct->tuplehash[!dir].tuple;
++		if ((tuple->nfp) || (tupleInverseDir->nfp))
++			goto in_window;
++	}
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 
+ 	if (!tcp_in_window(ct, &ct->proto.tcp, dir, index,
+ 			   skb, dataoff, th, pf)) {
+diff --git a/net/netfilter/nf_conntrack_standalone.c b/net/netfilter/nf_conntrack_standalone.c
+index 4f4c9d1..c95fc7c 100644
+--- a/net/netfilter/nf_conntrack_standalone.c
++++ b/net/netfilter/nf_conntrack_standalone.c
+@@ -251,7 +251,7 @@ static int ct_seq_show(struct seq_file *s, void *v)
+ 		goto release;
+ #endif
+ 
+-#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
++#if defined(CONFIG_MV_ETH_NFP_HOOKS)
+ 	if ((ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple.nfp) && (ct->tuplehash[IP_CT_DIR_REPLY].tuple.nfp)) {
+ 		if (seq_printf(s, "[NFP (both)] "))
+ 			goto release;
+@@ -262,7 +262,7 @@ static int ct_seq_show(struct seq_file *s, void *v)
+ 		if (seq_printf(s, "[NFP (reply)] "))
+ 			goto release;
+ 	}
+-#endif /* CONFIG_MV_ETH_NFP_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_HOOKS */
+ 
+ 	if (seq_printf(s, "use=%u\n", atomic_read(&ct->ct_general.use)))
+ 		goto release;
+-- 
+1.7.9.5
+

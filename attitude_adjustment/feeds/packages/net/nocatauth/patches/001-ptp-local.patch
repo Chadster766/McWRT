@@ -1,0 +1,56 @@
+diff -ru NoCatAuth-nightly/bin/detect-fw.sh NoCatAuth-patched/bin/detect-fw.sh
+--- NoCatAuth-nightly/bin/detect-fw.sh	2002-08-08 23:28:43.000000000 -0700
++++ NoCatAuth-patched/bin/detect-fw.sh	2009-03-18 15:03:00.000000000 -0700
+@@ -9,8 +9,7 @@
+ 
+ # Do we have iptables *and* are running Linux 2.4?
+ #
+-elif which iptables >/dev/null 2>&1 && \
+-  test X"`uname -sr | cut -d. -f-2`" = X"Linux 2.4"; then
++elif which iptables >/dev/null 2>&1 ; then
+     FIREWALL=iptables
+     FW_BIN=iptables
+ 
+diff -ru NoCatAuth-nightly/bin/gateway NoCatAuth-patched/bin/gateway
+--- NoCatAuth-nightly/bin/gateway	2003-03-07 17:56:51.000000000 -0800
++++ NoCatAuth-patched/bin/gateway	2009-03-19 00:24:05.000000000 -0700
+@@ -7,6 +7,7 @@
+ use lib "$FindBin::Bin/../lib";
+ use NoCat;
+ use strict;
++use sigtrap qw(stack-trace untrapped error-signals);
+ 
+ # Gracefully handle termination signals.
+ $SIG{INT} = sub { exit };
+diff -ru NoCatAuth-nightly/lib/NoCat/Gateway.pm NoCatAuth-patched/lib/NoCat/Gateway.pm
+--- NoCatAuth-nightly/lib/NoCat/Gateway.pm	2003-07-30 22:22:22.000000000 -0700
++++ NoCatAuth-patched/lib/NoCat/Gateway.pm	2009-03-19 00:22:09.000000000 -0700
+@@ -90,13 +90,12 @@
+ 
+ sub run {
+     my $self	= shift;
+-    my $kids	= 0;
+     my $hup = 0;
+     
+     return unless $self->bind_socket;
+ 
+     local $SIG{PIPE} = "IGNORE"; 
+-    local $SIG{CHLD} = sub { $kids++ };
++    local $SIG{CHLD} = "IGNORE";
+     local $SIG{HUP} = sub { $hup++ };
+ 
+     # Reset history.
+@@ -134,13 +133,6 @@
+             $self->log( 6, "HUP received, resetting log file." );
+             $hup = 0;
+         }
+-
+-	# See if any kids have expired, reap zombies
+-	if ( $kids ) {
+-	    1 until ( wait == -1 );
+-	    $kids = 0;
+-	}
+-
+     } # loop forever
+ }
+ 

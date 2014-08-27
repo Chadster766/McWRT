@@ -1,0 +1,40 @@
+From db733223cdc31b2276f77d176d4dfbc5967f9d9d Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Tue, 2 Apr 2013 15:58:08 +0300
+Subject: [PATCH 582/609] MTD, UBI: Fix ubi_init error, during boot from UBI
+ NAND
+
+Error was due to initialization UBI before NAND. This led to error during boot
+from an UBI volume on NAND device. The initialization order is determined by
+the order of linking modules into kernel. The NAND module is placed in
+arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/, so NAND is now linked before UBI.
+
+Bug fix - BTS #271 'UBIFS is configured in a wrong place'
+
+Change-Id: Ib2ec42f05f011f3dc812e06cddbbb6f208b71e06
+Signed-off-by: Grzegorz Jaszczyk <jaz@semihalf.com>
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1406
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ drivers/mtd/Makefile |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/mtd/Makefile b/drivers/mtd/Makefile
+index c108a94..dd6bac4 100644
+--- a/drivers/mtd/Makefile
++++ b/drivers/mtd/Makefile
+@@ -32,8 +32,8 @@ inftl-objs		:= inftlcore.o inftlmount.o
+ 
+ obj-y		+= chips/ lpddr/ maps/ devices/ nand/ onenand/ tests/
+ 
+-obj-$(CONFIG_MTD_UBI)		+= ubi/
+-
+ ifeq ($(CONFIG_PLAT_ARMADA),y)
+ obj-$(CONFIG_MTD)              += ../../arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/
+ endif
++
++obj-$(CONFIG_MTD_UBI)		+= ubi/
+-- 
+1.7.9.5
+

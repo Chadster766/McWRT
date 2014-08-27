@@ -1,0 +1,42 @@
+## Do several path fixups, removing unneeded @prefix@s
+--- a/tools/stunnel.conf-sample.in
++++ b/tools/stunnel.conf-sample.in
+@@ -4,15 +4,15 @@
+ ; please read the manual and make sure you understand them
+ 
+ ; certificate/key is needed in server mode and optional in client mode
+-cert = @prefix@/etc/stunnel/mail.pem
+-;key = @prefix@/etc/stunnel/mail.pem
++cert = @sysconfdir@/stunnel/stunnel.pem
++;key = @sysconfdir@/stunnel/stunnel.pem
+ 
+ ; protocol version (all, SSLv2, SSLv3, TLSv1)
+ sslVersion = SSLv3
+ 
+ ; security enhancements for UNIX systems - comment them out on Win32
+ ; for chroot a copy of some devices and files is needed within the jail
+-chroot = @prefix@/var/lib/stunnel/
++chroot = @localstatedir@
+ setuid = nobody
+ setgid = @DEFAULT_GROUP@
+ ; PID is created inside the chroot jail
+@@ -33,16 +33,16 @@ socket = r:TCP_NODELAY=1
+ ; CApath is located inside chroot jail
+ ;CApath = /certs
+ ; it's often easier to use CAfile
+-;CAfile = @prefix@/etc/stunnel/certs.pem
++;CAfile = @sysconfdir@/stunnel/certs.pem
+ ; don't forget to c_rehash CRLpath
+ ; CRLpath is located inside chroot jail
+ ;CRLpath = /crls
+ ; alternatively CRLfile can be used
+-;CRLfile = @prefix@/etc/stunnel/crls.pem
++;CRLfile = @sysconfdir@/stunnel/crls.pem
+ 
+ ; debugging stuff (may useful for troubleshooting)
+ ;debug = 7
+-;output = stunnel.log
++;output = @localstatedir@/log/stunnel.log
+ 
+ ; SSL client mode
+ ;client = yes

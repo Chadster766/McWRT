@@ -1,0 +1,1244 @@
+Source-Makefile: package/mac80211/Makefile
+Package: kmod-adm8211
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @PCI_SUPPORT +kmod-mac80211 +kmod-eeprom-93cx6
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: ADMTek 8211 support
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: ADMTek 8211 support
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-ath5k
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @PCI_SUPPORT||@TARGET_atheros +kmod-ath
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Atheros 5xxx wireless cards support
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description:  This module adds support for wireless adapters based on
+ Atheros 5xxx chipset.
+http://linuxwireless.org/en/users/Drivers/ath5k
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-lib80211
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN)
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: 802.11 Networking stack
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description:  Kernel modules for 802.11 Networking stack
+ Includes:
+ - lib80211
+ - lib80211_crypt_wep
+ - lib80211_crypt_tkip
+ - lib80211_crytp_ccmp
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-libertas-usb
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @USB_SUPPORT +kmod-cfg80211 +kmod-usb-core +kmod-lib80211 +@DRIVER_WEXT_SUPPORT
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Marvell 88W8015 Wireless Driver
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: Marvell 88W8015 Wireless Driver
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-libertas-sd
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) +kmod-cfg80211 +kmod-lib80211 +kmod-mmc +@DRIVER_WEXT_SUPPORT
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Marvell 88W8686 Wireless Driver
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: Marvell 88W8686 Wireless Driver
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-cfg80211
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) +iw
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: cfg80211 - wireless configuration API
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: cfg80211 is the Linux wireless LAN (802.11) configuration API.
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-mac80211
+Menu: 1
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) +kmod-crypto-core +kmod-crypto-arc4 +kmod-crypto-aes +kmod-cfg80211
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Linux 802.11 Wireless Networking Stack
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Kernel-Config: CONFIG_AVERAGE=y
+Description: Generic IEEE 802.11 Networking Stack (mac80211)
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+Config:
+  if PACKAGE_kmod-mac80211
+
+	config PACKAGE_MAC80211_DEBUGFS
+		bool "Export mac80211 internals in DebugFS"
+		select KERNEL_DEBUG_FS
+		select KERNEL_RELAY if PACKAGE_kmod-ath9k-common
+		default y
+		help
+		  Select this to see extensive information about
+		  the internal state of mac80211 in debugfs.
+
+	config PACKAGE_MAC80211_MESH
+		bool "Enable 802.11s mesh support"
+		default y
+
+  endif
+@@
+
+Package: kmod-p54-common
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @PCI_SUPPORT||@USB_SUPPORT||@TARGET_omap24xx +kmod-mac80211 +kmod-lib-crc-ccitt
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Prism54 Drivers (COMMON)
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: Prism54 Drivers (COMMON)
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-p54-pci
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @PCI_SUPPORT +kmod-p54-common
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Prism54 Drivers (PCI)
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: Prism54 Drivers (PCI)
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-p54-usb
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @USB_SUPPORT +kmod-usb-core +kmod-p54-common
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Prism54 Drivers (USB)
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: Prism54 Drivers (USB)
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-p54-spi
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @TARGET_omap24xx +kmod-p54-common
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Prism54 Drivers (SPI)
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: Prism54 Drivers (SPI)
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-rt2x00-lib
+Menu: 1
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @(PCI_SUPPORT||USB_SUPPORT||TARGET_ramips) +kmod-mac80211 +kmod-lib-crc-itu-t
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Ralink Drivers for RT2x00 cards (LIB)
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: Ralink Drivers for RT2x00 cards (LIB)
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+Config:
+  if PACKAGE_kmod-rt2x00-lib
+
+	config PACKAGE_RT2X00_LIB_DEBUGFS
+		bool "Enable rt2x00 debugfs support"
+		depends on PACKAGE_MAC80211_DEBUGFS
+		help
+		  Enable creation of debugfs files for the rt2x00 drivers.
+		  These debugfs files support both reading and writing of the
+		  most important register types of the rt2x00 hardware.
+
+	config PACKAGE_RT2X00_DEBUG
+		bool "Enable rt2x00 debug output"
+		help
+		  Enable debugging output for all rt2x00 modules
+
+  endif
+@@
+
+Package: kmod-rt2x00-mmio
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @(PCI_SUPPORT||TARGET_ramips) +kmod-rt2x00-lib +kmod-eeprom-93cx6
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Ralink Drivers for RT2x00 cards (MMIO)
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: Ralink Drivers for RT2x00 cards (MMIO)
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-rt2x00-pci
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @PCI_SUPPORT +kmod-rt2x00-mmio +kmod-rt2x00-lib
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Ralink Drivers for RT2x00 cards (PCI)
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: Ralink Drivers for RT2x00 cards (PCI)
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-rt2x00-usb
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @USB_SUPPORT +kmod-rt2x00-lib +kmod-usb-core
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Ralink Drivers for RT2x00 cards (USB)
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: Ralink Drivers for RT2x00 cards (USB)
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-rt2x00-soc
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @TARGET_ramips @!TARGET_ramips_mt7620a @!TARGET_ramips_rt3883 +kmod-rt2x00-mmio +kmod-rt2x00-lib
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Ralink Drivers for RT2x00 cards (SoC)
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: Ralink Drivers for RT2x00 cards (SoC)
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-rt2800-lib
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @(PCI_SUPPORT||USB_SUPPORT||TARGET_ramips) +kmod-rt2x00-lib +TARGET_ramips:kmod-rt2x00-soc +@DRIVER_11N_SUPPORT
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Ralink Drivers for RT2x00 cards (rt2800 LIB)
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: Ralink Drivers for RT2x00 cards (rt2800 LIB)
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-rt2400-pci
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @PCI_SUPPORT +kmod-rt2x00-pci
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Ralink Drivers for RT2x00 cards (RT2400 PCI)
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: Ralink Drivers for RT2x00 cards (RT2400 PCI)
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-rt2500-pci
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @PCI_SUPPORT +kmod-rt2x00-pci
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Ralink Drivers for RT2x00 cards (RT2500 PCI)
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: Ralink Drivers for RT2x00 cards (RT2500 PCI)
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-rt2500-usb
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @USB_SUPPORT +kmod-rt2x00-usb
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Ralink Drivers for RT2x00 cards (RT2500 USB)
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: Ralink Drivers for RT2x00 cards (RT2500 USB)
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-rt61-pci
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @PCI_SUPPORT +kmod-rt2x00-pci
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Ralink Drivers for RT2x00 cards (RT2x61 PCI)
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: Ralink Drivers for RT2x00 cards (RT2x61 PCI)
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-rt73-usb
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @USB_SUPPORT +kmod-rt2x00-usb
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Ralink Drivers for RT2x00 cards (RT73 USB)
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: Ralink Drivers for RT2x00 cards (RT73 USB)
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-rt2800-pci
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @(PCI_SUPPORT||TARGET_ramips) +PCI_SUPPORT:kmod-rt2x00-pci +kmod-rt2800-lib +kmod-lib-crc-ccitt +TARGET_ramips:kmod-rt2x00-soc
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Ralink Drivers for RT2x00 cards (RT2860 PCI)
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: Ralink Drivers for RT2x00 cards (RT2860 PCI)
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-rt2800-usb
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @USB_SUPPORT +kmod-rt2x00-usb +kmod-rt2800-lib +kmod-lib-crc-ccitt
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Ralink Drivers for RT2x00 cards (RT2870 USB)
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: Ralink Drivers for RT2x00 cards (RT2870 USB)
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-rtl8180
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) +kmod-eeprom-93cx6 +kmod-mac80211 @PCI_SUPPORT
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Realtek Drivers for RTL818x devices (RTL8180 PCI)
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: Realtek Drivers for RTL818x devices (RTL8180 PCI)
+http://wireless.kernel.org/en/users/Drivers/rtl8187
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-rtl8187
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) +kmod-eeprom-93cx6 +kmod-mac80211 @USB_SUPPORT +kmod-usb-core
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Realtek Drivers for RTL818x devices (RTL8187 USB)
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: Realtek Drivers for RTL818x devices (RTL8187 USB)
+http://wireless.kernel.org/en/users/Drivers/rtl8187
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-zd1211rw
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @USB_SUPPORT +kmod-usb-core +kmod-mac80211
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Zydas ZD1211 support
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: Zydas ZD1211 support
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-mac80211-hwsim
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) +kmod-mac80211
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: mac80211 HW simulation device
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: mac80211 HW simulation device
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-ath9k-common
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @PCI_SUPPORT||USB_SUPPORT||TARGET_ar71xx +kmod-ath +@DRIVER_11N_SUPPORT
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Atheros 802.11n wireless devices (common code for ath9k and ath9k_htc)
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: Atheros 802.11n wireless devices (common code for ath9k and ath9k_htc)
+http://linuxwireless.org/en/users/Drivers/ath9k
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-ath9k
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @PCI_SUPPORT||TARGET_ar71xx +kmod-ath9k-common
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Atheros 802.11n PCI wireless cards support
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: This module adds support for wireless adapters based on
+Atheros IEEE 802.11n AR5008 and AR9001 family of chipsets.
+http://linuxwireless.org/en/users/Drivers/ath9k
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-ath9k-htc
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @USB_SUPPORT +kmod-ath9k-common +kmod-usb-core
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Atheros 802.11n USB device support
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: This module adds support for wireless adapters based on
+Atheros USB AR9271 and AR7010 family of chipsets.
+http://linuxwireless.org/en/users/Drivers/ath9k
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-ath
+Menu: 1
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @PCI_SUPPORT||USB_SUPPORT||TARGET_ar71xx||TARGET_atheros +kmod-mac80211
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Atheros common driver part
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description:  This module contains some common parts needed by Atheros Wireless drivers.
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+Config:
+  if PACKAGE_kmod-ath
+	config ATH_USER_REGD
+		bool "Force Atheros drivers to respect the user's regdomain settings"
+		help
+		  Atheros' idea of regulatory handling is that the EEPROM of the card defines
+		  the regulatory limits and the user is only allowed to restrict the settings
+		  even further, even if the country allows frequencies or power levels that
+		  are forbidden by the EEPROM settings.
+
+		  Select this option if you want the driver to respect the user's decision about
+		  regulatory settings.
+
+	config PACKAGE_ATH_DEBUG
+		bool "Atheros wireless debugging"
+		help
+		  Say Y, if you want to debug atheros wireless drivers.
+		  Right now only ath9k makes use of this.
+  endif
+@@
+
+Package: kmod-carl9170
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @USB_SUPPORT +kmod-mac80211 +kmod-ath +kmod-usb-core +kmod-input-core +@DRIVER_11N_SUPPORT
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Driver for Atheros AR9170 USB sticks
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description: Driver for Atheros AR9170 USB sticks
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-b43
+Menu: 1
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) +kmod-mac80211 +!TARGET_brcm47xx:kmod-bcma +!(TARGET_brcm47xx||TARGET_brcm63xx):kmod-ssb
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Broadcom 43xx wireless support
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Kernel-Config: CONFIG_HW_RANDOM=y
+Description: Kernel module for Broadcom 43xx wireless support (mac80211 stack) new
+http://linuxwireless.org/en/users/Drivers/b43
+Felix Fietkau <nbd@openwrt.org>
+@@
+Config:
+  if PACKAGE_kmod-b43
+
+	choice
+		prompt "b43 firmware version"
+		default B43_FW_5_100_138
+		help
+		  This option allows you to select the version of the b43 firmware.
+
+	config B43_FW_4_150
+		bool "Firmware 410.2160 from driver 4.150.10.5 (old stable)"
+		help
+		  Stable firmware for BCM43xx devices.
+
+		  If unsure, select this.
+
+	config B43_FW_4_178
+		bool "Firmware 478.104 from driver 4.178.10.4"
+		help
+		  Experimental firmware for BCM43xx devices.
+
+		  This firmware is not tested as much as the "stable" firmware.
+
+		  If unsure, select the "stable" firmware.
+
+	config B43_FW_5_10
+		bool "Firmware 508.1084 from driver 5.10.56.27"
+		help
+		  Newer experimental firmware for BCM43xx devices.
+
+		  This firmware is mostly untested. It is needed for some N-PHY devices.
+
+		  If unsure, select the "stable" firmware.
+
+	config B43_FW_5_100_138
+		bool "Firmware 666.2 from driver 5.100.138 (stable)"
+		help
+		  Newer experimental firmware for BCM43xx devices.
+
+		  This firmware is mostly untested. It is needed for some N-PHY devices.
+
+		  If unsure, select the "stable" firmware.
+
+	config B43_OPENFIRMWARE
+		bool "Open FirmWare for WiFi networks"
+		help
+		  Opensource firmware for BCM43xx devices.
+
+		  Do _not_ select this, unless you know what you are doing.
+		  The Opensource firmware is not suitable for embedded devices, yet.
+		  It does not support QoS, which is bad for AccessPoints.
+		  It does not support hardware crypto acceleration, which is a showstopper
+		  for embedded devices with low CPU resources.
+
+		  If unsure, select the "stable" firmware.
+
+	endchoice
+
+	config B43_FW_SQUASH
+		bool "Remove unnecessary firmware files"
+		depends on !B43_OPENFIRMWARE
+		default y
+		help
+		  This options allows you to remove unnecessary b43 firmware files
+		  from the final rootfs image. This can reduce the rootfs size by
+		  up to 200k.
+
+		  If unsure, say Y.
+
+	config B43_FW_SQUASH_COREREVS
+		string "Core revisions to include"
+		depends on B43_FW_SQUASH
+		default "5,6,7,8,9,10,11,13,15,16,29"
+		help
+		  This is a comma seperated list of core revision numbers.
+
+		  Example (keep files for rev5 only):
+		    5
+
+		  Example (keep files for rev5 and rev11):
+		    5,11
+
+	config B43_FW_SQUASH_PHYTYPES
+		string "PHY types to include"
+		depends on B43_FW_SQUASH
+		default "G,LP,N,HT"
+		help
+		  This is a comma seperated list of PHY types:
+		    A  => A-PHY
+		    AG => Dual A-PHY G-PHY
+		    G  => G-PHY
+		    LP => LP-PHY
+		    N  => N-PHY
+		    HT  => HT-PHY
+		    LCN  => LCN-PHY
+
+		  Example (keep files for G-PHY only):
+		    G
+
+		  Example (keep files for G-PHY and N-PHY):
+		    G,N
+
+	config PACKAGE_B43_DEBUG
+		bool "Enable debug output and debugfs for b43"
+		default n
+		help
+		  Enable additional debug output and runtime sanity checks for b43
+		  and enables the debugfs interface.
+
+		  If unsure, say N.
+
+	config PACKAGE_B43_PIO
+		bool "Enable support for PIO transfer mode"
+		default n
+		help
+		  Enable support for using PIO instead of DMA. Unless you have DMA
+		  transfer problems you don't need this.
+
+		  If unsure, say N.
+
+	config PACKAGE_B43_PHY_N
+		bool "Enable support for N-PHYs"
+		default y
+		help
+		  Enable support for N-PHY. This includes support for the following devices:
+		  PCI: BCM4321, BCM4322, BCM43222, BCM43224, BCM43225
+		  SoC: BCM4716, BCM4717, BCM4718
+
+		  Currently only 11g speed is available.
+
+		  If unsure, say Y.
+
+	config PACKAGE_B43_PHY_HT
+		bool "Enable support for HT-PHYs"
+		default y
+		help
+		  Enable support for HT-PHY. This includes support for the following devices:
+		  PCI: BCM4331
+
+		  Currently only 11g speed is available.
+
+		  If unsure, say Y.
+
+	config PACKAGE_B43_PHY_LCN
+		bool "Enable support for LCN-PHYs"
+		depends on BROKEN
+		default n
+		help
+		  Currently broken.
+
+		  If unsure, say N.
+
+  endif
+@@
+
+Package: kmod-b43legacy
+Menu: 1
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) +kmod-mac80211 +!(TARGET_brcm47xx||TARGET_brcm63xx):kmod-ssb
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Broadcom 43xx-legacy wireless support
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Kernel-Config: CONFIG_HW_RANDOM=y
+Description: Kernel module for Broadcom 43xx-legacy wireless support (mac80211 stack) new
+http://linuxwireless.org/en/users/Drivers/b43
+Felix Fietkau <nbd@openwrt.org>
+@@
+Config:
+  if PACKAGE_kmod-b43legacy
+
+	config B43LEGACY_FW_SQUASH
+		bool "Remove unnecessary firmware files"
+		default y
+		help
+		  This options allows you to remove unnecessary b43legacy firmware files
+		  from the final rootfs image. This can reduce the rootfs size by
+		  up to 50k.
+
+		  If unsure, say Y.
+
+	config B43LEGACY_FW_SQUASH_COREREVS
+		string "Core revisions to include"
+		depends on B43LEGACY_FW_SQUASH
+		default "1,2,3,4"
+		help
+		  This is a comma seperated list of core revision numbers.
+
+		  Example (keep files for rev4 only):
+		    4
+
+		  Example (keep files for rev2 and rev4):
+		    2,4
+
+  endif
+@@
+
+Package: kmod-brcmutil
+Menu: 1
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @PCI_SUPPORT||USB_SUPPORT
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Broadcom IEEE802.11n common driver parts
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description:  This module contains some common parts needed by Broadcom Wireless drivers brcmsmac and brcmfmac.
+http://linuxwireless.org/en/users/Drivers/brcm80211
+Felix Fietkau <nbd@openwrt.org>
+@@
+Config:
+  if PACKAGE_kmod-brcmutil
+
+	config PACKAGE_BRCM80211_DEBUG
+		bool "Broadcom wireless driver debugging"
+		help
+		  Say Y, if you want to debug brcmsmac and brcmfmac wireless driver.
+
+  endif
+@@
+
+Package: kmod-brcmsmac
+Menu: 1
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) +kmod-mac80211 +@DRIVER_11N_SUPPORT +!TARGET_brcm47xx:kmod-bcma +kmod-lib-cordic +kmod-lib-crc8 +kmod-brcmutil
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Broadcom IEEE802.11n PCIe SoftMAC WLAN driver
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description:  Kernel module for Broadcom IEEE802.11n PCIe Wireless cards
+http://linuxwireless.org/en/users/Drivers/brcm80211
+Felix Fietkau <nbd@openwrt.org>
+@@
+Config:
+  if PACKAGE_kmod-brcmsmac
+
+	config BRCMSMAC_USE_FW_FROM_WL
+		bool "Use firmware extracted from broadcom proprietary driver"
+		default y
+		help
+		  Instead of using the official brcmsmac firmware a firmware
+		  version 666.2 extracted from the proprietary Broadcom driver
+		  is used. This is needed to get core rev 17 used in bcm4716
+		  to work.
+
+		  If unsure, say Y.
+
+  endif
+@@
+
+Package: kmod-brcmfmac
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @USB_SUPPORT +kmod-usb-core +kmod-cfg80211 +@DRIVER_11N_SUPPORT +kmod-brcmutil
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Broadcom IEEE802.11n USB FullMAC WLAN driver
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description:  Kernel module for Broadcom IEEE802.11n USB Wireless cards
+http://linuxwireless.org/en/users/Drivers/brcm80211
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-net-libipw
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @PCI_SUPPORT +kmod-crypto-core +kmod-crypto-arc4 +kmod-crypto-aes +kmod-crypto-michael-mic +kmod-lib80211 +kmod-cfg80211 +@DRIVER_WEXT_SUPPORT
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: libipw for ipw2100 and ipw2200
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description:  Hardware independent IEEE 802.11 networking stack for ipw2100 and ipw2200.
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-net-ipw2100
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @PCI_SUPPORT +kmod-net-libipw
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Intel IPW2100 driver
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description:  Kernel support for Intel IPW2100
+ Includes:
+ - ipw2100
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-net-ipw2200
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @PCI_SUPPORT +kmod-net-libipw
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Intel IPW2200 driver
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description:  Kernel support for Intel IPW2200
+ Includes:
+ - ipw2200
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-iwlagn
+Menu: 1
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: +kmod-mac80211 @PCI_SUPPORT +@DRIVER_11N_SUPPORT
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Intel AGN Wireless support
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description:  iwlagn kernel module for Intel 5000/5150/1000/6000/6050/6005/6030/100 support
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+Config:
+  if PACKAGE_kmod-iwlagn
+
+	config IWL5000_FW
+		bool "Intel 5000 Firmware"
+		default y
+		help
+		  Download and install firmware for:
+		    Intel Wireless WiFi 5100AGN, 5300AGN, and 5350AGN
+
+	config IWL5150_FW
+		bool "Intel 5150 Firmware"
+		default y
+		help
+		  Download and install firmware for:
+		    Intel Wireless WiFi 5150AGN
+
+	config IWL1000_FW
+		bool "Intel 1000 Firmware"
+		default y
+		help
+		  Download and install firmware for:
+		    Intel Centrino Wireless-N 1000
+
+	config IWL6000_FW
+		bool "Intel 6000 Firmware"
+		default y
+		help
+		  Download and install firmware for:
+		    Intel Centrino Ultimate-N 6300 and Advanced-N 6200
+
+	config IWL6050_FW
+		bool "Intel 6050 Firmware"
+		default y
+		help
+		  Download and install firmware for:
+		    Intel Centrino Advanced-N + WiMAX 6250 and Wireless-N + WiMAX 6150
+
+	config IWL6005_FW
+		bool "Intel 6005 Firmware"
+		default y
+		help
+		  Download and install firmware for:
+		    Intel Centrino Advanced-N 6205
+
+	config IWL6030_FW
+		bool "Intel 6030 Firmware"
+		default y
+		help
+		  Download and install firmware for:
+		    Intel Centrino Advanced-N 6230, Wireless-N 1030, Wireless-N 130 and Advanced-N 6235
+
+	config IWL100_FW
+		bool "Intel 100 Firmware"
+		default y
+		help
+		  Download and install firmware for:
+		    Intel Centrino Wireless-N 100
+
+	config IWL2000_FW
+		bool "Intel 2000 Firmware"
+		default y
+		help
+		  Download and install firmware for:
+		    Intel Centrino Wireless-N 2200
+
+	config IWL2030_FW
+		bool "Intel 2030 Firmware"
+		default y
+		help
+		  Download and install firmware for:
+		    Intel Centrino Wireless-N 2230
+
+	config IWL105_FW
+		bool "Intel 105 Firmware"
+		default y
+		help
+		  Download and install firmware for:
+		    Intel Centrino Wireless-N 105
+
+	config IWL135_FW
+		bool "Intel 135 Firmware"
+		default y
+		help
+		  Download and install firmware for:
+		    Intel Centrino Wireless-N 135
+  endif
+@@
+
+Package: kmod-iwl-legacy
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: +kmod-mac80211 @PCI_SUPPORT
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Intel legacy Wireless support
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description:  iwl-legacy kernel module for legacy Intel wireless support
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-iwl4965
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: +kmod-mac80211 +kmod-iwl-legacy +@DRIVER_11N_SUPPORT
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Intel iwl4965 Wireless support
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description:  iwl4965 kernel module for Intel 4965 support
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-iwl3945
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: +kmod-mac80211 +kmod-iwl-legacy
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Intel iwl3945 Wireless support
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description:  iwl3945 kernel module for Intel 3945 support
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-mwl8k
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @PCI_SUPPORT +kmod-mac80211 +@DRIVER_11N_SUPPORT
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Driver for Marvell TOPDOG 802.11 Wireless cards
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description:  Kernel modules for Marvell TOPDOG 802.11 Wireless cards
+http://wireless.kernel.org/en/users/Drivers/mwl8k
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-net-hermes
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @PCI_SUPPORT||PCMCIA_SUPPORT +kmod-cfg80211 +@DRIVER_WEXT_SUPPORT
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Hermes 802.11b chipset support
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description:  Kernel support for Hermes 802.11b chipsets
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-net-hermes-pci
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @PCI_SUPPORT +kmod-net-hermes
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Intersil Prism 2.5 PCI support
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description:  Kernel modules for Intersil Prism 2.5 PCI support
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-net-hermes-plx
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @PCI_SUPPORT +kmod-net-hermes
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: PLX9052 based PCI adaptor
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description:  Kernel modules for Hermes in PLX9052 based PCI adaptors
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-net-hermes-pcmcia
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @PCMCIA_SUPPORT +kmod-net-hermes @BROKEN
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Hermes based PCMCIA adaptors
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description:  Kernel modules for Hermes based PCMCIA adaptors
+http://linuxwireless.org/
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+Package: kmod-wl12xx
+Submenu: Wireless Drivers
+Version: <LINUX_VERSION>+2013-06-27-1
+Depends: @(!(TARGET_avr32||TARGET_ps3||TARGET_pxcab)||BROKEN) @TARGET_omap4 +kmod-mac80211
+Menu-Depends: 
+Provides: 
+Section: kernel
+Category: Kernel modules
+Title: Driver for TI WL12xx
+Maintainer: Felix Fietkau <nbd@openwrt.org>
+Source: compat-wireless-2013-06-27.1.tar.bz2
+Type: ipkg
+Description:  Kernel modules for TI WL12xx
+http://wireless.kernel.org/en/users/Drivers/wl12xx
+Felix Fietkau <nbd@openwrt.org>
+@@
+
+

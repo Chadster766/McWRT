@@ -1,0 +1,44 @@
+Source-Makefile: feeds/packages/net/samba36/Makefile
+Package: samba36-client
+Version: 3.6.5-3
+Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +libreadline +libncurses
+Menu-Depends: 
+Provides: 
+Section: net
+Category: Network
+Title: Samba 3.6 SMB/CIFS client
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: samba-3.6.5.tar.gz
+Type: ipkg
+Description: Samba 3.6 SMB/CIFS client
+http://www.samba.org/
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+
+Package: samba36-server
+Version: 3.6.5-3
+Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
+Menu-Depends: 
+Provides: 
+Section: net
+Category: Network
+Title: Samba 3.6 SMB/CIFS server
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: samba-3.6.5.tar.gz
+Type: ipkg
+Description:  The Samba software suite is a collection of programs that implements the
+ SMB protocol for UNIX systems, allowing you to serve files and printers to
+ Windows, NT, OS/2 and DOS clients. This protocol is sometimes also referred
+ to as the LanManager or Netbios protocol.
+http://www.samba.org/
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+Config:
+	config PACKAGE_SAMBA_MAX_DEBUG_LEVEL
+		int "Maximum level of compiled-in debug messages"
+		depends PACKAGE_samba36-server || PACKAGE_samba36-client
+		default -1
+
+@@
+
+

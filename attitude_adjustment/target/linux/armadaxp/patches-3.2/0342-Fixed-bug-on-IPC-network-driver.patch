@@ -1,0 +1,79 @@
+From 344e5dbb9ab070dcd0b3d0197249fdde4eb1b2cb Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 14 Nov 2012 14:51:26 +0200
+Subject: [PATCH 342/609] Fixed bug on IPC network driver
+
+	1. Fixed detection if IPC doorbell
+	2. Modified MAC address of ipc0 to unicast address
+	3. Fixed compilation errors in debug mode
+
+Change-Id: I2ee4543b1049735744caf15bece7b0df1835ad22
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/include/asm/entry-macro-multi.S           |    2 +-
+ .../arm/plat-armada/mv_drivers_lsp/mv_ipc/mv_ipc.c |    4 ++--
+ .../mv_drivers_lsp/mv_ipc_net/ipc_net.c            |    8 +++++---
+ 3 files changed, 8 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm/include/asm/entry-macro-multi.S b/arch/arm/include/asm/entry-macro-multi.S
+index d74dc30..50a7f3f 100644
+--- a/arch/arm/include/asm/entry-macro-multi.S
++++ b/arch/arm/include/asm/entry-macro-multi.S
+@@ -21,7 +21,7 @@
+ 	 * preserved from get_irqnr_and_base above
+ 	 */
+ #ifdef CONFIG_MV_IPC_DRIVER
+-	test_for_ipc r0, r6, r5, lr
++	test_for_ipc r0, r2, r6, lr
+ 	movne   r1, sp
+ 	adrne   lr, BSYM(1b)
+ 	bne     do_ipc_rx_irq
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/mv_ipc.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/mv_ipc.c
+index a0fc143..e1ab9c7 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/mv_ipc.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/mv_ipc.c
+@@ -162,7 +162,7 @@ void do_ipc_rx_irq(int irq, struct pt_regs *regs)
+ 	int read_msgs = IPC_RX_MAX_MSGS_PER_ISR;
+ 	struct pt_regs *old_regs = set_irq_regs(regs);
+ 
+-	ipc_debug(KERN_INFO "IPC: RX callback. got irq no = %d  time = %d\n", irq, axp_read_soc_clock(0));
++	ipc_debug(KERN_INFO "IPC: RX callback. got irq no = %d\n", irq);
+ 
+ 	irq_enter();
+ 	mvIpcDisableChnRx(irq);
+@@ -183,7 +183,7 @@ void do_ipc_rx_irq(int irq, struct pt_regs *regs)
+ 	irq_exit();
+ 
+ 	if(read_msgs == IPC_RX_MAX_MSGS_PER_ISR)
+-		ipc_debug(KERN_WARNING "IPC: Received interrupt with no messages at %d\n", axp_read_soc_clock(0));
++		ipc_debug(KERN_WARNING "IPC: Received interrupt with no messages\n");
+ 
+ 	set_irq_regs(old_regs);
+ }
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c
+index 5c9d2a2..3092460 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c
+@@ -477,13 +477,15 @@ static int ipc_net_init(void *platform_data)
+ 	dev->irq 			= 0;
+ 	dev->tx_queue_len   = IPC_NET_MAX_TX_DESC;
+ 	dev->watchdog_timeo = 5*HZ;
+-	dev->mtu 			= IPC_NET_MTU_SIZE;
+-	dev->netdev_ops		= &mv_ipc_netdev_ops;
++	dev->mtu 	    = IPC_NET_MTU_SIZE;
++	dev->netdev_ops     = &mv_ipc_netdev_ops;
+ 	dev->flags    	   &= ~IFF_MULTICAST;
+ 	dev->features       = NETIF_F_SG | NETIF_F_LLTX;
+ 
+ 	/* Set a static MAC address*/
+-	for(i = 0; i < ETH_ALEN; i++) {
++	dev->dev_addr[0] = 0;
++	dev->dev_addr[0] = 0;
++	for(i = 2; i < ETH_ALEN; i++) {
+ 		dev->dev_addr[i] = i + whoAmI();
+ 	}
+ 
+-- 
+1.7.9.5
+

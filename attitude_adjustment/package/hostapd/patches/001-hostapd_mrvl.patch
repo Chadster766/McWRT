@@ -1,0 +1,2824 @@
+diff -Naur hostapd-0.8-snapshot/hostapd/.config hostapd-0.8.x-mrvl/hostapd/.config
+--- hostapd-0.8-snapshot/hostapd/.config	1970-01-01 07:00:00.000000000 +0700
++++ hostapd-0.8.x-mrvl/hostapd/.config	2012-05-11 15:58:02.000000000 +0700
+@@ -0,0 +1,186 @@
++# Example hostapd build time configuration
++#
++# This file lists the configuration options that are used when building the
++# hostapd binary. All lines starting with # are ignored. Configuration option
++# lines must be commented out complete, if they are not to be included, i.e.,
++# just setting VARIABLE=n is not disabling that variable.
++#
++# This file is included in Makefile, so variables like CFLAGS and LIBS can also
++# be modified from here. In most cass, these lines should use += in order not
++# to override previous values of the variables.
++
++# Driver interface for Host AP driver
++#CONFIG_DRIVER_HOSTAP=y
++
++# Driver interface for wired authenticator
++#CONFIG_DRIVER_WIRED=y
++
++# Driver interface for madwifi driver
++#CONFIG_DRIVER_MADWIFI=y
++#CFLAGS += -I../../madwifi # change to the madwifi source directory
++
++# Driver interface for drivers using the nl80211 kernel interface
++#CONFIG_DRIVER_NL80211=y
++# driver_nl80211.c requires a rather new libnl (version 1.1) which may not be
++# shipped with your distribution yet. If that is the case, you need to build
++# newer libnl version and point the hostapd build to use it.
++#LIBNL=/usr/src/libnl
++#CFLAGS += -I$(LIBNL)/include
++#LIBS += -L$(LIBNL)/lib
++
++# Driver interface for FreeBSD net80211 layer (e.g., Atheros driver)
++#CONFIG_DRIVER_BSD=y
++#CFLAGS += -I/usr/local/include
++#LIBS += -L/usr/local/lib
++#LIBS_p += -L/usr/local/lib
++#LIBS_c += -L/usr/local/lib
++
++# Driver interface for no driver (e.g., RADIUS server only)
++#CONFIG_DRIVER_NONE=y
++
++# Driver interface for marvell driver
++CONFIG_DRIVER_MARVELL=y
++CFLAGS += -DMRVL_WSC -DGENERIC_GETIE -DMRVL_WPS2
++# change to reflect local setup; directory for marvell src
++CFLAGS += -I../../../wlan-v5/
++LIBS += -ldl -L../../openssl-0.9.8a/
++CFLAGS += -I../../openssl-0.9.8a/include
++
++# IEEE 802.11F/IAPP
++#CONFIG_IAPP=y
++
++# WPA2/IEEE 802.11i RSN pre-authentication
++CONFIG_RSN_PREAUTH=y
++
++# PeerKey handshake for Station to Station Link (IEEE 802.11e DLS)
++CONFIG_PEERKEY=y
++
++# IEEE 802.11w (management frame protection)
++# This version is an experimental implementation based on IEEE 802.11w/D1.0
++# draft and is subject to change since the standard has not yet been finalized.
++# Driver support is also needed for IEEE 802.11w.
++#CONFIG_IEEE80211W=y
++
++# Integrated EAP server
++CONFIG_EAP=y
++
++# EAP-MD5 for the integrated EAP server
++CONFIG_EAP_MD5=y
++
++# EAP-TLS for the integrated EAP server
++#CONFIG_EAP_TLS=y
++
++# EAP-MSCHAPv2 for the integrated EAP server
++#CONFIG_EAP_MSCHAPV2=y
++
++# EAP-PEAP for the integrated EAP server
++#CONFIG_EAP_PEAP=y
++
++# EAP-GTC for the integrated EAP server
++#CONFIG_EAP_GTC=y
++
++# EAP-TTLS for the integrated EAP server
++#CONFIG_EAP_TTLS=y
++
++# EAP-SIM for the integrated EAP server
++#CONFIG_EAP_SIM=y
++
++# EAP-AKA for the integrated EAP server
++#CONFIG_EAP_AKA=y
++
++# EAP-AKA' for the integrated EAP server
++# This requires CONFIG_EAP_AKA to be enabled, too.
++#CONFIG_EAP_AKA_PRIME=y
++
++# EAP-PAX for the integrated EAP server
++#CONFIG_EAP_PAX=y
++
++# EAP-PSK for the integrated EAP server (this is _not_ needed for WPA-PSK)
++#CONFIG_EAP_PSK=y
++
++# EAP-SAKE for the integrated EAP server
++#CONFIG_EAP_SAKE=y
++
++# EAP-GPSK for the integrated EAP server
++#CONFIG_EAP_GPSK=y
++# Include support for optional SHA256 cipher suite in EAP-GPSK
++#CONFIG_EAP_GPSK_SHA256=y
++
++# EAP-FAST for the integrated EAP server
++# Note: Default OpenSSL package does not include support for all the
++# functionality needed for EAP-FAST. If EAP-FAST is enabled with OpenSSL,
++# the OpenSSL library must be patched (openssl-0.9.9-session-ticket.patch)
++# to add the needed functions.
++#CONFIG_EAP_FAST=y
++
++# Wi-Fi Protected Setup (WPS)
++CONFIG_WPS=y
++# Enable WSC 2.0 support
++CONFIG_WPS2=y
++# Enable UPnP support for external WPS Registrars
++CONFIG_WPS_UPNP=y
++CONFIG_WPS_TESTING=y
++
++# EAP-IKEv2
++#CONFIG_EAP_IKEV2=y
++
++# Trusted Network Connect (EAP-TNC)
++#CONFIG_EAP_TNC=y
++
++# PKCS#12 (PFX) support (used to read private key and certificate file from
++# a file that usually has extension .p12 or .pfx)
++#CONFIG_PKCS12=y
++
++# RADIUS authentication server. This provides access to the integrated EAP
++# server from external hosts using RADIUS.
++#CONFIG_RADIUS_SERVER=y
++
++# Build IPv6 support for RADIUS operations
++CONFIG_IPV6=y
++
++# IEEE Std 802.11r-2008 (Fast BSS Transition)
++#CONFIG_IEEE80211R=y
++
++# Use the hostapd's IEEE 802.11 authentication (ACL), but without
++# the IEEE 802.11 Management capability (e.g., madwifi or FreeBSD/net80211)
++#CONFIG_DRIVER_RADIUS_ACL=y
++
++# IEEE 802.11n (High Throughput) support
++#CONFIG_IEEE80211N=y
++
++# Remove debugging code that is printing out debug messages to stdout.
++# This can be used to reduce the size of the hostapd considerably if debugging
++# code is not needed.
++#CONFIG_NO_STDOUT_DEBUG=y
++
++# Remove support for RADIUS accounting
++#CONFIG_NO_ACCOUNTING=y
++
++# Remove support for RADIUS
++#CONFIG_NO_RADIUS=y
++
++# Remove support for VLANs
++#CONFIG_NO_VLAN=y
++
++# Remove support for dumping state into a file on SIGUSR1 signal
++# This can be used to reduce binary size at the cost of disabling a debugging
++# option.
++#CONFIG_NO_DUMP_STATE=y
++
++# Enable tracing code for developer debugging
++# This tracks use of memory allocations and other registrations and reports
++# incorrect use with a backtrace of call (or allocation) location.
++#CONFIG_WPA_TRACE=y
++# For BSD, comment out these.
++#LIBS += -lexecinfo
++#LIBS_p += -lexecinfo
++#LIBS_c += -lexecinfo
++
++# Use libbfd to get more details for developer debugging
++# This enables use of libbfd to get more detailed symbols for the backtraces
++# generated by CONFIG_WPA_TRACE=y.
++#CONFIG_WPA_TRACE_BFD=y
++# For BSD, comment out these.
++#LIBS += -lbfd -liberty -lz
++#LIBS_p += -lbfd -liberty -lz
++#LIBS_c += -lbfd -liberty -lz
+diff -Naur hostapd-0.8-snapshot/hostapd/Makefile hostapd-0.8.x-mrvl/hostapd/Makefile
+--- hostapd-0.8-snapshot/hostapd/Makefile	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/hostapd/Makefile	2012-05-11 15:58:02.000000000 +0700
+@@ -1,3 +1,6 @@
++CROSS_COMPILE = /opt/SDK-2.1-LE/tools/gcc/bin/arm-none-linux-gnueabi-
++CC=$(CROSS_COMPILE)gcc
++
+ ifndef CC
+ CC=gcc
+ endif
+diff -Naur hostapd-0.8-snapshot/src/ap/drv_callbacks.c hostapd-0.8.x-mrvl/src/ap/drv_callbacks.c
+--- hostapd-0.8-snapshot/src/ap/drv_callbacks.c	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/ap/drv_callbacks.c	2012-05-11 15:58:02.000000000 +0700
+@@ -195,6 +195,19 @@
+ {
+ 	struct sta_info *sta;
+ 
++	if (addr == NULL) {
++		/*
++		 * This could potentially happen with unexpected event from the
++		 * driver wrapper. This was seen at least in one case where the
++		 * driver ended up reporting a station mode event while hostapd
++		 * was running, so better make sure we stop processing such an
++		 * event here.
++		 */
++		wpa_printf(MSG_DEBUG, "hostapd_notif_disassoc: Skip event "
++			   "with no address");
++		return;
++	}
++
+ 	hostapd_logger(hapd, addr, HOSTAPD_MODULE_IEEE80211,
+ 		       HOSTAPD_LEVEL_INFO, "disassociated");
+ 
+diff -Naur hostapd-0.8-snapshot/src/ap/hostapd.c hostapd-0.8.x-mrvl/src/ap/hostapd.c
+--- hostapd-0.8-snapshot/src/ap/hostapd.c	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/ap/hostapd.c	2012-05-11 15:58:02.000000000 +0700
+@@ -475,7 +475,7 @@
+ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
+ {
+ 	struct hostapd_bss_config *conf = hapd->conf;
+-	u8 ssid[HOSTAPD_MAX_SSID_LEN + 1];
++	u8 ssid[HOSTAPD_MAX_SSID_LEN + 2];
+ 	int ssid_len, set_ssid;
+ 	char force_ifname[IFNAMSIZ];
+ 	u8 if_addr[ETH_ALEN];
+@@ -619,6 +619,9 @@
+ 
+ 	ieee802_11_set_beacon(hapd);
+ 
++	if (hapd->driver && hapd->driver->set_operstate)
++		hapd->driver->set_operstate(hapd->drv_priv, 1);
++
+ 	return 0;
+ }
+ 
+diff -Naur hostapd-0.8-snapshot/src/ap/hostapd.h hostapd-0.8.x-mrvl/src/ap/hostapd.h
+--- hostapd-0.8-snapshot/src/ap/hostapd.h	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/ap/hostapd.h	2012-05-11 15:58:02.000000000 +0700
+@@ -168,6 +168,7 @@
+ 	struct wpabuf *wps_probe_resp_ie;
+ #ifdef CONFIG_WPS
+ 	unsigned int ap_pin_failures;
++	unsigned int ap_pin_failures_consecutive;
+ 	struct upnp_wps_device_sm *wps_upnp;
+ 	unsigned int ap_pin_lockout_time;
+ #endif /* CONFIG_WPS */
+diff -Naur hostapd-0.8-snapshot/src/ap/wps_hostapd.c hostapd-0.8.x-mrvl/src/ap/wps_hostapd.c
+--- hostapd-0.8-snapshot/src/ap/wps_hostapd.c	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/ap/wps_hostapd.c	2012-05-11 15:58:02.000000000 +0700
+@@ -475,6 +475,8 @@
+ 
+ 	if (hapd->conf->ap_setup_locked)
+ 		return;
++	if (hapd->ap_pin_failures_consecutive >= 10)
++		return;
+ 
+ 	wpa_printf(MSG_DEBUG, "WPS: Re-enable AP PIN");
+ 	wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_AP_SETUP_UNLOCKED);
+@@ -496,8 +498,10 @@
+ 	 * force attacks.
+ 	 */
+ 	hapd->ap_pin_failures++;
+-	wpa_printf(MSG_DEBUG, "WPS: AP PIN authentication failure number %u",
+-		   hapd->ap_pin_failures);
++	hapd->ap_pin_failures_consecutive++;
++	wpa_printf(MSG_DEBUG, "WPS: AP PIN authentication failure number %u "
++		   "(%u consecutive)",
++		   hapd->ap_pin_failures, hapd->ap_pin_failures_consecutive);
+ 	if (hapd->ap_pin_failures < 3)
+ 		return 0;
+ 
+@@ -506,7 +510,15 @@
+ 
+ 	wps_registrar_update_ie(hapd->wps->registrar);
+ 
+-	if (!hapd->conf->ap_setup_locked) {
++	if (!hapd->conf->ap_setup_locked &&
++	    hapd->ap_pin_failures_consecutive >= 10) {
++		/*
++		 * In indefinite lockdown - disable automatic AP PIN
++		 * reenablement.
++		 */
++		eloop_cancel_timeout(hostapd_wps_reenable_ap_pin, hapd, NULL);
++		wpa_printf(MSG_DEBUG, "WPS: AP PIN disabled indefinitely");
++	} else if (!hapd->conf->ap_setup_locked) {
+ 		if (hapd->ap_pin_lockout_time == 0)
+ 			hapd->ap_pin_lockout_time = 60;
+ 		else if (hapd->ap_pin_lockout_time < 365 * 24 * 60 * 60 &&
+@@ -532,12 +544,49 @@
+ }
+ 
+ 
++static int wps_ap_pin_success(struct hostapd_data *hapd, void *ctx)
++{
++	if (hapd->conf->ap_pin == NULL || hapd->wps == NULL)
++		return 0;
++
++	if (hapd->ap_pin_failures_consecutive == 0)
++		return 0;
++
++	wpa_printf(MSG_DEBUG, "WPS: Clear consecutive AP PIN failure counter "
++		   "- total validation failures %u (%u consecutive)",
++		   hapd->ap_pin_failures, hapd->ap_pin_failures_consecutive);
++	hapd->ap_pin_failures_consecutive = 0;
++
++	return 0;
++}
++
++
++static void hostapd_wps_ap_pin_success(struct hostapd_data *hapd)
++{
++	hostapd_wps_for_each(hapd, wps_ap_pin_success, NULL);
++}
++
++
++static const char * wps_event_fail_reason[NUM_WPS_EI_VALUES] = {
++	"No Error", /* WPS_EI_NO_ERROR */
++	"TKIP Only Prohibited", /* WPS_EI_SECURITY_TKIP_ONLY_PROHIBITED */
++	"WEP Prohibited" /* WPS_EI_SECURITY_WEP_PROHIBITED */
++};
++
+ static void hostapd_wps_event_fail(struct hostapd_data *hapd,
+ 				   struct wps_event_fail *fail)
+ {
+-	wpa_msg(hapd->msg_ctx, MSG_INFO,
+-		WPS_EVENT_FAIL "msg=%d config_error=%d",
+-		fail->msg, fail->config_error);
++	if (fail->error_indication > 0 &&
++	    fail->error_indication < NUM_WPS_EI_VALUES) {
++		wpa_msg(hapd->msg_ctx, MSG_INFO,
++			WPS_EVENT_FAIL "msg=%d config_error=%d reason=%d (%s)",
++			fail->msg, fail->config_error, fail->error_indication,
++			wps_event_fail_reason[fail->error_indication]);
++	} else {
++		wpa_msg(hapd->msg_ctx, MSG_INFO,
++			WPS_EVENT_FAIL "msg=%d config_error=%d",
++			fail->msg, fail->config_error);
++	}
+ }
+ 
+ 
+@@ -548,18 +597,22 @@
+ 
+ 	switch (event) {
+ 	case WPS_EV_M2D:
++		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_M2D);
+ 		break;
+ 	case WPS_EV_FAIL:
+ 		hostapd_wps_event_fail(hapd, &data->fail);
+ 		break;
+ 	case WPS_EV_SUCCESS:
++		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_SUCCESS);
+ 		break;
+ 	case WPS_EV_PWD_AUTH_FAIL:
+ 		hostapd_pwd_auth_fail(hapd, &data->pwd_auth_fail);
+ 		break;
+ 	case WPS_EV_PBC_OVERLAP:
++		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_OVERLAP);
+ 		break;
+ 	case WPS_EV_PBC_TIMEOUT:
++		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_TIMEOUT);
+ 		break;
+ 	case WPS_EV_ER_AP_ADD:
+ 		break;
+@@ -571,6 +624,11 @@
+ 		break;
+ 	case WPS_EV_ER_AP_SETTINGS:
+ 		break;
++	case WPS_EV_ER_SET_SELECTED_REGISTRAR:
++		break;
++	case WPS_EV_AP_PIN_SUCCESS:
++		hostapd_wps_ap_pin_success(hapd);
++		break;
+ 	}
+ 	if (hapd->wps_event_cb)
+ 		hapd->wps_event_cb(hapd->wps_event_cb_ctx, event, data);
+@@ -1095,6 +1153,7 @@
+ 	 */
+ 
+ 	sta = ap_get_sta(hapd, mac_addr);
++
+ #ifndef CONFIG_WPS_STRICT
+ 	if (!sta) {
+ 		/*
+@@ -1125,6 +1184,11 @@
+ 	p->next = hapd->wps->upnp_msgs;
+ 	hapd->wps->upnp_msgs = p;
+ 
++	if (sta->eapol_sm == NULL) {
++		/* if sta-eapol_sm is NULL, using sta->eapol_sm->eap will cause hostapd "Segmentation fault" */
++		return -1;
++	}
++
+ 	return eapol_auth_eap_pending_cb(sta->eapol_sm, sta->eapol_sm->eap);
+ }
+ 
+@@ -1144,18 +1208,12 @@
+ 	if (hapd->conf->ap_pin)
+ 		ctx->ap_pin = os_strdup(hapd->conf->ap_pin);
+ 
+-	hapd->wps_upnp = upnp_wps_device_init(ctx, wps, hapd);
+-	if (hapd->wps_upnp == NULL) {
+-		os_free(ctx);
++	hapd->wps_upnp = upnp_wps_device_init(ctx, wps, hapd,
++					      hapd->conf->upnp_iface);
++	if (hapd->wps_upnp == NULL)
+ 		return -1;
+-	}
+-	wps->wps_upnp = hapd->wps_upnp;
+ 
+-	if (upnp_wps_device_start(hapd->wps_upnp, hapd->conf->upnp_iface)) {
+-		upnp_wps_device_deinit(hapd->wps_upnp);
+-		hapd->wps_upnp = NULL;
+-		return -1;
+-	}
++	wps->wps_upnp = hapd->wps_upnp;
+ 
+ 	return 0;
+ }
+@@ -1163,7 +1221,7 @@
+ 
+ static void hostapd_wps_upnp_deinit(struct hostapd_data *hapd)
+ {
+-	upnp_wps_device_deinit(hapd->wps_upnp);
++	upnp_wps_device_deinit(hapd->wps_upnp, hapd);
+ }
+ 
+ #endif /* CONFIG_WPS_UPNP */
+@@ -1190,6 +1248,7 @@
+ {
+ 	wpa_printf(MSG_DEBUG, "WPS: Enabling AP PIN (timeout=%d)", timeout);
+ 	hapd->ap_pin_failures = 0;
++	hapd->ap_pin_failures_consecutive = 0;
+ 	hapd->conf->ap_setup_locked = 0;
+ 	if (hapd->wps->ap_setup_locked) {
+ 		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_AP_SETUP_UNLOCKED);
+diff -Naur hostapd-0.8-snapshot/src/common/wpa_ctrl.h hostapd-0.8.x-mrvl/src/common/wpa_ctrl.h
+--- hostapd-0.8-snapshot/src/common/wpa_ctrl.h	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/common/wpa_ctrl.h	2012-05-11 15:58:02.000000000 +0700
+@@ -89,6 +89,7 @@
+ #define WPS_EVENT_ER_ENROLLEE_ADD "WPS-ER-ENROLLEE-ADD "
+ #define WPS_EVENT_ER_ENROLLEE_REMOVE "WPS-ER-ENROLLEE-REMOVE "
+ #define WPS_EVENT_ER_AP_SETTINGS "WPS-ER-AP-SETTINGS "
++#define WPS_EVENT_ER_SET_SEL_REG "WPS-ER-AP-SET-SEL-REG "
+ 
+ /** P2P device found */
+ #define P2P_EVENT_DEVICE_FOUND "P2P-DEVICE-FOUND "
+diff -Naur hostapd-0.8-snapshot/src/drivers/driver.h hostapd-0.8.x-mrvl/src/drivers/driver.h
+--- hostapd-0.8-snapshot/src/drivers/driver.h	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/drivers/driver.h	2012-05-11 15:58:02.000000000 +0700
+@@ -2212,7 +2212,21 @@
+ 	 * e.g., because of a regulatory domain change triggered by scan
+ 	 * results including an AP advertising a country code.
+ 	 */
+-	EVENT_CHANNEL_LIST_CHANGED
++	EVENT_CHANNEL_LIST_CHANGED,
++
++	/**
++	 * EVENT_INTERFACE_UNAVAILABLE - Notify that interface is unavailable
++	 *
++	 * This event is used to indicate that the driver cannot maintain this
++	 * interface in its operation mode anymore. The most likely use for
++	 * this is to indicate that AP mode operation is not available due to
++	 * operating channel would need to be changed to a DFS channel when
++	 * the driver does not support radar detection and another virtual
++	 * interfaces caused the operating channel to change. Other similar
++	 * resource conflicts could also trigger this for station mode
++	 * interfaces.
++	 */
++	EVENT_INTERFACE_UNAVAILABLE
+ };
+ 
+ 
+diff -Naur hostapd-0.8-snapshot/src/drivers/driver_marvell.c hostapd-0.8.x-mrvl/src/drivers/driver_marvell.c
+--- hostapd-0.8-snapshot/src/drivers/driver_marvell.c	1970-01-01 07:00:00.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/drivers/driver_marvell.c	2012-05-11 15:58:02.000000000 +0700
+@@ -0,0 +1,1082 @@
++/*
++ * Host AP - driver interface with MARVELL driver
++ * Copyright (c) 2004, Sam Leffler <sam@errno.com>
++ * Copyright (c) 2010-2011, Marvell Semiconductor- added support for Marvell driver glue logics.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
++ *
++ * Alternatively, this software may be distributed under the terms of BSD
++ * license.
++ *
++ * See README and COPYING for more details.
++ */
++#include "includes.h"
++#include <sys/ioctl.h>
++
++#include <netpacket/packet.h>
++
++#include "common.h"
++#include "driver.h"
++#include "driver_wext.h"
++#include "eloop.h"
++#include "priv_netlink.h"
++#include "l2_packet/l2_packet.h"
++#include "common/ieee802_11_defs.h"
++#include "netlink.h"
++#include "linux_ioctl.h"
++#include "wireless_copy.h"
++
++#include "ap/hostapd.h"
++#include "ap/ap_config.h"
++
++#include <driver/linux/ap8xLnxIoctl.h>
++
++#define	IEEE80211_ADDR_LEN	6
++
++struct marvell_driver_data {
++	struct hostapd_data *hapd;		/* back pointer */
++	char	iface[IFNAMSIZ + 1];
++	int     ifindex;
++	struct l2_packet_data *sock_xmit;	/* raw packet xmit socket */
++	struct l2_packet_data *sock_recv;	/* raw packet recv socket */
++	int	ioctl_sock;			/* socket for ioctl() use */
++	struct netlink_data *netlink;
++	int	we_version;
++	u8	acct_mac[ETH_ALEN];
++	struct hostap_sta_driver_data acct_data;
++	struct l2_packet_data *sock_raw; /* raw 802.11 management frames */
++};
++
++static int marvell_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr, int reason_code);
++
++static int
++set80211priv(struct marvell_driver_data *drv, int op, void *data, int len)
++{
++	struct iwreq iwr;
++
++	memset(&iwr, 0, sizeof(iwr));
++	strncpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
++	if (len < IFNAMSIZ) {
++		/*
++		 * Argument data fits inline; put it there.
++		 */
++		memcpy(iwr.u.name, data, len);
++	} else {
++		/*
++		 * Argument data too big for inline transfer; setup a
++		 * parameter block instead; the kernel will transfer
++		 * the data for the driver.
++		 */
++		iwr.u.data.pointer = data;
++		iwr.u.data.length = len;
++	}
++
++	if (ioctl(drv->ioctl_sock, op, &iwr) < 0) {
++		return -1;
++	}
++
++	return 0;
++}
++
++static int
++get80211priv(struct marvell_driver_data *drv, int op, void *data, int len)
++{
++	struct iwreq iwr;
++
++	memset(&iwr, 0, sizeof(iwr));
++	strncpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
++	if (len < IFNAMSIZ) {
++		/*
++		 * Argument data fits inline; put it there.
++		 */
++		memcpy(iwr.u.name, data, len);
++	} else {
++		/*
++		 * Argument data too big for inline transfer; setup a
++		 * parameter block instead; the kernel will transfer
++		 * the data for the driver.
++		 */
++		iwr.u.data.pointer = data;
++		iwr.u.data.length = len;
++	}
++
++	if (ioctl(drv->ioctl_sock, op, &iwr) < 0) {
++		return -1;
++	}
++
++	if (len < IFNAMSIZ)
++		memcpy(data, iwr.u.name, len);
++	return iwr.u.data.length;
++}
++
++static int
++set80211param(struct marvell_driver_data *drv, int op, int arg, Boolean commit)
++{
++	struct iwreq iwr;
++
++	memset(&iwr, 0, sizeof(iwr));
++	strncpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
++	iwr.u.mode = op;
++	memcpy(iwr.u.name+sizeof(__u32), &arg, sizeof(arg));
++
++	if (ioctl(drv->ioctl_sock, WL_IOCTL_WL_PARAM, &iwr) < 0) {
++		perror("ioctl[WL_IOCTL_WL_PARAM]");
++		return -1;
++	}
++
++    if (commit) {
++    	memset(&iwr, 0, sizeof(iwr));
++    	strncpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
++        if (ioctl(drv->ioctl_sock, SIOCSIWCOMMIT, &iwr) < 0) {
++    		printf("ioctl[SIOCSIWCOMMIT]");
++    		return -1;
++    	}
++    }
++	return 0;
++}
++
++static const char *
++ether_sprintf(const u8 *addr)
++{
++	static char buf[sizeof(MACSTR)];
++
++	if (addr != NULL)
++		snprintf(buf, sizeof(buf), MACSTR, MAC2STR(addr));
++	else
++		snprintf(buf, sizeof(buf), MACSTR, 0,0,0,0,0,0);
++	return buf;
++}
++
++
++/*
++ * Configure WPA parameters.
++ */
++static int
++marvell_configure_wpa(struct marvell_driver_data *drv, struct wpa_bss_params *params)
++{
++	u8 wpawpa2mode;
++	char ciphersuite[16];
++
++	/* In WPS mode, set the WPAWPA2MODE to 0x13 (extended mixed mode)
++	* with the exception of WPA2PSK-TKIP. For WPA2PSK-TKIP set the
++	* the WPAWPA2MODE as 0x12 (extended WPA2PSK mode).
++	*/
++	if (drv->hapd->conf->wps_state)
++	{
++		// Set wpawpa2mode if WPA2PSK-TKIP
++    	if ((params->wpa & WPA_PROTO_RSN) &&
++        	!(params->wpa & WPA_PROTO_WPA) &&
++        	(params->wpa_key_mgmt & WPA_KEY_MGMT_PSK) &&
++       		((params->wpa_pairwise & WPA_CIPHER_CCMP) ||
++       		(params->wpa_pairwise & WPA_CIPHER_TKIP)))
++		{
++    		wpawpa2mode = 0x12;
++		}
++		// Set wpawpa2mode if WPAPSK-TKIP
++		else if (!(params->wpa & WPA_PROTO_RSN) &&
++        	(params->wpa & WPA_PROTO_WPA) &&
++        	(params->wpa_key_mgmt & WPA_KEY_MGMT_PSK) &&
++       		((params->wpa_pairwise & WPA_CIPHER_CCMP) ||
++       		(params->wpa_pairwise & WPA_CIPHER_TKIP)))
++		{
++    		wpawpa2mode = 0x11;
++		}
++		else
++		{
++    		wpawpa2mode = 0x13; // WSC custom mixed mode
++		}
++
++		if (set80211param(drv, WL_PARAM_WPAWPA2MODE, wpawpa2mode,TRUE)) {
++            wpa_printf(MSG_DEBUG,"%s: WPS Extended mode %x setting failed", __func__,wpawpa2mode);
++			return -1;
++		}
++
++		// Set ciphersuite if WPA2PSK-TKIP
++    	if ((params->wpa & WPA_PROTO_RSN) &&
++        	!(params->wpa & WPA_PROTO_WPA) &&
++        	(params->wpa_key_mgmt & WPA_KEY_MGMT_PSK) &&
++       		!(params->wpa_pairwise & WPA_CIPHER_CCMP) &&
++       		(params->wpa_pairwise & WPA_CIPHER_TKIP))
++		{
++        	strcpy(ciphersuite, "wpa2 tkip");
++    	
++			/* Set ciphersuite and commit */
++			if (set80211priv(drv, WL_IOCTL_SET_CIPHERSUITE, 
++					&ciphersuite, sizeof(ciphersuite))) 
++			{
++                wpa_printf(MSG_DEBUG,"%s: Cipher Suite %s setting failed", __func__,ciphersuite);
++				return -1;
++			}
++		}
++		// Set ciphersuite if WPAPSK-AES
++    	else if (!(params->wpa & WPA_PROTO_RSN) &&
++        	(params->wpa & WPA_PROTO_WPA) &&
++        	(params->wpa_key_mgmt & WPA_KEY_MGMT_PSK) &&
++       		(params->wpa_pairwise & WPA_CIPHER_CCMP) &&
++       		!(params->wpa_pairwise & WPA_CIPHER_TKIP))
++		{
++        	strcpy(ciphersuite, "wpa aes-ccmp");
++    	
++			/* Set ciphersuite and commit */
++			if (set80211priv(drv, WL_IOCTL_SET_CIPHERSUITE, 
++					&ciphersuite, sizeof(ciphersuite))) 
++			{
++                wpa_printf(MSG_DEBUG,"%s: WPS Cipher Suite %s setting failed", __func__,ciphersuite);
++				return -1;
++			}
++		}
++	}
++	else
++	{
++    	if ((params->wpa & WPA_PROTO_WPA) &&
++        	!(params->wpa & WPA_PROTO_RSN) &&
++        	(params->wpa_key_mgmt & WPA_KEY_MGMT_PSK))
++        	wpawpa2mode = 0x81;
++    	else if ((params->wpa & WPA_PROTO_RSN) &&
++        	!(params->wpa & WPA_PROTO_WPA) &&
++        	((params->wpa_key_mgmt & WPA_KEY_MGMT_PSK) ||
++        	(params->wpa_key_mgmt & WPA_KEY_MGMT_FT_PSK)))
++        	wpawpa2mode = 0x82;
++    	else if ((params->wpa & WPA_PROTO_RSN) &&
++        	(params->wpa & WPA_PROTO_WPA) &&
++        	(params->wpa_key_mgmt & WPA_KEY_MGMT_PSK))
++        	wpawpa2mode = 0x83;
++    	else if ((params->wpa & WPA_PROTO_WPA) &&
++        	!(params->wpa & WPA_PROTO_RSN) &&
++        	(params->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X))      
++        	wpawpa2mode = 0x84;
++    	else if ((params->wpa & WPA_PROTO_RSN) &&
++        	!(params->wpa & WPA_PROTO_WPA) &&
++        	(params->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X))
++        	wpawpa2mode = 0x85;
++    	else if ((params->wpa & WPA_PROTO_RSN) &&
++        	(params->wpa & WPA_PROTO_WPA) &&
++        	(params->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X))
++        	wpawpa2mode = 0x86;
++    	else
++        	wpawpa2mode = 0;
++        
++		if (set80211param(drv, WL_PARAM_WPAWPA2MODE, wpawpa2mode,TRUE))
++        {
++            wpa_printf(MSG_DEBUG,"%s: Mode %x setting failed", __func__,wpawpa2mode);
++			return -1;
++		}
++	}
++
++   	if ((params->wpa & WPA_PROTO_WPA) &&
++       	(params->wpa_pairwise & WPA_CIPHER_TKIP))
++       	strcpy(ciphersuite, "wpa tkip");        
++   	else if ((params->wpa & WPA_PROTO_RSN) &&
++       	(params->wpa_pairwise & WPA_CIPHER_CCMP))
++       	strcpy(ciphersuite, "wpa2 aes-ccmp");
++   	else if ((params->wpa & WPA_PROTO_RSN) &&
++       	(params->wpa_pairwise & WPA_CIPHER_TKIP))
++       	strcpy(ciphersuite, "wpa2 tkip");        
++   	else if ((params->wpa & WPA_PROTO_WPA) &&
++       	(params->wpa_pairwise & WPA_CIPHER_CCMP))
++       	strcpy(ciphersuite, "wpa aes-ccmp");
++    	
++	if (set80211priv(drv, WL_IOCTL_SET_CIPHERSUITE, &ciphersuite, sizeof(ciphersuite))) {
++        wpa_printf(MSG_DEBUG,"%s: Cipher Suite %s setting failed", __func__,ciphersuite);
++		return -1;
++	}
++
++    wpa_printf(MSG_DEBUG,"%s:configured mode=%x cipher suite=%s", __func__,wpawpa2mode,ciphersuite);
++    
++	return 0;
++}
++
++static int
++marvell_set_ieee8021x(void *priv, struct wpa_bss_params *params)
++{
++	struct marvell_driver_data *drv = priv;
++    
++	wpa_printf(MSG_DEBUG,"%s: enabled=%d", __func__, params->enabled);
++
++	if (!params->enabled) {
++		if (drv->hapd->conf->wps_state)
++			return set80211param(priv, WL_PARAM_WPAWPA2MODE, 0x10, TRUE);
++		else
++			return set80211param(priv, WL_PARAM_WPAWPA2MODE, 0, TRUE);
++	}
++
++    if (!params->wpa && !params->ieee802_1x) {
++		hostapd_logger(drv->hapd, NULL, HOSTAPD_MODULE_DRIVER,
++			HOSTAPD_LEVEL_WARNING, "No 802.1X or WPA enabled!");
++		return -1;
++	}
++
++    if (params->wpa && marvell_configure_wpa(drv, params) != 0) {
++		hostapd_logger(drv->hapd, NULL, HOSTAPD_MODULE_DRIVER,
++			HOSTAPD_LEVEL_WARNING, "Error configuring WPA state!");
++		return -1;
++	}
++
++    if (drv->hapd->conf->wps_state && !params->wpa)
++	{
++		/* WPS Extended Open mode setting - WPAWPA2MODE - 0x10 */
++   		if( set80211param(drv, WL_PARAM_WPAWPA2MODE, 0x10,TRUE) )
++		{
++            wpa_printf(MSG_DEBUG,"%s: WPS Extended Open mode setting failed\n", __func__);
++    		return -1;
++		}
++	}
++
++    return 0;
++}
++
++
++static int
++marvell_del_key(void *priv, const u8 *addr, int key_idx)
++{
++	struct marvell_driver_data *drv = priv;
++	struct wlreq_del_key wk;
++	int ret;
++
++	wpa_printf(MSG_DEBUG,"%s: addr=%s key_idx=%d",
++		__func__, ether_sprintf(addr), key_idx);
++
++	memset(&wk, 0, sizeof(wk));
++	if (addr != NULL) {
++		memcpy(wk.idk_macaddr, addr, IEEE80211_ADDR_LEN);
++		wk.idk_keyix = (u8) WL_KEYIX_NONE;
++	} else {
++		wk.idk_keyix = key_idx;
++	}
++	ret = set80211param(drv, WL_PARAM_DELKEYS, (int)&wk,FALSE);
++	if (ret < 0) {
++		wpa_printf(MSG_DEBUG, "%s: Failed to delete key (addr %s"
++			   " key_idx %d)", __func__, ether_sprintf(addr),
++			   key_idx);
++	}
++
++	return ret;
++}
++
++static int
++marvell_set_key(const char *ifname,void *priv, enum wpa_alg alg,
++	     const u8 *addr, int key_idx, int set_tx, const u8 *seq,
++	     size_t seq_len, const u8 *key, size_t key_len)
++{
++	struct marvell_driver_data *drv = priv;
++	struct wlreq_key wk;
++	u_int8_t cipher;
++	int ret;
++
++	if (alg == WPA_ALG_NONE)
++		return marvell_del_key(priv, addr, key_idx);
++
++	wpa_printf(MSG_DEBUG,
++		"%s: alg=%d addr=%s key_idx=%d\n",
++		__func__, alg, ether_sprintf(addr), key_idx);
++
++	switch (alg) {
++	case WPA_ALG_WEP:
++		cipher = WL_CIPHER_WEP104;
++		break;
++	case WPA_ALG_TKIP:
++		cipher = WL_CIPHER_TKIP;
++		break;
++	case WPA_ALG_CCMP:
++		cipher = WL_CIPHER_CCMP;
++		break;
++	default:
++		printf("%s: unknown/unsupported algorithm %d\n",
++			__func__, alg);
++		return -1;
++	}
++
++	if (key_len > sizeof(wk.ik_keydata)) {
++		printf("%s: key length %lu too big\n", __func__,
++		       (unsigned long) key_len);
++		return -3;
++	}
++
++	memset(&wk, 0, sizeof(wk));
++	wk.ik_type = cipher;
++	wk.ik_flags = WL_KEY_RECV | WL_KEY_XMIT;
++	if (addr == NULL) {
++		memset(wk.ik_macaddr, 0xff, IEEE80211_ADDR_LEN);
++		wk.ik_keyix = key_idx;
++		wk.ik_flags |= WL_KEY_DEFAULT;
++	} else {
++		memcpy(wk.ik_macaddr, addr, IEEE80211_ADDR_LEN);
++		wk.ik_keyix = WL_KEYIX_NONE;
++	}
++	wk.ik_keylen = key_len;
++	memcpy(wk.ik_keydata, key, key_len);
++    
++	ret = set80211param(drv, WL_PARAM_SETKEYS, (int)&wk,FALSE);
++	if (ret < 0) {
++		wpa_printf(MSG_DEBUG, "%s: Failed to set key (addr %s"
++			   " key_idx %d alg '%d' key_len %lu txkey %d)",
++			   __func__, ether_sprintf(wk.ik_macaddr), key_idx,
++			   alg, (unsigned long) key_len, set_tx);
++	}
++
++	return ret;
++}
++
++static int 
++marvell_flush(void *priv)
++{
++	u8 allsta[IEEE80211_ADDR_LEN];
++	memset(allsta, 0xff, IEEE80211_ADDR_LEN);
++	return marvell_sta_deauth(priv, NULL, allsta, 3); /*IEEEtypes_REASON_DEAUTH_LEAVING*/
++}
++
++
++static int
++marvell_read_sta_driver_data(void *priv, struct hostap_sta_driver_data *data,
++				const u8 *addr)
++{
++	return 0;
++}
++
++
++static int
++marvell_set_opt_ie(void *priv, const u8 *ie, size_t ie_len)
++{
++	/*
++	 * Do nothing; we setup parameters at startup that define the
++	 * contents of the beacon information element.
++	 */
++	return 0;
++}
++
++static int
++marvell_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr, int reason_code)
++{
++	struct marvell_driver_data *drv = priv;
++	struct wlreq_mlme mlme;
++
++	wpa_printf(MSG_DEBUG,
++		"%s: addr=%s reason_code=%d\n",
++		__func__, ether_sprintf(addr), reason_code);
++
++	mlme.im_op = WL_MLME_DEAUTH;
++	mlme.im_reason = reason_code;
++	memcpy(mlme.im_macaddr, addr, IEEE80211_ADDR_LEN);
++
++    return set80211param(drv, WL_PARAM_MLME_REQ, (int)&mlme,FALSE);
++}
++
++static void marvell_raw_receive(void *ctx, const u8 *src_addr, const u8 *buf,
++				size_t len)
++{
++	struct marvell_driver_data *drv = ctx;
++	const struct ieee80211_mgmt *mgmt;
++	u16 fc;
++	union wpa_event_data event;
++
++	/* Send Probe Request information to WPS processing */
++	if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.probe_req))
++		return;
++	mgmt = (const struct ieee80211_mgmt *) buf;
++
++	fc = le_to_host16(mgmt->frame_control);
++	if (WLAN_FC_GET_TYPE(fc) != WLAN_FC_TYPE_MGMT ||
++	    WLAN_FC_GET_STYPE(fc) != WLAN_FC_STYPE_PROBE_REQ)
++		return;
++
++	os_memset(&event, 0, sizeof(event));
++	event.rx_probe_req.sa = mgmt->sa;
++	event.rx_probe_req.ie = mgmt->u.probe_req.variable;
++	event.rx_probe_req.ie_len =
++		len - (IEEE80211_HDRLEN + sizeof(mgmt->u.probe_req));
++	wpa_supplicant_event(drv->hapd, EVENT_RX_PROBE_REQ, &event);
++}
++
++static int
++marvell_set_wsc_ie(void *priv, const u8 *iebuf, int iebuflen, u32 frametype)
++{
++	u8 buf[512];
++	struct wlreq_set_appie * app_ie;
++
++	wpa_printf(MSG_DEBUG, "%s buflen = %d", __func__, iebuflen);
++
++	app_ie = (struct wlreq_set_appie *)buf;
++	app_ie->appFrmType = frametype;
++	app_ie->appBufLen = iebuflen;
++
++    if (iebuf != NULL)
++    	memcpy(&(app_ie->appBuf[0]), iebuf , iebuflen );
++    else
++    {
++        memset(&(app_ie->appBuf[0]),0x00, 8);
++        app_ie->appBufLen = 8;
++    }
++
++	return set80211priv(priv, WL_IOCTL_SET_APPIE, app_ie,
++			8 + app_ie->appBufLen);
++
++}
++
++static int
++marvell_set_ap_wps_ie(void *priv, const struct wpabuf *beacon,
++		      const struct wpabuf *proberesp,const struct wpabuf *assocresp)
++{
++	if (marvell_set_wsc_ie(priv, beacon ? wpabuf_head(beacon) : NULL,
++			       beacon ? wpabuf_len(beacon) : 0,
++			       WL_APPIE_FRAMETYPE_BEACON))
++		return -1;
++    
++	return marvell_set_wsc_ie(priv,
++				  proberesp ? wpabuf_head(proberesp) : NULL,
++				  proberesp ? wpabuf_len(proberesp): 0,
++				  WL_APPIE_FRAMETYPE_PROBE_RESP);
++}
++
++
++static int
++marvell_new_sta(struct marvell_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
++{
++	struct wlreq_ie ie;
++	struct hostapd_data *hapd = drv->hapd;
++
++	hostapd_logger(hapd, addr, HOSTAPD_MODULE_IEEE80211,
++		HOSTAPD_LEVEL_INFO, "associated");
++
++    /* Get RSN IE */
++	memset(&ie, 0, sizeof(ie));
++	memcpy(ie.macAddr, addr, 6);
++    ie.IEtype = WLAN_EID_RSN;
++
++	if (get80211priv(drv, WL_IOCTL_GET_IE, &ie, sizeof(ie))<0) {
++       	wpa_printf(MSG_DEBUG,"%s: IOCTL Get IE failed\n", __func__);
++		return -1;		
++	}
++
++	if (ie.IELen == 0) {
++     	wpa_printf(MSG_DEBUG,"%s: STA addr %s RSN IE Length is zero\n", __func__, ether_sprintf(addr));
++	}
++
++	drv_event_assoc(hapd, addr, ie.IE, ie.IELen);
++
++	if (memcmp(addr, drv->acct_mac, ETH_ALEN) == 0) {
++		/* Cached accounting data is not valid anymore. */
++		memset(drv->acct_mac, 0, ETH_ALEN);
++		memset(&drv->acct_data, 0, sizeof(drv->acct_data));
++	}
++
++	return 0;
++}
++
++static void
++marvell_wireless_event_wireless_custom(struct marvell_driver_data *drv,
++				       char *custom)
++{
++//	wpa_printf(MSG_DEBUG, "Custom wireless event: '%s'", custom);
++
++	if (strncmp(custom, "MLME-MICHAELMICFAILURE.indication", 33) == 0) {
++		char *pos;
++		u8 addr[ETH_ALEN];
++		pos = strstr(custom, "addr=");
++		if (pos == NULL) {
++			wpa_printf(MSG_DEBUG,
++				      "MLME-MICHAELMICFAILURE.indication "
++				      "without sender address ignored");
++			return;
++		}
++		pos += 5;
++		if (hwaddr_aton(pos, addr) == 0) {
++			union wpa_event_data data;
++			os_memset(&data, 0, sizeof(data));
++			data.michael_mic_failure.unicast = 1;
++			data.michael_mic_failure.src = NULL;
++			wpa_supplicant_event(drv->hapd,
++					     EVENT_MICHAEL_MIC_FAILURE, &data);
++		} else {
++			wpa_printf(MSG_DEBUG,
++				      "MLME-MICHAELMICFAILURE.indication "
++				      "with invalid MAC address");
++		}
++	}
++    else if (strncmp(custom, "STA-TRAFFIC-STAT", 16) == 0)
++    {
++		char *key, *value;
++		u32 val;
++		key = custom;
++		while ((key = strchr(key, '\n')) != NULL) {
++			key++;
++			value = strchr(key, '=');
++			if (value == NULL)
++				continue;
++			*value++ = '\0';
++			val = strtoul(value, NULL, 10);
++			if (strcmp(key, "mac") == 0)
++				hwaddr_aton(value, drv->acct_mac);
++			else if (strcmp(key, "rx_packets") == 0)
++				drv->acct_data.rx_packets = val;
++			else if (strcmp(key, "tx_packets") == 0)
++				drv->acct_data.tx_packets = val;
++			else if (strcmp(key, "rx_bytes") == 0)
++				drv->acct_data.rx_bytes = val;
++			else if (strcmp(key, "tx_bytes") == 0)
++				drv->acct_data.tx_bytes = val;
++			key = value;
++		}
++	}
++#ifdef MRVL_WPS2
++    else if (strncmp(custom, "mlme-probe_request", strlen("mlme-probe_request")) == 0)
++#else
++    else if (strncmp(custom, "mlme-probe_request", 18) == 0)
++#endif
++    {
++#define MLME_FRAME_TAG_SIZE  20 
++#ifdef MRVL_WPS2
++		s16 len = WPA_GET_LE16(custom + strlen("mlme-probe_request"));
++#else
++		s16 len = *(custom + 18);
++#endif
++		if (len < 0) {
++			wpa_printf(MSG_DEBUG, "mlme-probe_request "
++				   "length %d", len);
++			return;
++		}
++        
++		marvell_raw_receive(drv, NULL, (u8 *) custom + MLME_FRAME_TAG_SIZE, len);
++	}
++    else if (strstr(custom, "Unexpected event - External recovery recommended: ") != NULL)
++    {
++        printf("received recovery event rebooting\n");
++        system("reboot");
++    }
++}
++
++static void
++marvell_wireless_event_wireless(struct marvell_driver_data *drv,
++					    char *data, int len)
++{
++	struct iw_event iwe_buf, *iwe = &iwe_buf;
++	char *pos, *end, *custom, *buf;
++
++	pos = data;
++	end = data + len;
++
++	while (pos + IW_EV_LCP_LEN <= end) {
++		/* Event data may be unaligned, so make a local, aligned copy
++		 * before processing. */
++		memcpy(&iwe_buf, pos, IW_EV_LCP_LEN);
++//		wpa_printf(MSG_MSGDUMP, "Wireless event: cmd=0x%x len=%d", iwe->cmd, iwe->len);
++		if (iwe->len <= IW_EV_LCP_LEN)
++			return;
++
++		custom = pos + IW_EV_POINT_LEN;
++		if (drv->we_version > 18 &&
++		    (iwe->cmd == IWEVMICHAELMICFAILURE ||
++		     iwe->cmd == IWEVASSOCREQIE ||
++		     iwe->cmd == IWEVCUSTOM)) {
++			/* WE-19 removed the pointer from struct iw_point */
++			char *dpos = (char *) &iwe_buf.u.data.length;
++			int dlen = dpos - (char *) &iwe_buf;
++			memcpy(dpos, pos + IW_EV_LCP_LEN,
++			       sizeof(struct iw_event) - dlen);
++		} else {
++			memcpy(&iwe_buf, pos, sizeof(struct iw_event));
++			custom += IW_EV_POINT_OFF;
++		}
++
++		switch (iwe->cmd) {
++		case IWEVEXPIRED:
++			drv_event_disassoc(drv->hapd,
++					   (u8 *) iwe->u.addr.sa_data);
++			break;
++		case IWEVREGISTERED:
++			/* First reset the station state so that if the station did not
++			* send explicit deauth, it will still be ok.
++			*/
++			drv_event_disassoc(drv->hapd, (u8 *) iwe->u.addr.sa_data);
++			marvell_new_sta(drv, (u8 *) iwe->u.addr.sa_data);
++			break;
++		case IWEVCUSTOM:
++			if (custom + iwe->u.data.length > end)
++				return;
++			buf = malloc(iwe->u.data.length + 1);
++			if (buf == NULL)
++				return;		/* XXX */
++			memcpy(buf, custom, iwe->u.data.length);
++			buf[iwe->u.data.length] = '\0';
++			marvell_wireless_event_wireless_custom(drv, buf);
++			free(buf);
++			break;
++		}
++
++		pos += iwe->len;
++	}
++}
++static void
++marvell_wireless_event_rtm_newlink(void *ctx,
++				   struct ifinfomsg *ifi, u8 *buf, size_t len)
++{
++	struct marvell_driver_data *drv = ctx;
++	int attrlen, rta_len;
++	struct rtattr *attr;
++
++	if (ifi->ifi_index != drv->ifindex)
++		return;
++
++	attrlen = len;
++	attr = (struct rtattr *) buf;
++
++	rta_len = RTA_ALIGN(sizeof(struct rtattr));
++	while (RTA_OK(attr, attrlen)) {
++		if (attr->rta_type == IFLA_WIRELESS) {
++			marvell_wireless_event_wireless(
++				drv, ((char *) attr) + rta_len,
++				attr->rta_len - rta_len);
++		}
++		attr = RTA_NEXT(attr, attrlen);
++	}
++}
++
++static int
++marvell_get_we_version(struct marvell_driver_data *drv)
++{
++	struct iw_range *range;
++	struct iwreq iwr;
++	int minlen;
++	size_t buflen;
++
++	drv->we_version = 0;
++
++	/*
++	 * Use larger buffer than struct iw_range in order to allow the
++	 * structure to grow in the future.
++	 */
++	buflen = sizeof(struct iw_range) + 500;
++	range = os_zalloc(buflen);
++	if (range == NULL)
++		return -1;
++
++	memset(&iwr, 0, sizeof(iwr));
++	os_strlcpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
++	iwr.u.data.pointer = (caddr_t) range;
++	iwr.u.data.length = buflen;
++
++	minlen = ((char *) &range->enc_capa) - (char *) range +
++		sizeof(range->enc_capa);
++
++	if (ioctl(drv->ioctl_sock, SIOCGIWRANGE, &iwr) < 0) {
++		perror("ioctl[SIOCGIWRANGE]");
++		free(range);
++		return -1;
++	} else if (iwr.u.data.length >= minlen &&
++		   range->we_version_compiled >= 18) {
++		wpa_printf(MSG_DEBUG, "SIOCGIWRANGE: WE(compiled)=%d "
++			   "WE(source)=%d enc_capa=0x%x",
++			   range->we_version_compiled,
++			   range->we_version_source,
++			   range->enc_capa);
++		drv->we_version = range->we_version_compiled;
++	}
++
++	free(range);
++	return 0;
++}
++
++
++static int
++marvell_wireless_event_init(struct marvell_driver_data *drv)
++{
++	struct netlink_config *cfg;
++
++	marvell_get_we_version(drv);
++
++	cfg = os_zalloc(sizeof(*cfg));
++	if (cfg == NULL)
++		return -1;
++	cfg->ctx = drv;
++	cfg->newlink_cb = marvell_wireless_event_rtm_newlink;
++	drv->netlink = netlink_init(cfg);
++	if (drv->netlink == NULL) {
++		os_free(cfg);
++		return -1;
++	}
++
++	return 0;
++}
++
++static int
++marvell_send_ether(void *priv, const u8 *dst, const u8 *src, u16 proto, const u8 *data, size_t data_len)
++{
++	struct marvell_driver_data *drv = priv;
++	unsigned char buf[3000];
++	unsigned char *bp = buf;
++	struct l2_ethhdr *eth;
++	size_t len;
++	int status;
++
++	/*
++	 * Prepend the Ethernet header.  If the caller left us
++	 * space at the front we could just insert it but since
++	 * we don't know we copy to a local buffer.  Given the frequency
++	 * and size of frames this probably doesn't matter.
++	 */
++	len = data_len + sizeof(struct l2_ethhdr);
++	if (len > sizeof(buf)) {
++		bp = malloc(len);
++		if (bp == NULL) {
++			printf("EAPOL frame discarded, cannot malloc temp "
++			       "buffer of size %lu!\n", (unsigned long) len);
++			return -1;
++		}
++	}
++	eth = (struct l2_ethhdr *) bp;
++	memcpy(eth->h_dest, dst, ETH_ALEN);
++	memcpy(eth->h_source, src, ETH_ALEN);
++	eth->h_proto = htons(proto);
++	memcpy(eth+1, data, data_len);
++
++	wpa_hexdump(MSG_MSGDUMP, "TX Ether", bp, len);
++
++	status = l2_packet_send(drv->sock_xmit, dst, proto, bp, len);
++
++	if (bp != buf)
++		free(bp);
++	return status;
++}
++
++static int
++marvell_send_eapol(void *priv, const u8 *addr, const u8 *data, size_t data_len,
++           int encrypt, const u8 *own_addr)
++{
++	struct marvell_driver_data *drv = priv;
++	unsigned char buf[3000];
++	unsigned char *bp = buf;
++	struct l2_ethhdr *eth;
++	size_t len;
++	int status;
++
++	/*
++	 * Prepend the Ethernet header.  If the caller left us
++	 * space at the front we could just insert it but since
++	 * we don't know we copy to a local buffer.  Given the frequency
++	 * and size of frames this probably doesn't matter.
++	 */
++	len = data_len + sizeof(struct l2_ethhdr);
++	if (len > sizeof(buf)) {
++		bp = malloc(len);
++		if (bp == NULL) {
++			printf("EAPOL frame discarded, cannot malloc temp "
++			       "buffer of size %lu!\n", (unsigned long) len);
++			return -1;
++		}
++	}
++	eth = (struct l2_ethhdr *) bp;
++	memcpy(eth->h_dest, addr, ETH_ALEN);
++	memcpy(eth->h_source, own_addr, ETH_ALEN);
++	eth->h_proto = host_to_be16(ETH_P_EAPOL);
++	memcpy(eth+1, data, data_len);
++
++	wpa_hexdump(MSG_MSGDUMP, "TX EAPOL", bp, len);
++
++	status = l2_packet_send(drv->sock_xmit, addr, ETH_P_EAPOL, bp, len);
++
++	if (bp != buf)
++		free(bp);
++	return status;
++}
++
++static void
++handle_read(void *ctx, const u8 *src_addr, const u8 *buf, size_t len)
++{
++	struct marvell_driver_data *drv = ctx;
++	drv_event_eapol_rx(drv->hapd, src_addr, buf + sizeof(struct l2_ethhdr),
++			   len - sizeof(struct l2_ethhdr));
++}
++
++
++static void *
++marvell_init(struct hostapd_data *hapd, struct wpa_init_params *params)
++{
++	struct marvell_driver_data *drv;
++	struct ifreq ifr;
++	char brname[IFNAMSIZ];
++
++	drv = os_zalloc(sizeof(struct marvell_driver_data));
++	if (drv == NULL) {
++		printf("Could not allocate memory for marvell driver data\n");
++		return NULL;
++	}
++
++	drv->hapd = hapd;
++	drv->ioctl_sock = socket(PF_INET, SOCK_DGRAM, 0);
++	if (drv->ioctl_sock < 0) {
++		perror("socket[PF_INET,SOCK_DGRAM]");
++		goto bad;
++	}
++	memcpy(drv->iface, params->ifname, sizeof(drv->iface));
++
++	memset(&ifr, 0, sizeof(ifr));
++	os_strlcpy(ifr.ifr_name, drv->iface, sizeof(ifr.ifr_name));
++	if (ioctl(drv->ioctl_sock, SIOCGIFINDEX, &ifr) != 0) {
++		perror("ioctl(SIOCGIFINDEX)");
++		goto bad;
++	}
++	drv->ifindex = ifr.ifr_ifindex;
++
++	drv->sock_xmit = l2_packet_init(drv->iface, NULL, ETH_P_EAPOL,
++					handle_read, drv, 1);
++	if (drv->sock_xmit == NULL)
++		goto bad;
++
++	if (l2_packet_get_own_addr(drv->sock_xmit, params->own_addr))
++		goto bad;
++
++	if (params->bridge[0]) {
++		wpa_printf(MSG_DEBUG, "Configure bridge %s for EAPOL traffic.",
++			   params->bridge[0]);
++		drv->sock_recv = l2_packet_init(params->bridge[0], NULL,
++						ETH_P_EAPOL, handle_read, drv,
++						1);
++		if (drv->sock_recv == NULL)
++			goto bad;
++	} else if (linux_br_get(brname, drv->iface) == 0) {
++		wpa_printf(MSG_DEBUG, "Interface in bridge %s; configure for "
++			   "EAPOL receive", brname);
++		drv->sock_recv = l2_packet_init(brname, NULL, ETH_P_EAPOL,
++						handle_read, drv, 1);
++		if (drv->sock_recv == NULL)
++			goto bad;
++        } else
++		    drv->sock_recv = drv->sock_xmit;
++
++	if (marvell_wireless_event_init(drv))
++		goto bad;
++            
++	/* for wps with open security and ieee8021x=0 mode */
++	if (drv->hapd->conf->wps_state && !drv->hapd->conf->wpa)
++	{
++   		if ( set80211param(drv, WL_PARAM_WPAWPA2MODE, 0x10, TRUE) )
++		{
++			wpa_printf(MSG_DEBUG,"%s: WPS Extended Open mode setting failed\n", __func__);
++			return NULL;
++		}
++	}
++
++	return drv;
++bad:
++	if (drv->sock_xmit != NULL)
++		l2_packet_deinit(drv->sock_xmit);
++	if (drv->ioctl_sock >= 0)
++		close(drv->ioctl_sock);
++	if (drv != NULL)
++		free(drv);
++	return NULL;
++}
++
++
++static void
++marvell_deinit(void* priv)
++{
++	struct marvell_driver_data *drv = priv;
++
++	netlink_deinit(drv->netlink);
++	(void) linux_set_iface_flags(drv->ioctl_sock, drv->iface, 0);
++	if (drv->ioctl_sock >= 0)
++		close(drv->ioctl_sock);
++	if (drv->sock_recv != NULL && drv->sock_recv != drv->sock_xmit)
++		l2_packet_deinit(drv->sock_recv);
++	if (drv->sock_xmit != NULL)
++		l2_packet_deinit(drv->sock_xmit);
++	if (drv->sock_raw)
++		l2_packet_deinit(drv->sock_raw);
++	free(drv);
++
++}
++
++static int
++marvell_set_ssid(void *priv, const u8 *buf, int len)
++{
++	struct marvell_driver_data *drv = priv;
++	struct iwreq iwr;
++
++	memset(&iwr, 0, sizeof(iwr));
++	strncpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
++	iwr.u.essid.flags = 1; /* SSID active */
++	iwr.u.essid.pointer = (caddr_t) buf;
++	iwr.u.essid.length = len + 1;
++
++	if (ioctl(drv->ioctl_sock, SIOCSIWESSID, &iwr) < 0) {
++		perror("ioctl[SIOCSIWESSID]");
++		printf("len=%d\n", len);
++		return -1;
++	}
++	if (drv->hapd->conf->wps_state )
++	{
++    	if (ioctl(drv->ioctl_sock, SIOCSIWCOMMIT, &iwr) < 0) {
++        	printf("ioctl[SIOCSIWCOMMIT]");
++        	return -1;
++    	}
++	}
++	return 0;
++}
++
++static int
++marvell_get_ssid(void *priv, u8 *buf, int len)
++{
++	struct marvell_driver_data *drv = priv;
++	struct iwreq iwr;
++	int ret = 0;
++
++	memset(&iwr, 0, sizeof(iwr));
++	os_strlcpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
++	iwr.u.essid.pointer = (caddr_t) buf;
++	iwr.u.essid.length = len;
++
++	if (ioctl(drv->ioctl_sock, SIOCGIWESSID, &iwr) < 0) {
++		perror("ioctl[SIOCGIWESSID]");
++		ret = -1;
++	} else
++		ret = iwr.u.essid.length;// -1; /*remove the '\0' */
++
++	return ret;
++}
++
++static int
++marvell_set_countermeasures(void *priv, int enabled)
++{
++	struct marvell_driver_data *drv = priv;
++	wpa_printf(MSG_DEBUG, "%s: enabled=%d", __FUNCTION__, enabled);
++
++	return set80211param(drv, WL_PARAM_COUNTERMEASURES, enabled,FALSE);
++}
++
++static int
++marvell_commit (void *priv)
++{
++	struct marvell_driver_data *drv = priv;
++	struct iwreq iwr;
++
++	memset(&iwr, 0, sizeof(iwr));
++	strncpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
++
++    if (ioctl(drv->ioctl_sock, SIOCSIWCOMMIT, &iwr) < 0) {
++		printf("ioctl[SIOCSIWCOMMIT]");
++		return -1;
++	}
++
++	return 0;
++}
++
++const struct wpa_driver_ops wpa_driver_marvell_ops = {
++	.name			        = "marvell",
++	.hapd_init			    = marvell_init,
++	.deinit			        = marvell_deinit,
++	.set_ieee8021x		    = marvell_set_ieee8021x,
++	.set_key		        = marvell_set_key,
++	.flush			        = marvell_flush,
++	.set_generic_elem	    = marvell_set_opt_ie,
++	.read_sta_data		    = marvell_read_sta_driver_data,
++	.hapd_send_eapol	    = marvell_send_eapol,
++	.sta_deauth		        = marvell_sta_deauth,
++	.hapd_set_ssid		    = marvell_set_ssid,
++	.hapd_get_ssid		    = marvell_get_ssid,
++	.set_countermeasures    = marvell_set_countermeasures,
++    .send_ether             = marvell_send_ether,
++	.set_ap_wps_ie		    = marvell_set_ap_wps_ie,
++	.commit                 = marvell_commit,
++};
+diff -Naur hostapd-0.8-snapshot/src/drivers/drivers.c hostapd-0.8.x-mrvl/src/drivers/drivers.c
+--- hostapd-0.8-snapshot/src/drivers/drivers.c	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/drivers/drivers.c	2012-05-11 15:58:02.000000000 +0700
+@@ -74,7 +74,9 @@
+ #ifdef CONFIG_DRIVER_NONE
+ extern struct wpa_driver_ops wpa_driver_none_ops; /* driver_none.c */
+ #endif /* CONFIG_DRIVER_NONE */
+-
++#ifdef CONFIG_DRIVER_MARVELL
++extern struct wpa_driver_ops wpa_driver_marvell_ops; /* driver_marvell.c */
++#endif /* CONFIG_DRIVER_MARVELL */
+ 
+ struct wpa_driver_ops *wpa_drivers[] =
+ {
+@@ -135,5 +137,8 @@
+ #ifdef CONFIG_DRIVER_NONE
+ 	&wpa_driver_none_ops,
+ #endif /* CONFIG_DRIVER_NONE */
++#ifdef CONFIG_DRIVER_MARVELL
++	&wpa_driver_marvell_ops,
++#endif /* CONFIG_DRIVER_NONE */
+ 	NULL
+ };
+diff -Naur hostapd-0.8-snapshot/src/drivers/drivers.mak hostapd-0.8.x-mrvl/src/drivers/drivers.mak
+--- hostapd-0.8-snapshot/src/drivers/drivers.mak	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/drivers/drivers.mak	2012-05-11 15:58:02.000000000 +0700
+@@ -71,6 +71,15 @@
+ NEED_LINUX_IOCTL=y
+ endif
+ 
++ifdef CONFIG_DRIVER_MARVELL
++DRV_AP_CFLAGS += -DCONFIG_DRIVER_MARVELL
++DRV_AP_OBJS += ../src/drivers/driver_marvell.o
++CONFIG_L2_PACKET=linux
++NEED_NETLINK=y
++NEED_LINUX_IOCTL=y
++endif
++
++
+ ##### PURE CLIENT DRIVERS
+ 
+ ifdef CONFIG_DRIVER_WEXT
+diff -Naur hostapd-0.8-snapshot/src/p2p/p2p_group.c hostapd-0.8.x-mrvl/src/p2p/p2p_group.c
+--- hostapd-0.8-snapshot/src/p2p/p2p_group.c	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/p2p/p2p_group.c	2012-05-11 15:58:02.000000000 +0700
+@@ -72,6 +72,7 @@
+ 	group->group_formation = 1;
+ 	group->beacon_update = 1;
+ 	p2p_group_update_ies(group);
++	group->cfg->idle_update(group->cfg->cb_ctx, 1);
+ 
+ 	return group;
+ }
+@@ -338,6 +339,8 @@
+ 	if (group->num_members == group->cfg->max_clients)
+ 		group->beacon_update = 1;
+ 	p2p_group_update_ies(group);
++	if (group->num_members == 1)
++		group->cfg->idle_update(group->cfg->cb_ctx, 0);
+ 
+ 	return 0;
+ }
+@@ -396,6 +399,8 @@
+ 		if (group->num_members == group->cfg->max_clients - 1)
+ 			group->beacon_update = 1;
+ 		p2p_group_update_ies(group);
++		if (group->num_members == 0)
++			group->cfg->idle_update(group->cfg->cb_ctx, 1);
+ 	}
+ }
+ 
+diff -Naur hostapd-0.8-snapshot/src/p2p/p2p.h hostapd-0.8.x-mrvl/src/p2p/p2p.h
+--- hostapd-0.8-snapshot/src/p2p/p2p.h	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/p2p/p2p.h	2012-05-11 15:58:02.000000000 +0700
+@@ -1049,6 +1049,13 @@
+ 	 */
+ 	void (*ie_update)(void *ctx, struct wpabuf *beacon_ies,
+ 			  struct wpabuf *proberesp_ies);
++
++	/**
++	 * idle_update - Notification of changes in group idle state
++	 * @ctx: Callback context from cb_ctx
++	 * @idle: Whether the group is idle (no associated stations)
++	 */
++	void (*idle_update)(void *ctx, int idle);
+ };
+ 
+ /**
+diff -Naur hostapd-0.8-snapshot/src/p2p/p2p_parse.c hostapd-0.8.x-mrvl/src/p2p/p2p_parse.c
+--- hostapd-0.8-snapshot/src/p2p/p2p_parse.c	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/p2p/p2p_parse.c	2012-05-11 15:58:02.000000000 +0700
+@@ -166,7 +166,8 @@
+ 		for (i = 0; i < nlen; i++) {
+ 			if (msg->device_name[i] == '\0')
+ 				break;
+-			if (msg->device_name[i] < 32)
++			if (msg->device_name[i] > 0 &&
++			    msg->device_name[i] < 32)
+ 				msg->device_name[i] = '_';
+ 		}
+ 		wpa_printf(MSG_DEBUG, "P2P: * Device Info: addr " MACSTR
+@@ -563,7 +564,7 @@
+ 		name[cli->dev_name_len] = '\0';
+ 		count = (int) cli->dev_name_len - 1;
+ 		while (count >= 0) {
+-			if (name[count] < 32)
++			if (name[count] > 0 && name[count] < 32)
+ 				name[count] = '_';
+ 			count--;
+ 		}
+diff -Naur hostapd-0.8-snapshot/src/wps/wps_attr_build.c hostapd-0.8.x-mrvl/src/wps/wps_attr_build.c
+--- hostapd-0.8-snapshot/src/wps/wps_attr_build.c	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/wps/wps_attr_build.c	2012-05-11 15:58:02.000000000 +0700
+@@ -254,20 +254,28 @@
+ 
+ int wps_build_auth_type_flags(struct wps_data *wps, struct wpabuf *msg)
+ {
++	u16 auth_types = WPS_AUTH_TYPES;
++#ifdef CONFIG_WPS2
++	auth_types &= ~WPS_AUTH_SHARED;
++#endif /* CONFIG_WPS2 */
+ 	wpa_printf(MSG_DEBUG, "WPS:  * Authentication Type Flags");
+ 	wpabuf_put_be16(msg, ATTR_AUTH_TYPE_FLAGS);
+ 	wpabuf_put_be16(msg, 2);
+-	wpabuf_put_be16(msg, WPS_AUTH_TYPES);
++	wpabuf_put_be16(msg, auth_types);
+ 	return 0;
+ }
+ 
+ 
+ int wps_build_encr_type_flags(struct wps_data *wps, struct wpabuf *msg)
+ {
++	u16 encr_types = WPS_ENCR_TYPES;
++#ifdef CONFIG_WPS2
++	encr_types &= ~WPS_ENCR_WEP;
++#endif /* CONFIG_WPS2 */
+ 	wpa_printf(MSG_DEBUG, "WPS:  * Encryption Type Flags");
+ 	wpabuf_put_be16(msg, ATTR_ENCR_TYPE_FLAGS);
+ 	wpabuf_put_be16(msg, 2);
+-	wpabuf_put_be16(msg, WPS_ENCR_TYPES);
++	wpabuf_put_be16(msg, encr_types);
+ 	return 0;
+ }
+ 
+diff -Naur hostapd-0.8-snapshot/src/wps/wps_defs.h hostapd-0.8.x-mrvl/src/wps/wps_defs.h
+--- hostapd-0.8-snapshot/src/wps/wps_defs.h	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/wps/wps_defs.h	2012-05-11 15:58:02.000000000 +0700
+@@ -224,6 +224,14 @@
+ 	WPS_CFG_DEV_PASSWORD_AUTH_FAILURE = 18
+ };
+ 
++/* Vendor specific Error Indication for WPS event messages */
++enum wps_error_indication {
++	WPS_EI_NO_ERROR,
++	WPS_EI_SECURITY_TKIP_ONLY_PROHIBITED,
++	WPS_EI_SECURITY_WEP_PROHIBITED,
++	NUM_WPS_EI_VALUES
++};
++
+ /* RF Bands */
+ #define WPS_RF_24GHZ 0x01
+ #define WPS_RF_50GHZ 0x02
+diff -Naur hostapd-0.8-snapshot/src/wps/wps_enrollee.c hostapd-0.8.x-mrvl/src/wps/wps_enrollee.c
+--- hostapd-0.8-snapshot/src/wps/wps_enrollee.c	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/wps/wps_enrollee.c	2012-05-11 15:58:02.000000000 +0700
+@@ -225,7 +225,7 @@
+ 
+ static int wps_build_cred_ssid(struct wps_data *wps, struct wpabuf *msg)
+ {
+-	wpa_printf(MSG_DEBUG, "WPS:  * SSID");
++	wpa_printf(MSG_DEBUG, "WPS:  * SSID (##<%s>)", wps->wps->ssid);
+ 	wpabuf_put_be16(msg, ATTR_SSID);
+ 	wpabuf_put_be16(msg, wps->wps->ssid_len);
+ 	wpabuf_put_data(msg, wps->wps->ssid, wps->wps->ssid_len);
+@@ -235,20 +235,40 @@
+ 
+ static int wps_build_cred_auth_type(struct wps_data *wps, struct wpabuf *msg)
+ {
+-	wpa_printf(MSG_DEBUG, "WPS:  * Authentication Type");
++	wpa_printf(MSG_DEBUG, "WPS:  * Authentication Type (##<0x%x>)", wps->wps->auth_types);
+ 	wpabuf_put_be16(msg, ATTR_AUTH_TYPE);
+ 	wpabuf_put_be16(msg, 2);
++#if 1 // For backwards compatibility (version 1.0) Win7 Certification
++	if (wps->wps->auth_types == (WPS_AUTH_WPA2PSK | WPS_AUTH_WPAPSK)) // 0x22
++	{
++		wpabuf_put_be16(msg, WPS_AUTH_WPA2PSK);
++		wpa_printf(MSG_DEBUG, "WPS:  * Authentication Type (<0x%x> - actual)", WPS_AUTH_WPA2PSK);
++	}
++	else
++		wpabuf_put_be16(msg, wps->wps->auth_types);
++#else
+ 	wpabuf_put_be16(msg, wps->wps->auth_types);
++#endif
+ 	return 0;
+ }
+ 
+ 
+ static int wps_build_cred_encr_type(struct wps_data *wps, struct wpabuf *msg)
+ {
+-	wpa_printf(MSG_DEBUG, "WPS:  * Encryption Type");
++	wpa_printf(MSG_DEBUG, "WPS:  * Encryption Type (##<0x%x>)", wps->wps->encr_types);
+ 	wpabuf_put_be16(msg, ATTR_ENCR_TYPE);
+ 	wpabuf_put_be16(msg, 2);
++#if 1 //For backwards compatibility (version 1.0) Win7 Certification
++	if (wps->wps->encr_types == (WPS_ENCR_AES | WPS_ENCR_TKIP)) // 0x0c
++	{
++		wpabuf_put_be16(msg, WPS_ENCR_AES);
++		wpa_printf(MSG_DEBUG, "WPS:  * Encryption Type (<0x%x> - actual)", WPS_ENCR_AES);
++	}
++	else
++	wpabuf_put_be16(msg, wps->wps->encr_types);
++#else
+ 	wpabuf_put_be16(msg, wps->wps->encr_types);
++#endif
+ 	return 0;
+ }
+ 
+@@ -813,6 +833,17 @@
+ 	}
+ #endif /* CONFIG_WPS2 */
+ 
++#ifdef MRVL_WPS2
++        if ((cred.encr_type & (WPS_ENCR_TKIP | WPS_ENCR_AES)) ==
++            WPS_ENCR_TKIP ||
++            (cred.auth_type & (WPS_AUTH_WPAPSK | WPS_AUTH_WPA2PSK)) ==
++            WPS_AUTH_WPAPSK) {
++                wpa_printf(MSG_INFO, "WPS-STRICT: Invalid WSC 2.0 "
++                           "AP Settings: WPA-Personal/TKIP only");
++                return -1;
++        }
++
++#else
+ #ifdef CONFIG_WPS_STRICT
+ 	if (wps2) {
+ 		if ((cred.encr_type & (WPS_ENCR_TKIP | WPS_ENCR_AES)) ==
+@@ -825,6 +856,7 @@
+ 		}
+ 	}
+ #endif /* CONFIG_WPS_STRICT */
++#endif /* WSC2_PF3_WAR */
+ 
+ #ifdef CONFIG_WPS2
+ 	if ((cred.encr_type & (WPS_ENCR_TKIP | WPS_ENCR_AES)) == WPS_ENCR_TKIP)
+@@ -1051,6 +1083,10 @@
+ 	}
+ 	wpabuf_free(decrypted);
+ 
++	if (wps->wps->ap)
++		wps->wps->event_cb(wps->wps->cb_ctx, WPS_EV_AP_PIN_SUCCESS,
++				   NULL);
++
+ 	wps->state = SEND_M7;
+ 	return WPS_CONTINUE;
+ }
+@@ -1132,7 +1168,8 @@
+ 
+ 	if (attr.msg_type == NULL) {
+ 		wpa_printf(MSG_DEBUG, "WPS: No Message Type attribute");
+-		return WPS_FAILURE;
++		wps->state = SEND_WSC_NACK;
++		return WPS_CONTINUE;
+ 	}
+ 
+ 	switch (*attr.msg_type) {
+diff -Naur hostapd-0.8-snapshot/src/wps/wps_er.c hostapd-0.8.x-mrvl/src/wps/wps_er.c
+--- hostapd-0.8-snapshot/src/wps/wps_er.c	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/wps/wps_er.c	2012-05-11 15:58:02.000000000 +0700
+@@ -62,11 +62,15 @@
+ }
+ 
+ 
+-static struct wps_er_sta * wps_er_sta_get(struct wps_er_ap *ap, const u8 *addr)
++static struct wps_er_sta * wps_er_sta_get(struct wps_er_ap *ap, const u8 *addr,
++					  const u8 *uuid)
+ {
+ 	struct wps_er_sta *sta;
+ 	dl_list_for_each(sta, &ap->sta, struct wps_er_sta, list) {
+-		if (os_memcmp(sta->addr, addr, ETH_ALEN) == 0)
++		if ((addr == NULL ||
++		     os_memcmp(sta->addr, addr, ETH_ALEN) == 0) &&
++		    (uuid == NULL ||
++		     os_memcmp(uuid, sta->uuid, WPS_UUID_LEN) == 0))
+ 			return sta;
+ 	}
+ 	return NULL;
+@@ -275,6 +279,64 @@
+ 	wps_er_ap_unsubscribed(ap->er, ap);
+ }
+ 
++
++static struct wps_er_ap_settings * wps_er_ap_get_settings(struct wps_er *er,
++							  const u8 *uuid)
++{
++	struct wps_er_ap_settings *s;
++	dl_list_for_each(s, &er->ap_settings, struct wps_er_ap_settings, list)
++		if (os_memcmp(uuid, s->uuid, WPS_UUID_LEN) == 0)
++			return s;
++	return NULL;
++}
++
++
++int wps_er_ap_cache_settings(struct wps_er *er, struct in_addr *addr)
++{
++	struct wps_er_ap *ap;
++	struct wps_er_ap_settings *settings;
++
++	ap = wps_er_ap_get(er, addr, NULL);
++	if (ap == NULL || ap->ap_settings == NULL)
++		return -1;
++
++	settings = wps_er_ap_get_settings(er, ap->uuid);
++	if (!settings) {
++		settings = os_zalloc(sizeof(*settings));
++		if (settings == NULL)
++			return -1;
++		os_memcpy(settings->uuid, ap->uuid, WPS_UUID_LEN);
++		dl_list_add(&er->ap_settings, &settings->list);
++	}
++	os_memcpy(&settings->ap_settings, ap->ap_settings,
++		  sizeof(struct wps_credential));
++
++	return 0;
++}
++
++
++static int wps_er_ap_use_cached_settings(struct wps_er *er,
++					 struct wps_er_ap *ap)
++{
++	struct wps_er_ap_settings *s;
++
++	if (ap->ap_settings)
++		return 0;
++
++	s = wps_er_ap_get_settings(ap->er, ap->uuid);
++	if (!s)
++		return -1;
++
++	ap->ap_settings = os_malloc(sizeof(*ap->ap_settings));
++	if (ap->ap_settings == NULL)
++		return -1;
++
++	os_memcpy(ap->ap_settings, &s->ap_settings, sizeof(*ap->ap_settings));
++	wpa_printf(MSG_DEBUG, "WPS ER: Use cached AP settings");
++	return 0;
++}
++
++
+ static void wps_er_ap_remove_entry(struct wps_er *er, struct wps_er_ap *ap)
+ {
+ 	wpa_printf(MSG_DEBUG, "WPS ER: Removing AP entry for %s (%s)",
+@@ -352,6 +414,7 @@
+ 		wpa_printf(MSG_DEBUG, "WPS ER: Subscribed to events");
+ 		ap->subscribed = 1;
+ 		wps_er_get_sid(ap, http_client_get_hdr_line(c, "SID"));
++		wps_er_ap_use_cached_settings(ap->er, ap);
+ 		wps_er_ap_event(ap->er->wps, ap, WPS_EV_ER_AP_ADD);
+ 		break;
+ 	case HTTP_CLIENT_FAILED:
+@@ -583,8 +646,12 @@
+ static void wps_er_ap_remove_all(struct wps_er *er)
+ {
+ 	struct wps_er_ap *prev, *ap;
++	struct wps_er_ap_settings *prev_s, *s;
+ 	dl_list_for_each_safe(ap, prev, &er->ap, struct wps_er_ap, list)
+ 		wps_er_ap_remove_entry(er, ap);
++	dl_list_for_each_safe(s, prev_s, &er->ap_settings,
++			      struct wps_er_ap_settings, list)
++		os_free(s);
+ }
+ 
+ 
+@@ -649,7 +716,7 @@
+ 					       struct wps_parse_attr *attr,
+ 					       int probe_req)
+ {
+-	struct wps_er_sta *sta = wps_er_sta_get(ap, addr);
++	struct wps_er_sta *sta = wps_er_sta_get(ap, addr, NULL);
+ 	int new_sta = 0;
+ 	int m1;
+ 
+@@ -1162,6 +1229,7 @@
+ 		return NULL;
+ 	dl_list_init(&er->ap);
+ 	dl_list_init(&er->ap_unsubscribing);
++	dl_list_init(&er->ap_settings);
+ 
+ 	er->multicast_sd = -1;
+ 	er->ssdp_sd = -1;
+@@ -1269,19 +1337,30 @@
+ 				       enum http_client_event event)
+ {
+ 	struct wps_er_ap *ap = ctx;
++	union wps_event_data data;
++
++	os_memset(&data, 0, sizeof(data));
+ 
+ 	switch (event) {
+ 	case HTTP_CLIENT_OK:
+ 		wpa_printf(MSG_DEBUG, "WPS ER: SetSelectedRegistrar OK");
++		data.set_sel_reg.state = WPS_ER_SET_SEL_REG_DONE;
++		data.set_sel_reg.uuid = ap->uuid;
+ 		break;
+ 	case HTTP_CLIENT_FAILED:
+ 	case HTTP_CLIENT_INVALID_REPLY:
+ 	case HTTP_CLIENT_TIMEOUT:
+ 		wpa_printf(MSG_DEBUG, "WPS ER: SetSelectedRegistrar failed");
++		data.set_sel_reg.state = WPS_ER_SET_SEL_REG_FAILED;
++		data.set_sel_reg.uuid = ap->uuid;
+ 		break;
+ 	}
+ 	http_client_free(ap->http);
+ 	ap->http = NULL;
++
++	if (data.set_sel_reg.uuid)
++		ap->er->wps->event_cb(ap->er->wps->cb_ctx,
++				      WPS_EV_ER_SET_SELECTED_REGISTRAR, &data);
+ }
+ 
+ 
+@@ -1376,7 +1455,9 @@
+ 	struct wps_er_ap *ap;
+ 	struct wps_registrar *reg = er->wps->registrar;
+ 	const u8 *auth_macs;
++	u8 bcast[ETH_ALEN];
+ 	size_t count;
++	union wps_event_data data;
+ 
+ 	if (er->skip_set_sel_reg) {
+ 		wpa_printf(MSG_DEBUG, "WPS ER: Skip SetSelectedRegistrar");
+@@ -1388,6 +1469,13 @@
+ 		return;
+ 
+ 	auth_macs = wps_authorized_macs(reg, &count);
++#ifdef CONFIG_WPS2
++	if (count == 0) {
++		os_memset(bcast, 0xff, ETH_ALEN);
++		auth_macs = bcast;
++		count = 1;
++	}
++#endif /* CONFIG_WPS2 */
+ 
+ 	if (wps_build_version(msg) ||
+ 	    wps_er_build_selected_registrar(msg, sel_reg) ||
+@@ -1399,8 +1487,22 @@
+ 		return;
+ 	}
+ 
+-	dl_list_for_each(ap, &er->ap, struct wps_er_ap, list)
++	os_memset(&data, 0, sizeof(data));
++	data.set_sel_reg.sel_reg = sel_reg;
++	data.set_sel_reg.dev_passwd_id = dev_passwd_id;
++	data.set_sel_reg.sel_reg_config_methods = sel_reg_config_methods;
++	data.set_sel_reg.state = WPS_ER_SET_SEL_REG_START;
++
++	dl_list_for_each(ap, &er->ap, struct wps_er_ap, list) {
++		if (er->set_sel_reg_uuid_filter &&
++		    os_memcmp(ap->uuid, er->set_sel_reg_uuid_filter,
++			      WPS_UUID_LEN) != 0)
++			continue;
++		data.set_sel_reg.uuid = ap->uuid;
++		er->wps->event_cb(er->wps->cb_ctx,
++				  WPS_EV_ER_SET_SELECTED_REGISTRAR, &data);
+ 		wps_er_send_set_sel_reg(ap, msg);
++	}
+ 
+ 	wpabuf_free(msg);
+ }
+@@ -1408,22 +1510,41 @@
+ 
+ int wps_er_pbc(struct wps_er *er, const u8 *uuid)
+ {
++	int res;
++	struct wps_er_ap *ap;
++
+ 	if (er == NULL || er->wps == NULL)
+ 		return -1;
+ 
+ 	if (wps_registrar_pbc_overlap(er->wps->registrar, NULL, NULL)) {
+ 		wpa_printf(MSG_DEBUG, "WPS ER: PBC overlap - do not start PBC "
+ 			   "mode");
+-		return -1;
++		return -2;
+ 	}
+ 
+-	/*
+-	 * TODO: Should enable PBC mode only in a single AP based on which AP
+-	 * the Enrollee (uuid) is using. Now, we may end up enabling multiple
+-	 * APs in PBC mode which could result in session overlap at the
+-	 * Enrollee.
+-	 */
+-	if (wps_registrar_button_pushed(er->wps->registrar))
++	ap = wps_er_ap_get(er, NULL, uuid);
++	if (ap == NULL) {
++		struct wps_er_sta *sta = NULL;
++		dl_list_for_each(ap, &er->ap, struct wps_er_ap, list) {
++			sta = wps_er_sta_get(ap, NULL, uuid);
++			if (sta) {
++				uuid = ap->uuid;
++				break;
++			}
++		}
++		if (sta == NULL)
++			return -3; /* Unknown UUID */
++	}
++
++	if (ap->ap_settings == NULL) {
++		wpa_printf(MSG_DEBUG, "WPS ER: AP settings not known");
++		return -4;
++	}
++
++	er->set_sel_reg_uuid_filter = uuid;
++	res = wps_registrar_button_pushed(er->wps->registrar);
++	er->set_sel_reg_uuid_filter = NULL;
++	if (res)
+ 		return -1;
+ 
+ 	return 0;
+diff -Naur hostapd-0.8-snapshot/src/wps/wps_er.h hostapd-0.8.x-mrvl/src/wps/wps_er.h
+--- hostapd-0.8-snapshot/src/wps/wps_er.h	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/wps/wps_er.h	2012-05-11 15:58:02.000000000 +0700
+@@ -73,6 +73,12 @@
+ 	void (*m1_handler)(struct wps_er_ap *ap, struct wpabuf *m1);
+ };
+ 
++struct wps_er_ap_settings {
++	struct dl_list list;
++	u8 uuid[WPS_UUID_LEN];
++	struct wps_credential ap_settings;
++};
++
+ struct wps_er {
+ 	struct wps_context *wps;
+ 	char ifname[17];
+@@ -83,6 +89,7 @@
+ 	int ssdp_sd;
+ 	struct dl_list ap;
+ 	struct dl_list ap_unsubscribing;
++	struct dl_list ap_settings;
+ 	struct http_server *http_srv;
+ 	int http_port;
+ 	unsigned int next_ap_id;
+@@ -92,6 +99,7 @@
+ 	void *deinit_done_ctx;
+ 	struct in_addr filter_addr;
+ 	int skip_set_sel_reg;
++	const u8 *set_sel_reg_uuid_filter;
+ };
+ 
+ 
+@@ -99,6 +107,7 @@
+ void wps_er_ap_add(struct wps_er *er, const u8 *uuid, struct in_addr *addr,
+ 		   const char *location, int max_age);
+ void wps_er_ap_remove(struct wps_er *er, struct in_addr *addr);
++int wps_er_ap_cache_settings(struct wps_er *er, struct in_addr *addr);
+ 
+ /* wps_er_ssdp.c */
+ int wps_er_ssdp_init(struct wps_er *er);
+diff -Naur hostapd-0.8-snapshot/src/wps/wps_er_ssdp.c hostapd-0.8.x-mrvl/src/wps/wps_er_ssdp.c
+--- hostapd-0.8-snapshot/src/wps/wps_er_ssdp.c	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/wps/wps_er_ssdp.c	2012-05-11 15:58:02.000000000 +0700
+@@ -113,6 +113,7 @@
+ 		return; /* Not WPS advertisement/reply */
+ 
+ 	if (byebye) {
++		wps_er_ap_cache_settings(er, &addr.sin_addr);
+ 		wps_er_ap_remove(er, &addr.sin_addr);
+ 		return;
+ 	}
+diff -Naur hostapd-0.8-snapshot/src/wps/wps.h hostapd-0.8.x-mrvl/src/wps/wps.h
+--- hostapd-0.8-snapshot/src/wps/wps.h	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/wps/wps.h	2012-05-11 15:58:02.000000000 +0700
+@@ -417,7 +417,17 @@
+ 	/**
+ 	 * WPS_EV_ER_AP_SETTINGS - ER: AP Settings learned
+ 	 */
+-	WPS_EV_ER_AP_SETTINGS
++	WPS_EV_ER_AP_SETTINGS,
++
++	/**
++	 * WPS_EV_ER_SET_SELECTED_REGISTRAR - ER: SetSelectedRegistrar event
++	 */
++	WPS_EV_ER_SET_SELECTED_REGISTRAR,
++
++	/**
++	 * WPS_EV_AP_PIN_SUCCESS - External Registrar used correct AP PIN
++	 */
++	WPS_EV_AP_PIN_SUCCESS
+ };
+ 
+ /**
+@@ -451,6 +461,7 @@
+ 	struct wps_event_fail {
+ 		int msg;
+ 		u16 config_error;
++		u16 error_indication;
+ 	} fail;
+ 
+ 	struct wps_event_pwd_auth_fail {
+@@ -492,6 +503,18 @@
+ 		const u8 *uuid;
+ 		const struct wps_credential *cred;
+ 	} ap_settings;
++
++	struct wps_event_er_set_selected_registrar {
++		const u8 *uuid;
++		int sel_reg;
++		u16 dev_passwd_id;
++		u16 sel_reg_config_methods;
++		enum {
++			WPS_ER_SET_SEL_REG_START,
++			WPS_ER_SET_SEL_REG_DONE,
++			WPS_ER_SET_SEL_REG_FAILED
++		} state;
++	} set_sel_reg;
+ };
+ 
+ /**
+diff -Naur hostapd-0.8-snapshot/src/wps/wps_registrar.c hostapd-0.8.x-mrvl/src/wps/wps_registrar.c
+--- hostapd-0.8-snapshot/src/wps/wps_registrar.c	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/wps/wps_registrar.c	2012-05-11 15:58:02.000000000 +0700
+@@ -439,7 +439,7 @@
+ 		return 0;
+ 	if (reg->sel_reg_dev_password_id_override >= 0)
+ 		id = reg->sel_reg_dev_password_id_override;
+-	if (id != DEV_PW_PUSHBUTTON || !reg->dualband)
++	if (id != DEV_PW_PUSHBUTTON)
+ 		return 0;
+ 	return wps_build_uuid_e(msg, reg->wps->uuid);
+ }
+@@ -1087,7 +1087,7 @@
+ 	    wps_build_sel_reg_dev_password_id(reg, beacon) ||
+ 	    wps_build_sel_reg_config_methods(reg, beacon) ||
+ 	    wps_build_sel_pbc_reg_uuid_e(reg, beacon) ||
+-	    (reg->dualband && wps_build_rf_bands(&reg->wps->dev, beacon)) ||
++	    wps_build_rf_bands(&reg->wps->dev, beacon) ||
+ 	    wps_build_wfa_ext(beacon, 0, auth_macs, count)) {
+ 		wpabuf_free(beacon);
+ 		wpabuf_free(probe);
+@@ -2605,7 +2605,8 @@
+ 
+ 	if (attr.msg_type == NULL) {
+ 		wpa_printf(MSG_DEBUG, "WPS: No Message Type attribute");
+-		return WPS_FAILURE;
++		wps->state = SEND_WSC_NACK;
++		return WPS_CONTINUE;
+ 	}
+ 
+ 	if (*attr.msg_type != WPS_M1 &&
+@@ -2881,8 +2882,13 @@
+ 		os_memset(&cred, 0, sizeof(cred));
+ 		os_memcpy(cred.ssid, wps->wps->ssid, wps->wps->ssid_len);
+ 		cred.ssid_len = wps->wps->ssid_len;
++#ifdef MRVL_WPS2
++		cred.auth_type = wps->cred.auth_type;
++		cred.encr_type = wps->cred.encr_type;
++#else
+ 		cred.auth_type = WPS_AUTH_WPAPSK | WPS_AUTH_WPA2PSK;
+ 		cred.encr_type = WPS_ENCR_TKIP | WPS_ENCR_AES;
++#endif
+ 		os_memcpy(cred.key, wps->new_psk, wps->new_psk_len);
+ 		cred.key_len = wps->new_psk_len;
+ 
+diff -Naur hostapd-0.8-snapshot/src/wps/wps_upnp_ap.c hostapd-0.8.x-mrvl/src/wps/wps_upnp_ap.c
+--- hostapd-0.8-snapshot/src/wps/wps_upnp_ap.c	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/wps/wps_upnp_ap.c	2012-05-11 15:58:02.000000000 +0700
+@@ -25,9 +25,10 @@
+ static void upnp_er_set_selected_timeout(void *eloop_ctx, void *timeout_ctx)
+ {
+ 	struct subscription *s = eloop_ctx;
++	struct wps_registrar *reg = timeout_ctx;
+ 	wpa_printf(MSG_DEBUG, "WPS: SetSelectedRegistrar from ER timed out");
+ 	s->selected_registrar = 0;
+-	wps_registrar_selected_registrar_changed(s->reg);
++	wps_registrar_selected_registrar_changed(reg);
+ }
+ 
+ 
+@@ -46,7 +47,7 @@
+ 		return -1;
+ 
+ 	s->reg = reg;
+-	eloop_cancel_timeout(upnp_er_set_selected_timeout, s, NULL);
++	eloop_cancel_timeout(upnp_er_set_selected_timeout, s, reg);
+ 
+ 	os_memset(s->authorized_macs, 0, sizeof(s->authorized_macs));
+ 	if (attr.selected_registrar == NULL || *attr.selected_registrar == 0) {
+@@ -73,7 +74,7 @@
+ #endif /* CONFIG_WPS2 */
+ 		}
+ 		eloop_register_timeout(WPS_PBC_WALK_TIME, 0,
+-				       upnp_er_set_selected_timeout, s, NULL);
++				       upnp_er_set_selected_timeout, s, reg);
+ 	}
+ 
+ 	wps_registrar_selected_registrar_changed(reg);
+@@ -82,10 +83,11 @@
+ }
+ 
+ 
+-void upnp_er_remove_notification(struct subscription *s)
+-{
++void upnp_er_remove_notification(struct wps_registrar *reg,
++                                struct subscription *s){
+ 	s->selected_registrar = 0;
+-	eloop_cancel_timeout(upnp_er_set_selected_timeout, s, NULL);
+-	if (s->reg)
+-		wps_registrar_selected_registrar_changed(s->reg);
++
++	eloop_cancel_timeout(upnp_er_set_selected_timeout, s, reg);
++	if (reg)
++		wps_registrar_selected_registrar_changed(reg);
+ }
+diff -Naur hostapd-0.8-snapshot/src/wps/wps_upnp.c hostapd-0.8.x-mrvl/src/wps/wps_upnp.c
+--- hostapd-0.8-snapshot/src/wps/wps_upnp.c	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/wps/wps_upnp.c	2012-05-11 15:58:02.000000000 +0700
+@@ -212,6 +212,10 @@
+ /* Maximum number of Probe Request events per second */
+ #define MAX_EVENTS_PER_SEC 5
+ 
++
++static struct upnp_wps_device_sm *shared_upnp_device = NULL;
++
++
+ /* Write the current date/time per RFC */
+ void format_date(struct wpabuf *buf)
+ {
+@@ -546,10 +550,13 @@
+  */
+ void subscription_destroy(struct subscription *s)
+ {
++	struct upnp_wps_device_interface *iface;
+ 	wpa_printf(MSG_DEBUG, "WPS UPnP: Destroy subscription %p", s);
+ 	subscr_addr_free_all(s);
+ 	event_delete_all(s);
+-	upnp_er_remove_notification(s);
++
++	dl_list_for_each(iface, &s->sm->interfaces,	struct upnp_wps_device_interface, list)
++	upnp_er_remove_notification(iface->wps->registrar, s);	
+ 	os_free(s);
+ }
+ 
+@@ -965,7 +972,7 @@
+  * upnp_wps_device_stop - Stop WPS UPnP operations on an interface
+  * @sm: WPS UPnP state machine from upnp_wps_device_init()
+  */
+-void upnp_wps_device_stop(struct upnp_wps_device_sm *sm)
++static void upnp_wps_device_stop(struct upnp_wps_device_sm *sm)
+ {
+ 	if (!sm || !sm->started)
+ 		return;
+@@ -997,7 +1004,7 @@
+  * @net_if: Selected network interface name
+  * Returns: 0 on success, -1 on failure
+  */
+-int upnp_wps_device_start(struct upnp_wps_device_sm *sm, char *net_if)
++static int upnp_wps_device_start(struct upnp_wps_device_sm *sm, char *net_if)
+ {
+ 	if (!sm || !net_if)
+ 		return -1;
+@@ -1052,24 +1059,56 @@
+ }
+ 
+ 
++static struct upnp_wps_device_interface *
++upnp_wps_get_iface(struct upnp_wps_device_sm *sm, void *priv)
++{
++	struct upnp_wps_device_interface *iface;
++	dl_list_for_each(iface, &sm->interfaces,
++			 struct upnp_wps_device_interface, list) {
++		if (iface->priv == priv)
++			return iface;
++	}
++	return NULL;
++}
++
++
+ /**
+  * upnp_wps_device_deinit - Deinitialize WPS UPnP
+  * @sm: WPS UPnP state machine from upnp_wps_device_init()
++ * @priv: External context data that was used in upnp_wps_device_init() call
+  */
+-void upnp_wps_device_deinit(struct upnp_wps_device_sm *sm)
++void upnp_wps_device_deinit(struct upnp_wps_device_sm *sm, void *priv)
+ {
++	struct upnp_wps_device_interface *iface;
++
+ 	if (!sm)
+ 		return;
+ 
+-	upnp_wps_device_stop(sm);
++	iface = upnp_wps_get_iface(sm, priv);
++	if (iface == NULL) {
++		wpa_printf(MSG_ERROR, "WPS UPnP: Could not find the interface "
++			   "instance to deinit");
++		return;
++	}
++	wpa_printf(MSG_DEBUG, "WPS UPnP: Deinit interface instance %p", iface);
++	if (dl_list_len(&sm->interfaces) == 1) {
++		wpa_printf(MSG_DEBUG, "WPS UPnP: Deinitializing last instance "
++			   "- free global device instance");
++		upnp_wps_device_stop(sm);
++	}
++	dl_list_del(&iface->list);
+ 
+-	if (sm->peer.wps)
+-		wps_deinit(sm->peer.wps);
+-	os_free(sm->root_dir);
+-	os_free(sm->desc_url);
+-	os_free(sm->ctx->ap_pin);
+-	os_free(sm->ctx);
+-	os_free(sm);
++	if (iface->peer.wps)
++		wps_deinit(iface->peer.wps);
++	os_free(iface->ctx->ap_pin);
++	os_free(iface->ctx);
++
++	if (dl_list_empty(&sm->interfaces)) {
++		os_free(sm->root_dir);
++		os_free(sm->desc_url);
++		os_free(sm);
++		shared_upnp_device = NULL;
++	}
+ }
+ 
+ 
+@@ -1078,25 +1117,59 @@
+  * @ctx: callback table; we must eventually free it
+  * @wps: Pointer to longterm WPS context
+  * @priv: External context data that will be used in callbacks
++ * @net_if: Selected network interface name
+  * Returns: WPS UPnP state or %NULL on failure
+  */
+ struct upnp_wps_device_sm *
+ upnp_wps_device_init(struct upnp_wps_device_ctx *ctx, struct wps_context *wps,
+-		     void *priv)
++		     void *priv, char *net_if)
+ {
+ 	struct upnp_wps_device_sm *sm;
++	struct upnp_wps_device_interface *iface;
++	int start = 0;
++
++	iface = os_zalloc(sizeof(*iface));
++	if (iface == NULL) {
++		os_free(ctx->ap_pin);
++		os_free(ctx);
++		return NULL;
++	}
++	wpa_printf(MSG_DEBUG, "WPS UPnP: Init interface instance %p", iface);
+ 
+-	sm = os_zalloc(sizeof(*sm));
+-	if (!sm) {
+-		wpa_printf(MSG_ERROR, "WPS UPnP: upnp_wps_device_init failed");
++	iface->ctx = ctx;
++	iface->wps = wps;
++	iface->priv = priv;
++
++	if (shared_upnp_device) {
++		wpa_printf(MSG_DEBUG, "WPS UPnP: Share existing device "
++			   "context");
++		sm = shared_upnp_device;
++	} else {
++		wpa_printf(MSG_DEBUG, "WPS UPnP: Initialize device context");
++		sm = os_zalloc(sizeof(*sm));
++		if (!sm) {
++			wpa_printf(MSG_ERROR, "WPS UPnP: upnp_wps_device_init "
++				   "failed");
++			os_free(iface);
++			os_free(ctx->ap_pin);
++			os_free(ctx);
++			return NULL;
++		}
++		shared_upnp_device = sm;
++
++		dl_list_init(&sm->msearch_replies);
++		dl_list_init(&sm->subscriptions);
++		dl_list_init(&sm->interfaces);
++		start = 1;
++	}
++
++	dl_list_add(&sm->interfaces, &iface->list);
++
++	if (start && upnp_wps_device_start(sm, net_if)) {
++		upnp_wps_device_deinit(sm, priv);
+ 		return NULL;
+ 	}
+ 
+-	sm->ctx = ctx;
+-	sm->wps = wps;
+-	sm->priv = priv;
+-	dl_list_init(&sm->msearch_replies);
+-	dl_list_init(&sm->subscriptions);
+ 
+ 	return sm;
+ }
+@@ -1115,16 +1188,20 @@
+ 
+ int upnp_wps_set_ap_pin(struct upnp_wps_device_sm *sm, const char *ap_pin)
+ {
++	struct upnp_wps_device_interface *iface;
+ 	if (sm == NULL)
+ 		return 0;
+ 
+-	os_free(sm->ctx->ap_pin);
+-	if (ap_pin) {
+-		sm->ctx->ap_pin = os_strdup(ap_pin);
+-		if (sm->ctx->ap_pin == NULL)
+-			return -1;
+-	} else
+-		sm->ctx->ap_pin = NULL;
++	dl_list_for_each(iface, &sm->interfaces,
++			 struct upnp_wps_device_interface, list) {
++		os_free(iface->ctx->ap_pin);
++		if (ap_pin) {
++			iface->ctx->ap_pin = os_strdup(ap_pin);
++			if (iface->ctx->ap_pin == NULL)
++				return -1;
++		} else
++			iface->ctx->ap_pin = NULL;
++	}
+ 
+ 	return 0;
+ }
+diff -Naur hostapd-0.8-snapshot/src/wps/wps_upnp.h hostapd-0.8.x-mrvl/src/wps/wps_upnp.h
+--- hostapd-0.8-snapshot/src/wps/wps_upnp.h	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/wps/wps_upnp.h	2012-05-11 15:58:02.000000000 +0700
+@@ -35,11 +35,8 @@
+ 
+ struct upnp_wps_device_sm *
+ upnp_wps_device_init(struct upnp_wps_device_ctx *ctx, struct wps_context *wps,
+-		     void *priv);
+-void upnp_wps_device_deinit(struct upnp_wps_device_sm *sm);
+-
+-int upnp_wps_device_start(struct upnp_wps_device_sm *sm, char *net_if);
+-void upnp_wps_device_stop(struct upnp_wps_device_sm *sm);
++		     void *priv, char *net_if);
++void upnp_wps_device_deinit(struct upnp_wps_device_sm *sm, void *priv);
+ 
+ int upnp_wps_device_send_wlan_event(struct upnp_wps_device_sm *sm,
+ 				    const u8 from_mac_addr[ETH_ALEN],
+diff -Naur hostapd-0.8-snapshot/src/wps/wps_upnp_i.h hostapd-0.8.x-mrvl/src/wps/wps_upnp_i.h
+--- hostapd-0.8-snapshot/src/wps/wps_upnp_i.h	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/wps/wps_upnp_i.h	2012-05-11 15:58:02.000000000 +0700
+@@ -103,16 +103,26 @@
+ };
+ 
+ 
++struct upnp_wps_device_interface {
++	struct dl_list list;
++	struct upnp_wps_device_ctx *ctx; /* callback table */
++	struct wps_context *wps;
++	void *priv;
++
++	/* FIX: maintain separate structures for each UPnP peer */
++	struct upnp_wps_peer peer;
++};
++
+ /*
+- * Our instance data corresponding to one WiFi network interface
+- * (multiple might share the same wired network interface!).
++ * Our instance data corresponding to the AP device. Note that there may be
++ * multiple wireless interfaces sharing the same UPnP device instance. Each
++ * such interface is stored in the list of struct upnp_wps_device_interface
++ * instances.
+  *
+  * This is known as an opaque struct declaration to users of the WPS UPnP code.
+  */
+ struct upnp_wps_device_sm {
+-	struct upnp_wps_device_ctx *ctx; /* callback table */
+-	struct wps_context *wps;
+-	void *priv;
++	struct dl_list interfaces; /* struct upnp_wps_device_interface */
+ 	char *root_dir;
+ 	char *desc_url;
+ 	int started; /* nonzero if we are active */
+@@ -136,9 +146,6 @@
+ 	enum upnp_wps_wlanevent_type wlanevent_type;
+ 	os_time_t last_event_sec;
+ 	unsigned int num_events_in_sec;
+-
+-	/* FIX: maintain separate structures for each UPnP peer */
+-	struct upnp_wps_peer peer;
+ };
+ 
+ /* wps_upnp.c */
+@@ -181,6 +188,6 @@
+ int upnp_er_set_selected_registrar(struct wps_registrar *reg,
+ 				   struct subscription *s,
+ 				   const struct wpabuf *msg);
+-void upnp_er_remove_notification(struct subscription *s);
+-
++void upnp_er_remove_notification(struct wps_registrar *reg,
++								struct subscription *s);
+ #endif /* WPS_UPNP_I_H */
+diff -Naur hostapd-0.8-snapshot/src/wps/wps_upnp_ssdp.c hostapd-0.8.x-mrvl/src/wps/wps_upnp_ssdp.c
+--- hostapd-0.8-snapshot/src/wps/wps_upnp_ssdp.c	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/wps/wps_upnp_ssdp.c	2012-05-11 15:58:02.000000000 +0700
+@@ -136,9 +136,12 @@
+ 	struct wpabuf *msg;
+ 	char *NTString = "";
+ 	char uuid_string[80];
++	struct upnp_wps_device_interface *iface;
+ 
+ 	*islast = 0;
+-	uuid_bin2str(sm->wps->uuid, uuid_string, sizeof(uuid_string));
++	iface = dl_list_first(&sm->interfaces,
++			      struct upnp_wps_device_interface, list);
++	uuid_bin2str(iface->wps->uuid, uuid_string, sizeof(uuid_string));
+ 	msg = wpabuf_alloc(800); /* more than big enough */
+ 	if (msg == NULL)
+ 		goto fail;
+@@ -588,8 +591,13 @@
+ 			}
+ 			if (str_starts(data, "uuid:")) {
+ 				char uuid_string[80];
++				struct upnp_wps_device_interface *iface;
++				iface = dl_list_first(
++					&sm->interfaces,
++					struct upnp_wps_device_interface,
++					list);
+ 				data += os_strlen("uuid:");
+-				uuid_bin2str(sm->wps->uuid, uuid_string,
++				uuid_bin2str(iface->wps->uuid, uuid_string,
+ 					     sizeof(uuid_string));
+ 				if (str_starts(data, uuid_string))
+ 					st_match = 1;
+diff -Naur hostapd-0.8-snapshot/src/wps/wps_upnp_web.c hostapd-0.8.x-mrvl/src/wps/wps_upnp_web.c
+--- hostapd-0.8-snapshot/src/wps/wps_upnp_web.c	2010-10-21 20:49:41.000000000 +0700
++++ hostapd-0.8.x-mrvl/src/wps/wps_upnp_web.c	2012-05-11 15:58:02.000000000 +0700
+@@ -184,6 +184,10 @@
+ {
+ 	const char *s;
+ 	char uuid_string[80];
++	struct upnp_wps_device_interface *iface;
++
++	iface = dl_list_first(&sm->interfaces,
++			      struct upnp_wps_device_interface, list);
+ 
+ 	wpabuf_put_str(buf, wps_device_xml_prefix);
+ 
+@@ -191,38 +195,38 @@
+ 	 * Add required fields with default values if not configured. Add
+ 	 * optional and recommended fields only if configured.
+ 	 */
+-	s = sm->wps->friendly_name;
++	s = iface->wps->friendly_name;
+ 	s = ((s && *s) ? s : "WPS Access Point");
+ 	xml_add_tagged_data(buf, "friendlyName", s);
+ 
+-	s = sm->wps->dev.manufacturer;
++	s = iface->wps->dev.manufacturer;
+ 	s = ((s && *s) ? s : "");
+ 	xml_add_tagged_data(buf, "manufacturer", s);
+ 
+-	if (sm->wps->manufacturer_url)
++	if (iface->wps->manufacturer_url)
+ 		xml_add_tagged_data(buf, "manufacturerURL",
+-				    sm->wps->manufacturer_url);
++				    iface->wps->manufacturer_url);
+ 
+-	if (sm->wps->model_description)
++	if (iface->wps->model_description)
+ 		xml_add_tagged_data(buf, "modelDescription",
+-				    sm->wps->model_description);
++				    iface->wps->model_description);
+ 
+-	s = sm->wps->dev.model_name;
++	s = iface->wps->dev.model_name;
+ 	s = ((s && *s) ? s : "");
+ 	xml_add_tagged_data(buf, "modelName", s);
+ 
+-	if (sm->wps->dev.model_number)
++	if (iface->wps->dev.model_number)
+ 		xml_add_tagged_data(buf, "modelNumber",
+-				    sm->wps->dev.model_number);
++				    iface->wps->dev.model_number);
+ 
+-	if (sm->wps->model_url)
+-		xml_add_tagged_data(buf, "modelURL", sm->wps->model_url);
++	if (iface->wps->model_url)
++		xml_add_tagged_data(buf, "modelURL", iface->wps->model_url);
+ 
+-	if (sm->wps->dev.serial_number)
++	if (iface->wps->dev.serial_number)
+ 		xml_add_tagged_data(buf, "serialNumber",
+-				    sm->wps->dev.serial_number);
++				    iface->wps->dev.serial_number);
+ 
+-	uuid_bin2str(sm->wps->uuid, uuid_string, sizeof(uuid_string));
++	uuid_bin2str(iface->wps->uuid, uuid_string, sizeof(uuid_string));
+ 	s = uuid_string;
+ 	/* Need "uuid:" prefix, thus we can't use xml_add_tagged_data()
+ 	 * easily...
+@@ -231,8 +235,8 @@
+ 	xml_data_encode(buf, s, os_strlen(s));
+ 	wpabuf_put_str(buf, "</UDN>\n");
+ 
+-	if (sm->wps->upc)
+-		xml_add_tagged_data(buf, "UPC", sm->wps->upc);
++	if (iface->wps->upc)
++		xml_add_tagged_data(buf, "UPC", iface->wps->upc);
+ 
+ 	wpabuf_put_str(buf, wps_device_xml_postfix);
+ }
+@@ -311,6 +315,10 @@
+ 	size_t extra_len = 0;
+ 	int body_length;
+ 	char len_buf[10];
++	struct upnp_wps_device_interface *iface;
++
++	iface = dl_list_first(&sm->interfaces,
++			      struct upnp_wps_device_interface, list);
+ 
+ 	/*
+ 	 * It is not required that filenames be case insensitive but it is
+@@ -322,16 +330,16 @@
+ 		wpa_printf(MSG_DEBUG, "WPS UPnP: HTTP GET for device XML");
+ 		req = GET_DEVICE_XML_FILE;
+ 		extra_len = 3000;
+-		if (sm->wps->friendly_name)
+-			extra_len += os_strlen(sm->wps->friendly_name);
+-		if (sm->wps->manufacturer_url)
+-			extra_len += os_strlen(sm->wps->manufacturer_url);
+-		if (sm->wps->model_description)
+-			extra_len += os_strlen(sm->wps->model_description);
+-		if (sm->wps->model_url)
+-			extra_len += os_strlen(sm->wps->model_url);
+-		if (sm->wps->upc)
+-			extra_len += os_strlen(sm->wps->upc);
++		if (iface->wps->friendly_name)
++			extra_len += os_strlen(iface->wps->friendly_name);
++		if (iface->wps->manufacturer_url)
++			extra_len += os_strlen(iface->wps->manufacturer_url);
++		if (iface->wps->model_description)
++			extra_len += os_strlen(iface->wps->model_description);
++		if (iface->wps->model_url)
++			extra_len += os_strlen(iface->wps->model_url);
++		if (iface->wps->upc)
++			extra_len += os_strlen(iface->wps->upc);
+ 	} else if (!os_strcasecmp(filename, UPNP_WPS_SCPD_XML_FILE)) {
+ 		wpa_printf(MSG_DEBUG, "WPS UPnP: HTTP GET for SCPD XML");
+ 		req = GET_SCPD_XML_FILE;
+@@ -408,11 +416,16 @@
+ {
+ 	static const char *name = "NewDeviceInfo";
+ 	struct wps_config cfg;
+-	struct upnp_wps_peer *peer = &sm->peer;
++	struct upnp_wps_device_interface *iface;
++	struct upnp_wps_peer *peer;
++
++	iface = dl_list_first(&sm->interfaces,
++			      struct upnp_wps_device_interface, list);
++	peer = &iface->peer;
+ 
+ 	wpa_printf(MSG_DEBUG, "WPS UPnP: GetDeviceInfo");
+ 
+-	if (sm->ctx->ap_pin == NULL)
++	if (iface->ctx->ap_pin == NULL)
+ 		return HTTP_INTERNAL_SERVER_ERROR;
+ 
+ 	/*
+@@ -427,9 +440,9 @@
+ 		wps_deinit(peer->wps);
+ 
+ 	os_memset(&cfg, 0, sizeof(cfg));
+-	cfg.wps = sm->wps;
+-	cfg.pin = (u8 *) sm->ctx->ap_pin;
+-	cfg.pin_len = os_strlen(sm->ctx->ap_pin);
++	cfg.wps = iface->wps;
++	cfg.pin = (u8 *) iface->ctx->ap_pin;
++	cfg.pin_len = os_strlen(iface->ctx->ap_pin);
+ 	peer->wps = wps_init(&cfg);
+ 	if (peer->wps) {
+ 		enum wsc_op_code op_code;
+@@ -458,6 +471,10 @@
+ 	enum http_reply_code ret;
+ 	enum wps_process_res res;
+ 	enum wsc_op_code op_code;
++	struct upnp_wps_device_interface *iface;
++
++	iface = dl_list_first(&sm->interfaces,
++			      struct upnp_wps_device_interface, list);
+ 
+ 	/*
+ 	 * PutMessage is used by external UPnP-based Registrar to perform WPS
+@@ -468,11 +485,11 @@
+ 	msg = xml_get_base64_item(data, "NewInMessage", &ret);
+ 	if (msg == NULL)
+ 		return ret;
+-	res = wps_process_msg(sm->peer.wps, WSC_UPnP, msg);
++	res = wps_process_msg(iface->peer.wps, WSC_UPnP, msg);
+ 	if (res == WPS_FAILURE)
+ 		*reply = NULL;
+ 	else
+-		*reply = wps_get_msg(sm->peer.wps, &op_code);
++		*reply = wps_get_msg(iface->peer.wps, &op_code);
+ 	wpabuf_free(msg);
+ 	if (*reply == NULL)
+ 		return HTTP_INTERNAL_SERVER_ERROR;
+@@ -491,6 +508,8 @@
+ 	int ev_type;
+ 	int type;
+ 	char *val;
++	struct upnp_wps_device_interface *iface;
++	int ok = 0;
+ 
+ 	/*
+ 	 * External UPnP-based Registrar is passing us a message to be proxied
+@@ -559,9 +578,16 @@
+ 		wpa_printf(MSG_DEBUG, "WPS UPnP: Message Type %d", type);
+ 	} else
+ 		type = -1;
+-	if (!sm->ctx->rx_req_put_wlan_response ||
+-	    sm->ctx->rx_req_put_wlan_response(sm->priv, ev_type, macaddr, msg,
+-					      type)) {
++	dl_list_for_each(iface, &sm->interfaces,
++			 struct upnp_wps_device_interface, list) {
++		if (iface->ctx->rx_req_put_wlan_response &&
++		    iface->ctx->rx_req_put_wlan_response(iface->priv, ev_type,
++							 macaddr, msg, type)
++		    == 0)
++			ok = 1;
++	}
++
++	if (!ok) {
+ 		wpa_printf(MSG_INFO, "WPS UPnP: Fail: sm->ctx->"
+ 			   "rx_req_put_wlan_response");
+ 		wpabuf_free(msg);
+@@ -606,6 +632,8 @@
+ 	struct wpabuf *msg;
+ 	enum http_reply_code ret;
+ 	struct subscription *s;
++	struct upnp_wps_device_interface *iface;
++	int err = 0;
+ 
+ 	wpa_printf(MSG_DEBUG, "WPS UPnP: SetSelectedRegistrar");
+ 	s = find_er(sm, cli);
+@@ -617,11 +645,15 @@
+ 	msg = xml_get_base64_item(data, "NewMessage", &ret);
+ 	if (msg == NULL)
+ 		return ret;
+-	if (upnp_er_set_selected_registrar(sm->wps->registrar, s, msg)) {
+-		wpabuf_free(msg);
+-		return HTTP_INTERNAL_SERVER_ERROR;
++	dl_list_for_each(iface, &sm->interfaces,
++			 struct upnp_wps_device_interface, list) {
++		if (upnp_er_set_selected_registrar(iface->wps->registrar, s,
++						   msg))
++			err = 1;
+ 	}
+ 	wpabuf_free(msg);
++	if (err)
++		return HTTP_INTERNAL_SERVER_ERROR;
+ 	*replyname = NULL;
+ 	*reply = NULL;
+ 	return HTTP_OK;

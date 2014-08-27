@@ -1,0 +1,62 @@
+Index: ekg-1.7/Makefile.in
+===================================================================
+--- ekg-1.7.orig/Makefile.in	2010-11-02 16:55:11.021994526 +0100
++++ ekg-1.7/Makefile.in	2010-11-02 16:59:57.189994991 +0100
+@@ -15,29 +15,31 @@
+ 
+ #
+ 
+-all:	configure libgadu @ekg@ @make_ekgwap@
++libgadu:=lib/libgadu.a
+ 
+-libgadu:
+-	cd lib && $(MAKE) all
++all: @ekg@ @make_ekgwap@
+ 
+-ekg:	
+-	cd src && $(MAKE) all
++$(libgadu): dep
++	$(MAKE) -C lib
+ 
+-make-ekgwap:
+-	cd ekgwap && $(MAKE) all
++ekg: $(libgadu)
++	$(MAKE) -C src
+ 
+-examples:
+-	cd examples && $(MAKE) all
++make-ekgwap: $(libgadu)
++	$(MAKE) -C ekgwap
++
++examples: $(libgadu)
++	$(MAKE) -C examples
+ 
+ #
+ 
+ dep:	dep-libgadu @dep_ekg@
+ 
+-dep-libgadu:
+-	cd lib && $(MAKE) dep
++dep-libgadu: configure
++	$(MAKE) -C lib dep
+ 
+-dep-ekg:
+-	cd src && $(MAKE) dep
++dep-ekg: configure
++	$(MAKE) -C src dep
+ 
+ #
+ 
+@@ -49,10 +51,10 @@
+ install:	all install-libgadu @install_ekg@ @install_ekgwap@
+ 
+ install-libgadu:
+-	cd lib && $(MAKE) install
++	$(MAKE) -C lib install
+ 
+ install-ekg:	install-ekg-data install-ekg-man
+-	cd src && $(MAKE) install
++	$(MAKE) -C src install
+ 
+ install-ekg-data:
+ 	$(INSTALL) -d $(DESTDIR)$(datadir)/ekg/themes

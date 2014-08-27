@@ -1,0 +1,37 @@
+From 2652112c50c08f3019c8993552f8e961a281aef0 Mon Sep 17 00:00:00 2001
+From: Rami Rosen <rosenr@marvell.com>
+Date: Thu, 2 Feb 2012 16:08:50 +0200
+Subject: [PATCH 112/609] NFP: FIB - remove checking of direct src/dst flag
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ net/ipv4/route.c |    6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/net/ipv4/route.c b/net/ipv4/route.c
+index 59c8467..399b83d 100644
+--- a/net/ipv4/route.c
++++ b/net/ipv4/route.c
+@@ -843,8 +843,7 @@ void nfp_fib_sync(void)
+ 				continue;
+ 
+ 			rt->nfp = false;
+-			if (!(rt->rt_flags & (RTCF_DIRECTSRC | RTCF_DIRECTDST |
+-						RTCF_MULTICAST | RTCF_BROADCAST | RTCF_LOCAL | RTCF_REJECT))) {
++			if (!(rt->rt_flags & (RTCF_MULTICAST | RTCF_BROADCAST | RTCF_LOCAL | RTCF_REJECT))) {
+ 				if (!nfp_hook_fib_rule_add(AF_INET, (u8 *)(&rt->rt_src), (u8 *)(&rt->rt_dst),
+ 					  (u8 *)(&rt->rt_gateway), rt->rt_iif, rt->dst.dev->ifindex))
+ 					rt->nfp = true;
+@@ -2270,8 +2269,7 @@ static int __mkroute_input(struct sk_buff *skb,
+ 
+ #if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
+ 	rth->nfp = false;
+-	if (!(rth->rt_flags & (RTCF_DIRECTSRC | RTCF_DIRECTDST |
+-				RTCF_MULTICAST | RTCF_BROADCAST | RTCF_LOCAL | RTCF_REJECT))) {
++	if (!(rth->rt_flags & (RTCF_MULTICAST | RTCF_BROADCAST | RTCF_LOCAL | RTCF_REJECT))) {
+ 		if (!nfp_hook_fib_rule_add(AF_INET, (u8 *)(&rth->rt_src), (u8 *)(&rth->rt_dst),
+ 					(u8 *)(&rth->rt_gateway), rth->rt_iif, rth->dst.dev->ifindex))
+ 			rth->nfp = true;
+-- 
+1.7.9.5
+

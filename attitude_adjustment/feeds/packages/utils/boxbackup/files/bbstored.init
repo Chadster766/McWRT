@@ -1,0 +1,22 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2010-2011 Openwrt.org
+
+START=90
+
+start() {
+	. /lib/functions/bbstored.sh
+
+	create_config
+
+	if [ "$EXTERNAL_CONFIG" -eq 1 ]
+	then
+		BXBK_CONFIG_FILE="$EXTERNAL_CONF_FILE"
+	fi
+	service_start /usr/sbin/bbstored "$BXBK_CONFIG_FILE"
+}
+
+stop() {
+	. /lib/functions/bbstored.sh
+
+	service_stop /usr/sbin/bbstored
+}

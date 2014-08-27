@@ -1,0 +1,245 @@
+From cc7ad3fa9c2cb1b2d57b13632166a1d2e535cec0 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Tue, 6 Nov 2012 10:16:43 +0200
+Subject: [PATCH 419/609] Hal Counter manager defines alignment with a370
+ (Temp fix for compilation erros)
+
+Change-Id: Ib9e94a4edbb524bb4c6b3c2641655f7d00c2afa7
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c        |   45 ++++++++------------
+ arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h        |   15 +------
+ arch/arm/plat-armada/mv_hal/cntmr/mvCntmrRegs.h    |   44 ++-----------------
+ 4 files changed, 25 insertions(+), 81 deletions(-)
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/cntmr/mvCntmrRegs.h
+
+diff --git a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
+old mode 100644
+new mode 100755
+index bcaac2c..270c89b
+--- a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
++++ b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
+@@ -79,24 +79,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+ #define CNTMR_EVENTS_STATUS_REG_GLOBAL	(MV_CNTMR_REGS_OFFSET + 4)
+ 
+-#if defined(CONFIG_ARCH_ARMADA370)
+-#define TIMER_GLOBAL_BIT(timer)		(1 << (timer * 8 - ((timer == MAX_GLOBAL_TIMER) ? 1 : 0)))
+-#else
+ #define TIMER_GLOBAL_BIT(timer)		((timer == MAX_GLOBAL_TIMER) ? (1<<31) : (1 << (timer * 8)))
+-#endif
+ 
+-#if defined(MV88F78X60_Z1)
+-#define CNTMR_EVENTS_STATUS_REG_PRIVATE(t)	(MV_CPUIF_REGS_OFFSET(TIMER_TO_CPU(t) + 0x68))
+-#define TIMER_PRIVATE_BIT(timer)	(1 << ((CPU_TIMER(timer) * 8)))
+-#elif defined(MV88F78X60) && !defined(MV88F78X60_Z1)
++
++
+ #define CNTMR_EVENTS_STATUS_REG_PRIVATE		(MV_CPUIF_LOCAL_REGS_OFFSET + 0x68)
+ #define TIMER_PRIVATE_BIT(timer)	(1 << ((timer - FIRST_PRIVATE_TIMER) * 8))
+-#elif defined(CONFIG_ARCH_ARMADA370)
+-#define CNTMR_EVENTS_STATUS_REG_PRIVATE (MV_CPUIF_REGS_OFFSET(0) + 0x68)
+-#define TIMER_PRIVATE_BIT(timer)        (1 << ((timer - FIRST_PRIVATE_TIMER) * 8 + ((timer == TIMER7) ? 8 : 0)))
+-#else
+-#error "No device is defined!"
+-#endif
++
+ 
+ /*******************************************************************************
+ * mvCntmrLoad -
+@@ -197,25 +186,32 @@ MV_STATUS mvCntmrCtrlSet(MV_U32 countNum, MV_CNTMR_CTRL *pCtrl)
+ 
+ 	/* read control register */
+ 	cntmrCtrl = MV_REG_READ(CNTMR_CTRL_REG(countNum));
++#if defined(MV88F78X60) || defined(MV88F78X60_A0) ||  defined(MV88F78X60_B0)
+ 	cntmrCtrl &= ~((CTCR_ARM_TIMER_EN_MASK(countNum)) | (CTCR_ARM_TIMER_AUTO_MASK(countNum)));
+-
++#endif
+ 	if (pCtrl->enable)	/* enable counter\timer */
+ 		cntmrCtrl |= (CTCR_ARM_TIMER_EN(countNum));
++#if !defined(MV88F78X60) && !defined(MV88F78X60_A0) && !defined(MV88F78X60_B0)
++	else			/* disable counter\timer */
++		cntmrCtrl &= ~(CTCR_ARM_TIMER_EN(countNum));
++#endif
+ 
+ 	if (pCtrl->autoEnable)	/* Auto mode */
+ 		cntmrCtrl |= (CTCR_ARM_TIMER_AUTO_EN(countNum));
+-
+-#ifndef MV88F78X60_Z1
++#if defined(MV88F78X60) || defined(MV88F78X60_A0) ||  defined(MV88F78X60_B0)
+ 	cntmrCtrl &= ~((CTCR_ARM_TIMER_RATIO_MASK(countNum)) | (CTCR_ARM_TIMER_25MhzFRQ_MASK(countNum)));
+ 
+ 	cntmrCtrl |= (pCtrl->Ratio & 0x7) << (CTCR_ARM_TIMER_RATIO_OFFS(countNum));
+ 
+ 	if (pCtrl->enable_25Mhz)	/* 25Mhz enable */
+ 		cntmrCtrl |= (CTCR_ARM_TIMER_25MhzFRQ_EN(countNum));
+-
++#else
++	else			/* no auto mode */
++		cntmrCtrl &= ~(CTCR_ARM_TIMER_AUTO_EN(countNum));
+ #endif
+ 
+ 
++
+ 	MV_REG_WRITE(CNTMR_CTRL_REG(countNum), cntmrCtrl);
+ 
+ 	return MV_OK;
+@@ -261,14 +257,11 @@ MV_STATUS mvCntmrCtrlGet(MV_U32 countNum, MV_CNTMR_CTRL *pCtrl)
+ 		pCtrl->autoEnable = MV_TRUE;
+ 	else
+ 		pCtrl->autoEnable = MV_FALSE;
+-
+-
+-#ifndef MV88F78X60_Z1
++#if defined(MV88F78X60) || defined(MV88F78X60_A0) ||  defined(MV88F78X60_B0)
+ 	pCtrl->Ratio = (cntmrCtrl & (CTCR_ARM_TIMER_RATIO_MASK(countNum))) / (1 << (CTCR_ARM_TIMER_RATIO_OFFS(countNum)));
+ 
+ 	pCtrl->enable_25Mhz = (cntmrCtrl & CTCR_ARM_TIMER_25MhzFRQ_MASK(countNum)) ? MV_TRUE : MV_FALSE;
+ #endif
+-
+ 	return MV_OK;
+ }
+ 
+@@ -410,11 +403,9 @@ MV_STATUS mvCntmrIntClear(MV_U32 cntmrNum)
+ 		/* Reset cause bit to acknowledge interrupt */
+ 		MV_REG_WRITE(CNTMR_EVENTS_STATUS_REG_GLOBAL, ~(TIMER_GLOBAL_BIT(cntmrNum)));
+ 	} else {
+-#ifdef MV88F78X60_Z1
+-		MV_REG_WRITE(CNTMR_EVENTS_STATUS_REG_PRIVATE(cntmrNum), ~(TIMER_PRIVATE_BIT(cntmrNum)));
+-#else
++
+ 		MV_REG_WRITE(CNTMR_EVENTS_STATUS_REG_PRIVATE, ~(TIMER_PRIVATE_BIT(cntmrNum)));
+-#endif
++#
+ 	}
+ 	return MV_OK;
+ }
+@@ -436,7 +427,7 @@ MV_STATUS mvCntmrIntClear(MV_U32 cntmrNum)
+ *******************************************************************************/
+ MV_U32 mvCntmrFrqGet(MV_U32 cntmrNum)
+ {
+-#ifndef MV88F78X60_Z1
++#if defined(MV88F78X60) || defined(MV88F78X60_A0) ||  defined(MV88F78X60_B0)
+                 if (INVALID_CNTMR(cntmrNum))
+                                 return MV_ERROR;
+                 {
+diff --git a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h
+old mode 100644
+new mode 100755
+index 8ce5fd7..c9fd581
+--- a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h
++++ b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h
+@@ -85,17 +85,6 @@ extern "C" {
+ 		TIMER5,			/* CPU0 Timer 0   for A0 this is private CPU timer 0  */
+ 		TIMER6, 		/* CPU0 Timer 1   for A0 this is private CPU timer 1   */
+ 		TIMER7, 		/* CPU0 Watchdog  for A0 this is private CPU WD  */
+-#ifdef MV88F78X60_Z1
+-		TIMER8, 		/* CPU1 Timer 0     */
+-		TIMER9, 		/* CPU1 Timer 1     */
+-		TIMER10,		/* CPU1 Watchdog    */
+-		TIMER11,		/* CPU2 Timer 0     */
+-		TIMER12,		/* CPU2 Timer 1     */
+-		TIMER13,		/* CPU2 Watchdog    */
+-		TIMER14,		/* CPU73 Timer 0    */
+-		TIMER15,		/* CPU73 Timer 1    */
+-		TIMER16 		/* CPU73 Watchdog   */
+-#endif
+ 	} MV_CNTMR_ID;
+ 
+ #define MAX_GLOBAL_TIMER	TIMER4
+@@ -116,10 +105,10 @@ extern "C" {
+ 	typedef struct _mvCntmrCtrl {
+ 		MV_BOOL enable;	/* enable */
+ 		MV_BOOL autoEnable;	/* counter/Timer  */
+-#ifndef MV88F78X60_Z1
++
+ 		MV_CNTMR_RATIO_ID	Ratio;
+ 		MV_BOOL enable_25Mhz;	/* enable timer count frequency is to 25Mhz*/
+-#endif
++
+ 	} MV_CNTMR_CTRL;
+ 
+ /* Functions */
+diff --git a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmrRegs.h b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmrRegs.h
+old mode 100644
+new mode 100755
+index 0d3f2f3..b72b491
+--- a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmrRegs.h
++++ b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmrRegs.h
+@@ -84,44 +84,12 @@ extern "C" {
+ 	TIMER5  = CPU0 Timer 0
+ 	TIMER6  = CPU0 Timer 1
+ 	TIMER7  = CPU0 Watchdog
+-	TIMER8  = CPU1 Timer 0
+-	TIMER9  = CPU1 Timer 1
+-	TIMER10 = CPU1 Watchdog
+-	TIMER11 = CPU2 Timer 0
+-	TIMER12 = CPU2 Timer 1
+-	TIMER13 = CPU2 Watchdog
+-	TIMER14 = CPU73 Timer 0
+-	TIMER15 = CPU73 Timer 1
+-	TIMER16 = CPU73 Watchdog
+ */
+ #define INVALID_CNTMR(cntmrNum)    	((cntmrNum) >= MV_CNTMR_MAX_COUNTER)
+ 
+-#ifdef MV88F78X60_Z1
+-#define TIMER_TO_CPU(t)			((t < TIMER8) ? 0 :					\
+-											((t < TIMER11) ? 1 : 	\
+-											((t < TIMER14) ? 2 : 3)))
+-#define CPU_TIMER(t)			((t < TIMER8) ? (t-TIMER5) :					\
+-											((t < TIMER11) ? (t-TIMER8) :	\
+-											((t < TIMER14) ? (t-TIMER11) : (t-TIMER14))))
+-#else
+-#define CPU_TIMER(t)			(t-TIMER5)
+-#endif
+-
+-
+-#ifdef MV88F78X60_Z1
+-#define CNTMR_BASE(tmrNum)		((tmrNum <= MAX_GLOBAL_TIMER) ? (MV_CNTMR_REGS_OFFSET) : \
+-								(MV_CPUIF_REGS_OFFSET(TIMER_TO_CPU(tmrNum)) + 0x40))
+-
+-#define CNTMR_RELOAD_REG(tmrNum)	 ((tmrNum <= MAX_GLOBAL_TIMER) ? 				 \
+-										(CNTMR_BASE(tmrNum)  + 0x10 + (tmrNum * 8)) : \
+-										((MV_CPUIF_REGS_OFFSET(TIMER_TO_CPU(tmrNum)) + 0x50+CPU_TIMER(tmrNum)*8)))
+-
+-#define CNTMR_VAL_REG(tmrNum)		((tmrNum <= MAX_GLOBAL_TIMER) ? 					 \
+-										(CNTMR_BASE(tmrNum)  + 0x14 + (tmrNum * 8)) : \
+-										((MV_CPUIF_REGS_OFFSET(TIMER_TO_CPU(tmrNum)) + 0x54+CPU_TIMER(tmrNum)*8)))
+ 
++#define CPU_TIMER(t)			(t-TIMER5)
+ 
+-#else
+ #define CNTMR_BASE(tmrNum)		((tmrNum <= MAX_GLOBAL_TIMER) ? (MV_CNTMR_REGS_OFFSET) : \
+ 																(MV_CPUIF_LOCAL_REGS_OFFSET + 0x40))
+ 
+@@ -133,7 +101,7 @@ extern "C" {
+ 										(CNTMR_BASE(tmrNum)  + 0x14 + (tmrNum * 8)) : \
+ 										(MV_CPUIF_LOCAL_REGS_OFFSET + 0x54 + ((tmrNum-5) * 8)))
+ 
+-#endif
++
+ 
+ /* #define CNTMR_CTRL_REG(tmrNum)	(tmrNum <=MAX_GLOBAL_TIMER) ? (MV_CNTMR_REGS_OFFSET) :
+ 						 (MV_CPUIF_REGS_OFFSET(0) + 0x84) */
+@@ -151,13 +119,9 @@ extern "C" {
+ #define CTCR_ARM_TIMER_EN(cntr)		(1 << CTCR_ARM_TIMER_EN_OFFS(cntr))
+ #define CTCR_ARM_TIMER_DIS(cntr)	(0 << CTCR_ARM_TIMER_EN_OFFS(cntr))
+ 
+-#if defined (CONFIG_ARCH_ARMADA370)
+-#define CTCR_ARM_TIMER_AUTO_OFFS(timer) ((timer <= MAX_GLOBAL_TIMER) ? (1 + (timer * 2)) : \
+-										(1 + (timer-FIRST_PRIVATE_TIMER) * 2))
+-#else
++
+ #define CTCR_ARM_TIMER_AUTO_OFFS(timer)	((timer <= MAX_GLOBAL_TIMER) ? (1 + (timer * 2)) : \
+-										(1 + ((CPU_TIMER(timer))) * 2))
+-#endif
++                                                                               (1 + ((CPU_TIMER(timer))) * 2))
+ 
+ #define CTCR_ARM_TIMER_AUTO_MASK(cntr)	(1 << CTCR_ARM_TIMER_EN_OFFS(cntr))
+ #define CTCR_ARM_TIMER_AUTO_EN(cntr)	(1 << CTCR_ARM_TIMER_AUTO_OFFS(cntr))
+-- 
+1.7.9.5
+

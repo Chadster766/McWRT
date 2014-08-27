@@ -1,0 +1,35 @@
+Index: cbtt80-20060727-src/Makefile
+===================================================================
+--- cbtt80-20060727-src.orig/Makefile	2007-08-27 23:41:22.000000000 +0200
++++ cbtt80-20060727-src/Makefile	2007-08-27 23:41:22.000000000 +0200
+@@ -1,6 +1,5 @@
+ SHELL = /bin/sh
+ SYSTEM = $(shell uname)
+-C++ = g++
+ DFLAGS =
+ OFLAGS = -O2 -w
+ LFLAGS = -L. -lz
+@@ -42,19 +41,19 @@
+ all: $(OBJS) $(OBJS_BNBT) $(OBJS_BNBTMYSQL) $(PROGS)
+ 
+ ./bnbt: $(OBJS) $(OBJS_BNBT)
+-	$(C++) -o ./bnbt $(OBJS) $(OBJS_BNBT) $(LFLAGS)
++	$(CXX) -o ./bnbt $(OBJS) $(OBJS_BNBT) $(LFLAGS)
+ 
+ ./bnbtmysql: $(OBJS) $(OBJS_BNBTMYSQL)
+-	$(C++) -o ./bnbtmysql $(OBJS) $(OBJS_BNBTMYSQL) $(LFLAGS) -L/usr/lib/mysql -lmysqlclient
++	$(CXX) -o ./bnbtmysql $(OBJS) $(OBJS_BNBTMYSQL) $(LFLAGS)
+ 
+ clean:
+ 	rm -f $(OBJS) $(OBJS_BNBT) $(OBJS_BNBTMYSQL) $(PROGS)
+ 
+ %.o: %.cpp
+-	$(C++) -o $@ $(CFLAGS) -c $<
++	$(CXX) -o $@ $(CFLAGS) -c $<
+ 
+ %.mysql.o: %.cpp
+-	$(C++) -o $@ $(CFLAGS) -DBNBT_MYSQL -c $<
++	$(CXX) -o $@ $(CFLAGS) -DBNBT_MYSQL -c $<
+ 
+ ./bnbt: $(OBJS) $(OBJS_BNBT)
+ 

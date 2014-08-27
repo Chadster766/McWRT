@@ -1,0 +1,27 @@
+From 78580f1ace72953f760e13592b7c6d2a31b47977 Mon Sep 17 00:00:00 2001
+From: Po-Yu Chuang <pychuang@marvell.com>
+Date: Thu, 13 Sep 2012 15:28:33 +0800
+Subject: [PATCH 338/609] fix compile error when disabling MV_INCLUDE_GIG_ETH
+
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/Makefile |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
+index 7fe3836..88ebd74 100644
+--- a/arch/arm/mach-armadaxp/Makefile
++++ b/arch/arm/mach-armadaxp/Makefile
+@@ -127,7 +127,7 @@ obj-$(CONFIG_MV_ETH_L2FW)               += $(LSP_L2FW_DIR)/l2fw_sysfs.o $(LSP_L2
+ obj-$(CONFIG_MV_ETH_L2SEC)              += $(LSP_L2FW_DIR)/mv_eth_l2sec.o
+ endif
+ 
+-obj-y                                  += $(LSP_PHY_DIR)/phy_sysfs.o
++obj-$(CONFIG_MV_INCLUDE_GIG_ETH)        += $(LSP_PHY_DIR)/phy_sysfs.o
+ 
+ obj-$(CONFIG_MV_USE_XOR_ENGINE) 	+= $(PLAT_DRIVERS)/mv_xor/
+ obj-$(CONFIG_MV_CESA) 			+= $(PLAT_DRIVERS)/mv_cesa/
+-- 
+1.7.9.5
+

@@ -1,0 +1,32 @@
+From b091c7504de00c4f36a5b110f5eb9fd740eb2256 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Wed, 13 Feb 2013 18:32:31 -0500
+Subject: [PATCH 529/609] NETA: reproduce old fix for mvEthPowerUp call for
+ A370 This fix already exist in 13q1
+
+Change-Id: I8e9a93183074d761a82baccc48c0c7c753f5942a
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1135
+Reviewed-by: Tawfik Bayouk <tawfik@marvell.com>
+Tested-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |    3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index c6ae526..2e35b91 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -3331,8 +3331,7 @@ int mv_eth_port_resume(int port)
+ 		printk(KERN_ERR "%s: port %d is not suspend.\n", __func__, port);
+ 		return MV_ERROR;
+ 	}
+-	/*13q1 TODO: mvNetaPortPowerUp(port, mvBoardIsPortInSgmii(port), mvBoardIsPortInRgmii(port));*/
+-	mvNetaPortPowerUp(port, mvBoardIsPortInSgmii(port), !mvBoardIsPortInGmii(port));
++	mvNetaPortPowerUp(port, mvBoardIsPortInSgmii(port), mvBoardIsPortInRgmii(port));
+ 
+ 	mv_eth_win_init(port);
+ 
+-- 
+1.7.9.5
+

@@ -1,0 +1,450 @@
+From 6d390e859f0c937bf17a0f78023c9bf39f196da3 Mon Sep 17 00:00:00 2001
+From: Matthew Fatheree <Matthew.Fatheree@belkin.com>
+Date: Wed, 14 May 2014 21:48:29 +0700
+Subject: [PATCH 26/31] Support led activity
+
+ - Add led monitor package which support led activity when the RESET/WPS button are pressed
+ - Script to control the Led
+ Activity:
+ - Pressed RESET button 1..10s -> Blink Power LED 700ms
+ - Pressed RESET button > 10s -> Blink Power LED 500ms
+
+Signed-off-by: Matthew Fatheree <Matthew.Fatheree@belkin.com>
+---
+ package/leds-monitor/Makefile                      |   43 +++++++
+ package/leds-monitor/src/leds_monitor.c            |  127 +++++++++++++++++++
+ target/linux/armadaxp/base-files/etc/config/system |   10 ++
+ target/linux/armadaxp/base-files/etc/init.d/mamba  |    2 +
+ .../linux/armadaxp/base-files/usr/sbin/app_reset   |   68 +++++++++++
+ target/linux/armadaxp/base-files/usr/sbin/ledctrl  |  128 ++++++++++++++++++++
+ 6 files changed, 378 insertions(+)
+ create mode 100644 package/leds-monitor/Makefile
+ create mode 100644 package/leds-monitor/src/leds_monitor.c
+ create mode 100755 target/linux/armadaxp/base-files/usr/sbin/app_reset
+ create mode 100755 target/linux/armadaxp/base-files/usr/sbin/ledctrl
+
+diff --git a/package/leds-monitor/Makefile b/package/leds-monitor/Makefile
+new file mode 100644
+index 0000000..91792bb
+--- /dev/null
++++ b/package/leds-monitor/Makefile
+@@ -0,0 +1,43 @@
++#
++# Copyright (C) 2011-2012 OpenWrt.org
++#
++# This is free software, licensed under the GNU General Public License v2.
++# See /LICENSE for more information.
++#
++
++include $(TOPDIR)/rules.mk
++
++PKG_NAME:=leds-monitor
++PKG_RELEASE:=2
++
++include $(INCLUDE_DIR)/package.mk
++
++define Package/leds-monitor
++  SECTION:=utils
++  CATEGORY:=Utilities
++  TITLE:=Mamba board utilities
++  MAINTAINER:=Belkin Inc.
++  DEPENDS:=+libpthread
++endef
++
++define Package/leds-monitor/description
++ This package contains some small utility apps which use to monitor the
++ leds events, status...
++endef
++
++define Build/Prepare
++	$(INSTALL_DIR) $(PKG_BUILD_DIR)
++	$(INSTALL_DATA) ./src/leds_monitor.c $(PKG_BUILD_DIR)/
++endef
++
++define Build/Compile
++	$(TARGET_CC) $(TARGET_CFLAGS) -Wall \
++		-o $(PKG_BUILD_DIR)/leds_monitor $(PKG_BUILD_DIR)/leds_monitor.c -lpthread -v
++endef
++
++define Package/leds-monitor/install
++	$(INSTALL_DIR) $(1)/usr/sbin
++	$(INSTALL_BIN) $(PKG_BUILD_DIR)/leds_monitor $(1)/usr/sbin/
++endef
++
++$(eval $(call BuildPackage,leds-monitor))
+diff --git a/package/leds-monitor/src/leds_monitor.c b/package/leds-monitor/src/leds_monitor.c
+new file mode 100644
+index 0000000..99fd027
+--- /dev/null
++++ b/package/leds-monitor/src/leds_monitor.c
+@@ -0,0 +1,127 @@
++/*
++ * Copyright 2014 Belkin Inc.
++ *
++ * Author: Belkin Inc.
++ *
++ * This file is subject to the terms and conditions of version 2 of
++ * the GNU General Public License.  See the file COPYING in the main
++ * directory of this archive for more details.
++ *
++ */
++
++#include <signal.h>
++#include <stdio.h>
++#include <sys/types.h>
++#include <unistd.h>
++#include <pthread.h>
++
++//#define DEBUG
++#ifdef DEBUG
++#define mamba_dbg(fmt, arg...) printf("mamba_apps:%s " fmt "\n", __func__ , ## arg)
++#else
++#define mamba_dbg(fmt, arg...)
++#endif
++
++#define MAX_MONITOR 	50 /* 50s */
++
++/* When a SIGUSR1 signal arrives, set this variable. */
++volatile sig_atomic_t usr_interrupt = 0;
++enum{
++	LED_STOP=0,
++	LED_START,
++};
++static int led_mode = LED_STOP;
++static pthread_t pid;
++
++void *handler_led(void *arg)
++{
++	int i = 0, blink = 0;
++	struct timeval start, end;
++	long mtime, secs, usecs;    
++
++	gettimeofday(&start, NULL);
++	while((led_mode == LED_START) && (i < MAX_MONITOR)) {
++		sleep(1);
++		i++;
++		gettimeofday(&end, NULL);
++		secs  = end.tv_sec  - start.tv_sec;
++		usecs = end.tv_usec - start.tv_usec;
++		mtime = ((secs) * 1000 + usecs/1000.0) + 0.5;
++
++		if (secs > 1 && blink == 0) {
++			blink = 1;
++			mamba_dbg ("Blink 700ms/700ms\n");
++			system("ledctrl power 255 700 700");
++		}
++		else if (secs > 10 && blink == 1) {
++			blink = 2;
++			mamba_dbg ("Blink 500ms/500ms\n");
++			system("ledctrl power 255 500 500");
++		}
++	}
++	mamba_dbg("Stop blink \n");
++	system("ledctrl power off");
++}
++
++void handler_led_blink_reset (int sig)
++{
++	int err;
++
++	if (led_mode == LED_STOP) {
++		mamba_dbg ("Send signal start.\n");
++		led_mode = LED_START;
++		err = pthread_create(&pid, NULL, &handler_led, NULL);
++		if (err != 0)
++			mamba_dbg ("\ncan't create thread :[%s]", strerror(err));
++		else
++			mamba_dbg ("\n Thread created successfully\n");
++	}
++	else if (led_mode == LED_START)
++	{
++		led_mode = LED_STOP;
++		mamba_dbg ("Send signal stop.\n");
++		system("ledctrl power off");
++	}
++}
++
++void handler_led_advance (int sig)
++{
++	mamba_dbg ("%s\n", __func__);
++	led_mode = LED_STOP;
++}
++
++void register_signal(int sig) 
++{
++	struct sigaction usr_action;
++	sigset_t block_mask;
++
++	/* Establish the signal handler. */
++	sigfillset (&block_mask);
++	if (sig == SIGUSR1)
++		usr_action.sa_handler = handler_led_blink_reset;
++	else if (sig == SIGUSR2)
++		usr_action.sa_handler = handler_led_advance;
++	else {
++		usr_interrupt = 1;
++		return;
++	}
++	usr_action.sa_mask = block_mask;
++	usr_action.sa_flags = 0;
++	sigaction (sig, &usr_action, NULL);
++}
++
++int main (int argc, char *argv)
++{
++	register_signal(SIGUSR1);
++	register_signal(SIGUSR2);
++
++	/* Busy wait for the child to send a signal. */
++	while (!usr_interrupt){
++		sleep(100000);
++	}
++
++	/* Now continue execution. */
++	puts ("That's all, folks!");
++
++	return 0;
++}
+diff --git a/target/linux/armadaxp/base-files/etc/config/system b/target/linux/armadaxp/base-files/etc/config/system
+index 0f4ba72..7627d97 100644
+--- a/target/linux/armadaxp/base-files/etc/config/system
++++ b/target/linux/armadaxp/base-files/etc/config/system
+@@ -16,6 +16,16 @@ config button
+ 
+ config button
+         option button 'reset'
++        option action 'pressed'
++        option handler '/usr/sbin/app_reset signal /usr/sbin/key_monitor USR1'
++
++config button
++        option button 'reset'
++        option action 'released'
++        option handler '/usr/sbin/app_reset signal /usr/sbin/key_monitor USR2'
++
++config button
++        option button 'reset'
+         option action 'released'
+         option handler '/usr/sbin/reset_handler reboot'
+         option min '1'
+diff --git a/target/linux/armadaxp/base-files/etc/init.d/mamba b/target/linux/armadaxp/base-files/etc/init.d/mamba
+index f77616d..649f5d5 100755
+--- a/target/linux/armadaxp/base-files/etc/init.d/mamba
++++ b/target/linux/armadaxp/base-files/etc/init.d/mamba
+@@ -6,4 +6,6 @@ start() {
+ 	echo 33 > /sys/class/gpio/unexport
+ 	sleep 1
+ 	echo 40 > /sys/class/gpio/export
++	sleep 1
++	/usr/sbin/app_reset start /usr/sbin/leds_monitor
+ }
+diff --git a/target/linux/armadaxp/base-files/usr/sbin/app_reset b/target/linux/armadaxp/base-files/usr/sbin/app_reset
+new file mode 100755
+index 0000000..2898393
+--- /dev/null
++++ b/target/linux/armadaxp/base-files/usr/sbin/app_reset
+@@ -0,0 +1,68 @@
++#!/bin/sh
++
++EXPECTED_ARGS=2
++usage() {
++        echo "Usage: `basename $0` start <program_name>"
++        echo "Usage: `basename $0` signal <program_name> <USR1|USR2>"
++        exit 0
++}
++
++if [ $# -lt $EXPECTED_ARGS ]
++then
++        usage
++fi
++
++mode=$1
++name=$2
++sig=$3
++logname=app_reset.pid
++
++if [ $mode = "start" ]
++then
++	${name} &
++
++	if [ -f /tmp/${logname} ] 
++	then
++		rm -rf /tmp/${logname}
++	fi
++	echo "$!" > /tmp/${logname}
++
++	pid=`cat /tmp/${logname}`
++	echo "START:" ${name} "running" ${pid}
++elif [ $mode = "signal" ]
++then
++	if [ $# -lt 3 ]
++	then
++        	usage
++	fi
++
++	echo "signal"
++	if [ -f /tmp/${logname} ] 
++	then
++		pid=`cat /tmp/${logname}`
++	else
++		usage
++	fi
++	echo "SIGNAL:" ${name} "running" ${pid}
++
++	echo ${sig}
++	#Send signal to star/stop timer
++	if [ ${sig} = "USR1" ]
++	then
++		kill -${sig} ${pid}
++	elif [ ${sig} = "USR2" ] #Send signal to change LED blink mode
++	then
++		kill -${sig} ${pid}
++	elif [ ${sig} = "KILL" ] #Send signal to change LED blink mode
++	then
++		kill -${sig} ${pid}
++	else
++		echo "LED activity process is not running"
++		logger "LED activity process is not running"
++		usage
++	fi
++else
++	echo "LED activity process is not running"
++	logger "LED activity process is not running"
++	usage
++fi
+diff --git a/target/linux/armadaxp/base-files/usr/sbin/ledctrl b/target/linux/armadaxp/base-files/usr/sbin/ledctrl
+new file mode 100755
+index 0000000..4c4feee
+--- /dev/null
++++ b/target/linux/armadaxp/base-files/usr/sbin/ledctrl
+@@ -0,0 +1,128 @@
++#!/bin/sh
++
++EXPECTED_ARGS=2
++E_BADARGS=65
++
++usage() {
++	echo "Usage: `basename $0` <led_name> <on|off|brightness_value> [delay_on] [delay_off]"
++	echo "       `basename $0` <led_2g> 100 500 500"
++	echo "       `basename $0` all on|off"
++	echo "		led name: led_2g | led_5g | led_esata | led_usb2"
++	echo "          	  led_usb31 | led_usb32 | wan_amber | wan_white"
++	echo "          	  wps_amber | wps_white | power"
++	echo "		brightness_value: 0..255"
++	echo "		delay_on/delay_off: 0..5000"
++
++	exit $E_BADARGS
++}
++
++if [ $# -lt $EXPECTED_ARGS ]
++then
++	usage
++fi
++
++led_name=$1
++value=$2
++blink="na"
++
++if [ $# -ge 4 ]
++then
++	blink="ok"
++	delay_on=$3
++	delay_off=$4
++fi
++
++check_number() {
++	case $1 in
++	*[!0-9]* )
++		usage
++		;;
++	esac
++}
++
++do_power() {
++	sval=$1
++	sblink=$2
++	sdelay_on=$3
++	sdelay_off=$4
++
++	if [ $sblink = "ok" ]
++	then
++		echo power $sval $delay_on $delay_off > /proc/mamba_led
++	else
++		echo power $sval > /proc/mamba_led
++	fi
++}
++
++led_list="led_2g led_5g led_esata led_usb2 led_usb31 led_usb32 wan_amber wan_white wps_amber wps_white power"
++
++led_perf() {
++
++	# Check if the led_name is valid
++	found=0
++	for x in $led_list
++	do
++		if [ $led_name = $x ] 
++		then
++			found=1
++		fi
++	done
++	
++	if [ $found -eq 0 ] 
++	then 
++		if [ $led_name != "all" ] 
++		then 	
++			usage
++		fi
++	fi
++
++	# Check if the value is valid
++	case $value in
++	"on")
++		value=255
++		;;
++	"off")
++		value=0
++		;;
++	*)	
++		check_number $value
++		if [ $value -gt 255 ]
++		then
++			value=255
++		elif [ $value -lt 0 ] 
++		then
++			value=0
++		fi
++		
++		;;
++	esac
++
++	if [ $led_name = "all" ] 
++	then
++		for x in $led_list
++		do
++			path_led=/sys/class/leds/tlc59116:$x
++			echo $value > $path_led/brightness
++			#cat $path_led/brightness
++			sleep 1
++		done
++	elif [ $led_name = "power" ]
++	then
++		#echo "Do Led Power"
++		do_power $value $blink $delay_on $delay_off
++		exit
++	else
++		path_led=/sys/class/leds/tlc59116:$led_name
++		echo $value > $path_led/brightness
++	fi
++
++	if [ $blink = "ok" ]
++	then
++		echo timer > $path_led/trigger
++		echo $value > $path_led/brightness
++		echo $delay_on > $path_led/delay_on
++		echo $delay_off > $path_led/delay_off
++	fi
++}
++
++led_perf
+-- 
+1.7.9.5
+

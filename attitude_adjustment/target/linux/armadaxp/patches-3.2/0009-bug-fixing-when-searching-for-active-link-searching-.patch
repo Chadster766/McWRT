@@ -1,0 +1,42 @@
+From 1d25923e59b84c540569011016a1ec40208456cb Mon Sep 17 00:00:00 2001
+From: Lior Amsalem <alior@marvell.com>
+Date: Tue, 1 Nov 2011 16:29:49 +0200
+Subject: [PATCH 009/609] bug fixing when searching for active link, searching
+ thru PMP links and then falling to the deafult ap
+ active_tag
+
+Signed-off-by: Lior Amsalem <alior@marvell.com>
+Signed-off-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ drivers/ata/sata_mv.c |   11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/ata/sata_mv.c b/drivers/ata/sata_mv.c
+index 9ba0974..f66bf30 100644
+--- a/drivers/ata/sata_mv.c
++++ b/drivers/ata/sata_mv.c
+@@ -2391,10 +2391,19 @@ static struct ata_queued_cmd *mv_get_active_qc(struct ata_port *ap)
+ {
+ 	struct mv_port_priv *pp = ap->private_data;
+ 	struct ata_queued_cmd *qc;
++	struct ata_link *link = NULL;
+ 
+ 	if (pp->pp_flags & MV_PP_FLAG_NCQ_EN)
+ 		return NULL;
+-	qc = ata_qc_from_tag(ap, ap->link.active_tag);
++
++	ata_for_each_link(link, ap, EDGE)
++		if (ata_link_active(link))
++			break;
++
++        if (!link)
++                link = &ap->link;
++
++	qc = ata_qc_from_tag(ap, link->active_tag);
+ 	if (qc && !(qc->tf.flags & ATA_TFLAG_POLLING))
+ 		return qc;
+ 	return NULL;
+-- 
+1.7.9.5
+

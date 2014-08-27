@@ -1,0 +1,39 @@
+---
+ kernel/zaptel-base.c |   18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+--- a/kernel/zaptel-base.c
++++ b/kernel/zaptel-base.c
+@@ -5181,6 +5181,20 @@ static int zt_ioctl(struct inode *inode,
+ 	return zt_chan_ioctl(inode, file, cmd, data, unit);
+ }
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
++#include <linux/smp_lock.h>
++static long zt_ioctl_unlocked(struct file *file, unsigned int cmd, unsigned long data)
++{
++	int ret;
++
++	lock_kernel();
++	ret = zt_ioctl(file->f_path.dentry->d_inode, file, cmd, data);
++	unlock_kernel();
++
++	return ret;
++}
++#endif
++
+ int zt_register(struct zt_span *span, int prefmaster)
+ {
+ 	int x;
+@@ -7632,7 +7646,11 @@ static struct file_operations zt_fops =
+ 	llseek: NULL,
+ 	open: zt_open,
+ 	release: zt_release,
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
++	unlocked_ioctl: zt_ioctl_unlocked,
++#else
+ 	ioctl: zt_ioctl,
++#endif
+ 	read: zt_read,
+ 	write: zt_write,
+ 	poll: zt_poll,

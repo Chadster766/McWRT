@@ -1,0 +1,21 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2007-2012 OpenWrt.org
+
+START=80
+
+start() {
+	. /lib/functions/network.sh
+
+	[ -f /etc/ndyndns/ndyndns.conf ] || {
+		echo "$0: missing config file '/etc/ndyndns/ndyndns.conf'" 1>&2
+		return 1
+	}
+
+	local device
+	network_get_device device wan && \
+		service_start /usr/sbin/ndyndns -c /etc/ndyndns -f /etc/ndyndns/ndyndns.conf -i $device
+}
+
+stop() {
+	service_stop /usr/sbin/ndyndns
+}

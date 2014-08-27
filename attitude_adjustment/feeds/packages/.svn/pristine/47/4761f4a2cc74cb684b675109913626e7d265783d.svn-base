@@ -1,0 +1,35 @@
+--- a/nprobe.c
++++ b/nprobe.c
+@@ -241,8 +241,10 @@ void processPacket(u_char *_deviceId,
+   u_short eth_type, off=0, numPkts = 1;
+   u_int8_t flags = 0, proto = 0;
+   struct ip ip;
++  #ifndef IPV4_ONLY
+   struct ip6_hdr ipv6;
+   struct ip6_ext ipv6ext;
++  #endif
+   struct tcphdr tp;
+   struct udphdr up;
+   struct icmp icmpPkt;
+@@ -362,7 +364,9 @@ void processPacket(u_char *_deviceId,
+ 	isFragment = (ntohs(ip.ip_off) & 0x3fff) ? 1 : 0;
+ 
+ 	off = ntohs(ip.ip_off);
+-      } else if(eth_type == ETHERTYPE_IPV6) {
++      } 
++      #ifndef IPV4_ONLY
++      else if(eth_type == ETHERTYPE_IPV6) {
+ 	memcpy(&ipv6, p+ehshift, sizeof(struct ip6_hdr));
+ 	if(((ipv6.ip6_vfc >> 4) & 0x0f) != 6) return; /* IP v6 only */
+ 	estimatedLen = sizeof(struct ip6_hdr)+ehshift+htons(ipv6.ip6_plen);
+@@ -392,7 +396,9 @@ void processPacket(u_char *_deviceId,
+ 	  hlen += (ipv6ext.ip6e_len+1)*8;
+ 	  proto = ipv6ext.ip6e_nxt;
+ 	}
+-      } else
++      } 
++     #endif //IPV4_ONLY
++      else
+ 	return; /* Anything else that's not IPv4/v6 */
+ 
+       plen = length-ehshift;

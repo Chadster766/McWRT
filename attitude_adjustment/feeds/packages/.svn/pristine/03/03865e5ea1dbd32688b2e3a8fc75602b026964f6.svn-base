@@ -1,0 +1,16 @@
+---
+ kernel/zaptel-base.c |    3 +++
+ 1 file changed, 3 insertions(+)
+
+--- a/kernel/zaptel-base.c
++++ b/kernel/zaptel-base.c
+@@ -59,6 +59,9 @@
+ #include <linux/if_ppp.h>
+ #endif
+ #include <asm/atomic.h>
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32)
++#include <linux/sched.h>
++#endif
+ 
+ #ifndef CONFIG_OLD_HDLC_API
+ #define NEW_HDLC_INTERFACE

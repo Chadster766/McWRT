@@ -1,0 +1,17 @@
+diff --git a/arch/arm/plat-armada/suspend.c b/arch/arm/plat-armada/suspend.c
+index 23b39d8..9908e7e 100644
+--- a/arch/arm/plat-armada/suspend.c
++++ b/arch/arm/plat-armada/suspend.c
+@@ -259,7 +259,9 @@ void armadaxp_suspend(void)
+ 	armadaxp_fabric_restore_deepIdle();
+ 	armadaxp_restore_training_space();
+ 	aurora_l2_pm_exit();
++#ifdef CONFIG_SMP
+ 	smp_resume();
++#endif
+ 
+ #if defined(CONFIG_VFP)
+ 	vfp_restore();
+-- 
+1.7.9.5
+

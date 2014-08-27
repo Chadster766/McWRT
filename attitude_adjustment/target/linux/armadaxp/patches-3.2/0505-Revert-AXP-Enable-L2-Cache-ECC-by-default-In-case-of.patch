@@ -1,0 +1,45 @@
+From f818014caf0154ceb13615cdaf0a5b849e22550a Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Thu, 17 Jan 2013 13:24:20 +0200
+Subject: [PATCH 505/609] Revert "AXP: Enable L2 Cache ECC by default In case
+ of correctable errors, the counter will be
+ incremented.
+
+    Disabling the L2 Cache ECC because of stability issues in AXP and A370
+
+    This reverts commit c9ba4f3c1dbf949977bb55f75ebdcdd413d777f4.
+
+Change-Id: I7b7b8a36d305dd1e4f3875245d391ae5b683316a
+Reviewed-on: http://vgitil04.il.marvell.com:8080/954
+Reviewed-by: Star_Automation <star@marvell.com>
+Reviewed-by: Tawfik Bayouk <tawfik@marvell.com>
+Tested-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mm/cache-aurora-l2.c |    3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/arch/arm/mm/cache-aurora-l2.c b/arch/arm/mm/cache-aurora-l2.c
+index c736c03..dbc5c01 100644
+--- a/arch/arm/mm/cache-aurora-l2.c
++++ b/arch/arm/mm/cache-aurora-l2.c
+@@ -667,7 +667,7 @@ int __init aurora_l2_init(void __iomem *base)
+ 	{
+ 
+ 		/* 1. Write to AuroraL2 Auxiliary Control Register, 0x104
+-		*    Setting up Associativity, Way Size, ECC and Latencies
++		*    Setting up Associativity, Way Size, and Latencies
+ 		*/
+ 		aux = readl(auroraL2_base + L2_AUX_CTRL_REG);
+ 		aux &= ~L2ACR_REPLACEMENT_MASK;
+@@ -676,7 +676,6 @@ int __init aurora_l2_init(void __iomem *base)
+ 		aux &= ~L2ACR_FORCE_WRITE_POLICY_MASK;
+ 		aux |= L2ACR_FORCE_WRITE_BACK_POLICY;
+ #endif
+-		aux |= L2ACR_ECC_ENABLE;
+ 		writel(aux, auroraL2_base + L2_AUX_CTRL_REG);
+ 
+ 		l2_wt_override = ((aux & (0x3)) == 0x2 ? 1:0);
+-- 
+1.7.9.5
+

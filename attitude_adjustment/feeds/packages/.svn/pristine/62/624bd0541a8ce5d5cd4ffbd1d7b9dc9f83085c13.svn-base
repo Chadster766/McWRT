@@ -1,0 +1,125 @@
+diff -ruN glibmm-2.22.1.orig/configure glibmm-2.22.1/configure
+--- glibmm-2.22.1.orig/configure	2009-09-21 18:07:01.000000000 +0200
++++ glibmm-2.22.1/configure	2009-11-05 17:32:32.000000000 +0100
+@@ -18361,7 +18361,7 @@
+   fi
+ 
+ 
+-ac_config_files="$ac_config_files Makefile tools/Makefile tools/gmmproc tools/generate_wrap_init.pl glib/${GLIBMM_MODULE_NAME}.pc:glib/glibmm.pc.in glib/${GLIBMM_MODULE_NAME}-uninstalled.pc:glib/glibmm-uninstalled.pc.in glib/src/Makefile glib/glibmm/Makefile gio/${GIOMM_MODULE_NAME}.pc:gio/giomm.pc.in gio/${GIOMM_MODULE_NAME}-uninstalled.pc:gio/giomm-uninstalled.pc.in gio/src/Makefile gio/giomm/Makefile tests/Makefile examples/Makefile docs/Makefile docs/reference/Doxyfile MSVC_Net2005/glibmm/glibmm.rc MSVC_Net2005/giomm/giomm.rc MSVC_Net2008/glibmm/glibmm.rc MSVC_Net2008/giomm/giomm.rc"
++ac_config_files="$ac_config_files Makefile glib/${GLIBMM_MODULE_NAME}.pc:glib/glibmm.pc.in glib/${GLIBMM_MODULE_NAME}-uninstalled.pc:glib/glibmm-uninstalled.pc.in glib/src/Makefile glib/glibmm/Makefile gio/${GIOMM_MODULE_NAME}.pc:gio/giomm.pc.in gio/${GIOMM_MODULE_NAME}-uninstalled.pc:gio/giomm-uninstalled.pc.in gio/src/Makefile gio/giomm/Makefile MSVC_Net2005/glibmm/glibmm.rc MSVC_Net2005/giomm/giomm.rc MSVC_Net2008/glibmm/glibmm.rc MSVC_Net2008/giomm/giomm.rc"
+ 
+ 
+ # Copy the generated configuration headers into the MSVC project directories.
+@@ -19400,9 +19400,6 @@
+     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
+     "libtool") CONFIG_COMMANDS="$CONFIG_COMMANDS libtool" ;;
+     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
+-    "tools/Makefile") CONFIG_FILES="$CONFIG_FILES tools/Makefile" ;;
+-    "tools/gmmproc") CONFIG_FILES="$CONFIG_FILES tools/gmmproc" ;;
+-    "tools/generate_wrap_init.pl") CONFIG_FILES="$CONFIG_FILES tools/generate_wrap_init.pl" ;;
+     "glib/${GLIBMM_MODULE_NAME}.pc") CONFIG_FILES="$CONFIG_FILES glib/${GLIBMM_MODULE_NAME}.pc:glib/glibmm.pc.in" ;;
+     "glib/${GLIBMM_MODULE_NAME}-uninstalled.pc") CONFIG_FILES="$CONFIG_FILES glib/${GLIBMM_MODULE_NAME}-uninstalled.pc:glib/glibmm-uninstalled.pc.in" ;;
+     "glib/src/Makefile") CONFIG_FILES="$CONFIG_FILES glib/src/Makefile" ;;
+@@ -19411,10 +19408,6 @@
+     "gio/${GIOMM_MODULE_NAME}-uninstalled.pc") CONFIG_FILES="$CONFIG_FILES gio/${GIOMM_MODULE_NAME}-uninstalled.pc:gio/giomm-uninstalled.pc.in" ;;
+     "gio/src/Makefile") CONFIG_FILES="$CONFIG_FILES gio/src/Makefile" ;;
+     "gio/giomm/Makefile") CONFIG_FILES="$CONFIG_FILES gio/giomm/Makefile" ;;
+-    "tests/Makefile") CONFIG_FILES="$CONFIG_FILES tests/Makefile" ;;
+-    "examples/Makefile") CONFIG_FILES="$CONFIG_FILES examples/Makefile" ;;
+-    "docs/Makefile") CONFIG_FILES="$CONFIG_FILES docs/Makefile" ;;
+-    "docs/reference/Doxyfile") CONFIG_FILES="$CONFIG_FILES docs/reference/Doxyfile" ;;
+     "MSVC_Net2005/glibmm/glibmm.rc") CONFIG_FILES="$CONFIG_FILES MSVC_Net2005/glibmm/glibmm.rc" ;;
+     "MSVC_Net2005/giomm/giomm.rc") CONFIG_FILES="$CONFIG_FILES MSVC_Net2005/giomm/giomm.rc" ;;
+     "MSVC_Net2008/glibmm/glibmm.rc") CONFIG_FILES="$CONFIG_FILES MSVC_Net2008/glibmm/glibmm.rc" ;;
+diff -ruN glibmm-2.22.1.orig/configure.ac glibmm-2.22.1/configure.ac
+--- glibmm-2.22.1.orig/configure.ac	2009-09-21 18:03:52.000000000 +0200
++++ glibmm-2.22.1/configure.ac	2009-11-05 17:32:41.000000000 +0100
+@@ -124,9 +124,6 @@
+ GLIBMM_ARG_ENABLE_API_DEFAULT_SIGNAL_HANDLERS
+ 
+ AC_CONFIG_FILES([Makefile
+-                 tools/Makefile
+-                 tools/gmmproc
+-                 tools/generate_wrap_init.pl
+                  glib/${GLIBMM_MODULE_NAME}.pc:glib/glibmm.pc.in
+                  glib/${GLIBMM_MODULE_NAME}-uninstalled.pc:glib/glibmm-uninstalled.pc.in
+                  glib/src/Makefile
+@@ -135,10 +132,6 @@
+                  gio/${GIOMM_MODULE_NAME}-uninstalled.pc:gio/giomm-uninstalled.pc.in
+                  gio/src/Makefile
+                  gio/giomm/Makefile
+-                 tests/Makefile
+-                 examples/Makefile
+-                 docs/Makefile
+-                 docs/reference/Doxyfile
+                  MSVC_Net2005/glibmm/glibmm.rc
+                  MSVC_Net2005/giomm/giomm.rc
+                  MSVC_Net2008/glibmm/glibmm.rc
+diff -ruN glibmm-2.22.1.orig/Makefile.am glibmm-2.22.1/Makefile.am
+--- glibmm-2.22.1.orig/Makefile.am	2009-09-08 18:12:29.000000000 +0200
++++ glibmm-2.22.1/Makefile.am	2009-11-05 17:33:01.000000000 +0100
+@@ -28,7 +28,7 @@
+ else
+ doc_subdirs =
+ endif
+-SUBDIRS = tools $(src_subdirs) glib/glibmm gio/giomm tests examples $(doc_subdirs)
++SUBDIRS = $(src_subdirs) glib/glibmm gio/giomm
+ 
+ glibmm_includedir = $(includedir)/$(GLIBMM_MODULE_NAME)
+ glibmm_include_HEADERS = glib/glibmm.h
+diff -ruN glibmm-2.22.1.orig/Makefile.in glibmm-2.22.1/Makefile.in
+--- glibmm-2.22.1.orig/Makefile.in	2009-09-21 18:07:00.000000000 +0200
++++ glibmm-2.22.1/Makefile.in	2009-11-05 17:32:54.000000000 +0100
+@@ -137,8 +137,7 @@
+ 	distdir dist dist-all distcheck
+ ETAGS = etags
+ CTAGS = ctags
+-DIST_SUBDIRS = tools glib/src gio/src glib/glibmm gio/giomm tests \
+-	examples docs
++DIST_SUBDIRS = glib/src gio/src glib/glibmm gio/giomm
+ DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
+ distdir = $(PACKAGE)-$(VERSION)
+ top_distdir = $(distdir)
+@@ -330,7 +329,7 @@
+ @MAINTAINER_MODE_TRUE@src_subdirs = glib/src gio/src
+ @ENABLE_DOCUMENTATION_FALSE@doc_subdirs = 
+ @ENABLE_DOCUMENTATION_TRUE@doc_subdirs = docs
+-SUBDIRS = tools $(src_subdirs) glib/glibmm gio/giomm tests examples $(doc_subdirs)
++SUBDIRS = $(src_subdirs) glib/glibmm gio/giomm
+ glibmm_includedir = $(includedir)/$(GLIBMM_MODULE_NAME)
+ glibmm_include_HEADERS = glib/glibmm.h
+ glibmm_libincludedir = $(libdir)/$(GLIBMM_MODULE_NAME)/include
+@@ -350,15 +349,7 @@
+ 	glibmm/glibmm.vcproj			\
+ 	glibmm/glibmmconfig.h			\
+ 	giomm/giomm.vcproj			\
+-	giomm/giommconfig.h			\
+-	tests/giomm_simple/giomm_simple.vcproj	\
+-	tests/glibmm_value/glibmm_value.vcproj	\
+-	examples/dispatcher/dispatcher.vcproj	\
+-	examples/dispatcher2/dispatcher2.vcproj	\
+-	examples/markup/markup.vcproj		\
+-	examples/options/options.vcproj		\
+-	examples/thread/thread.vcproj		\
+-	examples/thread_pool/thread_pool.vcproj
++	giomm/giommconfig.h
+ 
+ msvc_net2008_data = \
+ 	blank.cpp				\
+@@ -368,15 +359,7 @@
+ 	glibmm/glibmm.vcproj			\
+ 	glibmm/glibmmconfig.h			\
+ 	giomm/giomm.vcproj			\
+-	giomm/giommconfig.h			\
+-	tests/giomm_simple/giomm_simple.vcproj	\
+-	tests/glibmm_value/glibmm_value.vcproj	\
+-	examples/dispatcher/dispatcher.vcproj	\
+-	examples/dispatcher2/dispatcher2.vcproj	\
+-	examples/markup/markup.vcproj		\
+-	examples/options/options.vcproj		\
+-	examples/thread/thread.vcproj		\
+-	examples/thread_pool/thread_pool.vcproj
++	giomm/giommconfig.h
+ 
+ text_files = COPYING.tools README.SUN README.win32
+ msvc_files = $(addprefix MSVC_Net2005/,$(msvc_net2005_data)) \

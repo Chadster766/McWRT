@@ -1,0 +1,62 @@
+From 760ff7251aa88f173e4715274713954d5394f3ec Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Mon, 22 Apr 2013 16:20:44 +0300
+Subject: [PATCH 601/609] PM, A370: Correct deep idle L2 power down bit
+ setting
+
+Armada 370 has single power domain so it must set the L2 power down request bit
+in addition to the CPU power down request
+This fixes the "deep idle" power mode for Armada370
+
+Change-Id: I45a5e92c531481eda2c2347012beddd7d29bf2f6
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1638
+Reviewed-by: Star_Automation <star@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/cpuidle.c |   21 +++++++++------------
+ 1 file changed, 9 insertions(+), 12 deletions(-)
+
+diff --git a/arch/arm/plat-armada/cpuidle.c b/arch/arm/plat-armada/cpuidle.c
+index 3ae787d..7f8a1fd 100644
+--- a/arch/arm/plat-armada/cpuidle.c
++++ b/arch/arm/plat-armada/cpuidle.c
+@@ -177,25 +177,22 @@ void armadaxp_fabric_prepare_deepIdle(void)
+ 	/* Mask interrupts */
+ 	reg |= PM_STATUS_AND_MASK_IRQ_MASK | PM_STATUS_AND_MASK_FIQ_MASK;
+ #endif
+-
+ 	MV_REG_WRITE(PM_STATUS_AND_MASK_REG(processor_id), reg);
+ 
+-	/* Disable delivering of other CPU core cache maintenance instruction,
+-	 * TLB, and Instruction synchronization to the CPU core 
+-	 */
+-	/* TODO */
+-#ifdef CONFIG_CACHE_AURORA_L2
++	/* request power down */
++	reg = MV_REG_READ(PM_CONTROL_AND_CONFIG_REG(processor_id));
++	reg |= PM_CONTROL_AND_CONFIG_PWDDN_REQ;
++#ifdef CONFIG_CACHE_AURORA_L2 && CONFIG_ARCH_ARMADA_XP
+ 	if (pm_mode == SNOOZE) {
+ 		/* ask HW to power down the L2 Cache if possible */
+-		reg = MV_REG_READ(PM_CONTROL_AND_CONFIG_REG(processor_id));
+ 		reg |= PM_CONTROL_AND_CONFIG_L2_PWDDN;
+-		MV_REG_WRITE(PM_CONTROL_AND_CONFIG_REG(processor_id), reg);
+ 	}
+ #endif
+-
+-	/* request power down */
+-	reg = MV_REG_READ(PM_CONTROL_AND_CONFIG_REG(processor_id));
+-	reg |= PM_CONTROL_AND_CONFIG_PWDDN_REQ;
++#ifdef CONFIG_ARCH_ARMADA370
++	/* Armada370 has single power domain so the L2 power down request bit
++	must be set as well */
++	reg |= PM_CONTROL_AND_CONFIG_L2_PWDDN;
++#endif
+ 	MV_REG_WRITE(PM_CONTROL_AND_CONFIG_REG(processor_id), reg);
+ 
+ 	/* Disable snoop disable by HW */
+-- 
+1.7.9.5
+

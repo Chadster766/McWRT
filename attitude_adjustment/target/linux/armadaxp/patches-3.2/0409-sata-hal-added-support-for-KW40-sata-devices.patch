@@ -1,0 +1,63 @@
+From 3c4d1ae473fef5ae15ee9fc28be9eae5e11ea74e Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Sun, 21 Oct 2012 15:55:26 +0200
+Subject: [PATCH 409/609] sata hal: added support for KW40 sata devices
+
+Change-Id: I6ab764a8633936654ab151feb2e06f6a19d1ba02
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../plat-armada/mv_hal/sata/CoreDriver/mvSata.c    |   13 ++++++++++++-
+ .../plat-armada/mv_hal/sata/CoreDriver/mvSata.h    |    2 ++
+ 2 files changed, 14 insertions(+), 1 deletion(-)
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c
+
+diff --git a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c
+old mode 100644
+new mode 100755
+index a4b131f..66e3312
+--- a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c
++++ b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c
+@@ -4758,6 +4758,7 @@ MV_BOOLEAN mvSataInitAdapter(MV_SATA_ADAPTER *pAdapter)
+ 	case MV_SATA_DEVICE_ID_7813:
+ 	case MV_SATA_DEVICE_ID_7823:
+ 	case MV_SATA_DEVICE_ID_6710:
++	case MV_SATA_DEVICE_ID_6707:
+ 	case MV_SATA_DEVICE_ID_7888:
+ 		pAdapter->numberOfChannels = 2;
+ 		pAdapter->numberOfUnits = 1;
+@@ -4769,7 +4770,17 @@ MV_BOOLEAN mvSataInitAdapter(MV_SATA_ADAPTER *pAdapter)
+ 		pAdapter->mainCauseOffset = 0x20020;
+ 		pAdapter->chipIs62X1Z0 = MV_TRUE;
+ 		break;
+-
++	case MV_SATA_DEVICE_ID_6W11:
++		pAdapter->numberOfChannels = 1;
++		pAdapter->numberOfUnits = 1;
++		pAdapter->portsPerUnit = 1;
++		pAdapter->sataAdapterGeneration = MV_SATA_GEN_IIE;
++		/*The integrated sata core chip based on 60x1 C0 */
++		pAdapter->hostInterface = MV_HOST_IF_INTEGRATED;
++		pAdapter->mainMaskOffset = 0x20024;
++		pAdapter->mainCauseOffset = 0x20020;
++		pAdapter->chipIs62X1Z0 = MV_TRUE;
++		break;
+ 
+ 	default:
+ 		mvLogMsg(MV_CORE_DRIVER_LOG_ID, MV_DEBUG_ERROR, " %d : Bad device ID"
+diff --git a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.h b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.h
+index 4528e7f..757c336 100755
+--- a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.h
++++ b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.h
+@@ -110,6 +110,8 @@ extern "C" {
+ #define MV_SATA_DEVICE_ID_6550		       0x6550	/*88f6550 integrated sata */
+ #define MV_SATA_DEVICE_ID_6560		       0x6560	/*88f6560 integrated sata */
+ #define MV_SATA_DEVICE_ID_6710			0x6710 /* KW40 */
++#define MV_SATA_DEVICE_ID_6W11			0x6711 /* KW40 */
++#define MV_SATA_DEVICE_ID_6707			0x6707 /* KW40 */
+ #define MV_SATA_DEVICE_ID_7816			0x7816 /* DSMP */
+ #define MV_SATA_DEVICE_ID_7826			0x7826 /* DSMP */
+ #define MV_SATA_DEVICE_ID_7846			0x7846 /* DSMP */
+-- 
+1.7.9.5
+

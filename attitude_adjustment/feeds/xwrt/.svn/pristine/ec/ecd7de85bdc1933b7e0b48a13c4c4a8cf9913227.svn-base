@@ -1,0 +1,11 @@
+#!/bin/sh
+#
+# Webif post-install script.
+#
+if $(grep -q "HotSpot" "${IPKG_INSTROOT}/www/cgi-bin/webif/.categories"); then
+	sed -i '/##WEBIF:category:HotSpot/a##WEBIF:category:Freeloader' "${IPKG_INSTROOT}/www/cgi-bin/webif/.categories"
+elif $(grep -q "VPN" "${IPKG_INSTROOT}/www/cgi-bin/webif/.categories"); then
+	sed -i '/##WEBIF:category:VPN/a##WEBIF:category:Freeloader' "${IPKG_INSTROOT}/www/cgi-bin/webif/.categories"
+else
+	sed -i '/##WEBIF:category:Network/a##WEBIF:category:Freeloader' "${IPKG_INSTROOT}/www/cgi-bin/webif/.categories"
+fi

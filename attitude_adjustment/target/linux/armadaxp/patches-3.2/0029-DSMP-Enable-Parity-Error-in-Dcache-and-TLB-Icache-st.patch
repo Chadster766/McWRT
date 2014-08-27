@@ -1,0 +1,29 @@
+From 0687b4791d60aa3a1358d5b0366627f98a371b9c Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Sun, 26 Feb 2012 11:43:37 +0200
+Subject: [PATCH 029/609] DSMP: > Enable Parity Error in Dcache and TLB,
+ Icache still without parity > Fix FWD for CPU
+ 0-1-2-3 NOTE: this is not an emplty patch, I've
+ added it to keep change history logged of two
+ branches submited on linux 3.0.6
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mm/proc-sheeva_pj4bv7.S |    1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/arch/arm/mm/proc-sheeva_pj4bv7.S b/arch/arm/mm/proc-sheeva_pj4bv7.S
+index 51e6f91..30dbf1a 100644
+--- a/arch/arm/mm/proc-sheeva_pj4bv7.S
++++ b/arch/arm/mm/proc-sheeva_pj4bv7.S
+@@ -394,7 +394,6 @@ defined(CONFIG_SMP)
+ 	orr        r0, r0, #0x00020                                /* BIT5 STREX backoff_disable--> '1' enable the back off of STREX instr */
+ 	orr	   r0, r0, #0x00100                                /* BIT8 Internal Parity Handling Disable--> '1' Disable Internal Parity Handling */
+ 	mcr        p15, 1, r0, c15, c1, 1                         /* Write */
+-
+ /* Auxiliary Functional Modes Control Register 0 */
+ 	mrc        p15, 1, r0, c15, c2, 0                         /* Read */
+ #ifdef CONFIG_SMP
+-- 
+1.7.9.5
+

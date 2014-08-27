@@ -1,0 +1,25 @@
+diff -urN iptables-snmp-0.1/Makefile.in iptables-snmp-0.1.new/Makefile.in
+--- iptables-snmp-0.1/Makefile.in	2005-11-02 13:00:10.000000000 +0100
++++ iptables-snmp-0.1.new/Makefile.in	2009-08-02 01:13:40.000000000 +0200
+@@ -67,7 +67,7 @@
+ 
+ all: iptables-snmp.so
+ 
+-iptables-snmp.so: $(OBJS) libiptc.a Makefile
++iptables-snmp.so: $(OBJS) Makefile
+ 	$(CC) $(CFLAGS) $(OTHER) $(DFLAGS) -shared  -o $@ $(OBJS) $(LDFLAGS)
+ 
+ libiptc.a: $(LIBIPTC_OBJS) Makefile
+diff -urN iptables-snmp-0.1/iptables-snmp.c iptables-snmp-0.1.new/iptables-snmp.c
+--- iptables-snmp-0.1/iptables-snmp.c	2005-11-02 12:10:54.000000000 +0100
++++ iptables-snmp-0.1.new/iptables-snmp.c	2009-08-02 01:13:30.000000000 +0200
+@@ -37,6 +37,9 @@
+ 
+ #include "libiptc/libiptc.h"
+ 
++/* For backward compatibility */
++typedef struct iptc_handle *iptc_handle_t;
++
+ static oid agent_version_oid[] = {
+     BASE_OID, 1, 0, AGENT_VERSION_INDEX
+ };

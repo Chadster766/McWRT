@@ -1,0 +1,70 @@
+Index: setserial-2.17/setserial.c
+===================================================================
+--- setserial-2.17.orig/setserial.c	2010-10-24 11:21:21.000000000 +0200
++++ setserial-2.17/setserial.c	2010-10-24 11:26:55.000000000 +0200
+@@ -15,14 +15,19 @@
+ #include <termios.h>
+ #include <string.h>
+ #include <errno.h>
++#include <stdlib.h>
++
++#include <linux/serial.h>
+ 
+ #ifdef HAVE_ASM_IOCTLS_H
+ #include <asm/ioctls.h>
+ #endif
+ #ifdef HAVE_LINUX_HAYESESP_H
+ #include <linux/hayesesp.h>
++#ifdef TIOCGHAYESESP
++#define HAVE_HAYESESP
++#endif
+ #endif
+-#include <linux/serial.h>
+ 
+ #include "version.h"
+ 
+@@ -118,7 +123,7 @@
+ 	CMD_CONFIG,	"autoconfigure",0,		0,		0, 0,
+ 	CMD_GETMULTI,	"get_multiport",0,		0,		0, 0,
+ 	CMD_SETMULTI,	"set_multiport",0,		0,		0, 0,
+-#ifdef TIOCGHAYESESP
++#ifdef HAVE_HAYESESP
+ 	CMD_RX_TRIG,    "rx_trigger",   0,              0,              0, FLAG_NEED_ARG,
+ 	CMD_TX_TRIG,    "tx_trigger",   0,              0,              0, FLAG_NEED_ARG,
+ 	CMD_FLOW_OFF,   "flow_off",     0,              0,              0, FLAG_NEED_ARG,
+@@ -356,7 +361,7 @@
+ }
+ #endif
+ 
+-#ifdef TIOCGHAYESESP
++#ifdef HAVE_HAYESESP
+ void print_hayesesp(int fd)
+ {
+ 	struct hayes_esp_config esp;
+@@ -453,7 +458,7 @@
+ 		print_flags(&serinfo, "\tFlags: ", "");
+ 		printf("\n\n");
+ 
+-#ifdef TIOCGHAYESESP
++#ifdef HAVE_HAYESESP
+ 		print_hayesesp(fd);
+ #endif
+ 	} else if (verbosity==0) {
+@@ -593,7 +598,7 @@
+ 			}
+ 			set_multiport(device, fd, &arg);
+ 			break;
+-#ifdef TIOCGHAYESESP
++#ifdef HAVE_HAYESESP
+ 		case CMD_RX_TRIG:
+ 		case CMD_TX_TRIG:
+ 		case CMD_FLOW_OFF:
+@@ -692,7 +697,7 @@
+ 	fprintf(stderr, "\t  get_multiport\tDisplay the multiport configuration\n");
+ 	fprintf(stderr, "\t  set_multiport\tSet the multiport configuration\n");
+ 	fprintf(stderr, "\n");
+-#ifdef TIOCGHAYESESP
++#ifdef HAVE_HAYESESP
+ 	fprintf(stderr, "\t* rx_trigger\tSet RX trigger level (ESP-only)\n");
+ 	fprintf(stderr, "\t* tx_trigger\tSet TX trigger level (ESP-only)\n");
+ 	fprintf(stderr, "\t* flow_off\tSet hardware flow off level (ESP-only)\n");

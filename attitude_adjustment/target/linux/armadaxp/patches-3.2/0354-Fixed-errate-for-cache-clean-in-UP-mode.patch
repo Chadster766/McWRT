@@ -1,0 +1,30 @@
+From 9b77ab8d444ac03e31323834eb53f59fdd07fc68 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 25 Nov 2012 13:05:20 +0200
+Subject: [PATCH 354/609] Fixed errate for cache clean in UP mode
+
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mm/cache-v7.S |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mm/cache-v7.S b/arch/arm/mm/cache-v7.S
+index 6a5232a..bd70e50 100644
+--- a/arch/arm/mm/cache-v7.S
++++ b/arch/arm/mm/cache-v7.S
+@@ -327,9 +327,9 @@ v7_dma_clean_range:
+ #endif
+ 1:
+ #if defined CONFIG_SHEEVA_ERRATA_ARM_CPU_6043 || defined(CONFIG_SHEEVA_ERRATA_ARM_CPU_6124) || defined(CONFIG_SHEEVA_ERRATA_ARM_CPU_6076)
+-	mcr		p15, 0, r12, c7, c14, 1		@ clean & invalidate D line to the point of unification
++	mcr	p15, 0, r0, c7, c14, 1	 @ clean & invalidate D line to the point of unification
+ #else
+-	mcr		p15, 0, r0, c7, c10, 1		@ clean D / U line
++	mcr	p15, 0, r0, c7, c10, 1	 @ clean D / U line
+ #endif
+ 	add	r0, r0, r2
+ 	cmp	r0, r1
+-- 
+1.7.9.5
+

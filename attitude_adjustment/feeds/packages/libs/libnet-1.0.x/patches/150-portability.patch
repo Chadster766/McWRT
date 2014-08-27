@@ -1,0 +1,28 @@
+diff -ur libnet.old/configure libnet.dev/configure
+--- libnet.old/configure	2007-04-01 17:36:55.000000000 +0200
++++ libnet.dev/configure	2007-04-01 17:40:06.000000000 +0200
+@@ -8613,7 +8613,9 @@
+ echo "$as_me:$LINENO: checking low-level packet interface type" >&5
+ echo $ECHO_N "checking low-level packet interface type... $ECHO_C" >&6
+ 
+-if test -r /dev/bpf0 ; then
++if [ -n "$LL_INT_TYPE" ]; then
++    echo "$as_me:$LINENO: result: found $LL_INT_TYPE (cached)" >&5
++elif test -r /dev/bpf0 ; then
+     LL_INT_TYPE=bpf
+     echo "$as_me:$LINENO: result: found bpf" >&5
+ echo "${ECHO_T}found bpf" >&6
+diff -ur libnet.old/configure.in libnet.dev/configure.in
+--- libnet.old/configure.in	2007-04-01 17:36:55.000000000 +0200
++++ libnet.dev/configure.in	2007-04-01 17:41:08.000000000 +0200
+@@ -97,7 +97,9 @@
+ dnl
+ AC_MSG_CHECKING(low-level packet interface type)
+ 
+-if test -r /dev/bpf0 ; then
++if [ -n "$LL_INT_TYPE" ]; then
++    AC_MSG_RESULT(found $LL_INT_TYPE (cached))
++elif test -r /dev/bpf0 ; then
+     LL_INT_TYPE=bpf
+     AC_MSG_RESULT(found bpf)
+ elif test -r /usr/include/net/pfilt.h ; then

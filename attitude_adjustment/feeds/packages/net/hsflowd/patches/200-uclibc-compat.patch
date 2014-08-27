@@ -1,0 +1,63 @@
+--- a/src/Linux/hsflowd.c
++++ b/src/Linux/hsflowd.c
+@@ -1408,13 +1408,12 @@ extern "C" {
+ 	signal(SIGXFSZ, SIG_DFL);
+ 
+ 	// ask for the backtrace pointers
+-	size_t siz = backtrace(backtracePtrs, HSP_NUM_BACKTRACE_PTRS);
++	size_t siz = 0;
+ 
+ 	if(f_crash == NULL) {
+ 	  f_crash = stderr;
+ 	}
+ 
+-	backtrace_symbols_fd(backtracePtrs, siz, fileno(f_crash));
+ 	fflush(f_crash);
+ 	// Do something useful with siginfo_t 
+ 	if (sig == SIGSEGV) {
+@@ -1430,7 +1429,6 @@ extern "C" {
+ 	// overwrite sigaction with caller's address
+ 	backtracePtrs[1] = (void *)(((ucontext_t *)secret)->uc_mcontext.gregs[REG_EIP]);
+ 	// then write again:
+-	backtrace_symbols_fd(backtracePtrs, siz, fileno(f_crash));
+ 	fflush(f_crash);
+ #endif
+ 	// exit with the original signal so we get the right idea
+@@ -2005,7 +2003,6 @@ extern "C" {
+ 	      if(debug) {
+ 		myLog(LOG_INFO, "initAgent suceeded");
+ 		// print some stats to help us size HSP_RLIMIT_MEMLOCK etc.
+-		malloc_stats();
+ 	      }
+ 
+ 	      if(sp->dropPriv) {
+--- a/src/Linux/hsflowd.h
++++ b/src/Linux/hsflowd.h
+@@ -34,9 +34,7 @@ extern "C" {
+ #include <limits.h> // for UINT_MAX
+ 
+ // for signal backtrace
+-#include <execinfo.h>
+ #include <signal.h>
+-#include <ucontext.h>
+ 
+ #include <stdarg.h> // for va_start()
+ #include "util.h"
+--- a/src/Linux/util.c
++++ b/src/Linux/util.c
+@@ -39,7 +39,6 @@ extern "C" {
+     void *mem = SYS_CALLOC(1, bytes);
+     if(mem == NULL) {
+       myLog(LOG_ERR, "calloc() failed : %s", strerror(errno));
+-      if(debug) malloc_stats();
+       exit(EXIT_FAILURE);
+     }
+     return mem;
+@@ -51,7 +50,6 @@ extern "C" {
+     void *mem = SYS_REALLOC(ptr, bytes);
+     if(mem == NULL) {
+       myLog(LOG_ERR, "realloc() failed : %s", strerror(errno));
+-      if(debug) malloc_stats();
+       exit(EXIT_FAILURE);
+     }
+     return mem;

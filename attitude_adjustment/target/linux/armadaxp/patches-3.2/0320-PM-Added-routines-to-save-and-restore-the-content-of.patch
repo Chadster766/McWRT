@@ -1,0 +1,242 @@
+From 66bd862d03a5575b52b2937669de0840e21c8065 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 22 Oct 2012 13:04:20 +0200
+Subject: [PATCH 320/609] PM: Added routines to save and restore the content
+ of the DDR3 training memory space
+
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/suspend.c |  180 ++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 171 insertions(+), 9 deletions(-)
+
+diff --git a/arch/arm/plat-armada/suspend.c b/arch/arm/plat-armada/suspend.c
+index d9ba64a..23b39d8 100644
+--- a/arch/arm/plat-armada/suspend.c
++++ b/arch/arm/plat-armada/suspend.c
+@@ -36,6 +36,8 @@ void armadaxp_powerdown(void);
+ void armadaxp_cpu_resume(void);
+ void smp_resume(void);
+ 
++static char *saved_training_space;
++
+ /*
+  * Store boot information used by bin header
+  */
+@@ -47,20 +49,176 @@ void smp_resume(void);
+ #define SDRAM_WIN_CTRL_REG(x)	(0x20184 + (0x8*x))
+ #define MAX_CS_COUNT		4
+ 
++#define TRAINING_SPACE 		(10*1024)
++
++/*#define DEBUG_DDR_SELF_REFRESH*/
++
++/* Store/Restore 10KB in beginning of each DDR Chip Select
++ * since the DDR3 Training will overwrite this space
++ */
++void armadaxp_save_training_space(void)
++{
++	char *store_addr;
++	int i, cs, ctrl,  base;
++	char *start[MAX_CS_COUNT];
++	char *last = (char*)0xFFFFFFFF;
++
++	pr_info("Storing training space\n");
++
++	/* Create a list of memory areas to save */
++	for (cs = 0; cs < MAX_CS_COUNT; cs++) {
++		ctrl = MV_REG_READ(SDRAM_WIN_CTRL_REG(cs));
++		base = MV_REG_READ(SDRAM_WIN_BASE_REG(cs));
++
++		if(ctrl & 0x1)
++			start[cs] = (char*) phys_to_virt(base);
++		else
++			start[cs] = last;
++	}
++
++	/*
++	 * Allocate a buffer to store the memory
++	 * Check that it deosnt overlap the store areas
++	 * */
++
++	for (i = 0; i < 4; i++) {
++		store_addr = kmalloc(MAX_CS_COUNT * TRAINING_SPACE, GFP_KERNEL);
++
++		/*
++		 * Make sure that the allocated buffer deosn't overlap
++		 * The DDR training space
++		 */
++		for (cs = 0; cs < MAX_CS_COUNT; cs++) {
++			if ((start[cs] != last) &&
++			    (store_addr > start[cs])  &&
++			    (store_addr < (start[cs] + TRAINING_SPACE))) {
++				kfree(store_addr);
++				store_addr = 0;
++				break;
++			}
++		}
++		if(store_addr)
++			break;
++	}
++
++	if(store_addr == 0) {
++		pr_info("Could not allocate space to store ddr trainig space\n");
++		return;
++	}
++
++	saved_training_space = store_addr;
++
++	/* Create a list of memory areas to save */
++	for(cs = 0; cs < MAX_CS_COUNT; cs++) {
++		if(start[cs] != last) {
++			memcpy(store_addr, start[cs],TRAINING_SPACE);
++			store_addr += TRAINING_SPACE;
++		}
++	}
++}
++
++void armadaxp_restore_training_space(void)
++{
++	char *store_addr;
++	int  cs, ctrl,  base;
++	char *start[MAX_CS_COUNT];
++	char *last = (char*)0xFFFFFFFF;
++
++	pr_info("Restoring training space\n");
++
++	/* Create a list of memory areas to restore */
++	for (cs = 0; cs < MAX_CS_COUNT; cs++) {
++		ctrl = MV_REG_READ(SDRAM_WIN_CTRL_REG(cs));
++		base = MV_REG_READ(SDRAM_WIN_BASE_REG(cs));
++
++		if(ctrl & 0x1)
++			start[cs] = (char*) phys_to_virt(base);
++		else
++			start[cs] = last;
++	}
++
++	store_addr = saved_training_space;
++
++	/* Restore memory from buffer */
++	for (cs = 0; cs < MAX_CS_COUNT; cs++)
++	{
++		if (start[cs] != last) {
++			memcpy(start[cs], store_addr, TRAINING_SPACE);
++			store_addr += TRAINING_SPACE;
++		}
++	}
++}
++
++#ifdef DEBUG_DDR_SELF_REFRESH
++/*
++ * Write a pattern to memory and check it after resume
++ * to ensure the DDR has entered self refresh
++ */
++#define BASE_PATTERN 0x40000000
++#define SIZE_PATTERN 0x10000000
++static int  *pattern_ptr;
++
++void write_pattern(void)
++{
++	int *ptr, n = 0;
++
++	ptr = ioremap(BASE_PATTERN,SIZE_PATTERN);
++	pattern_ptr = ptr;
++	pr_info("Writing pattern to %p(%p) + %x\n", ptr, (void*)virt_to_phys(ptr), SIZE_PATTERN);
++
++	if(ptr == 0)
++	{
++		pr_info("Failed to remap pattern space\n");
++		return;
++	}
++
++	while (n < (SIZE_PATTERN / sizeof(int)))
++	{
++		*ptr = (int)ptr;
++		ptr++;
++		n++;
++	}
++}
++
++void test_pattern(void)
++{
++	int *ptr, n = 0;
++
++	ptr = pattern_ptr;
++
++	if(pattern_ptr == 0)
++		return;
++
++	pr_info("Testing pattern from %p (%p) + %x\n", ptr, (void*)virt_to_phys(ptr), SIZE_PATTERN);
++
++	__asm__("b .");
++
++	while (n < (SIZE_PATTERN / sizeof(int)))
++	{
++		if(*ptr != (int)ptr)
++		{
++			pr_info("Bad pattern %x at %p\n", *ptr, ptr);
++		}
++		ptr++;
++		n++;
++	}
++}
++#endif
++
+ void armadaxp_store_boot_info(void)
+ {
+ 	int *store_addr = (int *)BOOT_INFO_ADDR;
+ 	int *resume_pc, win;
+ 
+-	store_addr = phys_to_virt(store_addr);
+-	resume_pc = virt_to_phys(armadaxp_cpu_resume);
++	store_addr = (int*)phys_to_virt((int)store_addr);
++	resume_pc = (int*)virt_to_phys(armadaxp_cpu_resume);
+ 
+ 	/*
+ 	 * Store magic word indicating suspend to ram
+ 	 * and return address
+ 	 */
+ 	*store_addr++ = (int)(BOOT_MAGIC_WORD);
+-	*store_addr++ = resume_pc;
++	*store_addr++ = (int)resume_pc;
+ 
+ 	/*
+ 	 * Now store registers that need to be proggrammed before
+@@ -80,23 +238,27 @@ void armadaxp_store_boot_info(void)
+ /*
+  * Save SOC & CPU register data before powering down board
+  */
+-void armadaxp_suspend()
++void armadaxp_suspend(void)
+ {
+ #if defined(CONFIG_VFP)
+ 	vfp_save();
+ #endif
+ 	aurora_l2_pm_enter();
+-
++	armadaxp_save_training_space();
+ 	armadaxp_store_boot_info();
+-
++#ifdef DEBUG_DDR_SELF_REFRESH
++	write_pattern();
++#endif
++	/* This call will shut down the board */
+ 	armadaxp_powerdown();
++#ifdef DEBUG_DDR_SELF_REFRESH
++	test_pattern();
++#endif
+ 
+ 	cpu_init();
+-
+ 	armadaxp_fabric_restore_deepIdle();
+-
++	armadaxp_restore_training_space();
+ 	aurora_l2_pm_exit();
+-
+ 	smp_resume();
+ 
+ #if defined(CONFIG_VFP)
+-- 
+1.7.9.5
+

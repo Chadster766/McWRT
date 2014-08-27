@@ -1,0 +1,66 @@
+From 6966c8bc74f49232fb5a26e286338e3e99e39abb Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Wed, 15 Aug 2012 02:35:42 -0400
+Subject: [PATCH 246/609] Fix possible bug in locking mechanism used for
+ shared TXQs
+
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h     |   19 +++++++++++--------
+ 1 file changed, 11 insertions(+), 8 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+index 73dc76a..2ae439b 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+@@ -118,18 +118,22 @@ int mv_eth_skb_recycle(struct sk_buff *skb);
+ 		spin_trylock_irqsave((lock), (flags)))
+ 
+ #define MV_ETH_LOCK(lock, flags)                              \
++{                                                             \
+ 	if (in_interrupt())                                   \
+ 		spin_lock((lock));                            \
+ 	else                                                  \
+-		spin_lock_irqsave((lock), (flags));
++		spin_lock_irqsave((lock), (flags));           \
++}
+ 
+ #define MV_ETH_UNLOCK(lock, flags)                            \
++{                                                             \
+ 	if (in_interrupt())                                   \
+ 		spin_unlock((lock));                          \
+ 	else                                                  \
+-		spin_unlock_irqrestore((lock), (flags));
++		spin_unlock_irqrestore((lock), (flags));      \
++}
+ 
+-#define MV_ETH_LIGHT_LOCK(flags)                             \
++#define MV_ETH_LIGHT_LOCK(flags)                              \
+ 	if (!in_interrupt())                                  \
+ 		local_irq_save(flags);
+ 
+@@ -140,16 +144,15 @@ int mv_eth_skb_recycle(struct sk_buff *skb);
+ 
+ #define mv_eth_lock(txq_ctrl, flags)    		     \
+ 	if (txq_ctrl->flags & MV_ETH_F_TX_SHARED)	     \
+-		spin_lock(&txq_ctrl->queue_lock);	     \
++		MV_ETH_LOCK(&txq_ctrl->queue_lock, flags)    \
+ 	else                                                 \
+-		MV_ETH_LIGHT_LOCK(flags);
+-
++		MV_ETH_LIGHT_LOCK(flags)
+ 
+ #define mv_eth_unlock(txq_ctrl, flags)    		     \
+ 	if (txq_ctrl->flags & MV_ETH_F_TX_SHARED)	     \
+-		spin_unlock(&txq_ctrl->queue_lock);	     \
++		MV_ETH_UNLOCK(&txq_ctrl->queue_lock, flags)  \
+ 	else                                                 \
+-		MV_ETH_LIGHT_UNLOCK(flags);
++		MV_ETH_LIGHT_UNLOCK(flags)
+ 
+ 
+ /******************************************************
+-- 
+1.7.9.5
+

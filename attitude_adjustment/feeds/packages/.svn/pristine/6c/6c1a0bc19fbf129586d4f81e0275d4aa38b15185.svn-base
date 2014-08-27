@@ -1,0 +1,54 @@
+--- a/config.h.in
++++ b/config.h.in
+@@ -15,6 +15,9 @@
+ // Define to the address where bug reports for this package should be sent.
+ #define USTL_BUGREPORT	"@PACKAGE_BUGREPORT@"
+ 
++/// Define to 1 if you want to build without libstdc++
++#undef WITHOUT_LIBSTDCPP
++
+ /// Define to 1 if you want stream operations to throw exceptions on
+ /// insufficient data or insufficient space. All these errors should
+ /// be preventable in output code; the input code should verify the
+@@ -23,13 +26,10 @@
+ ///
+ #undef WANT_STREAM_BOUNDS_CHECKING
+ 
+-#if !defined(WANT_STREAM_BOUNDS_CHECKING) && !defined(NDEBUG)
++#if !defined(WANT_STREAM_BOUNDS_CHECKING) && !defined(NDEBUG) && !defined(WITHOUT_LIBSTDCPP)
+     #define WANT_STREAM_BOUNDS_CHECKING 1
+ #endif
+ 
+-/// Define to 1 if you want to build without libstdc++
+-#undef WITHOUT_LIBSTDCPP
+-
+ /// Define to 1 if you don't want the standard streams.
+ /// You will not be able to run bvt tests if you do this.
+ ///
+--- a/mostream.h
++++ b/mostream.h
+@@ -11,7 +11,9 @@
+ #include "memlink.h"
+ #include "uexception.h"
+ #include "utf8.h"
++#ifdef WANT_STREAM_BOUNDS_CHECKING
+ #include <typeinfo>
++#endif
+ 
+ namespace ustl {
+ 
+--- a/uctrstrm.h
++++ b/uctrstrm.h
+@@ -109,8 +109,12 @@
+     size_type n;
+     is >> n;
+     const size_type expectedSize = n * stream_size_of(value_type());
++#ifdef WANT_STREAM_BOUNDS_CHECKING
+     if (expectedSize > is.remaining())
+ 	throw stream_bounds_exception ("read", typeid(v).name(), is.pos(), expectedSize, is.remaining());
++#else
++    assert(expectedSize <= is.remaining());
++#endif
+     v.resize (n);
+     nr_container_read (is, v);
+     is.align();

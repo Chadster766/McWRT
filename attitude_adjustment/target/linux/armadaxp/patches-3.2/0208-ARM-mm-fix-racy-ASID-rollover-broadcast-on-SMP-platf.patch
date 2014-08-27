@@ -1,0 +1,74 @@
+From 5b636253eee82ba7abfe54c9293835ab02fc919d Mon Sep 17 00:00:00 2001
+From: Will Deacon <will.deacon@arm.com>
+Date: Tue, 12 Apr 2011 09:52:46 +0100
+Subject: [PATCH 208/609] ARM: mm: fix racy ASID rollover broadcast on SMP
+ platforms
+
+If ASID rollover is detected on a CPU in an SMP system, a synchronous
+IPI call is made to force the secondaries to reallocate their current
+ASIDs.
+
+There is a problem where a CPU may be interrupted in the cpu_switch_mm
+code with the context ID held in r1. After servicing the IPI, the
+context ID register will be updated with an ASID from the previous
+generation, polluting the TLB for when that ASID becomes valid in the
+new generation.
+
+This patch disables interrupts during cpu_switch_mm for SMP systems,
+preventing incoming rollover broadcasts from being serviced while the
+register state is inconsistent. Additionally, the context resetting code
+is modified to call cpu_switch_mm, rather than setting the context ID
+register directly, so that the TTBR always agrees with the ASID.
+
+Acked-by: Catalin Marinas <catalin.marinas@arm.com>
+Signed-off-by: Will Deacon <will.deacon@arm.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/include/asm/proc-fns.h |   14 ++++++++++++++
+ arch/arm/mm/context.c           |    3 +--
+ 2 files changed, 15 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/include/asm/proc-fns.h b/arch/arm/include/asm/proc-fns.h
+index 9e92cb2..a39b8f7 100644
+--- a/arch/arm/include/asm/proc-fns.h
++++ b/arch/arm/include/asm/proc-fns.h
+@@ -105,8 +105,22 @@ extern void cpu_resume(void);
+ 
+ #ifdef CONFIG_MMU
+ 
++#ifdef CONFIG_SMP
++
++#define cpu_switch_mm(pgd,mm)	\
++	({						\
++		unsigned long flags;			\
++		local_irq_save(flags);			\
++		cpu_do_switch_mm(virt_to_phys(pgd),mm);	\
++		local_irq_restore(flags);		\
++	})
++
++#else /* SMP */
++
+ #define cpu_switch_mm(pgd,mm) cpu_do_switch_mm(virt_to_phys(pgd),mm)
+ 
++#endif
++
+ #define cpu_get_pgd()	\
+ 	({						\
+ 		unsigned long pg;			\
+diff --git a/arch/arm/mm/context.c b/arch/arm/mm/context.c
+index aa2d04c..0041f6d 100644
+--- a/arch/arm/mm/context.c
++++ b/arch/arm/mm/context.c
+@@ -100,8 +100,7 @@ static void reset_context(void *info)
+ 	set_mm_context(mm, asid);
+ 
+ 	/* set the new ASID */
+-	asm("mcr	p15, 0, %0, c13, c0, 1\n" : : "r" (mm->context.id));
+-	isb();
++	cpu_switch_mm(mm->pgd, mm);
+ }
+ 
+ #else
+-- 
+1.7.9.5
+

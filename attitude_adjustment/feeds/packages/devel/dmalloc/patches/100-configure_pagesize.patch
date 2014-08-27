@@ -1,0 +1,44 @@
+--- a/configure
++++ b/configure
+@@ -857,6 +857,11 @@ Optional Features:
+    --enable-threads        build in thread support (disabled by default)
+    --enable-shlib          build shared libraries (disabled by default)
+ 
++Optional Packages:
++  --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
++  --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
++  --with-pagesize=nbits   log base 2 of machine page size
++
+ Some influential environment variables:
+   CC          C compiler command
+   CFLAGS      C compiler flags
+@@ -5307,6 +5312,14 @@ done
+ echo "$as_me:$LINENO: checking basic-block size" >&5
+ echo $ECHO_N "checking basic-block size... $ECHO_C" >&6
+ ac_cv_page_size=0
++
++# Check whether --with-pagesize or --without-pagesize was given.
++if test "${with_pagesize+set}" = set; then
++  withval="$with_pagesize"
++  case "$withval" in ?|1?) ac_cv_page_size=$withval; esac
++else
++  : # default to probing, set above
++fi;
+ if test $ac_cv_page_size = 0; then
+    if test "$cross_compiling" = yes; then
+   { { echo "$as_me:$LINENO: error: cannot run test program while cross compiling
+--- a/configure.ac
++++ b/configure.ac
+@@ -349,6 +349,12 @@ AC_MSG_RESULT([$ac_cv_use_mmap])
+ AC_CHECK_FUNCS(getpagesize)
+ AC_MSG_CHECKING([basic-block size])
+ ac_cv_page_size=0
++AC_ARG_WITH(pagesize,
++    [ AC_HELP_STRING([--with-pagesize=nbits],
++		[log base 2 of machine page size] ) ],
++    [ case "$withval" in ?|1?) ac_cv_page_size=$withval; esac ],
++    [ : # default to probing, set above ],
++)
+ if test $ac_cv_page_size = 0; then
+    AC_RUN_IFELSE([main() { if (getpagesize()<=2048) exit(0); else exit(1); }],
+ 	[ ac_cv_page_size=11 ] )

@@ -1,0 +1,740 @@
+From ea64ee8192c82dfad7262302979903974c27185e Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 13 Jan 2013 14:42:15 +0200
+Subject: [PATCH 491/609] Aligned kernel to Repo sources
+
+Change-Id: Iab5df5c905b6531e497495cd93f5f229f308924f
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/Makefile                    |    2 +-
+ arch/arm/mach-armadaxp/core.c                      |   10 +
+ arch/arm/mach-armadaxp/include/mach/armadaxp.h     |  359 +++++++++-----------
+ arch/arm/mach-armadaxp/pm.c                        |   11 +-
+ arch/arm/plat-armada/cpuidle.c                     |    8 +-
+ arch/arm/plat-armada/cpuidle.h                     |    5 +
+ arch/arm/plat-armada/hotplug.c                     |    2 -
+ .../arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig |   22 +-
+ arch/arm/plat-armada/suspend.c                     |   15 +-
+ 10 files changed, 201 insertions(+), 238 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
+index de803f4..4b95a53 100644
+--- a/arch/arm/mach-armadaxp/Makefile
++++ b/arch/arm/mach-armadaxp/Makefile
+@@ -49,7 +49,7 @@ QD_OBJS		= $(HAL_QD_DIR)/src/driver/gtDrvConfig.o $(HAL_QD_DIR)/src/driver/gtDrv
+                   $(HAL_QD_DIR)/src/msapi/gtSysStatus.o $(HAL_QD_DIR)/src/msapi/gtPortRateCtrl.o\
+                   $(HAL_QD_DIR)/src/msapi/gtPortPav.o $(HAL_QD_DIR)/src/msapi/gtVct.o		\
+ 		  $(HAL_QD_DIR)/src/msapi/gtPIRL2.o $(HAL_QD_DIR)/src/msapi/gtCCPVT.o		\
+-		  $(HAL_QD_DIR)/src/msapi/gtPCSCtrl.o $(HAL_QD_DIR)/src/msapi/gtBrgStu.o
++		  $(HAL_QD_DIR)/src/msapi/gtPCSCtrl.o
+ 
+ LSP_OBJS        = core.o irq.o time.o leds.o sysmap.o export.o clock.o
+ 
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index d538dea..8ed93b0 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -540,6 +540,7 @@ static struct platform_device axp_i2c1 = {
+ };
+ #endif
+ 
++
+ void __init armadaxp_i2c0_init(void)
+ {
+ 	if (mvUnitMapIsMine(I2C0) == MV_TRUE)
+@@ -2034,6 +2035,9 @@ MACHINE_START(ARMADA_XP_RD_NAS, "Marvell Armada XP RD NAS Board")
+ 	/* reserve memory for LCD */
+ 	.fixup		= axp_tag_fixup_mem32,
+ #endif /* CONFIG_FB_DOVE */
++#ifdef CONFIG_SUSPEND
++	.reserve	= reserve_training_mem,
++#endif /* CONFIG_SUSPEND */
+ #ifdef CONFIG_MV_AMP_ENABLE
+ 	.reserve	= axp_reserve_regs_space,
+ #endif
+@@ -2143,6 +2147,9 @@ MACHINE_START(ARMADA_XP_RDSRV, "Marvell Armada XP Server Board")
+   	.init_irq	= axp_init_irq,
+   	.timer		= &axp_timer,
+   	.init_machine	= axp_rdsrv_init,
++#ifdef CONFIG_SUSPEND
++	.reserve	= reserve_training_mem,
++#endif /* CONFIG_SUSPEND */
+ #ifdef CONFIG_MV_AMP_ENABLE
+ 	.reserve	= axp_reserve_regs_space,
+ #endif
+@@ -2214,6 +2221,9 @@ MACHINE_START(ARMADA_XP_FPGA, "Marvell Armada XP FPGA Board")
+ 	.init_irq	= axp_init_irq,
+ 	.timer		= &axp_timer,
+ 	.init_machine	= axp_fpga_init,
++#ifdef CONFIG_SUSPEND
++	.reserve	= reserve_training_mem,
++#endif /* CONFIG_SUSPEND */
+ #ifdef CONFIG_MV_AMP_ENABLE
+ 	.reserve	= axp_reserve_regs_space,
+ #endif
+diff --git a/arch/arm/mach-armadaxp/include/mach/armadaxp.h b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
+index 184cc35..32d7429 100644
+--- a/arch/arm/mach-armadaxp/include/mach/armadaxp.h
++++ b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
+@@ -22,10 +22,14 @@
+ /* The base address of memory that should be reserved for IO windows.
+ ** The reserved end address is 0xFFFFFFFF.
+ */
+-#define CONFIG_DRAM_IO_RESERVE_BASE	0xC0000000ll
++#define CONFIG_DRAM_IO_RESERVE_BASE	0xF0000000ll
+ 
+ /*
+  * Armada-XP address maps.
++ * Virtual Addresses should be between 0xFA800000 and 0xFEFFFFFF (72MB)
++ * Physical Addresses should be between 0xF0000000 and 0xFFFFFFFF (256MB)
++ * If a larger physical address space is needed, then the amount of DRAM
++ * available for Linux will be smaller.
+  *
+  * phys		virt		size
+  * e0000000	@runtime	128M	PCIe-0 Memory space
+@@ -68,245 +72,198 @@
+ #define SDRAM_CS3_BASE  		0x30000000
+ #define SDRAM_CS3_SIZE  		_256M
+ 
+-/*
+- * PEX Address Decoding
+- * Virtual address not specified - remapped @runtime
+- */
+-#define PEX0_MEM_PHYS_BASE		0xE0000000
+-#define PEX0_MEM_SIZE			_32M
+-#define PEX1_MEM_PHYS_BASE		0xE2000000
+-#define PEX1_MEM_SIZE			_32M
+-#define PEX2_MEM_PHYS_BASE		0xE4000000
+-#define PEX2_MEM_SIZE			_32M
+-#define PEX3_MEM_PHYS_BASE		0xE6000000
+-#define PEX3_MEM_SIZE			_32M
+-#define PEX4_MEM_PHYS_BASE		0xE8000000
+-#define PEX4_MEM_SIZE			_32M
+-#define PEX5_MEM_PHYS_BASE		0x0	/*TBD*/
+-#define PEX5_MEM_SIZE			_32M
+-#define PEX6_MEM_PHYS_BASE		0xEA000000
+-#define PEX6_MEM_SIZE			_32M
+-#define PEX7_MEM_PHYS_BASE		0x0	/*TBD*/
+-#define PEX7_MEM_SIZE			_32M
+-#define PEX8_MEM_PHYS_BASE		0xEC000000
+-#define PEX8_MEM_SIZE			_32M
+-#define PEX9_MEM_PHYS_BASE		0xEE000000
+-#define PEX9_MEM_SIZE			_32M
+-
+-#ifdef CONFIG_ARM_LPAE
+-
+-
+-#define SPI_CS0_PHYS_BASE		0xF0000000
+-#define SPI_CS0_VIRT_BASE		0xFAA00000
+-#define SPI_CS0_SIZE			_16M
+ 
++/* First, we place the "static" windows (that has less chance to have a size
++ * change), then all the "dynamic" windows (the ones that might need different
++ * sizes depending on the system configuration - SPI flash size, PEX cards...).
++ */
+ 
++/*
++ * Internal registers.
++ * PHYS: 0xF1000000 to 0xF1100000
++ * VIRT: 0xFBC00000 to 0xFBC00000
++ * INTER_REGS_VIRT_BASE Must be 2MB aligned in order to support CONFIG_DEBUG_LL.
++ * Before paging_init, the UART port is mapped by a section entry (2MB in LPAE).
++ */
+ #ifdef CONFIG_MV_AMP_ENABLE
+ /* In AMP mode the internal register base must match U-BOOTs base since
+  * Two operating systems cannot modify the base during boot as is done
+  * with a single image */
+-#define INTER_REGS_PHYS_BASE	0xD0000000
++#define INTER_REGS_PHYS_BASE		0xD0000000
+ #else
+-#define INTER_REGS_PHYS_BASE	0xF1000000
++#define INTER_REGS_PHYS_BASE		0xF1000000
+ #endif
+-#define INTER_REGS_VIRT_BASE	0xFBC00000
+-#define INTER_REGS_BASE			INTER_REGS_VIRT_BASE
++#define INTER_REGS_VIRT_BASE		0xFBC00000
++#define INTER_REGS_BASE			INTER_REGS_VIRT_BASE /* For compatibility */
+ 
+-#define PEX0_IO_PHYS_BASE		0xF1100000
+-#define PEX0_IO_VIRT_BASE		0xFBE00000
+-#define PEX0_IO_SIZE			_1M
+-#define PEX1_IO_PHYS_BASE		0xF1200000
+-#define PEX1_IO_VIRT_BASE		0xFBF00000
+-#define PEX1_IO_SIZE			_1M
+-#define PEX2_IO_PHYS_BASE		0xF1300000
+-#define PEX2_IO_VIRT_BASE		0xFC000000
+-#define PEX2_IO_SIZE			_1M
+-#define PEX3_IO_PHYS_BASE		0xF1400000
+-#define PEX3_IO_VIRT_BASE		0xFC100000
+-#define PEX3_IO_SIZE			_1M
+-#define PEX4_IO_PHYS_BASE		0xF1500000
+-#define PEX4_IO_VIRT_BASE		0xFC200000
+-#define PEX4_IO_SIZE			_1M
+-#define PEX5_IO_PHYS_BASE		0xF1600000
+-#define PEX5_IO_VIRT_BASE		0xFC300000
+-#define PEX5_IO_SIZE			_1M
+-#define PEX6_IO_PHYS_BASE		0xF1700000
+-#define PEX6_IO_VIRT_BASE		0xFC400000
+-#define PEX6_IO_SIZE			_1M
+-#define PEX7_IO_PHYS_BASE		0xF1800000
+-#define PEX7_IO_VIRT_BASE		0xFC500000
+-#define PEX7_IO_SIZE			_1M
+-#define PEX8_IO_PHYS_BASE		0xF1900000
+-#define PEX8_IO_VIRT_BASE		0xFC600000
+-#define PEX8_IO_SIZE			_1M
+-#define PEX9_IO_PHYS_BASE		0xF1A00000
+-#define PEX9_IO_VIRT_BASE		0xFC700000
+-#define PEX9_IO_SIZE			_1M
+-
+-#define UART_REGS_BASE			0xF1B00000
+-#define UART_VIRT_BASE			0xFC800000
++/*
++ * Uart registers.
++ * PHYS: 0xF1200000 - 0xF1300000
++ * VIRT: 0xFBE00000
++ */
++#define UART_REGS_BASE			0xF1200000
++#define UART_VIRT_BASE			0xFBE00000
+ #define UART_SIZE			_1M
+ 
+-#define DEVICE_BOOTCS_PHYS_BASE		0xF2000000
+-#define DEVICE_BOOTCS_VIRT_BASE		0xFCA00000
+-#define DEVICE_BOOTCS_SIZE		_32M
+-#define DEVICE_CS0_PHYS_BASE		0xF4000000
+-#define DEVICE_CS0_VIRT_BASE		0xFEA00000
+-#define DEVICE_CS0_SIZE			_1M
+-#define DEVICE_CS1_PHYS_BASE		0xF4100000
+-#define DEVICE_CS1_VIRT_BASE		0xFEB00000
+-#define DEVICE_CS1_SIZE			_1M
+-#define DEVICE_CS2_PHYS_BASE		0xF4200000
+-#define DEVICE_CS2_VIRT_BASE		0xFEC00000
+-#define DEVICE_CS2_SIZE			_1M
+-#define DEVICE_CS3_PHYS_BASE		0xF4300000
+-#define DEVICE_CS3_VIRT_BASE		0xFED00000
+-#define DEVICE_CS3_SIZE			_1M
+-
+-#define CRYPT_ENG_PHYS_BASE(chan)	((chan == 0) ? 0xC8010000 : 0xF4480000)
+-#define CRYPT_ENG_VIRT_BASE(chan)	((chan == 0) ? 0xFEE00000 : 0xFEE10000)
+-#define CRYPT_ENG_SIZE			_64K
+-
+-
+-#ifdef CONFIG_ARMADA_XP_REV_Z1
+-#define XOR0_PHYS_BASE                 (INTER_REGS_PHYS_BASE | 0x60800)
+-#define XOR1_PHYS_BASE                 (INTER_REGS_PHYS_BASE | 0x60900)
+-#else
+-#define XOR0_PHYS_BASE			(INTER_REGS_PHYS_BASE | 0x60900)
+-#define XOR1_PHYS_BASE			(INTER_REGS_PHYS_BASE | 0xF0900)
+-#endif
+-#define XOR0_HIGH_PHYS_BASE		(INTER_REGS_PHYS_BASE | 0x60B00)
+-#define XOR1_HIGH_PHYS_BASE		(INTER_REGS_PHYS_BASE | 0xF0B00)
+-
+-#define PNC_BM_PHYS_BASE		0xF4500000
+-#define PNC_BM_VIRT_BASE		0xFEF00000
++/*
++ * BM / PNC window
++ * PHYS: 0xF1300000 - 0xF1400000
++ * VIRT: @runtime
++ */
++#define PNC_BM_PHYS_BASE		0xF1300000
+ #define PNC_BM_SIZE			_1M
+ 
+-#define BOOTROM_PHYS_BASE		0xFFF00000
+-#define BOOTROM_VIRT_BASE		0xFF000000
+-#define BOOTROM_SIZE			_1M
++/*
++ * Crypto Engine(s)
++ * PHYS: 0xF1400000 - 0xF1500000
++ * VIRT: 0xFC000000
++ */
++#define CRYPT_ENG_PHYS_BASE(chan)	(0xF1400000 + (chan * 0x10000))
++#define CRYPT_ENG_VIRT_BASE(chan)	(0xFC000000 + (chan * 0x10000))
++#define CRYPT_ENG_SIZE			_64K
+ 
+-#define PMU_SCRATCH_PHYS_BASE		0xF4700000
+-#define PMU_SCRATCH_VIRT_BASE		0xFF100000
++/*
++ * PMU Scratch PAD
++ * PHYS: 0xF1600000 - 0xF1700000
++ * VIRT: 0xFC200000
++ */
++#define PMU_SCRATCH_PHYS_BASE		0xF1500000
++#define PMU_SCRATCH_VIRT_BASE		0xFC100000
+ #define PMU_SCRATCH_SIZE		_1M
+ 
+-#define LEGACY_NAND_PHYS_BASE		0xF4800000
+-#define LEGACY_NAND_VIRT_BASE		0xFF200000
+-#define LEGACY_NAND_SIZE		_1M
+-
+-#define	LCD_PHYS_BASE			(INTER_REGS_PHYS_BASE | 0xE0000)
+-
+-#define AXP_NFC_PHYS_BASE	(INTER_REGS_PHYS_BASE | 0xD0000)
+-
+-#else /* !CONFIG_ARM_LPAE */
+-
+-#define SPI_CS0_PHYS_BASE		0xF0000000
+-#define SPI_CS0_VIRT_BASE		0xFAB00000
+-#define SPI_CS0_SIZE			_16M
+-
+-#ifdef CONFIG_MV_AMP_ENABLE
+-/* In AMP mode the internal register base must match U-BOOTs base since
+- * Two operating systems cannot modify the base during boot as is done
+- * with a single image */
+-#define INTER_REGS_PHYS_BASE	0xD0000000
+-#else
+-#define INTER_REGS_PHYS_BASE	0xF1000000
+-#endif
+-#define INTER_REGS_VIRT_BASE	0xFBB00000
+-#define INTER_REGS_BASE			INTER_REGS_VIRT_BASE
+-
+-#define PEX0_IO_PHYS_BASE		0xF1100000
+-#define PEX0_IO_VIRT_BASE		0xFBC00000
++/*
++ * PHYS: 0xF1700000 to 0xF100000
++ * VIRT: 0xFC300000 - 0xFCC00000
++ * PEX IO Address Decoding
++ * Allocate 1MB for each IO windowi, total of 10MB.
++ */
++#define PEX0_IO_PHYS_BASE		0xF1600000
++#define PEX0_IO_VIRT_BASE		0xFC200000
+ #define PEX0_IO_SIZE			_1M
+-#define PEX1_IO_PHYS_BASE		0xF1200000
+-#define PEX1_IO_VIRT_BASE		0xFBD00000
++#define PEX1_IO_PHYS_BASE		0xF1700000
++#define PEX1_IO_VIRT_BASE		0xFC300000
+ #define PEX1_IO_SIZE			_1M
+-#define PEX2_IO_PHYS_BASE		0xF1300000
+-#define PEX2_IO_VIRT_BASE		0xFBE00000
++#define PEX2_IO_PHYS_BASE		0xF1800000
++#define PEX2_IO_VIRT_BASE		0xFC400000
+ #define PEX2_IO_SIZE			_1M
+-#define PEX3_IO_PHYS_BASE		0xF1400000
+-#define PEX3_IO_VIRT_BASE		0xFBF00000
++#define PEX3_IO_PHYS_BASE		0xF1900000
++#define PEX3_IO_VIRT_BASE		0xFC500000
+ #define PEX3_IO_SIZE			_1M
+-#define PEX4_IO_PHYS_BASE		0xF1500000
+-#define PEX4_IO_VIRT_BASE		0xFC000000
++#define PEX4_IO_PHYS_BASE		0xF1A00000
++#define PEX4_IO_VIRT_BASE		0xFC600000
+ #define PEX4_IO_SIZE			_1M
+-#define PEX5_IO_PHYS_BASE		0xF1600000
+-#define PEX5_IO_VIRT_BASE		0xFC100000
++#define PEX5_IO_PHYS_BASE		0xF1B00000
++#define PEX5_IO_VIRT_BASE		0xFC700000
+ #define PEX5_IO_SIZE			_1M
+-#define PEX6_IO_PHYS_BASE		0xF1700000
+-#define PEX6_IO_VIRT_BASE		0xFC200000
++#define PEX6_IO_PHYS_BASE		0xF1C00000
++#define PEX6_IO_VIRT_BASE		0xFC800000
+ #define PEX6_IO_SIZE			_1M
+-#define PEX7_IO_PHYS_BASE		0xF1800000
+-#define PEX7_IO_VIRT_BASE		0xFC300000
++#define PEX7_IO_PHYS_BASE		0xF1D00000
++#define PEX7_IO_VIRT_BASE		0xFC900000
+ #define PEX7_IO_SIZE			_1M
+-#define PEX8_IO_PHYS_BASE		0xF1900000
+-#define PEX8_IO_VIRT_BASE		0xFC400000
++#define PEX8_IO_PHYS_BASE		0xF1E00000
++#define PEX8_IO_VIRT_BASE		0xFCA00000
+ #define PEX8_IO_SIZE			_1M
+-#define PEX9_IO_PHYS_BASE		0xF1A00000
+-#define PEX9_IO_VIRT_BASE		0xFC500000
++#define PEX9_IO_PHYS_BASE		0xF1F00000
++#define PEX9_IO_VIRT_BASE		0xFCB00000
+ #define PEX9_IO_SIZE			_1M
+ 
+-#define UART_REGS_BASE			0xF1B00000
+-#define UART_VIRT_BASE			0xFC600000
+-#define UART_SIZE			_1M
+ 
+-#define DEVICE_BOOTCS_PHYS_BASE		0xF2000000
+-#define DEVICE_BOOTCS_VIRT_BASE		0xFC700000
+-#define DEVICE_BOOTCS_SIZE		_32M
+-#define DEVICE_CS0_PHYS_BASE		0xF4000000
+-#define DEVICE_CS0_VIRT_BASE		0xFE700000
++/*
++ * Below are the IOs that might require size change depending on the
++ * system peripherals.
++ */
++
++/*
++ * PHYS: 0xF8000000 to 0xFFEFFFFF
++ * VIRT: @runtime
++ * PEX Memory Address Decoding
++ * Virtual address not specified - remapped @runtime
++ * Reserve 127MB for PEX MEM space, so that in case an interface needs more
++ * than 2MB, it will be possible to relocate it within the reserved 127MB.
++ */
++#define PEX0_MEM_PHYS_BASE		0xF2000000
++#define PEX0_MEM_SIZE			_2M
++#define PEX1_MEM_PHYS_BASE		0xF2200000
++#define PEX1_MEM_SIZE			_2M
++#define PEX2_MEM_PHYS_BASE		0xF2400000
++#define PEX2_MEM_SIZE			_2M
++#define PEX3_MEM_PHYS_BASE		0xF2600000
++#define PEX3_MEM_SIZE			_2M
++#define PEX4_MEM_PHYS_BASE		0xF2800000
++#define PEX4_MEM_SIZE			_2M
++#define PEX5_MEM_PHYS_BASE		0xF2A00000
++#define PEX5_MEM_SIZE			_2M
++#define PEX6_MEM_PHYS_BASE		0xF2C00000
++#define PEX6_MEM_SIZE			_2M
++#define PEX7_MEM_PHYS_BASE		0xF2E00000
++#define PEX7_MEM_SIZE			_2M
++#define PEX8_MEM_PHYS_BASE		0xF3000000
++#define PEX8_MEM_SIZE			_2M
++#define PEX9_MEM_PHYS_BASE		0xF3200000
++#define PEX9_MEM_SIZE			_2M
++
++/*
++ * Device Bus address decode windows.
++ * PHYS: 0xF3300000 - 0xF3400000
++ * VIRT: @runtime
++ */
++#define DEVICE_CS0_PHYS_BASE		0xF3300000
+ #define DEVICE_CS0_SIZE			_1M
+-#define DEVICE_CS1_PHYS_BASE		0xF4100000
+-#define DEVICE_CS1_VIRT_BASE		0xFE800000
++#define DEVICE_CS1_PHYS_BASE		0xF3400000
+ #define DEVICE_CS1_SIZE			_1M
+-#define DEVICE_CS2_PHYS_BASE		0xF4200000
+-#define DEVICE_CS2_VIRT_BASE		0xFE900000
++#define DEVICE_CS2_PHYS_BASE		0xF3500000
+ #define DEVICE_CS2_SIZE			_1M
+-#define DEVICE_CS3_PHYS_BASE		0xF4300000
+-#define DEVICE_CS3_VIRT_BASE		0xFEA00000
++#define DEVICE_CS3_PHYS_BASE		0xF3600000
+ #define DEVICE_CS3_SIZE			_1M
+ 
+-#define CRYPT_ENG_PHYS_BASE(chan)	((chan == 0) ? 0xC8010000 : 0xF4480000)
+-#define CRYPT_ENG_VIRT_BASE(chan)	((chan == 0) ? 0xFEB00000 : 0xFEB10000)
+-#define CRYPT_ENG_SIZE			_64K
++/*
++ * Device Boot-CS Window
++ * PHYS: 0xF4000000 - 0xF6000000
++ * VIRT: @runtime
++ */
++#define DEVICE_BOOTCS_PHYS_BASE		0xF4000000
++#define DEVICE_BOOTCS_SIZE		_32M
+ 
+ 
+-#ifdef CONFIG_ARMADA_XP_REV_Z1
+-#define XOR0_PHYS_BASE                 (INTER_REGS_PHYS_BASE | 0x60800)
+-#define XOR1_PHYS_BASE                 (INTER_REGS_PHYS_BASE | 0x60900)
+-#else
+-#define XOR0_PHYS_BASE			(INTER_REGS_PHYS_BASE | 0x60900)
+-#define XOR1_PHYS_BASE			(INTER_REGS_PHYS_BASE | 0xF0900)
+-#endif
+-#define XOR0_HIGH_PHYS_BASE		(INTER_REGS_PHYS_BASE | 0x60B00)
+-#define XOR1_HIGH_PHYS_BASE		(INTER_REGS_PHYS_BASE | 0xF0B00)
++/*
++ * SPI Flash window.
++ * PHYS: 0xF6000000 - 0xF7000000
++ * VIRT: @runtime
++ * This is a 16MB window, if a larger flash exists, then the
++ * window needs to be enlarged.
++ */
++#define SPI_CS0_PHYS_BASE		0xF6000000
++#define SPI_CS0_SIZE			_16M
++
++/*
++ * Free area from 0xF7000000 to 0xFFF00000 (143MB).
++ * This can be used to map a larger window for PCI / SPI / Device-CS....
++ */
+ 
+-#define PNC_BM_PHYS_BASE		0xF4500000
+-#define PNC_BM_VIRT_BASE		0xFEC00000
+-#define PNC_BM_SIZE			_1M
+ 
++/*
++ * PHYS: 0xFFF00000 - 0xFFFFFFFF
++ * VIRT: 0xFF000000 - 0xFF0FFFFF
++ * Bootrom window
++ */
+ #define BOOTROM_PHYS_BASE		0xFFF00000
+-#define BOOTROM_VIRT_BASE		0xFED00000
++#define BOOTROM_VIRT_BASE		0xFF000000
+ #define BOOTROM_SIZE			_1M
+ 
+ 
+-#define PMU_SCRATCH_PHYS_BASE		0xF4700000
+-#define PMU_SCRATCH_VIRT_BASE		0xFEE00000
+-#define PMU_SCRATCH_SIZE		_1M
+-
+-#define LEGACY_NAND_PHYS_BASE		0xF4800000
+-#define LEGACY_NAND_VIRT_BASE		0xFEF00000
+-#define LEGACY_NAND_SIZE		_1M
++/*
++ * Linux native definitiotns
++ */
++#define XOR0_PHYS_BASE			(INTER_REGS_PHYS_BASE | 0x60900)
++#define XOR1_PHYS_BASE			(INTER_REGS_PHYS_BASE | 0xF0900)
++#define XOR0_HIGH_PHYS_BASE		(INTER_REGS_PHYS_BASE | 0x60B00)
++#define XOR1_HIGH_PHYS_BASE		(INTER_REGS_PHYS_BASE | 0xF0B00)
+ 
+ #define	LCD_PHYS_BASE			(INTER_REGS_PHYS_BASE | 0xE0000)
+ 
+-#define AXP_NFC_PHYS_BASE	(INTER_REGS_PHYS_BASE | 0xD0000)
++#define AXP_NFC_PHYS_BASE		(INTER_REGS_PHYS_BASE | 0xD0000)
+ 
+-#endif /* CONFIG_ARM_LPAE */
+-
+-/*
+- * Linux native definitiotns
+- */
+ #define SDRAM_OPERATION_REG		(INTER_REGS_BASE | 0x1418)
+ #define SDRAM_CONFIG_REG		(INTER_REGS_BASE | 0x1400)
+ #define SDRAM_DLB_EVICT_REG		(INTER_REGS_BASE | 0x170C)
+@@ -325,8 +282,8 @@
+ #define AXP_CPU_INTACK			0xB4
+ #define AXP_IRQ_SEL_CAUSE_OFF		0xA0
+ #define AXP_IN_DOORBELL_CAUSE		0x78
+-#define AXP_IN_DRBEL_CAUSE			(AXP_PER_CPU_BASE | 0x78)
+-#define AXP_IN_DRBEL_MSK			(AXP_PER_CPU_BASE | 0x7c)
++#define AXP_IN_DRBEL_CAUSE		(AXP_PER_CPU_BASE | 0x78)
++#define AXP_IN_DRBEL_MSK		(AXP_PER_CPU_BASE | 0x7c)
+ 
+ #ifdef CONFIG_MACH_ARMADA_XP_FPGA
+ #define AXP_CPU_RESUME_ADDR_REG(cpu)	(AXP_BRIDGE_VIRT_BASE | 0x984)
+@@ -337,14 +294,10 @@
+ #define AXP_CPU_RESET_REG(cpu)		(AXP_BRIDGE_VIRT_BASE | (0x800+(cpu)*8))
+ #define AXP_CPU_RESET_OFFS		0
+ 
+-#define AXP_L2_CLEAN_WAY_REG		(INTER_REGS_BASE | 0x87BC)
++#define AXP_L2_CLEAN_WAY_REG		(INTER_REGS_BASE | 0x87BC) 
+ #define AXP_L2_MNTNC_STAT_REG		(INTER_REGS_BASE | 0x8704)
+ #define AXP_SNOOP_FILTER_PHYS_REG	(INTER_REGS_PHYS_BASE | 0x21020)
+ #define AXP_REVISION_ID_PHYS_REG	(INTER_REGS_PHYS_BASE | 0x40008)
+ #define AXP_REVISION_ID_VIRT_REG	(INTER_REGS_BASE | 0x40008)
+-
+-#define AXP_HW_SEMAPHORE_0_VIRT_REG		(INTER_REGS_BASE | 0x20500)
+-#define AXP_HW_SEMAPHORE_0_PHYS_REG		(INTER_REGS_PHYS_BASE | 0x20500)
+-#define AXP_COHER_FABRIC_CTRL_VIRT_REG	(INTER_REGS_BASE | 0x20200)
+-#define AXP_COHER_FABRIC_CTRL_PHYS_REG	(INTER_REGS_PHYS_BASE | 0x20200)
+ #endif
++
+diff --git a/arch/arm/mach-armadaxp/pm.c b/arch/arm/mach-armadaxp/pm.c
+index ce4b44d..88ce8d2 100644
+--- a/arch/arm/mach-armadaxp/pm.c
++++ b/arch/arm/mach-armadaxp/pm.c
+@@ -54,8 +54,7 @@ static int armadaxp_pm_enter(suspend_state_t state)
+ 		/* Reenable the Uart IRQ in order to wake from it */
+ 		/* Enable Uart IRQ */
+ 		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0));
+-		reg &= ~0xF;
+-		reg |= 0x1;
++		reg = (reg & ~0xF) | 0x1;	/* Mask all non-boot CPUs */
+ 		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0), reg);
+ 
+ 		/* Disable IPI IRQs */
+@@ -69,19 +68,19 @@ static int armadaxp_pm_enter(suspend_state_t state)
+ 
+ 		/* Reenable the NETA IRQ in order to wake from it */
+ 		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE0_FIC));
+-		reg |= 0x1;
++		reg = (reg & ~0xF) | 0x1;	/* Mask all non-boot CPUs */
+ 		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE0_FIC), reg);
+ 
+ 		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE1_FIC));
+-		reg |= 0x1;
++		reg = (reg & ~0xF) | 0x1;	/* Mask all non-boot CPUs */
+ 		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE1_FIC), reg);
+ 
+ 		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE2_FIC));
+-		reg |= 0x1;
++		reg = (reg & ~0xF) | 0x1;	/* Mask all non-boot CPUs */
+ 		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE2_FIC), reg);
+ 
+ 		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE3_FIC));
+-		reg |= 0x1;
++		reg = (reg & ~0xF) | 0x1;	/* Mask all non-boot CPUs */
+ 		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE3_FIC), reg);
+ #endif /* CONFIG_MV_ETH_PNC_WOL */
+ 
+diff --git a/arch/arm/plat-armada/cpuidle.c b/arch/arm/plat-armada/cpuidle.c
+index 9d7a312..69fbf93 100644
+--- a/arch/arm/plat-armada/cpuidle.c
++++ b/arch/arm/plat-armada/cpuidle.c
+@@ -26,10 +26,6 @@
+ #include "cpuidle.h"
+ #include "mvOs.h"
+ 
+-extern int armadaxp_cpu_resume(void);
+-extern int armadaxp_cpu_suspend(unsigned long);
+-extern int axp_secondary_startup(void);
+-
+ #ifdef CONFIG_CPU_IDLE
+ #if defined CONFIG_ARMADA_DEEP_IDLE_SAVE_WINDOWS_STATE
+ static MV_AHB_TO_MBUS_DEC_WIN ahbAddrDecWin[MAX_AHB_TO_MBUS_WINS];
+@@ -87,7 +83,7 @@ void mv_cpuidle_restore_cpu_win_state(void)
+ 
+ 	/* Save CPU windows state, and enable access for Bootrom	*
+ 	** according to SoC default address decoding windows.		*/
+-	for(i = 0; i < MAX_AHB_TO_MBUS_WINS; i++) {
++	for (i = 0; i < MAX_AHB_TO_MBUS_WINS; i++) {
+ 		mvAhbToMbusWinSet(i, &ahbAddrDecWin[i]);
+ 		mvAhbToMbusWinRemap(i, &ahbAddrWinRemap[i]);
+ 	}
+@@ -100,7 +96,7 @@ void mv_cpuidle_reset_cpu_win_state(void)
+ 
+ 	/* Save CPU windows state, and enable access for Bootrom	*
+ 	** according to SoC default address decoding windows.		*/
+-	for(i = 0; i < MAX_AHB_TO_MBUS_WINS; i++) {
++	for (i = 0; i < MAX_AHB_TO_MBUS_WINS; i++) {
+ 		mvAhbToMbusWinGet(i, &ahbAddrDecWin[i]);
+ 		mvAhbToMbusWinRemapGet(i, &ahbAddrWinRemap[i]);
+ 
+diff --git a/arch/arm/plat-armada/cpuidle.h b/arch/arm/plat-armada/cpuidle.h
+index b1d6229..160ded5 100644
+--- a/arch/arm/plat-armada/cpuidle.h
++++ b/arch/arm/plat-armada/cpuidle.h
+@@ -11,7 +11,10 @@
+ #ifndef __PLAT_ARMADA_CPUIDLE_H
+ #define __PLAT_ARMADA_CPUIDLE_H
+ 
++int armadaxp_snoop_dis_virt(void);
+ int armadaxp_cpu_suspend(unsigned long);
++int armadaxp_powerdown(unsigned long);
++void armadaxp_cpu_resume(void);
+ void armadaxp_fabric_setup_deepIdle(void);
+ void armadaxp_fabric_prepare_deepIdle(void);
+ void armadaxp_fabric_prepare_hotplug(void);
+@@ -20,6 +23,8 @@ void armadaxp_deepidle(int power_state);
+ void armadaxp_smp_prepare_idle(unsigned int processor_id);
+ void armadaxp_smp_restore_idle(unsigned int processor_id);
+ 
++extern int axp_secondary_startup(void);
++
+ typedef enum  {
+ 	DISABLED,
+ 	WFI,
+diff --git a/arch/arm/plat-armada/hotplug.c b/arch/arm/plat-armada/hotplug.c
+index 3140399..8f9241d 100644
+--- a/arch/arm/plat-armada/hotplug.c
++++ b/arch/arm/plat-armada/hotplug.c
+@@ -26,8 +26,6 @@
+                 cpunum &= 0x0F;                         \
+         })
+ 
+-extern int armadaxp_snoop_dis_virt(void);
+-
+ static DECLARE_COMPLETION(cpu_killed);
+ 
+ static inline void platform_do_lowpower(unsigned int cpu)
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig
+index a204254..b7b204b 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig
+@@ -5,10 +5,11 @@ config  MV_CESA
+ 	bool "Support for Marvell Cryptographic Engine and Security Acceleration(CESA)"
+ 	default y
+ 
+-config  MV_CESA_TOOL
++config  MV_CESA_TOOL_ARMADA
+ 	bool "Support for Marvell CESA Tool"
+ 	default y
+ 	depends on MV_CESA
++	select MV_CESA_TOOL
+ 	---help---
+ 
+ config MV_CESA_CHANNELS
+@@ -48,22 +49,22 @@ config MV_CESA_INT_PER_PACKET
+ endchoice
+ 
+ choice 
+-	prompt "CESA Mode"
+-	depends on MV_CESA
+-	default MV_CESA_OCF_ARMADA
++        prompt "CESA Mode"
++        depends on MV_CESA
++        default MV_CESA_OCF_ARMADA
+ 
+ config	MV_CESA_OCF_ARMADA
+-	tristate "Support for Marvell CESA OCF driver"
+-	select MV_CESA_OCF
++	bool "Support for Marvell CESA OCF driver"
+ 	depends on OCF_OCF
++	select MV_CESA_OCF
+ 	---help---
+ 	Choosing this option will enable you to use the Marvell Cryptographic Engine and
+ 	Security Accelerator, under the OCF package.
+ 
+ config  MV_CESA_TEST_ARMADA
+ 	bool "Support for Marvell CESA test driver"
+-	select MV_CESA_OCF
+-	depends on MV_CESA_TOOL 
++	depends on MV_CESA_TOOL_ARMADA 
++	select MV_CESA_TEST
+ 	---help---
+ 	Choosing this option will enable you to use the Marvell Cryptographic Engine and
+ 	Security Accelerator, with the mv_cesa_tool in test mode.
+@@ -78,6 +79,11 @@ config  MV_CESA_TEST
+ 	depends on MV_CESA_TEST_ARMADA
+ 	bool
+ 
++config  MV_CESA_TOOL
++	depends on MV_CESA_TOOL_ARMADA
++	tristate
++
++
+ endmenu
+ 
+ 
+diff --git a/arch/arm/plat-armada/suspend.c b/arch/arm/plat-armada/suspend.c
+index 8c97a87..f52b280 100644
+--- a/arch/arm/plat-armada/suspend.c
++++ b/arch/arm/plat-armada/suspend.c
+@@ -33,8 +33,6 @@
+ #include "ctrlEnv/sys/mvCpuIf.h"
+ #include "mvOs.h"
+ 
+-int armadaxp_powerdown(unsigned long);
+-void armadaxp_cpu_resume(void);
+ void smp_resume(void);
+ 
+ /*
+@@ -66,7 +64,8 @@ void write_pattern(void)
+ 
+ 	ptr = ioremap(BASE_PATTERN,SIZE_PATTERN);
+ 	pattern_ptr = ptr;
+-	pr_info("Writing pattern to %p(%p) + %x\n", ptr, (void*)virt_to_phys(ptr), SIZE_PATTERN);
++	pr_info("Writing pattern to %p(%p) + %x\n", ptr,
++		(void *)virt_to_phys(ptr), SIZE_PATTERN);
+ 
+ 	if(ptr == 0)
+ 	{
+@@ -91,7 +90,8 @@ void test_pattern(void)
+ 	if(pattern_ptr == 0)
+ 		return;
+ 
+-	pr_info("Testing pattern from %p (%p) + %x\n", ptr, (void*)virt_to_phys(ptr), SIZE_PATTERN);
++	pr_info("Testing pattern from %p (%p) + %x\n", ptr,
++		(void *)virt_to_phys(ptr), SIZE_PATTERN);
+ 
+ 	__asm__("b .");
+ 
+@@ -112,8 +112,8 @@ void armadaxp_store_boot_info(void)
+ 	int *store_addr = (int *)BOOT_INFO_ADDR;
+ 	int *resume_pc, win;
+ 
+-	store_addr = (int*)phys_to_virt((int)store_addr);
+-	resume_pc = (int*)virt_to_phys(armadaxp_cpu_resume);
++	store_addr = (int *)phys_to_virt((int)store_addr);
++	resume_pc = (int *)virt_to_phys(armadaxp_cpu_resume);
+ 
+ 	/*
+ 	 * Store magic word indicating suspend to ram
+@@ -126,7 +126,8 @@ void armadaxp_store_boot_info(void)
+ 	 * Now store registers that need to be proggrammed before
+ 	 * comming back to linux. format is addr->value
+ 	 */
+-	/* Disable X-Bar window 12 which is opend in the bootROM by default to 0xF0000000 */
++	/* Disable X-Bar window 12 which is opend in the bootROM
++	 * by default to 0xF0000000 */
+ 	*store_addr++ = BOOTROM_INTER_REGS_PHYS_BASE + 0x200B0;
+ 	*store_addr++ = 0x0;
+ 
+-- 
+1.7.9.5
+

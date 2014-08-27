@@ -1,0 +1,20 @@
+config MAEMO_KEXEC_DOWNLOAD_KERNEL
+	bool "Download latest Maemo kernel"
+	default y
+	depends on PACKAGE_maemo-kexec
+
+config MAEMO_KEXEC_KERNEL_PATH
+	string
+	prompt "Path to the Maemo kernel image"
+	default "PLEASE_CONFIGURE_MAEMO_ZIMAGE"
+	depends on PACKAGE_maemo-kexec && !MAEMO_KEXEC_DOWNLOAD_KERNEL
+	help
+	  Defines the path to the Maemo kernel zImage.
+
+	  The image can be extracted from the Fiasco firmware image.
+	  Use the proprietary flasher to extract the image. The
+	  opensource tool "0xFFFF" is not able to extract the zImage correctly.
+
+	  The zImage defined here will be included in the OpenWrt rootfs
+	  for kexec-ing of the Maemo operating system. The Maemo rootfs
+	  has to be installed on the n810's "rootfs" MTD partition (MTD4).

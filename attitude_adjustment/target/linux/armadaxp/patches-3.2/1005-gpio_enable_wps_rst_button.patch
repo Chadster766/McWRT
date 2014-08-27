@@ -1,0 +1,112 @@
+diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
+index e8bab44..870c1f4 100644
+--- a/arch/arm/mach-armadaxp/Makefile
++++ b/arch/arm/mach-armadaxp/Makefile
+@@ -51,7 +51,7 @@ QD_OBJS		= $(HAL_QD_DIR)/src/driver/gtDrvConfig.o $(HAL_QD_DIR)/src/driver/gtDrv
+ 		  $(HAL_QD_DIR)/src/msapi/gtPIRL2.o $(HAL_QD_DIR)/src/msapi/gtCCPVT.o		\
+ 		  $(HAL_QD_DIR)/src/msapi/gtPCSCtrl.o
+ 
+-LSP_OBJS        = core.o irq.o time.o leds.o sysmap.o export.o clock.o
++LSP_OBJS        = core.o irq.o time.o leds.o sysmap.o export.o clock.o board_mamba.o
+ 
+ obj-y   				:=  armadaxp.o
+ armadaxp-objs  				:=$(LSP_OBJS) $(COMMON_OBJS) $(OSSERVICES_OBJS) $(HAL_OBJS) 	\
+diff --git a/arch/arm/mach-armadaxp/board_mamba.c b/arch/arm/mach-armadaxp/board_mamba.c
+new file mode 100644
+index 0000000..d307c93
+--- /dev/null
++++ b/arch/arm/mach-armadaxp/board_mamba.c
+@@ -0,0 +1,93 @@
++/******************************************************************************
++Marvell GPL License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File in accordance with the terms and conditions of the General
++Public License Version 2, June 1991 (the "GPL License"), a copy of which is
++available along with the File in the license.txt file or by writing to the Free
++Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
++on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++
++THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
++DISCLAIMED.  The GPL License provides additional details about this warranty
++disclaimer.
++*******************************************************************************/
++#include <linux/platform_device.h>
++#include <linux/miscdevice.h>
++#include "../plat-armada/mv_drivers_lsp/mv_btns/btns_driver.h"
++#include "../plat-orion/include/plat/gpio.h"
++#include "btns_dev.h"
++#include "ctrlEnv/mvCtrlEnvLib.h"
++#include <linux/gpio_keys.h>
++#include <linux/input.h>
++#include <linux/gpio.h>
++
++/*
++ * common debug for all
++ */
++#undef DEBUG
++
++#ifdef DEBUG
++#define dprintk   printk
++#else
++#define dprintk(a...)
++#endif
++
++#define	MAMBA_GPIO_WPS_BUTTON	32
++#define MAMBA_GPIO_RST_BUTTON	33
++
++static struct gpio_keys_button mv_ev_buttons[] = {
++        {
++                .gpio           = MAMBA_GPIO_WPS_BUTTON,
++                .code           = KEY_WPS_BUTTON,
++                .desc           = "WPS",
++                .active_low     = 1,
++                .wakeup         = 1,
++        },
++        {
++                .gpio           = MAMBA_GPIO_RST_BUTTON,
++                .code           = KEY_RESTART,
++                .desc           = "RESET",
++                .active_low     = 1,
++                .wakeup         = 1,
++        },
++};
++
++static struct gpio_keys_platform_data mamba_ev_data = {
++	.buttons        = mv_ev_buttons,
++	.nbuttons       = ARRAY_SIZE(mv_ev_buttons),
++};
++
++static struct platform_device mamba_ev_device = {
++	.name		= "gpio-keys",
++	.id		= 0,
++	.num_resources	= 0,
++	.dev = {
++		.platform_data  = &mamba_ev_data,
++	},
++};
++
++static int __init mamba_ev_init(void)
++{
++	int status;
++
++	printk(KERN_NOTICE "Mamba Buttons Event Device Load\n");
++
++	orion_gpio_set_valid(MAMBA_GPIO_WPS_BUTTON, 1);
++	orion_gpio_set_valid(MAMBA_GPIO_RST_BUTTON, 1);
++
++	/* register device */
++	status = platform_device_register(&mamba_ev_device);
++	if (status) {
++		printk(KERN_WARNING
++			"Can't register Mamba Buttons Event Device,status=%d\n",
++			status);
++		return status;
++	}
++
++	return 0;
++}
++
++subsys_initcall(mamba_ev_init);
++

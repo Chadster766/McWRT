@@ -1,0 +1,43 @@
+From 7311de158222e6f54ec74a422e9ad3ab0614de60 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Mon, 2 Jan 2012 11:38:21 +0200
+Subject: [PATCH 058/609] DSMP adding errata SHEEVA_ERRATA_ARM_CPU_5980 to
+ cover core eratta 5980
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mm/Kconfig |   18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
+index a4f33e5..5e3f612 100644
+--- a/arch/arm/mm/Kconfig
++++ b/arch/arm/mm/Kconfig
+@@ -949,6 +949,24 @@ config SHEEVA_ERRATA_ARM_CPU_4948
+ 	  line boundary (i.e., unaligned access). If it does occur, L0 data
+ 	  cache can be disabled
+ 
++
++
++config SHEEVA_ERRATA_ARM_CPU_5980
++
++        bool "Sheeva Errata 5980: Ordering Issues associated with Streaming device write"
++        depends on  CPU_SHEEVA_PJ4B_V7 && ARMADA_XP_REV_A0
++	default y
++        help
++	A stream of device writes are performed with the same AXI ID, followed by a write-back, write-allocate cacheable
++	exclusive write that has the same AXI ID.  There is an issue with the System L2 AXI logic that allows the response of
++	the exclusive write to return with EXOK prior to the response of all of the devices.
++	WA:
++		Disable the device write streaming capability.  This can be done by:
++		;; use read/modify/write
++		;; set bit 29 to .1. (default is 0)
++		MCR p15, 1, <Rd>, c15, c1,2
++
++
+ config SHEEVA_ERRATA_ARM_CPU_PMU_RESET
+ 	bool "Sheeva Errata CPU Performance counters reset"
+ 	depends on CPU_SHEEVA_PJ4B_V6 || CPU_SHEEVA_PJ4B_V7
+-- 
+1.7.9.5
+

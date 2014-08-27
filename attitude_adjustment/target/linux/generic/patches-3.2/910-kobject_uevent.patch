@@ -1,0 +1,59 @@
+From 528fe821235569f9ee5b9a618617ed0ae6a1d408 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Thu, 5 Sep 2013 00:19:13 -0700
+Subject: [PATCH 1/1] 910
+
+---
+ lib/kobject_uevent.c |   15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/lib/kobject_uevent.c b/lib/kobject_uevent.c
+index 6d40244..14ddc2e 100644
+--- a/lib/kobject_uevent.c
++++ b/lib/kobject_uevent.c
+@@ -29,6 +29,7 @@
+ 
+ u64 uevent_seqnum;
+ char uevent_helper[UEVENT_HELPER_PATH_LEN] = CONFIG_UEVENT_HELPER_PATH;
++static DEFINE_SPINLOCK(sequence_lock);
+ #ifdef CONFIG_NET
+ struct uevent_sock {
+ 	struct list_head list;
+@@ -50,6 +51,18 @@ static const char *kobject_actions[] = {
+ 	[KOBJ_OFFLINE] =	"offline",
+ };
+ 
++u64 uevent_next_seqnum(void)
++{
++	u64 seq;
++
++	spin_lock(&sequence_lock);
++	seq = ++uevent_seqnum;
++	spin_unlock(&sequence_lock);
++
++	return seq;
++}
++EXPORT_SYMBOL_GPL(uevent_next_seqnum);
++
+ /**
+  * kobject_action_type - translate action string to numeric type
+  *
+@@ -137,6 +150,7 @@ int kobject_uevent_env(struct kobject *kobj, enum kobject_action action,
+ 	struct kobject *top_kobj;
+ 	struct kset *kset;
+ 	const struct kset_uevent_ops *uevent_ops;
++	u64 seq;
+ 	int i = 0;
+ 	int retval = 0;
+ #ifdef CONFIG_NET
+@@ -245,6 +259,7 @@ int kobject_uevent_env(struct kobject *kobj, enum kobject_action action,
+ 
+ 	mutex_lock(&uevent_sock_mutex);
+ 	/* we will send an event, so request a new sequence number */
++	seq = uevent_next_seqnum();
+ 	retval = add_uevent_var(env, "SEQNUM=%llu", (unsigned long long)++uevent_seqnum);
+ 	if (retval) {
+ 		mutex_unlock(&uevent_sock_mutex);
+-- 
+1.7.9.5
+

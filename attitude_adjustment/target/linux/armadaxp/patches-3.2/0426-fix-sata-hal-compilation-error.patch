@@ -1,0 +1,101 @@
+From fee19ce45a7ba9476280b8baac41bae0ac58be6c Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Thu, 22 Nov 2012 13:21:14 +0200
+Subject: [PATCH 426/609] fix sata hal compilation error
+
+Change-Id: Ib7a97d3ce88e6035cc452cb7558c3665177239bd
+Signed-off-by: Neta Zur <neta@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../plat-armada/mv_hal/sata/CoreDriver/mvSata.c    |    4 ++++
+ .../plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.c |   15 ++++++++++-----
+ .../plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.h |    5 -----
+ 3 files changed, 14 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c
+index 4502bd7..63def29 100755
+--- a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c
++++ b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c
+@@ -389,6 +389,10 @@ static void checkIogBit(MV_SATA_ADAPTER *pAdapter, MV_U8 bitOffset, MV_U8 value)
+ static MV_BOOLEAN iogReset(MV_SATA_ADAPTER *pAdapter);
+ #endif
+ 
++/* Calculate the base address of the registers for a SATA channel */
++static MV_U32 edmaRegOffst[8] = { 0x22000, 0x24000, 0x26000, 0x28000,
++	0x32000, 0x34000, 0x36000, 0x38000
++};
+ 
+ #define getEdmaRegOffset(x) edmaRegOffst[(x)]
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.c b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.c
+index 3aeeb78..d6dc9ef 100755
+--- a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.c
++++ b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.c
+@@ -65,15 +65,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #include "mvSataSoc.h"
+ #include "mvRegs.h"
+ 
++/* Calculate the base address of the registers for a SATA channel */
++static MV_U32 edmaRegOffstSataSoc[8] = { 0x22000, 0x24000, 0x26000, 0x28000,
++	0x32000, 0x34000, 0x36000, 0x38000
++};
+ 
+-#define getEdmaRegOffset(x) edmaRegOffst[(x)]
++
++#define getEdmaRegOffsetSataSoc(x) edmaRegOffstSataSoc[(x)]
+ 
+ MV_BOOL mvSataPhyShutdown(MV_U8 port)
+ {
+ 	MV_U32 regVal;
+ 	MV_U32 adapterIoBaseAddress = MV_SATA_REGS_OFFSET - 0x20000;
+ 
+-	regVal = MV_REG_READ(adapterIoBaseAddress + getEdmaRegOffset(port) + MV_SATA_II_SATA_CONFIG_REG_OFFSET);
++	regVal = MV_REG_READ(adapterIoBaseAddress + getEdmaRegOffsetSataSoc(port) + MV_SATA_II_SATA_CONFIG_REG_OFFSET);
+ 	/* Fix for 88SX60x1 FEr SATA#8 */
+ 	/* according to the spec, bits [31:12] must be set to 0x009B1 */
+ 	regVal &= 0x00000FFF;
+@@ -81,7 +86,7 @@ MV_BOOL mvSataPhyShutdown(MV_U8 port)
+ 	regVal |= 0x009B1000;
+ 
+ 	regVal |= BIT9;
+-	MV_REG_WRITE(adapterIoBaseAddress + getEdmaRegOffset(port) + MV_SATA_II_SATA_CONFIG_REG_OFFSET, regVal);
++	MV_REG_WRITE(adapterIoBaseAddress + getEdmaRegOffsetSataSoc(port) + MV_SATA_II_SATA_CONFIG_REG_OFFSET, regVal);
+ 	return MV_TRUE;
+ }
+ 
+@@ -89,7 +94,7 @@ MV_BOOL mvSataPhyPowerOn(MV_U8 port)
+ {
+ 	MV_U32 adapterIoBaseAddress = MV_SATA_REGS_OFFSET - 0x20000;
+ 
+-	MV_U32 regVal = MV_REG_READ(adapterIoBaseAddress + getEdmaRegOffset(port) + MV_SATA_II_SATA_CONFIG_REG_OFFSET);
++	MV_U32 regVal = MV_REG_READ(adapterIoBaseAddress + getEdmaRegOffsetSataSoc(port) + MV_SATA_II_SATA_CONFIG_REG_OFFSET);
+ 	/* Fix for 88SX60x1 FEr SATA#8 */
+ 	/* according to the spec, bits [31:12] must be set to 0x009B1 */
+ 	regVal &= 0x00000FFF;
+@@ -97,6 +102,6 @@ MV_BOOL mvSataPhyPowerOn(MV_U8 port)
+ 	regVal |= 0x009B1000;
+ 
+ 	regVal &= ~(BIT9);
+-	MV_REG_WRITE(adapterIoBaseAddress + getEdmaRegOffset(port) + MV_SATA_II_SATA_CONFIG_REG_OFFSET, regVal);
++	MV_REG_WRITE(adapterIoBaseAddress + getEdmaRegOffsetSataSoc(port) + MV_SATA_II_SATA_CONFIG_REG_OFFSET, regVal);
+ 	return MV_TRUE;
+ }
+diff --git a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.h b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.h
+index b57159c..fe26456 100755
+--- a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.h
++++ b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.h
+@@ -75,11 +75,6 @@ extern "C"			/*{ */
+  MV_BOOL mvSataPhyShutdown(MV_U8 port);
+ MV_BOOL mvSataPhyPowerOn(MV_U8 port);
+ 
+-/* Calculate the base address of the registers for a SATA channel */
+-MV_U32 edmaRegOffst[8] = { 0x22000, 0x24000, 0x26000, 0x28000,
+-	0x32000, 0x34000, 0x36000, 0x38000
+-};
+-
+ 
+ #ifdef __cplusplus
+ 
+-- 
+1.7.9.5
+

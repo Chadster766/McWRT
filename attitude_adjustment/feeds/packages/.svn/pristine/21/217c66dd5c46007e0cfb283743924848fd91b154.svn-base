@@ -1,0 +1,122 @@
+diff -Nur updatedd-2.6/config.h.in updatedd-2.6.lx2/config.h.in
+--- updatedd-2.6/config.h.in	2006-09-15 18:19:37.000000000 +0400
++++ updatedd-2.6.lx2/config.h.in	2009-11-25 11:00:14.000000000 +0300
+@@ -36,9 +36,6 @@
+ /* Define to 1 if you have the `dl' library (-ldl). */
+ #undef HAVE_LIBDL
+ 
+-/* Define to 1 if you have the `iberty' library (-liberty). */
+-#undef HAVE_LIBIBERTY
+-
+ /* Define to 1 if you have the `nsl' library (-lnsl). */
+ #undef HAVE_LIBNSL
+ 
+diff -Nur updatedd-2.6/configure updatedd-2.6.lx2/configure
+--- updatedd-2.6/configure	2006-09-15 18:19:10.000000000 +0400
++++ updatedd-2.6.lx2/configure	2009-11-25 11:02:02.000000000 +0300
+@@ -20596,93 +20596,6 @@
+ fi
+ 
+ 
+-{ echo "$as_me:$LINENO: checking for vasprintf in -liberty" >&5
+-echo $ECHO_N "checking for vasprintf in -liberty... $ECHO_C" >&6; }
+-if test "${ac_cv_lib_iberty_vasprintf+set}" = set; then
+-  echo $ECHO_N "(cached) $ECHO_C" >&6
+-else
+-  ac_check_lib_save_LIBS=$LIBS
+-LIBS="-liberty  $LIBS"
+-cat >conftest.$ac_ext <<_ACEOF
+-/* confdefs.h.  */
+-_ACEOF
+-cat confdefs.h >>conftest.$ac_ext
+-cat >>conftest.$ac_ext <<_ACEOF
+-/* end confdefs.h.  */
+-
+-/* Override any GCC internal prototype to avoid an error.
+-   Use char because int might match the return type of a GCC
+-   builtin and then its argument prototype would still apply.  */
+-#ifdef __cplusplus
+-extern "C"
+-#endif
+-char vasprintf ();
+-int
+-main ()
+-{
+-return vasprintf ();
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-rm -f conftest.$ac_objext conftest$ac_exeext
+-if { (ac_try="$ac_link"
+-case "(($ac_try" in
+-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+-  *) ac_try_echo=$ac_try;;
+-esac
+-eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
+-  (eval "$ac_link") 2>conftest.er1
+-  ac_status=$?
+-  grep -v '^ *+' conftest.er1 >conftest.err
+-  rm -f conftest.er1
+-  cat conftest.err >&5
+-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); } &&
+-	 { ac_try='test -z "$ac_c_werror_flag" || test ! -s conftest.err'
+-  { (case "(($ac_try" in
+-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+-  *) ac_try_echo=$ac_try;;
+-esac
+-eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
+-  (eval "$ac_try") 2>&5
+-  ac_status=$?
+-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); }; } &&
+-	 { ac_try='test -s conftest$ac_exeext'
+-  { (case "(($ac_try" in
+-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+-  *) ac_try_echo=$ac_try;;
+-esac
+-eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
+-  (eval "$ac_try") 2>&5
+-  ac_status=$?
+-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+-  (exit $ac_status); }; }; then
+-  ac_cv_lib_iberty_vasprintf=yes
+-else
+-  echo "$as_me: failed program was:" >&5
+-sed 's/^/| /' conftest.$ac_ext >&5
+-
+-	ac_cv_lib_iberty_vasprintf=no
+-fi
+-
+-rm -f core conftest.err conftest.$ac_objext \
+-      conftest$ac_exeext conftest.$ac_ext
+-LIBS=$ac_check_lib_save_LIBS
+-fi
+-{ echo "$as_me:$LINENO: result: $ac_cv_lib_iberty_vasprintf" >&5
+-echo "${ECHO_T}$ac_cv_lib_iberty_vasprintf" >&6; }
+-if test $ac_cv_lib_iberty_vasprintf = yes; then
+-  cat >>confdefs.h <<_ACEOF
+-#define HAVE_LIBIBERTY 1
+-_ACEOF
+-
+-  LIBS="-liberty $LIBS"
+-
+-fi
+-
+-
+ # ------------------] GETOPT_LONG [
+ 
+ 
+diff -Nur updatedd-2.6/configure.ac updatedd-2.6.lx2/configure.ac
+--- updatedd-2.6/configure.ac	2006-09-15 18:18:44.000000000 +0400
++++ updatedd-2.6.lx2/configure.ac	2009-11-25 11:00:33.000000000 +0300
+@@ -74,8 +74,6 @@
+ AC_CHECK_LIB([c], [dlopen])
+ dnl Linux distributes dlopen() in libdl.
+ AC_CHECK_LIB([dl], [dlopen])
+-dnl Tru64 distributes vasprintf() in -liberty
+-AC_CHECK_LIB([iberty], [vasprintf])
+ 
+ # ------------------] GETOPT_LONG [
+ 

@@ -1,0 +1,43 @@
+From 4145ff7d898919331adb45ae78f7fb02a6398dc1 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Tue, 30 Oct 2012 11:27:09 +0200
+Subject: [PATCH 357/609] - added Fix LED in front panel for RD_88F6710
+
+Change-Id: I234909dce17b14f692ef9290afcd72f1c5cf7733
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c |   10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
+index bc3bf21..be8b158 100755
+--- a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
++++ b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
+@@ -1868,10 +1868,6 @@ MV_VOID mvEth1340PhyBasicInit(void)
+ 		mvEthPhyRegWrite(i, 0x0, 0x1140);
+ 		/* Set page to 0. */
+ 		mvEthPhyRegWrite(i, 0x16, 0);
+-
+-
+-	    mvEthPhyRegWrite(i, 0x16, 0x0000);
+-
+ 		mvEthPhyRegRead(i, ETH_PHY_CTRL_REG, &reg);
+ 		reg &= ~(ETH_PHY_CTRL_POWER_DOWN_MASK);
+ 		reg |= 0x1<<9;	/* workaround - restart workaround - restart workaround - restart workaround - restart */
+@@ -1916,6 +1912,12 @@ MV_VOID mvEthE1512PhyBasicInit(MV_U32 ethPortNum)
+ 	mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x16, 0x00FB);
+ 	mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x07, 0xC00D);
+ 
++	#ifdef RD_88F6710
++		/* Fix LED in front panel */
++		mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x16, 0x0003);
++		mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x10, 0x1011);
++		mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x16, 0x0000);
++	#endif
+ 	if (ethphyHalData.isSgmii[ethPortNum]) {
+ 
+ 		mvEthPhyRegWrite(ethphyHalData.phyAddr[ethPortNum], 0x16, 0x0012);
+-- 
+1.7.9.5
+

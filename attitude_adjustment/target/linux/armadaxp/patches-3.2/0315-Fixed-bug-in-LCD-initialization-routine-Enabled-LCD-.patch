@@ -1,0 +1,182 @@
+From d90107d10ccaf02d2b7bcddf261567d68ccb78a4 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 10 Oct 2012 16:43:10 +0200
+Subject: [PATCH 315/609] Fixed bug in LCD initialization routine Enabled LCD
+ suspend to RAM
+
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/core.c       |    8 +++----
+ drivers/video/marvell/dovefb_base.c |   44 +++++++++++++++++++++++++++++++----
+ include/video/dovefb.h              |    4 ++++
+ include/video/dovefbreg.h           |    1 +
+ 4 files changed, 48 insertions(+), 9 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index de828cf..300e5d4 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -1644,11 +1644,11 @@ static void __init axp_db_init(void)
+  * This fixup function is used to reserve memory for the LCD engine
+  * as these drivers require large chunks of consecutive memory.
+  */
+-void __init axp_tag_fixup_mem32(struct machine_desc *mdesc, struct tag *t,
+-		char **from, struct meminfo *meminfo)
++void __init axp_tag_fixup_mem32(struct tag *t, char **cmdline, struct meminfo *mi)
++
+ {
+ 	struct tag *last_tag = NULL;
+-	int total_size = PAGE_ALIGN(DEFAULT_FB_SIZE*4) * 2;
++	int total_size = PAGE_ALIGN(DEFAULT_FB_SIZE) * 2;
+ 	uint32_t memory_start;
+ 
+ 	for (; read_tag(t->hdr.size); t = tag_next(t))
+@@ -1666,7 +1666,7 @@ void __init axp_tag_fixup_mem32(struct machine_desc *mdesc, struct tag *t,
+ 
+ 	/* Resereve memory from last tag for LCD usage.	*/
+ 	last_tag->u.mem.size -= total_size;
+-	memory_start = last_tag->u.mem.start + last_tag->u.mem.size;
++	memory_start = last_tag->u.mem.start + last_tag->u.mem.size + 1;
+ 
+ 	kw_lcd0_dmi.fb_mem[0] = (void*)memory_start;
+ 	kw_lcd0_dmi.fb_mem_size[0] = total_size / 2;
+diff --git a/drivers/video/marvell/dovefb_base.c b/drivers/video/marvell/dovefb_base.c
+index 0e4677e..d0763aa 100644
+--- a/drivers/video/marvell/dovefb_base.c
++++ b/drivers/video/marvell/dovefb_base.c
+@@ -824,7 +824,7 @@ static int dovefb_init_layer(struct platform_device *pdev,
+ 	/*
+ 	 * Allocate framebuffer memory.
+ 	 */
+-	dfli->fb_size = PAGE_ALIGN(DEFAULT_FB_SIZE*4);
++	dfli->fb_size = PAGE_ALIGN(DEFAULT_FB_SIZE);
+ 
+ 	dfli->fb_start = NULL;
+ 	dfli->fb_start_dma = 0;
+@@ -1004,7 +1004,7 @@ static void dovefb_conf_lvds(struct dovefb_info *info, struct dovefb_mach_info *
+ 
+ 	reg = readl(info->reg_base + LCD_LVDS_CLK_CFG);
+ 
+-	/* Enable LVDS clock. */
++	/* Enable LVDS serializer. */
+ 	reg &= ~LCD_LVDS_CFG_SER_MASK;
+ 	reg |= LCD_LVDS_CFG_SER_EN(1);
+ 
+@@ -1024,6 +1024,10 @@ static void dovefb_conf_lvds(struct dovefb_info *info, struct dovefb_mach_info *
+ 	/* Set data delay. */
+ 	reg &= ~LCD_LVDS_CFG_TICK_DRV_MASK;
+ 	reg |= LCD_LVDS_CFG_TICK_DRV(dmi->lvds_info.lvds_tick_drv);
++
++	/* Enable LVDS clock */
++	reg |= LCD_LVDS_CFG_CLK_EN;
++
+ 	writel(reg, info->reg_base + LCD_LVDS_CLK_CFG);
+ 	return;
+ }
+@@ -1247,11 +1251,19 @@ static int dovefb_suspend(struct platform_device *pdev, pm_message_t mesg)
+ 		readl(dfi->reg_base + LCD_SPU_COLORKEY_U);
+ 	dfi->LCD_SPU_COLORKEY_V_saved_value =
+ 		readl(dfi->reg_base + LCD_SPU_COLORKEY_V);
++	dfi->LCD_SPU_DMA_CTRL0_saved_value =
++		readl(dfi->reg_base + LCD_SPU_DMA_CTRL0);
+ 	dfi->LCD_SPU_DMA_CTRL1_saved_value =
+ 		readl(dfi->reg_base + LCD_SPU_DMA_CTRL1);
+ 	dfi->LCD_SPU_ADV_REG_saved_value =
+ 		readl(dfi->reg_base + LCD_SPU_ADV_REG);
+-	
++
++	/* Save general registers */
++	dfi->LCD_CFG_GRA_PITCH_saved_value =
++		readl(dfi->reg_base + LCD_CFG_GRA_PITCH);
++	dfi->LCD_CFG_RDREG4F_saved_value =
++		readl(dfi->reg_base + LCD_CFG_RDREG4F);
++
+ 	console_lock();
+ //	acquire_console_sem();
+ 
+@@ -1283,9 +1295,15 @@ int lcd_set_clock(struct clk *clk, unsigned long rate);
+ static int dovefb_resume(struct platform_device *pdev)
+ {
+ 	struct dovefb_info *dfi = platform_get_drvdata(pdev);
++	struct dovefb_mach_info *dmi;
+ 
+ 	printk(KERN_INFO "dovefb_resume().\n");
+ 
++	dmi = pdev->dev.platform_data;
++	if (dmi == NULL)
++		return -EINVAL;
++
++
+ 	 console_lock();
+ 	//acquire_console_sem();
+ 	if (!IS_ERR(dfi->clk))
+@@ -1311,6 +1329,12 @@ static int dovefb_resume(struct platform_device *pdev)
+ 		return -1;
+ 	}
+ 
++	if (dmi->dram != NULL)
++		dovefb_conf_mbus_windows(dfi, dmi->dram);
++
++	if (dmi->lvds_info.enabled)
++		dovefb_conf_lvds(dfi, dmi);
++
+ 	/* Restore cursor related registers */
+ 	writel(dfi->LCD_SPU_HWC_HPXL_VLN_saved_value,
+ 		dfi->reg_base + LCD_SPU_HWC_HPXL_VLN);
+@@ -1326,11 +1350,21 @@ static int dovefb_resume(struct platform_device *pdev)
+ 		dfi->reg_base + LCD_SPU_COLORKEY_U);
+ 	writel(dfi->LCD_SPU_COLORKEY_V_saved_value,
+ 		dfi->reg_base + LCD_SPU_COLORKEY_V);
+-	writel(dfi->LCD_SPU_DMA_CTRL1_saved_value,
+-		dfi->reg_base + LCD_SPU_DMA_CTRL1);
+ 	writel(dfi->LCD_SPU_ADV_REG_saved_value,
+ 		dfi->reg_base + LCD_SPU_ADV_REG);
+ 
++	/* Restore general regiters */
++	writel(dfi->LCD_CFG_GRA_PITCH_saved_value,
++		dfi->reg_base + LCD_CFG_GRA_PITCH);
++	writel(dfi->LCD_CFG_RDREG4F_saved_value,
++		dfi->reg_base + LCD_CFG_RDREG4F);
++
++	/* Finally, enable DMA */
++	writel(dfi->LCD_SPU_DMA_CTRL0_saved_value,
++		dfi->reg_base + LCD_SPU_DMA_CTRL0);
++	writel(dfi->LCD_SPU_DMA_CTRL1_saved_value,
++		dfi->reg_base + LCD_SPU_DMA_CTRL1);
++
+ 	/* Disable all interrupts */
+ 	writel( 0x0, dfi->reg_base + SPU_IRQ_ENA);
+ 
+diff --git a/include/video/dovefb.h b/include/video/dovefb.h
+index 665eba5..a010103 100644
+--- a/include/video/dovefb.h
++++ b/include/video/dovefb.h
+@@ -417,8 +417,12 @@ struct dovefb_info {
+ 	unsigned int LCD_SPU_COLORKEY_Y_saved_value;
+ 	unsigned int LCD_SPU_COLORKEY_U_saved_value;
+ 	unsigned int LCD_SPU_COLORKEY_V_saved_value;
++	unsigned int LCD_SPU_DMA_CTRL0_saved_value;
+ 	unsigned int LCD_SPU_DMA_CTRL1_saved_value;
+ 	unsigned int LCD_SPU_ADV_REG_saved_value;
++
++	unsigned int LCD_CFG_GRA_PITCH_saved_value;
++	unsigned int LCD_CFG_RDREG4F_saved_value;
+ };
+ 
+ /*
+diff --git a/include/video/dovefbreg.h b/include/video/dovefbreg.h
+index 5f10ec1..de54cc7 100644
+--- a/include/video/dovefbreg.h
++++ b/include/video/dovefbreg.h
+@@ -680,6 +680,7 @@
+ 
+ /* LVDS related registers. */
+ #define LCD_LVDS_CLK_CFG		0xF0AC
++#define LCD_LVDS_CFG_CLK_EN		(1 << 31)
+ #define LCD_LVDS_CFG_SER_MASK		(1 << 30)
+ #define LCD_LVDS_CFG_SER_EN(x)		(x << 30)
+ #define LCD_LVDS_CFG_TICK_DRV_MASK	(0x7 << 8)
+-- 
+1.7.9.5
+

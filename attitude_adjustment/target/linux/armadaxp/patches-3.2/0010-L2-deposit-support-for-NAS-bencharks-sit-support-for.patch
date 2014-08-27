@@ -1,0 +1,69 @@
+From d440084aa7fa5820c6188ad31409361a1ccad36e Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Wed, 22 Feb 2012 13:25:09 +0200
+Subject: [PATCH 010/609] L2 deposit support for NAS bencharks sit support for
+ NAS bencharks
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/mv_hal_if/mvSysNeta.c |    9 +++++++++
+ arch/arm/mm/Kconfig                          |    7 +++++++
+ arch/arm/mm/cache-aurora-l2.c                |    4 ++++
+ 3 files changed, 20 insertions(+)
+
+diff --git a/arch/arm/mach-armadaxp/mv_hal_if/mvSysNeta.c b/arch/arm/mach-armadaxp/mv_hal_if/mvSysNeta.c
+index 4d053bc..47f40dc 100644
+--- a/arch/arm/mach-armadaxp/mv_hal_if/mvSysNeta.c
++++ b/arch/arm/mach-armadaxp/mv_hal_if/mvSysNeta.c
+@@ -100,6 +100,15 @@ void 	mvSysNetaInit(void)
+ 		if(addrWinMap[i].enable == MV_FALSE)
+ 			continue;
+ 
++#ifdef CONFIG_MV_SUPPORT_L2_DEPOSIT
++		/* Setting DRAM windows attribute to :
++		   0x3 - Shared transaction + L2 write allocate (L2 Deposit) */
++		if (MV_TARGET_IS_DRAM(i)) {
++			addrWinMap[i].attrib &= ~(0x30);
++			addrWinMap[i].attrib |= 0x30;
++		}
++#endif
++
+ 		printk("%d - Base 0x%08x , Size = 0x%08x.\n", i,
+ 				addrWinMap[i].addrWin.baseLow,
+ 				addrWinMap[i].addrWin.size);
+diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
+index fa7efcb..a4f33e5 100644
+--- a/arch/arm/mm/Kconfig
++++ b/arch/arm/mm/Kconfig
+@@ -1048,6 +1048,13 @@ config MV_SUPPORT_64KB_PAGE_SIZE
+ 	help
+ 	  This option enables 64KB pages.
+ 
++config MV_SUPPORT_L2_DEPOSIT
++	bool "Support L2 Deposit"
++	depends on ARCH_ARMADA_XP
++	default n
++	help
++	  This option enables L2 deposit.
++
+ config CACHE_L2X0
+ 	bool "Enable the L2x0 outer cache controller"
+ 	depends on REALVIEW_EB_ARM11MP || MACH_REALVIEW_PB11MP || MACH_REALVIEW_PB1176 || \
+diff --git a/arch/arm/mm/cache-aurora-l2.c b/arch/arm/mm/cache-aurora-l2.c
+index e38ba82..68959bd 100644
+--- a/arch/arm/mm/cache-aurora-l2.c
++++ b/arch/arm/mm/cache-aurora-l2.c
+@@ -665,6 +665,10 @@ int __init aurora_l2_init(void __iomem *base)
+ 	aux = readl(auroraL2_base + L2_AUX_CTRL_REG);
+ 	aux &= ~L2ACR_REPLACEMENT_MASK;
+ 	aux |= l2rep;
++#ifdef CONFIG_MV_SUPPORT_L2_DEPOSIT
++	aux &= ~L2ACR_FORCE_WRITE_POLICY_MASK;
++	aux |= L2ACR_FORCE_WRITE_BACK_POLICY;
++#endif
+ 	writel(aux, auroraL2_base + L2_AUX_CTRL_REG); 	    	
+ 
+ 	l2_wt_override = ((aux & (0x3)) == 0x2 ? 1:0);
+-- 
+1.7.9.5
+

@@ -1,0 +1,43 @@
+From 7d73b49eba9ded1f8ef09b04ba401ff0858e647f Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Sun, 1 Jan 2012 11:19:04 +0200
+Subject: [PATCH 057/609] DSMP adding a special handling for SMP mode when
+ number of cores is set not to be 4 at sample of
+ reser
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/platsmp.c |   10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/arch/arm/mach-armadaxp/platsmp.c b/arch/arm/mach-armadaxp/platsmp.c
+index 3774e4f..1e431e4 100644
+--- a/arch/arm/mach-armadaxp/platsmp.c
++++ b/arch/arm/mach-armadaxp/platsmp.c
+@@ -47,6 +47,13 @@ static inline void axp_smp_cross_call(const struct cpumask *mask, unsigned int i
+         return;
+ }
+ 
++
++static inline unsigned int get_sample_at_reset_core_count(void)
++{
++	/* Read the number of availabe CPUs in the SoC */
++	return ((MV_REG_READ(SOC_COHERENCY_FABRIC_CFG_REG) & 0xF) + 1);
++}
++
+ /*
+  * control for which core is the next to come out of the secondary
+  * boot "holding pen"
+@@ -342,6 +349,9 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
+ 		ncores = (NR_CPUS - master_cpu_id);
+ 	}
+ 
++	if(ncores > get_sample_at_reset_core_count())
++		ncores=get_sample_at_reset_core_count();
++
+ 	/* Adjust core count in case fixing was done */
+ 	set_core_count(ncores);
+ 
+-- 
+1.7.9.5
+

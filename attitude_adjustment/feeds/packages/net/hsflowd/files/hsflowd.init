@@ -1,0 +1,72 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2012 OpenWrt.org
+
+START=50
+
+SERVICE_USE_PID=1
+
+start() {
+	config_load hsflowd
+	local args agent conffile dnssd polling sampling uuid
+
+	getcollectors() {
+		echo " collector {" >> $tmpconf
+
+		config_get ip "$1" ip
+		[ -n "$ip" ] && echo "  ip=${ip}" >> $tmpconf
+		config_get port "$1" port
+		[ -n "$port" ] && echo "  udpport=${port}" >> $tmpconf
+		
+		echo " }" >> $tmpconf
+	}
+
+	config_get agent config agent_iface "br-lan"
+	config_get conffile config config_file
+	config_get_bool dnssd config dnssd 1
+	config_get polling config polling 30
+	config_get sampling config sampling 512
+	config_get uuid config uuid
+
+	[ -z "$uuid" ] && {
+		uuid="$(cat /proc/sys/kernel/random/uuid)"
+		uci set hsflowd.config.uuid=$uuid
+		uci commit hsflowd
+	}
+
+	args=""
+	append args "-u $uuid"
+
+	if [ -n "$conffile" ]; then
+		append args "-f $conffile"
+	else
+		tmpconf="/var/etc/hsflowd.conf"
+		append args "-f $tmpconf"
+		mkdir -p /var/etc
+
+		echo "sFlow {" > $tmpconf
+		echo " agent=${agent}" >> $tmpconf
+		
+		if [ "$dnssd" -eq 1 ]; then
+			echo " DNSSD=on" >> $tmpconf	
+		else
+			echo " DNSSD=off" >> $tmpconf
+			echo " polling=${polling}" >> $tmpconf
+			echo " sampling=${sampling}" >> $tmpconf
+
+			config_foreach getcollectors collector
+		fi
+		
+		echo "}" >> $tmpconf
+
+	fi
+
+
+	service_start /usr/sbin/hsflowd $args
+}
+
+stop() {
+	service_stop /usr/sbin/hsflowd
+
+	pid_file="/var/run/hsflowd.pid"
+	[ -f "$pid_file" ] && rm -f "$pid_file"
+}

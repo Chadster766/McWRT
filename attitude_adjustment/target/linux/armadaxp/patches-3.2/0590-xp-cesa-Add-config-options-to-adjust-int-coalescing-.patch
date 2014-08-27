@@ -1,0 +1,94 @@
+From d61419bc6eba7580eb8a933985ba390931e64527 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Sun, 7 Apr 2013 10:12:25 +0300
+Subject: [PATCH 590/609] xp,cesa: Add config options to adjust int coalescing
+ mode parameters.
+
+Threshold values used by interrupt coalescing mode were hardcoded
+in mvCesa.c. This patch allows to change interrupt and time
+thresholds from kernel menuconfig.
+
+Change-Id: Ib37295a496af2d795f8fc75182241acde15dc747
+Signed-off-by: Michal Mazur <arg@semihalf.com>
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1439
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/config/mvSysCesaConfig.h    |    4 ++++
+ .../arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig |   21 ++++++++++++++++++++
+ arch/arm/plat-armada/mv_hal/cesa/mvCesa.c          |   11 ++--------
+ 3 files changed, 27 insertions(+), 9 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/config/mvSysCesaConfig.h b/arch/arm/mach-armadaxp/config/mvSysCesaConfig.h
+index 6004eee..abd2a45 100644
+--- a/arch/arm/mach-armadaxp/config/mvSysCesaConfig.h
++++ b/arch/arm/mach-armadaxp/config/mvSysCesaConfig.h
+@@ -50,6 +50,10 @@ disclaimer.
+ 
+ #ifdef CONFIG_MV_CESA_INT_COALESCING_SUPPORT
+ 	#define MV_CESA_INT_COALESCING_SUPPORT
++	#define MV_CESA_INT_COAL_THRESHOLD		\
++				(CONFIG_MV_CESA_INT_COAL_THRESHOLD)
++	#define MV_CESA_INT_COAL_TIME_THRESHOLD		\
++				(CONFIG_MV_CESA_INT_COAL_TIME_THRESHOLD)
+ #endif
+ 
+ #ifdef CONFIG_MV_CESA_INT_PER_PACKET
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig
+index d48683f..57ac243 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig
+@@ -79,6 +79,27 @@ config MV_CESA_INT_PER_PACKET
+ 
+ endchoice
+ 
++config	MV_CESA_INT_COAL_THRESHOLD
++	hex "Cryptographic Interrupt Coalescing Threshold"
++	depends on MV_CESA_INT_COALESCING_SUPPORT
++	range 0x0 0xff
++	default 0x2
++	---help---
++	This field provides a way to minimize the number of interrupts to off load
++	the CPU. It defines the number of <AccAndTDMAInt_CM> indications before
++	asserting the <EopCoalInt> bit in the Cryptographic interrupt Cause Register.
++
++config	MV_CESA_INT_COAL_TIME_THRESHOLD
++	hex "Cryptographic Interrupt Coalescing Time Threshold"
++	depends on MV_CESA_INT_COALESCING_SUPPORT
++	range 0x0 0xffffff
++	default 0xfffff
++	---help---
++	This field provides a way to ensure maximum delay between <AccAndTDMAInt_CM>
++	assertion and assertion bit <EopCoalInt> in Cryptographic Interrupt Cause
++	Register (even if the number of <AccAndTDMAInt_CM> indications did not
++	reach the <EopCoalPacketTh> value).
++
+ config	MV_CESA_OCF
+ 	depends on MV_CESA_OCF_ARMADA
+ 	tristate
+diff --git a/arch/arm/plat-armada/mv_hal/cesa/mvCesa.c b/arch/arm/plat-armada/mv_hal/cesa/mvCesa.c
+index 74532e9..f5ba79a 100644
+--- a/arch/arm/plat-armada/mv_hal/cesa/mvCesa.c
++++ b/arch/arm/plat-armada/mv_hal/cesa/mvCesa.c
+@@ -415,16 +415,9 @@ MV_STATUS mvCesaHalInit(int numOfSession, int queueDepth, void *osHandle, MV_CES
+ 
+ #ifdef MV_CESA_INT_COALESCING_SUPPORT
+ 		configReg |= MV_CESA_CFG_CHAIN_MODE_MASK;
+-#ifdef MV_CESA_TEST
+-		/* Enable interrupt coalescing for test tool */
+-		MV_REG_WRITE(MV_CESA_INT_COAL_TH_REG(chan), 0x1);
+-		MV_REG_WRITE(MV_CESA_INT_TIME_TH_REG(chan), 0xff);
+-
+-#else
+ 		/* Enable interrupt coalescing */
+-		MV_REG_WRITE(MV_CESA_INT_COAL_TH_REG(chan), 0x2);
+-		MV_REG_WRITE(MV_CESA_INT_TIME_TH_REG(chan), 0xfffff);
+-#endif
++		MV_REG_WRITE(MV_CESA_INT_COAL_TH_REG(chan), MV_CESA_INT_COAL_THRESHOLD);
++		MV_REG_WRITE(MV_CESA_INT_TIME_TH_REG(chan), MV_CESA_INT_COAL_TIME_THRESHOLD);
+ #endif
+ 
+ 		/* Set CESA configuration registers */
+-- 
+1.7.9.5
+

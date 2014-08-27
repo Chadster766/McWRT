@@ -1,0 +1,24 @@
+diff -urN elfutils-0.152/libdw//Makefile.am elfutils-0.152.new/libdw/Makefile.am
+--- elfutils-0.152/libdw//Makefile.am	2010-09-10 15:18:31.000000000 +0200
++++ elfutils-0.152.new/libdw/Makefile.am	2011-07-07 09:47:25.041354790 +0200
+@@ -108,7 +108,7 @@
+ 		-Wl,--enable-new-dtags,-rpath,$(pkglibdir) \
+ 		-Wl,--version-script,$<,--no-undefined \
+ 		-Wl,--whole-archive $(filter-out $<,$^) -Wl,--no-whole-archive\
+-		-ldl $(zip_LIBS)
++		-ldl $(zip_LIBS) $(LIBS)
+ 	if readelf -d $@ | fgrep -q TEXTREL; then exit 1; fi
+ 	ln -fs $@ $@.$(VERSION)
+ 
+diff -urN elfutils-0.152/libdw//Makefile.in elfutils-0.152.new/libdw/Makefile.in
+--- elfutils-0.152/libdw//Makefile.in	2011-07-06 20:22:31.161366385 +0200
++++ elfutils-0.152.new/libdw/Makefile.in	2011-07-07 09:47:16.631354792 +0200
+@@ -839,7 +839,7 @@
+ @MUDFLAP_FALSE@		-Wl,--enable-new-dtags,-rpath,$(pkglibdir) \
+ @MUDFLAP_FALSE@		-Wl,--version-script,$<,--no-undefined \
+ @MUDFLAP_FALSE@		-Wl,--whole-archive $(filter-out $<,$^) -Wl,--no-whole-archive\
+-@MUDFLAP_FALSE@		-ldl $(zip_LIBS)
++@MUDFLAP_FALSE@		-ldl $(zip_LIBS) $(LIBS)
+ @MUDFLAP_FALSE@	if readelf -d $@ | fgrep -q TEXTREL; then exit 1; fi
+ @MUDFLAP_FALSE@	ln -fs $@ $@.$(VERSION)
+ 

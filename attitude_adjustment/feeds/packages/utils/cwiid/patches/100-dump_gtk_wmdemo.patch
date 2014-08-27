@@ -1,0 +1,69 @@
+Index: cwiid-0.6.00/Makefile.in
+===================================================================
+--- cwiid-0.6.00.orig/Makefile.in	2010-06-20 19:32:38.000000000 +0200
++++ cwiid-0.6.00/Makefile.in	2010-06-20 19:32:46.000000000 +0200
+@@ -3,7 +3,7 @@
+ include @top_builddir@/defs.mak
+ 
+ LIB_DIRS = libcwiid
+-BIN_DIRS = wmgui wminput lswm
++BIN_DIRS = wminput lswm
+ DOC_DIRS = man doc
+ ifdef PYTHON
+ BIND_DIRS = python
+Index: cwiid-0.6.00/configure.ac
+===================================================================
+--- cwiid-0.6.00.orig/configure.ac	2010-06-20 19:31:22.000000000 +0200
++++ cwiid-0.6.00/configure.ac	2010-06-20 19:31:35.000000000 +0200
+@@ -124,11 +124,6 @@
+ fi
+ AC_SUBST(LDCONFIG)
+ 
+-pkg_modules="gtk+-2.0 >= 2.0.0 gthread-2.0"
+-PKG_CHECK_MODULES([GTK], [$pkg_modules])
+-AC_SUBST(GTK_CFLAGS)
+-AC_SUBST(GTK_LIBS)
+-
+ AC_OUTPUT(
+ 	[Makefile]
+ 	[defs.mak]
+Index: cwiid-0.6.00/wminput/Makefile.in
+===================================================================
+--- cwiid-0.6.00.orig/wminput/Makefile.in	2010-06-20 19:47:06.000000000 +0200
++++ cwiid-0.6.00/wminput/Makefile.in	2010-06-20 19:47:13.000000000 +0200
+@@ -14,7 +14,7 @@
+ 	-DWMINPUT_CONFIG_DIR=\"$(WMINPUT_CONFIG_DIR)\" \
+ 	-DCWIID_PLUGINS_DIR=\"$(CWIID_PLUGINS_DIR)\"
+ 
+-LDLIBS += -lcwiid -ldl
++LDLIBS += -lcwiid -ldl -lbluetooth
+ LDFLAGS += -L@top_builddir@/libcwiid -rdynamic
+ INST_DIR = @bindir@
+ 
+Index: cwiid-0.6.00/lswm/Makefile.in
+===================================================================
+--- cwiid-0.6.00.orig/lswm/Makefile.in	2010-06-20 19:50:13.000000000 +0200
++++ cwiid-0.6.00/lswm/Makefile.in	2010-06-20 19:50:22.000000000 +0200
+@@ -8,7 +8,7 @@
+ 
+ CFLAGS += -I@top_builddir@/libcwiid
+ LDFLAGS += -L@top_builddir@/libcwiid
+-LDLIBS += -lcwiid
++LDLIBS += -lcwiid -lbluetooth
+ INST_DIR = @bindir@
+ 
+ include $(COMMON)/include/app.mak
+Index: cwiid-0.6.00/Makefile.in
+===================================================================
+--- cwiid-0.6.00.orig/Makefile.in	2010-06-20 19:53:45.000000000 +0200
++++ cwiid-0.6.00/Makefile.in	2010-06-20 19:53:54.000000000 +0200
+@@ -9,7 +9,7 @@
+ BIND_DIRS = python
+ endif
+ 
+-SUB_DIRS = $(LIB_DIRS) $(BIN_DIRS) $(DOC_DIRS) $(BIND_DIRS) wmdemo
++SUB_DIRS = $(LIB_DIRS) $(BIN_DIRS) $(DOC_DIRS) $(BIND_DIRS)
+ 
+ all install clean distclean uninstall: TARGET += $(MAKECMDGOALS)
+ 
+

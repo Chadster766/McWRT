@@ -1,0 +1,140 @@
+From d5369ee8e02e4eb943c63236e36a23bcd2819345 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Mon, 5 Mar 2012 00:09:40 +0200
+Subject: [PATCH 076/609] DSMP fixing hotplug stall (by Nadav H.), and
+ hardcode disable the hw_breakpoint feature
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/platsmp.c |    4 ++--
+ arch/arm/plat-armada/cpuidle.c   |   34 +++-------------------------------
+ arch/arm/vfp/vfpmodule.c         |   17 +++++++++++++++++
+ 3 files changed, 22 insertions(+), 33 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/platsmp.c b/arch/arm/mach-armadaxp/platsmp.c
+index ea88dc3..aac4314 100644
+--- a/arch/arm/mach-armadaxp/platsmp.c
++++ b/arch/arm/mach-armadaxp/platsmp.c
+@@ -27,7 +27,7 @@ extern void second_cpu_init(void);
+ extern void second_cpu_msi_init(void);
+ extern MV_CPU_DEC_WIN* mv_sys_map(void);
+ extern unsigned long mv_cpu_count;
+-extern void armadaxp_smp_restore_idle(unsigned int processor_id);
++extern void armadaxp_fabric_restore_deepIdle(void);
+ 
+ unsigned int master_cpu_id  = 0;
+ unsigned int group_cpu_mask = ((1 << NR_CPUS) - 1);
+@@ -86,7 +86,7 @@ static DEFINE_SPINLOCK(boot_lock);
+ void __cpuinit platform_secondary_init(unsigned int cpu)
+ {
+ 	trace_hardirqs_off();
+-	armadaxp_smp_restore_idle(cpu);
++	armadaxp_fabric_restore_deepIdle();
+ 
+ 	/*
+ 	 * if any interrupts are already enabled for the primary
+diff --git a/arch/arm/plat-armada/cpuidle.c b/arch/arm/plat-armada/cpuidle.c
+index ba43611..b52ba33 100644
+--- a/arch/arm/plat-armada/cpuidle.c
++++ b/arch/arm/plat-armada/cpuidle.c
+@@ -123,18 +123,7 @@ void armadaxp_fabric_setup_deepIdle(void)
+ 	reg = MV_REG_READ(MV_L2C_NFABRIC_PM_CTRL_CFG_REG);
+ 	reg |= MV_L2C_NFABRIC_PM_CTRL_CFG_PWR_DOWN;
+ 	MV_REG_WRITE(MV_L2C_NFABRIC_PM_CTRL_CFG_REG, reg);
+-#if 0
+-#ifdef  CONFIG_ARCH_ARMADA_XP
+-	for (i=0; i<4; i++) {
+-#else
+-	for (i=0; i<1; i++) {
+-#endif
+-		/* Enable L2 & Fabric powerdown in Deep-Idle mode - Per CPUs */
+-		reg = MV_REG_READ(PM_CONTROL_AND_CONFIG_REG(i));
+-		reg |= PM_CONTROL_AND_CONFIG_L2_PWDDN;
+-		MV_REG_WRITE(PM_CONTROL_AND_CONFIG_REG(i), reg);
+-	}
+-#endif
++
+ 	/* Set the resume control registers to do nothing */
+ 	MV_REG_WRITE(0x20980, 0);
+ 	MV_REG_WRITE(0x20988, 0);
+@@ -257,24 +246,7 @@ void armadaxp_fabric_restore_deepIdle(void)
+ 	MV_REG_READ(MV_COHERENCY_FABRIC_CTRL_REG);
+ 	hw_sem_unlock();
+ #endif
+-
+-}
+-
+-#if defined(CONFIG_AURORA_IO_CACHE_COHERENCY) || defined(CONFIG_SMP)
+-void armadaxp_smp_restore_idle(unsigned int processor_id)
+-{
+-	u32 reg;
+-
+-	/* Enable delivery of snoop requests to the CPU core */
+-	hw_sem_lock();
+-	reg = MV_REG_READ(MV_COHERENCY_FABRIC_CTRL_REG);
+-	reg |= 1 << (24 + processor_id);
+-	MV_REG_WRITE(MV_COHERENCY_FABRIC_CTRL_REG, reg);
+-	MV_REG_READ(MV_COHERENCY_FABRIC_CTRL_REG);
+-	hw_sem_unlock();
+ }
+-EXPORT_SYMBOL(armadaxp_smp_restore_idle);
+-#endif
+ 
+ /*
+  * Enter the DEEP IDLE mode (power off CPU only)
+@@ -437,7 +409,7 @@ int armadaxp_init_cpuidle(void)
+ {
+ 	struct cpuidle_device *device;
+ 	int i;
+-	device_registered = 0;
++	device_registered = 1;
+ 	printk("Initializing Armada-XP CPU power management ");
+ 
+ 	if (build_identity_page_table()) {
+@@ -463,6 +435,7 @@ int armadaxp_init_cpuidle(void)
+ 		printk(" (SNOOZE)\n");
+ 	else {
+ 		printk(" (DISABLED)\n");
++		device_registered = 0;
+ 	}
+ 	pm_mode = pm_support;
+ 
+@@ -496,7 +469,6 @@ int armadaxp_init_cpuidle(void)
+ 
+                 if(pm_mode) {
+                         if (cpuidle_register_device(device)) {
+-				device_registered = 1;
+                                 printk(KERN_ERR "armadaxp_init_cpuidle: Failed registering\n");
+                                 return -EIO;
+                         }
+diff --git a/arch/arm/vfp/vfpmodule.c b/arch/arm/vfp/vfpmodule.c
+index 9a9ebeb..2a5bd12 100644
+--- a/arch/arm/vfp/vfpmodule.c
++++ b/arch/arm/vfp/vfpmodule.c
+@@ -561,6 +561,23 @@ static int vfp_hotplug(struct notifier_block *b, unsigned long action,
+ 	return NOTIFY_OK;
+ }
+ 
++void vfp_save(void)
++{
++        struct pm_message temp;
++        /*
++         * if VFP was not initialized yet, then do nothing
++         */
++        if (VFP_arch)
++                vfp_pm_suspend();
++}
++
++void vfp_restore(void)
++{
++        if (VFP_arch)
++                vfp_pm_resume();
++}
++
++
+ /*
+  * VFP support code initialisation.
+  */
+-- 
+1.7.9.5
+

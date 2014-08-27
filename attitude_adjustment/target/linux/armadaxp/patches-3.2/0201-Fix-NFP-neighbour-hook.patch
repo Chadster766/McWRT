@@ -1,0 +1,26 @@
+From 247cc4956b65d58789197a842ddf50568942b66e Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Tue, 10 Jul 2012 01:37:54 -0400
+Subject: [PATCH 201/609] Fix NFP neighbour hook
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ net/core/neighbour.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/net/core/neighbour.c b/net/core/neighbour.c
+index 0d23e28..42b457d 100644
+--- a/net/core/neighbour.c
++++ b/net/core/neighbour.c
+@@ -2907,7 +2907,7 @@ void neigh_sync(int family)
+ 			continue;
+ 		nht = rcu_dereference_bh(tbl->nht);
+ 
+-		for (h = 0; h <= nht->hash_mask; h++) {
++		for (h = 0; h < (1 << nht->hash_shift); h++) {
+ 			for (n = rcu_dereference_bh(nht->hash_buckets[h]); n != NULL;
+ 				 n = rcu_dereference_bh(n->next)) {
+ 					 if (n->dev == NULL)
+-- 
+1.7.9.5
+

@@ -1,0 +1,61 @@
+From 6995553e78005df3e25f57163018a8eda6ce190d Mon Sep 17 00:00:00 2001
+From: Uri Eliyahu <uriel@marvell.com>
+Date: Mon, 10 Dec 2012 19:16:37 +0200
+Subject: [PATCH 463/609] PNC support pm suspend resume
+
+Change-Id: I4fb9cc948002ac475fb25faee9bee88deefe956a
+Signed-off-by: Uri Eliyahu <uriel@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |   20 +++++++++++++++-----
+ 1 file changed, 15 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 3cebbda..689cfb9 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -80,6 +80,7 @@ static inline int mv_eth_tx_policy(struct eth_port *pp, struct sk_buff *skb);
+ 
+ #ifdef CONFIG_MV_ETH_PNC
+ unsigned int mv_eth_pnc_ctrl_en = 1;
++static int pnc_resume_flag = 0;
+ 
+ int mv_eth_ctrl_pnc(int en)
+ {
+@@ -3128,12 +3129,17 @@ int mv_eth_port_resume(int port)
+ 
+ 	mv_eth_resume_network_interfaces(pp);
+ 
+-#ifndef CONFIG_MV_ETH_PNC
+-	if (mvNetaMacAddrSet(port, pp->dev->dev_addr, CONFIG_MV_ETH_RXQ_DEF) != MV_OK) {
+-		printk(KERN_ERR "%s: ethSetMacAddr failed\n", pp->dev->name);
+-		return -1;
++#ifdef CONFIG_MV_ETH_PNC
++	if (!pnc_resume_flag) {
++		if (tcam_hw_init())
++			printk(KERN_ERR "%s: Warning PNC tcam init failed\n", __func__);
++		if (pnc_default_init())
++			printk(KERN_ERR "%s: Warning PNC init failed\n", __func__);
++		pnc_resume_flag = 1;
+ 	}
+-#endif /* CONFIG_MV_ETH_PNC */
++#endif /*CONFIG_MV_ETH_PNC*/
++	if (pp->flags & MV_ETH_F_STARTED_OLD)
++		(*pp->dev->netdev_ops->ndo_set_rx_mode)(pp->dev);
+ 
+ 	for_each_possible_cpu(cpu)
+ 		pp->cpu_config[cpu]->causeRxTx = 0;
+@@ -5983,6 +5989,10 @@ int mv_eth_resume(struct platform_device *pdev)
+ 	struct eth_port *pp;
+ 	int port;
+ 
++#ifdef CONFIG_MV_ETH_PNC
++	pnc_resume_flag = 0;
++#endif
++
+ 	for (port = 0 ; port < CONFIG_MV_ETH_PORTS_NUM ; port++) {
+ 		pp = mv_eth_port_by_id(port);
+ 		if (!pp)
+-- 
+1.7.9.5
+

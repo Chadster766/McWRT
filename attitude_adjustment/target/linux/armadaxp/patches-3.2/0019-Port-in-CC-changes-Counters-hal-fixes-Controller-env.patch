@@ -1,0 +1,184 @@
+From d45bd399df9721f0c230dc538200e41fa0a237e0 Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Sun, 15 Jul 2012 15:05:27 +0300
+Subject: [PATCH 019/609] Port in CC changes: - Counters hal fixes -
+ Controller environment lib
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvLib.c        |   35 +++++++++++---------
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvLib.h        |   20 +++++++----
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h       |    1 +
+ arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c        |   19 +++++++----
+ 4 files changed, 46 insertions(+), 29 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
+index 4367915..fab6c4b 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
+@@ -112,26 +112,26 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ MV_U32 dummyFlavour = 0;
+ MV_BIOS_MODE bios_modes[BIOS_MODES_NUM] = {
+ #ifdef MV88F78X60_Z1
+-/*	DBConf ConfID Code L2Size CPUFreq CpuFreqMode FabricFreq FabricFreqMode CPU1/2/3Enable cpuEndianess	*/
++/*	DBConf ConfID Code L2Size CPUFreq CpuFreqMode FabricFreq FabricFreqMode CPU1/2/3Enable cpuEndianess dramBusWidth*/
+ /*	0x4d/[1:0] 0x4d/[4:2] 0x4e[0] 0x4e/[4:1] 0x4f[0] 0x4f/[2:1] 0x4f/[4:3]	*/
+-       {"78130", 0x10, 0x7813, 0x1, 0x2, 0x0, 0x5, 0x0, 0x0, 0x1},
+-       {"6710" , 0x11, 0x6710, 0x0, 0x2, 0x0, 0x5, 0x0, 0x0, 0x1},
+-       {"78160", 0x12, 0x7816, 0x1, 0x2, 0x0, 0x5, 0x0, 0x0, 0x1},
+-       {"78230", 0x13, 0x7823, 0x1, 0x2, 0x0, 0x5, 0x0, 0x2, 0x2},
+-       {"78260", 0x14, 0x7826, 0x1, 0x2, 0x0, 0x5, 0x0, 0x2, 0x2},
+-       {"78460", 0x15, 0x7846, 0x3, 0x2, 0x0, 0x5, 0x0, 0x3, 0x2},
+-       {"78480", 0x16, 0x7846, 0x3, 0x2, 0x0, 0x5, 0x0, 0x3, 0x2}
++       {"78130", 0x10, 0x7813, 0x1, 0x2, 0x0, 0xC, 0x0, 0x0, 0x1, 0x1},
++       {"6710" , 0x11, 0x6710, 0x0, 0x2, 0x0, 0x5, 0x0, 0x0, 0x1, 0x0},
++       {"78160", 0x12, 0x7816, 0x1, 0x2, 0x0, 0x5, 0x0, 0x0, 0x1, 0x0},
++       {"78230", 0x13, 0x7823, 0x1, 0x2, 0x0, 0xC, 0x0, 0x2, 0x2, 0x1},
++       {"78260", 0x14, 0x7826, 0x1, 0x2, 0x0, 0x5, 0x0, 0x2, 0x2, 0x0},
++       {"78460", 0x15, 0x7846, 0x3, 0x2, 0x0, 0x5, 0x0, 0x3, 0x2, 0x0},
++       {"78480", 0x16, 0x7846, 0x3, 0x2, 0x0, 0x5, 0x0, 0x3, 0x2, 0x0}
+ };
+ #else
+ /*	DBConf ConfID Code L2Size CPUFreq CpuFreqMode FabricFreq FabricFreqMode CPU1/2/3Enable cpuEndianess	*/
+ /*	0x4d/[1:0] 0x4d/[4:2] 0x4e[0] 0x4e/[4:1] 0x4f[0] 0x4f/[2:1] 0x4f/[4:3]	*/
+-	{"78130",0x10, 0x7813, 0x1, 0x2, 0x0, 0x5, 0x0, 0x0, 0x1},
+-	{"6710" ,0x11, 0x6710, 0x0, 0x2, 0x0, 0x5, 0x0, 0x0, 0x1},
+-	{"78160",0x12, 0x7816, 0x1, 0x2, 0x0, 0x5, 0x0, 0x0, 0x1},
+-	{"78230",0x13, 0x7823, 0x1, 0x2, 0x0, 0x5, 0x0, 0x1, 0x0},
+-	{"78260",0x14, 0x7826, 0x1, 0x2, 0x0, 0x5, 0x0, 0x1, 0x0},
+-	{"78460",0x15, 0x7846, 0x3, 0x2, 0x0, 0x5, 0x0, 0x3, 0x0},
+-	{"78480",0x16, 0x7846, 0x3, 0x2, 0x0, 0x5, 0x0, 0x3, 0x0}
++	{"78130",0x10, 0x7813, 0x1, 0x2, 0x0, 0xC, 0x0, 0x0, 0x1, 0x1},
++	{"6710" ,0x11, 0x6710, 0x0, 0x2, 0x0, 0x5, 0x0, 0x0, 0x1, 0x0},
++	{"78160",0x12, 0x7816, 0x1, 0x2, 0x0, 0x5, 0x0, 0x0, 0x1, 0x0},
++	{"78230",0x13, 0x7823, 0x1, 0x2, 0x0, 0xC, 0x0, 0x1, 0x0, 0x1},
++	{"78260",0x14, 0x7826, 0x1, 0x2, 0x0, 0x5, 0x0, 0x1, 0x0, 0x0},
++	{"78460",0x15, 0x7846, 0x3, 0x2, 0x0, 0x5, 0x0, 0x3, 0x0, 0x0},
++	{"78480",0x16, 0x7846, 0x3, 0x2, 0x0, 0x5, 0x0, 0x3, 0x0, 0x0}
+ };
+ #endif
+ 
+@@ -2239,6 +2239,7 @@ MV_STATUS mvCtrlSerdesPhyConfig(MV_VOID)
+ 
+ 		/* STEP 3 [PEX-Only] First phase of PEX-PIPE Configuration:*/
+ 		for (pexUnit = 0; pexUnit < mvCtrlPexMaxUnitGet(); pexUnit++) {
++			if (MV_REG_READ(PEX_STATUS_REG(pexUnit)) & PXSR_DL_DOWN) { /* If there is no link */
+ 			if (boardPexInfo->pexUnitCfg[pexUnit].pexCfg == PEX_BUS_DISABLED)
+ 				continue;
+ 			DB(mvOsPrintf("Step[3].1 Addr[0x%08x] Value[0x%08x]\n", PEX_PHY_ACCESS_REG(pexUnit), (0xC1 << 16) | 0xA5));
+@@ -2280,8 +2281,8 @@ MV_STATUS mvCtrlSerdesPhyConfig(MV_VOID)
+ 			MV_REG_WRITE(PEX_PHY_ACCESS_REG(pexUnit), (0xC5 << 16) | 0x11F);
+ 			MV_REG_WRITE(PEX_PHY_ACCESS_REG(pexUnit), (0x80 << 16) | 0x1000);
+ 			MV_REG_WRITE(PEX_PHY_ACCESS_REG(pexUnit), (0x81 << 16) | 0x11);
++			}
+ 		}
+-
+ 		/* Steps 4, 5, 6, 7 - use prepared REG addresses and values */
+ 		for (step = 0; step < 4; step++) {
+ 			for (serdesLineNum = 0; serdesLineNum < maxSerdesLines; serdesLineNum++) {
+@@ -2297,6 +2298,7 @@ MV_STATUS mvCtrlSerdesPhyConfig(MV_VOID)
+ 
+ 		/*Step 8 [PEX-Only] Last phase of PEX-PIPE Configuration */
+ 		for (pexUnit = 0; pexUnit < mvCtrlPexMaxUnitGet(); pexUnit++) {
++			if (MV_REG_READ(PEX_STATUS_REG(pexUnit)) & PXSR_DL_DOWN) { /* If there is no link */
+ 			if (boardPexInfo->pexUnitCfg[pexUnit].pexCfg == PEX_BUS_DISABLED)
+ 				continue;
+ 			DB(mvOsPrintf("Step[8].1 Addr[0x%08x] Value[0x%08x]\n", \
+@@ -2310,6 +2312,7 @@ MV_STATUS mvCtrlSerdesPhyConfig(MV_VOID)
+ 			#else
+ 				MV_REG_WRITE(PEX_PHY_ACCESS_REG(pexUnit), (0xC1 << 16) | 0x24);
+ 			#endif
++			}
+ 		}
+ 
+ 		/*Step 9 [SATA-Only] - Init additional SATA registers */
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
+index 2973faf..3dd3ec4 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
+@@ -148,20 +148,27 @@ typedef struct _boardSerdesConf {
+ 
+ 
+ /* BIOS Modes related defines */
+-#define SAR0_CPU_FREQ_MASK		0x00E00000
++#define SAR0_CPU_FREQ_MASK	0x00E00000
+ #define SAR0_CPU_FREQ_OFFSET	21
+ #define SAR0_FABRIC_FREQ_MASK	0x0F000000
+ #define SAR0_FABRIC_FREQ_OFFSET	24
+-#define SAR0_L2_SIZE_MASK		0x00180000
+-#define SAR0_L2_SIZE_OFFSET		19
+-#define SAR1_CPU_CORE_MASK		0x00000018
++#define SAR0_L2_SIZE_MASK	0x00180000
++#define SAR0_L2_SIZE_OFFSET	19
++#define SAR0_BOOTSRC_MASK	0X1E0
++#define SAR0_BOOTSRC_OFFSET	5
++#define SAR0_BOOTWIDTH_MASK	0X18
++#define SAR0_BOOTWIDTH_OFFSET	3
++#define SAR0_CPU0CORE_MASK	0X80000000
++#define SAR0_CPU0CORE_OFFSET	31
++#define SAR1_CPU0CORE_MASK	0x1
++#define SAR1_CPU0CORE_OFFSET	0
++#define SAR1_CPU_CORE_MASK	0x00000018
+ #define SAR1_CPU_CORE_OFFSET	3
+-#define SAR1_CPU_MODE_MASK		0x00100000
++#define SAR1_CPU_MODE_MASK	0x00100000
+ #define SAR1_CPU_MODE_OFFSET	20
+ #define SAR1_FABRIC_MODE_MASK	0x00080000
+ #define SAR1_FABRIC_MODE_OFFSET	19
+ 
+-
+ #define SAR_CPU_FAB_GET(cpu, fab)	(((cpu & 0x7) << 21) | ((fab & 0xF) << 24))
+ #define BIOS_MODES_NUM			7
+ 
+@@ -180,6 +187,7 @@ typedef struct {
+ #else
+ 	MV_U8 cpuEndianess;
+ #endif
++	MV_U8 dramBusWidth;
+ } MV_BIOS_MODE;
+ 
+ extern MV_BIOS_MODE bios_modes[];
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
+index f433186..1829ff9 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
+@@ -341,6 +341,7 @@ extern "C" {
+ 
+ /* Sample at Reset */
+ #define MPP_SAMPLE_AT_RESET(id)			(0x18230 + (id * 4))
++#define MPP_SAMPLE_AT_RESET_HIGH(id)		(0x18234 + (id * 4))
+ 
+ /* SYSRSTn Length Counter */
+ #define SYSRST_LENGTH_COUNTER_REG		0x18250
+diff --git a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
+index 3eda4aa..9b606aa 100644
+--- a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
++++ b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
+@@ -429,12 +429,17 @@ MV_STATUS mvCntmrIntClear(MV_U32 cntmrNum)
+ *******************************************************************************/
+ MV_U32 mvCntmrFrqGet(MV_U32 cntmrNum)
+ {
+-/*#ifndef MV88F78X60_Z1
+-	if (INVALID_CNTMR(cntmrNum))
+-		return MV_ERROR;
++#ifndef MV88F78X60_Z1
++                if (INVALID_CNTMR(cntmrNum))
++                                return MV_ERROR;
++                {
++                                MV_U32 cntmrCtrl;
++                                cntmrCtrl = MV_REG_READ(CNTMR_CTRL_REG(cntmrNum));
+ 
+-	if (cntmrCtrl & CTCR_ARM_TIMER_25MhzFRQ_MASK(cntmrNum))
+-		return MV_BOARD_REFCLK_25MHZ;
+-#endif*/
+-	return mvCpuL2ClkGet();
++
++                                if (cntmrCtrl & CTCR_ARM_TIMER_25MhzFRQ_MASK(cntmrNum))
++                                                return MV_BOARD_REFCLK_25MHZ;
++                }
++#endif
++                return mvCpuL2ClkGet();
+ }
+-- 
+1.7.9.5
+

@@ -1,0 +1,76 @@
+diff -ur serialoverip-1.0.orig/serialoverip.c serialoverip-1.0/serialoverip.c
+--- serialoverip-1.0.orig/serialoverip.c	2009-09-24 19:32:40.000000000 +0200
++++ serialoverip-1.0/serialoverip.c	2009-09-24 19:43:18.000000000 +0200
+@@ -34,6 +34,7 @@
+ #include <fcntl.h>
+ #include <termios.h>
+ #include <signal.h>
++#include <strings.h>
+ 
+ #define MAXMESG 2048
+ 
+@@ -42,20 +43,19 @@
+ int s[2],st[2];
+ 
+ void help(){
+-	fprintf(stderr,"\
+-SerialOverIP version 1.0, Copyright (C) 2002 Stefan-Florin Nicola <sten@fx.ro>
+-SerialOverIP comes with ABSOLUTELY NO WARRANTY. This is free software, and you
+-are welcome to redistribute it under GNU General Public License.
+- Usage: %s <source1> <source2>
+-  where <source1> and <source2> are one of the folowing:
+-    -s <IP> <port>                 UDP server on IP:port
+-    -c <IP> <port>                 UDP client for server IP:port
+-    -d <device> sss-dps            local serial device
+-       sss is speed (50,..,230400)
+-       d is data bits (5,6,7,8)
+-       p is parity type (N,E,O)
+-       s is stop bits (1,2)
+-",pname);
++	fprintf(stderr,
++"SerialOverIP version 1.0, Copyright (C) 2002 Stefan-Florin Nicola <sten@fx.ro>\n"
++"SerialOverIP comes with ABSOLUTELY NO WARRANTY. This is free software, and you\n"
++"are welcome to redistribute it under GNU General Public License.\n"
++" Usage: %s <source1> <source2>\n"
++"  where <source1> and <source2> are one of the folowing:\n"
++"    -s <IP> <port>                 UDP server on IP:port\n"
++"    -c <IP> <port>                 UDP client for server IP:port\n"
++"    -d <device> sss-dps            local serial device\n"
++"       sss is speed (50,..,230400)\n"
++"       d is data bits (5,6,7,8)\n"
++"       p is parity type (N,E,O)\n"
++"       s is stop bits (1,2)\n", pname);
+ 	return;
+ }
+ 
+@@ -113,10 +113,9 @@
+ 
+ int main(int argc,char**argv){
+ 	int i,n,w,clen[2],nonblock[2],speed,data,stopb;
+-	unsigned char c,buf[MAXMESG],*p,parity;
++	unsigned char buf[MAXMESG],*p,parity;
+ 	struct termios cfg;
+ 	struct sockaddr_in addr[4][4];
+-	struct sigaction newact,oldact;
+ 
+ 	pname=argv[0];
+ 	if(argc!=7){
+@@ -156,7 +155,7 @@
+ 			n=sscanf(argv[3*i+3],"%d-%d%c%d",&speed,&data,&parity,&stopb);
+ 			if(n<4){
+ 				fprintf(stderr,"%s: invalid argument %1d from %s\n",
+-						pname,read+1,argv[3*i+3]);
++						pname,(int)(read+1),argv[3*i+3]);
+ 				return 3;
+ 			}
+ 			if(setserial(s[i],&cfg,speed,data,parity,stopb)<0){
+@@ -177,7 +176,7 @@
+ 		if(st[i]&2)n=read(s[i],buf,MAXMESG);
+ 		else{
+ 			n=recvfrom(s[i],buf,MAXMESG,nonblock[i]*MSG_DONTWAIT,
+-					(struct sockaddr*)&addr[i][st[i]],&clen[i]);
++					(struct sockaddr*)&addr[i][st[i]],(socklen_t *)&clen[i]);
+ 			nonblock[i]=1;
+ 		}
+ 		p=buf;
+Only in serialoverip-1.0: serialoverip.new

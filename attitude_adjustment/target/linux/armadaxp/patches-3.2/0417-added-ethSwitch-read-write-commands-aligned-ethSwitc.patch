@@ -1,0 +1,257 @@
+From cd8c7304a018ac28def081c09092dc4dd1cb6771 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Thu, 1 Nov 2012 17:33:42 +0200
+Subject: [PATCH 417/609] added ethSwitch read/write commands & aligned
+ ethSwitch interface - (Not Tested) Added empty
+ Switch_Info struct defines (initialize struct for
+ AXP before usage) Added init sequence for other
+ switch devices (aligned with KW40)
+
+Change-Id: I5c01b886ecaec2d684e42b057948bb97e0d196e4
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/boardEnv/mvBoardEnvLib.c      |   57 ++++++++++++++++++++
+ .../armada_xp_family/boardEnv/mvBoardEnvLib.h      |   13 +++++
+ .../armada_xp_family/boardEnv/mvBoardEnvSpec.c     |   42 +++++++++++++++
+ 3 files changed, 112 insertions(+)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+index cd40df2..8ed9b60 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+@@ -382,6 +382,35 @@ MV_32 mvBoardPhyLinkCryptPortAddrGet(MV_U32 ethPortNum)
+ 	return BOARD_INFO(boardId)->pBoardMacInfo[ethPortNum].LinkCryptPortAddr;
+ }
+ 
++/*******************************************************************************
++* mvBoardSwitchCpuPortGet - Get the the Ethernet Switch CPU port
++*
++* DESCRIPTION:
++*       This routine returns the Switch CPU port.
++*
++* INPUT:
++*       switchIdx - index of the switch. Only 0 is supported.
++*
++* OUTPUT:
++*       None.
++*
++* RETURN:
++*       the Switch CPU port, -1 if the switch is not connected.
++*
++*******************************************************************************/
++MV_32 mvBoardSwitchCpuPortGet(MV_U32 switchIdx)
++{
++	MV_U32 boardId = mvBoardIdGet();
++
++	if (!((boardId >= BOARD_ID_BASE) && (boardId < MV_MAX_BOARD_ID))) {
++		mvOsPrintf("mvBoardSwitchCpuPortGet: Board unknown.\n");
++		return -1;
++	}
++	if ((BOARD_INFO(boardId)->switchInfoNum == 0) || (switchIdx >= BOARD_INFO(boardId)->switchInfoNum))
++		return -1;
++
++	return BOARD_INFO(boardId)->pSwitchInfo[switchIdx].cpuPort;
++}
+ 
+ /*******************************************************************************
+ * mvBoardMacSpeedGet - Get the Mac speed
+@@ -2540,6 +2569,34 @@ MV_VOID mvBoardSerdesZ1ASupport(void)
+ 	gSerdesZ1AMode = 1;
+ }
+ /*******************************************************************************
++* mvBoardSmiScanModeGet - Get Switch SMI scan mode
++*
++* DESCRIPTION:
++*       This routine returns Switch SMI scan mode.
++*
++* INPUT:
++*       switchIdx - index of the switch. Only 0 is supported.
++*
++* OUTPUT:
++*       None.
++*
++* RETURN:
++*       1 for SMI_MANUAL_MODE, -1 if the port number is wrong or if not relevant.
++*
++*******************************************************************************/
++MV_32 mvBoardSmiScanModeGet(MV_U32 switchIdx)
++{
++	MV_U32 boardId = mvBoardIdGet();
++
++	if (!((boardId >= BOARD_ID_BASE) && (boardId < MV_MAX_BOARD_ID))) {
++		mvOsPrintf("mvBoardSmiScanModeGet: Board unknown.\n");
++		return -1;
++	}
++
++	return BOARD_INFO(boardId)->pSwitchInfo[switchIdx].smiScanMode;
++}
++
++/*******************************************************************************
+ * mvBoardIsSerdesConfigurationEnabled
+ *
+ * DESCRIPTION:
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
+index 4bfb319..6fff1fe 100755
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
+@@ -89,6 +89,7 @@ extern "C" {
+ /*
+ #define BOARD_ETH_PORT_NUM		MV_ETH_MAX_PORTS
+ */
++#define BOARD_ETH_SWITCH_PORT_NUM	5
+ #define	MV_BOARD_MAX_USB_IF		3
+ #define MV_BOARD_MAX_MPP		9	/* number of MPP conf registers */
+ #define MV_BOARD_NAME_LEN  		0x20
+@@ -224,6 +225,15 @@ typedef struct _devCsInfo {
+ 	MV_U8 busWidth;
+ } MV_DEV_CS_INFO;
+ 
++typedef struct _boardSwitchInfo {
++	MV_32 switchIrq;
++	MV_32 switchPort[BOARD_ETH_SWITCH_PORT_NUM];
++	MV_32 cpuPort;
++	MV_32 connectedPort[MV_ETH_MAX_PORTS];
++	MV_32 smiScanMode;
++	MV_32 quadPhyAddr;
++	MV_U32 forceLinkMask; /* Bitmask of switch ports to have force link (1Gbps) */
++} MV_BOARD_SWITCH_INFO;
+ typedef struct _boardLedInfo {
+ 	MV_U8 activeLedsNumber;
+ 	MV_U8 ledsPolarity;	/* '0' or '1' to turn on led */
+@@ -317,6 +327,9 @@ typedef struct _boardInfo {
+ 	MV_U32 gppPolarityValMid;
+ 	MV_U32 gppPolarityValHigh;
+ 
++	/* External Switch Configuration */
++	MV_BOARD_SWITCH_INFO *pSwitchInfo;
++	MV_U32 switchInfoNum;
+ 	/* TDM configuration */
+ 	/* We hold a different configuration array for each possible slic that
+ 	 ** can be connected to board.
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+index 8e01e47..760fc18 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+@@ -232,6 +232,10 @@ MV_BOARD_INFO db88f78XX0Info = {
+ 	.gppPolarityValMid		= DB_88F78XX0_GPP_POL_MID,
+ 	.gppPolarityValHigh		= DB_88F78XX0_GPP_POL_HIGH,
+ 
++	/* External Switch Configuration */
++	.pSwitchInfo = NULL,
++	.switchInfoNum = 0,
++
+ 	/* TDM configuration */
+ 	/* We hold a different configuration array for each possible slic that
+ 	** can be connected to board.
+@@ -419,6 +423,10 @@ MV_BOARD_INFO db88f78XX0rev2Info = {
+ 	.gppPolarityValMid		= DB_88F78XX0_REV2_GPP_POL_MID,
+ 	.gppPolarityValHigh		= DB_88F78XX0_REV2_GPP_POL_HIGH,
+ 
++	/* External Switch Configuration */
++	.pSwitchInfo = NULL,
++	.switchInfoNum = 0,
++
+ 	/* TDM configuration */
+ 	/* We hold a different configuration array for each possible slic that
+ 	** can be connected to board.
+@@ -538,6 +546,10 @@ MV_BOARD_INFO rd78460nasInfo = {
+ 	.gppPolarityValMid		= RD_78460_NAS_GPP_POL_MID,
+ 	.gppPolarityValHigh		= RD_78460_NAS_GPP_POL_HIGH,
+ 
++	/* External Switch Configuration */
++	.pSwitchInfo = NULL,
++	.switchInfoNum = 0,
++
+ 	/* TDM configuration */
+ 	/* We hold a different configuration array for each possible slic that
+ 	** can be connected to board.
+@@ -642,6 +654,10 @@ MV_BOARD_INFO rd78460Info = {
+  .gppPolarityValMid			= RD_78460_GPP_POL_MID,
+  .gppPolarityValHigh			= RD_78460_GPP_POL_HIGH,
+ 
++	/* External Switch Configuration */
++	.pSwitchInfo = NULL,
++	.switchInfoNum = 0,
++
+  /* TDM configuration */
+ 	/* We hold a different configuration array for each possible slic that
+  ** can be connected to board.
+@@ -744,6 +760,10 @@ MV_BOARD_INFO rd78460ServerRev2Info = {
+  .gppPolarityValMid			= RD_78460_SERVER_REV2_GPP_POL_MID,
+  .gppPolarityValHigh			= RD_78460_SERVER_REV2_GPP_POL_HIGH,
+ 
++	/* External Switch Configuration */
++	.pSwitchInfo = NULL,
++	.switchInfoNum = 0,
++
+  /* TDM configuration */
+ 	/* We hold a different configuration array for each possible slic that
+  ** can be connected to board.
+@@ -864,6 +884,9 @@ MV_BOARD_INFO db78X60pcacInfo = {
+ 	.gppPolarityValMid		= DB_78X60_PCAC_GPP_POL_MID,
+ 	.gppPolarityValHigh		= DB_78X60_PCAC_GPP_POL_HIGH,
+ 
++	/* External Switch Configuration */
++	.pSwitchInfo = NULL,
++	.switchInfoNum = 0,
+ 
+ 	/* TDM configuration */
+ 	/* We hold a different configuration array for each possible slic that
+@@ -975,6 +998,9 @@ MV_BOARD_INFO db78X60pcacrev2Info = {
+ 	.gppPolarityValMid		= DB_78X60_PCAC_REV2_GPP_POL_MID,
+ 	.gppPolarityValHigh		= DB_78X60_PCAC_REV2_GPP_POL_HIGH,
+ 
++	/* External Switch Configuration */
++	.pSwitchInfo = NULL,
++	.switchInfoNum = 0,
+ 
+ 	/* TDM configuration */
+ 	/* We hold a different configuration array for each possible slic that
+@@ -1097,6 +1123,10 @@ MV_BOARD_INFO fpga88f78XX0Info = {
+ 	.gppPolarityValMid		= FPGA_88F78XX0_GPP_POL_MID,
+ 	.gppPolarityValHigh		= FPGA_88F78XX0_GPP_POL_HIGH,
+ 
++	/* External Switch Configuration */
++	.pSwitchInfo = NULL,
++	.switchInfoNum = 0,
++
+ 	/* TDM configuration */
+ 	/* We hold a different configuration array for each possible slic that
+ 	** can be connected to board.
+@@ -1214,6 +1244,9 @@ MV_BOARD_INFO db78X60amcInfo = {
+ 	.gppPolarityValMid		= DB_78X60_AMC_GPP_POL_MID,
+ 	.gppPolarityValHigh		= DB_78X60_AMC_GPP_POL_HIGH,
+ 
++	/* External Switch Configuration */
++	.pSwitchInfo = NULL,
++	.switchInfoNum = 0,
+ 
+ 	/* TDM configuration */
+ 	/* We hold a different configuration array for each possible slic that
+@@ -1338,6 +1371,10 @@ MV_BOARD_INFO rd78460gpInfo = {
+ 	.gppPolarityValMid		= RD_78460_GP_GPP_POL_MID,
+ 	.gppPolarityValHigh		= RD_78460_GP_GPP_POL_HIGH,
+ 
++	/* External Switch Configuration */
++	.pSwitchInfo = NULL,
++	.switchInfoNum = 0,
++
+ 	/* TDM configuration */
+ 	/* We hold a different configuration array for each possible slic that
+ 	** can be connected to board.
+@@ -1456,6 +1493,11 @@ MV_BOARD_INFO rd78460customerInfo = {
+ 	.gppPolarityValMid		= RD_78460_CUSTOMER_GPP_POL_MID,
+ 	.gppPolarityValHigh		= RD_78460_CUSTOMER_GPP_POL_HIGH,
+ 
++	/* External Switch Configuration */
++	.pSwitchInfo = NULL,
++	.switchInfoNum = 0,
++
++
+ 	/* TDM configuration */
+ 	/* We hold a different configuration array for each possible slic that
+ 	** can be connected to board.
+-- 
+1.7.9.5
+

@@ -1,0 +1,104 @@
+From 1adea03a76a12edb39d29f51d400eac0d468eda7 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 29 Oct 2012 11:06:27 +0200
+Subject: [PATCH 329/609] Basic CESA support for AXP - Non production
+
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/configs/armada_xp_defconfig         |    4 +++-
+ arch/arm/mach-armadaxp/Makefile              |    5 ++++-
+ arch/arm/mach-armadaxp/mv_hal_if/mvSysCesa.c |   17 +++++++++++------
+ 3 files changed, 18 insertions(+), 8 deletions(-)
+
+diff --git a/arch/arm/configs/armada_xp_defconfig b/arch/arm/configs/armada_xp_defconfig
+index db88347..8b3b350 100644
+--- a/arch/arm/configs/armada_xp_defconfig
++++ b/arch/arm/configs/armada_xp_defconfig
+@@ -37,8 +37,8 @@ CONFIG_MV_ETH_RX_DESC_PREFETCH=y
+ CONFIG_MV_ETH_RX_PKT_PREFETCH=y
+ # CONFIG_MV_ETH_REDUCE_BURST_SIZE_WA is not set
+ CONFIG_MV_CESA_TOOL=y
+-CONFIG_MV_CESA_CHANNELS=2
+ CONFIG_MV_CESA_CHAIN_MODE=y
++CONFIG_MV_CESA_OCF=y
+ # CONFIG_SWP_EMULATE is not set
+ CONFIG_SHEEVA_ERRATA_ARM_CPU_PMU_RESET=y
+ CONFIG_SHEEVA_DEEP_IDLE=y
+@@ -231,5 +231,7 @@ CONFIG_CRYPTO_CBC=m
+ CONFIG_CRYPTO_ECB=m
+ CONFIG_CRYPTO_PCBC=m
+ # CONFIG_CRYPTO_ANSI_CPRNG is not set
++CONFIG_OCF_OCF=y
++CONFIG_OCF_CRYPTODEV=y
+ CONFIG_CRC_CCITT=y
+ CONFIG_LIBCRC32C=y
+diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
+index 62e1a45..7fe3836 100644
+--- a/arch/arm/mach-armadaxp/Makefile
++++ b/arch/arm/mach-armadaxp/Makefile
+@@ -86,12 +86,15 @@ armadaxp-$(CONFIG_MV_ETH_PMT)	        += $(HAL_ETH_PMT_DIR)/mvPmt.o
+ armadaxp-$(CONFIG_MV_ETH_HWF)           += $(HAL_ETH_GBE_DIR)/mvHwf.o
+ endif
+ 
+-armadaxp-$(CONFIG_MV_INCLUDE_CESA) 	+= $(HAL_CESA_DIR)/mvCesa.o $(HAL_CESA_DIR)/mvCesaDebug.o 	\
++armadaxp-$(CONFIG_MV_INCLUDE_CESA) 	+= $(HAL_CESA_DIR)/mvCesa.o $(HAL_CESA_DIR)/mvCesaIf.o		\
++					   $(HAL_CESA_DIR)/mvCesaDebug.o 				\
+ 					   $(HAL_CESA_DIR)/mvCesaAddrDec.o				\
+                         		   $(HAL_CESA_DIR)/mvMD5.o $(HAL_CESA_DIR)/mvSHA1.o 		\
+ 					   $(HAL_CESA_DIR)/mvSHA256.o					\
+ 					   $(HAL_CESA_AES_DIR)/mvAesAlg.o $(HAL_CESA_AES_DIR)/mvAesApi.o\
+ 					   $(HAL_IF_DIR)/mvSysCesa.o
++armadaxp-$(CONFIG_MV_CESA_TEST)         += $(HAL_CESA_DIR)/mvCesaTest.o
++
+ armadaxp-$(CONFIG_MV_INCLUDE_INTEG_SATA)+= $(HAL_IF_DIR)/mvSysSata.o $(HAL_SATA_DIR)/mvSataSoc.o	\
+ 					   $(HAL_SATA_DIR)/mvSataAddrDec.o
+ armadaxp-$(CONFIG_MV_INCLUDE_SPI) 	+= $(HAL_SPI_DIR)/mvSpi.o $(HAL_SPI_DIR)/mvSpiCmnd.o 		\
+diff --git a/arch/arm/mach-armadaxp/mv_hal_if/mvSysCesa.c b/arch/arm/mach-armadaxp/mv_hal_if/mvSysCesa.c
+index 49f6154..3d41db4 100644
+--- a/arch/arm/mach-armadaxp/mv_hal_if/mvSysCesa.c
++++ b/arch/arm/mach-armadaxp/mv_hal_if/mvSysCesa.c
+@@ -66,7 +66,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #include "mvOs.h"
+ #include "ctrlEnv/mvCtrlEnvLib.h"
+ #include "boardEnv/mvBoardEnvLib.h"
+-#include "mv_cesa/cesa_if.h"
++#include "cesa/mvCesaIf.h"
+ 
+ extern u32 mv_crypto_phys_base_get(u8 chan);
+ extern u32 mv_crypto_virt_base_get(u8 chan);
+@@ -96,21 +96,26 @@ MV_STATUS mvSysCesaInit(int numOfSession, int queueDepth, void *osHandle)
+ 	if(status == MV_OK) {
+ 		for(chan = 0; chan < MV_CESA_CHANNELS; chan++) {
+ 			status = mvCesaIfTdmaWinInit(chan, addrWinMap);
+-			
++
+ 			if(status != MV_OK) {
+ 				mvOsPrintf("Error, unable to initialize CESA windows for channel(%d)\n", chan);
+ 				break;
+ 			}
+ 			halData.sramPhysBase[chan] = (MV_ULONG)mv_crypto_phys_base_get(chan);
+ 			halData.sramVirtBase[chan] = (MV_U8*)mv_crypto_virt_base_get(chan);
++#ifdef CONFIG_ARMADA_SUPPORT_DEEP_IDLE_FAST_EXIT
++			halData.sramOffset[chan] = 32;
++#else
+ 			halData.sramOffset[chan] = 0;
++#endif
+ 		}
+ 
+ 		if(status == MV_OK) {
+-			halData.ctrlModel = mvCtrlModelGet();
+-			halData.ctrlRev = mvCtrlRevGet();
+-			status = mvCesaIfInit (numOfSession, queueDepth, osHandle, &halData);
+-		}
++		halData.ctrlModel = mvCtrlModelGet();
++		halData.ctrlRev = mvCtrlRevGet();
++			status = mvCesaIfHalInit (numOfSession, queueDepth,
++					osHandle, &halData);
++	}
+ 	}
+ 
+ 	return status;
+-- 
+1.7.9.5
+

@@ -1,0 +1,37 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2010-2012 OpenWrt.org
+
+SERVICE_USE_PID=1
+
+start() {
+	[ ! -e /etc/dhcp6sctlkey ] && `dd if=/dev/urandom count=1 2> /dev/null | md5sum | cut -d" " -f1 > /etc/dhcp6sctlkey`
+
+	[ -e /var/run/dhcp6s.pid ] && return 0
+
+	. /lib/functions/network.sh
+
+	config_load "dhcp6s"
+
+	local enabled
+	config_get_bool enabled basic enabled 0
+	[ $enabled -eq 0 ] && return 0
+
+	logger starting dhcp6s
+
+	local server_interface server_ifname
+	config_get server_interface basic interface
+	network_get_device server_ifname "$server_interface" || return 1
+
+	local config_file
+	config_get config_file basic config_file
+
+	[ ! -e $config_file ] && return 1
+
+	service_start /usr/sbin/dhcp6s -c $config_file $server_ifname
+}
+
+stop() {
+	logger stopping dhcp6s
+	service_stop /usr/sbin/dhcp6s
+}
+

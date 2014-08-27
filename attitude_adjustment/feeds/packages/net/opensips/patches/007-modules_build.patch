@@ -1,0 +1,102 @@
+--- a/modules/carrierroute/Makefile
++++ b/modules/carrierroute/Makefile
+@@ -12,10 +12,8 @@ NAME=carrierroute.so
+ BUILDER = $(shell which confuse-config)
+ 
+ ifeq ($(BUILDER),)
+-	CONFUSEDEFS=-I$(LOCALBASE)/include -I/usr/local/include -I/opt/include \
+-		-I/usr/sfw/include
+-	CONFUSELIBS=-L$(LOCALBASE)/lib -L/usr/local/lib -L/usr/sfw/lib \
+-		-L/opt/lib -lconfuse
++	CONFUSEDEFS=-I$(LOCALBASE)/include
++	CONFUSELIBS=-L$(LOCALBASE)/lib
+ else
+ 		CONFUSEDEFS = $(shell confuse-config --cflags)
+ 		CONFUSELIBS = $(shell confuse-config --libs)
+--- a/modules/h350/Makefile
++++ b/modules/h350/Makefile
+@@ -9,6 +9,8 @@ include ../../Makefile.defs
+ 
+ auto_gen=
+ NAME=h350.so
+-LIBS=
++
++DEFS+=-I$(LOCALBASE)/include
++LIBS=-L$(LOCALBASE)/lib -lldap
+ 
+ include ../../Makefile.modules
+--- a/modules/identity/Makefile
++++ b/modules/identity/Makefile
+@@ -9,7 +9,7 @@ include ../../Makefile.defs
+ auto_gen=
+ NAME=identity.so
+ 
+-DEFS+= -I$(LOCALBASE)/ssl/include -I$(LOCALBASE)/include -I/usr/sfw/include -I/usr/local/ssl/include
+-LIBS= -L$(LOCALBASE)/lib -L$(LOCALBASE)/ssl/lib -L/usr/sfw/lib -L/usr/local/ssl/lib -lssl  -lcrypto
++DEFS+= -I$(LOCALBASE)/include
++LIBS= -L$(LOCALBASE)/lib -lssl  -lcrypto
+ 
+ include ../../Makefile.modules
+--- a/modules/ldap/Makefile
++++ b/modules/ldap/Makefile
+@@ -12,7 +12,8 @@ include ../../Makefile.defs
+ auto_gen=
+ NAME=ldap.so
+ 
+-LIBS=-lldap
++DEFS+=-I$(LOCALBASE)/include
++LIBS=-L$(LOCALBASE)/lib -lldap 
+ 
+ ifeq ($(OS),solaris)
+        DEFS+=-I$(LOCALBASE)/include -I/usr/sfw/include -I/usr/local/include -I/opt/sfw/include -I/opt/csw/include
+--- a/modules/pua_bla/Makefile
++++ b/modules/pua_bla/Makefile
+@@ -9,8 +9,8 @@ include ../../Makefile.defs
+ auto_gen=
+ NAME=pua_bla.so
+ LIBS=
+-DEFS+=-I/usr/include/libxml2 -I$(LOCALBASE)/include/libxml2 -I$(LOCALBASE)/include
+-LIBS+=-L/usr/include/lib  -L$(LOCALBASE)/lib -lxml2
++DEFS+=-I$(LOCALBASE)/include/libxml2 -I$(LOCALBASE)/include
++LIBS+=-L$(LOCALBASE)/lib -lxml2
+ 
+ include ../../Makefile.modules
+ 
+--- a/modules/pua_xmpp/Makefile
++++ b/modules/pua_xmpp/Makefile
+@@ -10,7 +10,7 @@ auto_gen=
+ NAME= pua_xmpp.so
+ LIBS=
+ 
+-DEFS+=-I/usr/include/libxml2 -I$(LOCALBASE)/include/libxml2 -I$(LOCALBASE)/include
+-LIBS+=-L/usr/include/lib  -L$(LOCALBASE)/lib -lxml2
++DEFS+=-I$(LOCALBASE)/include/libxml2 -I$(LOCALBASE)/include
++LIBS+=-L$(LOCALBASE)/lib -lxml2
+ 
+ include ../../Makefile.modules
+--- a/modules/regex/Makefile
++++ b/modules/regex/Makefile
+@@ -20,8 +20,8 @@ ifneq ($(PCRECFG),)
+ 
+ else
+ 
+-	DEFS+=-I/usr/include -I/usr/sfw/include -I/usr/local/include -I/opt/csw/include -I$(LOCALBASE)/include
+-	LIBS=-I/usr/lib -I/usr/sfw/lib -I/usr/local/lib -I/opt/csw/lib -I$(LOCALBASE)/lib -lpcre
++	DEFS+=-I$(LOCALBASE)/include
++	LIBS=-L$(LOCALBASE)/lib -lpcre
+ 
+ endif
+ 
+--- a/modules/tlsops/Makefile
++++ b/modules/tlsops/Makefile
+@@ -7,8 +7,8 @@ auto_gen=
+ NAME=tlsops.so
+ LIBS=
+ 
+-DEFS+= -I$(LOCALBASE)/ssl/include -I$(LOCALBASE)/include -I/usr/sfw/include -I/usr/local/ssl/include
+-LIBS+= -L$(LOCALBASE)/lib -L$(LOCALBASE)/ssl/lib -L/usr/sfw/lib -L/usr/local/ssl/lib -lssl  -lcrypto
++DEFS+= -I$(LOCALBASE)/include
++LIBS+= -L$(LOCALBASE)/lib -lssl  -lcrypto
+ 
+ include ../../Makefile.modules
+ 

@@ -1,0 +1,27 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## fix_non_i386.dpatch by Kilian Krause <kilian@debian.org>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: Remove i386-only code analogous to twinkle
+@DPATCH@
+diff -urNad stun-0.96~/stun.cxx stun-0.96/stun.cxx
+--- stun-0.96~/stun.cxx	2005-08-14 00:39:03.000000000 +0000
++++ stun-0.96/stun.cxx	2006-01-03 00:54:33.000000000 +0000
+@@ -669,16 +669,8 @@
+       tick = hightick;
+       tick <<= 32;
+       tick |= lowtick;
+-#elif defined(__GNUC__) && ( defined(__i686__) || defined(__i386__) )
+-      asm("rdtsc" : "=A" (tick));
+-#elif defined (__SUNPRO_CC) || defined( __sparc__ )	
+-      tick = gethrtime();
+-#elif defined(__MACH__) 
+-      int fd=open("/dev/random",O_RDONLY);
+-      read(fd,&tick,sizeof(tick));
+-      closesocket(fd);
+ #else
+-#     error Need some way to seed the random number generator 
++      tick = time(NULL);
+ #endif 
+       int seed = int(tick);
+ #ifdef WIN32

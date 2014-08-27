@@ -1,0 +1,111 @@
+# Configuration parameters for xmail
+#
+# To see what xmail command line parameters each parameter corresponds to,
+# 	please see /etc/init.d/xmail
+#
+# The xmail configuration files are contained in /etc/MailRoot.tar.gz, and need
+# 	to be installed in the MAIL_ROOT directory, set by default to
+# 	/var/MailRoot below by:
+# 	MAIL_ROOT=`grep "option.*mail_root.*'$" /etc/config/xmail | sed -e "s/'$//" -e "s/.*'//"`
+# 	mkdir -p $MAIL_ROOT; cd $MAIL_ROOT; tar -xjf /etc/MailRoot.tar.bz2
+# NOTE: On OpenWRT /var is a temporary filesystem, so change mail_root below,
+# 	but it is probably not a good idea to install on a device's internal
+# 	flash due to the amount of writing of the flash that will ensue.
+#
+# To see what settings are appropriate, please refer to:
+# 	http://www.xmailserver.org/Readme.html
+# which also documents the configuration files in mail_root
+# ( please note that the values commented out are not real values )
+# 
+
+config xmail
+	option	mail_root	'/var/MailRoot'
+#	option	debug		1
+#	option	log_rotate	'3600'
+#	option	split_level	'param-split_level'
+#	option	rx_buffer	'param-rx_buffer'
+#	option	tx_buffer	'param-tx_buffer'
+#	option	maildir_delivery	1
+#	option	mailbox_delivery	1
+#	option	dns_cache_dirs	'param-dns_cache_dirs'
+#	option	ipv4_only	1
+#	option	ipv6_only	1
+#	option	ipv4_then_ipv6	1
+#	option	ipv6_then_ipv4	1
+
+config pop3
+#	option	disable	1
+#	option	ipv6	1
+#	option	server_port	'param-server_port'
+#	option	session_timeout	'param-session_timeout'
+#	option	log	1
+#	option	delay_timeout	'param-delay_timeout'
+#	option	bad_login_hang	1
+#	option	local_address	'param-local_address'
+	option	num_threads	4
+
+config pop3s
+	option	disable	1
+#	option	ipv6	1
+#	option	server_port	'param-server_port'
+#	option	local_address	'param-local_address'
+
+config smtp
+#	option	disable	1
+#	option	ipv6	1
+#	option	server_port	'param-server_port'
+#	option	session_timeout	'param-session_timeout'
+#	option	log	1
+#	option	local_address	'param-local_address'
+	option	num_threads	4
+#	option	max_recipients	'param-max_recipients'
+#	option	expire_timeout	'param-expire_timeout'
+
+config smtps
+	option	disable	1
+#	option	ipv6	1
+#	option	server_port	'param-server_port'
+#	option	local_address	'param-local_address'
+
+config smail
+	option	num_threads	8
+#	option	next_try_timeout	'param-next_try_timeout'
+#	option	ratio	'param-ratio'
+#	option	retries	'param-retries'
+#	option	log	1
+#	option	filters_timeout	'param-filters_timeout'
+#	option	filter_log	1
+
+config psync
+	option	disable	1
+#	option	interval	'param-interval'
+#	option	num_threads	'param-num_threads'
+#	option	timeout	'param-timeout'
+#	option	log	1
+
+config finger
+	option	disable	1
+#	option	ipv6	1
+#	option	server_port	'param-server_port'
+#	option	log	1
+#	option	local_address	'param-local_address'
+
+config ctrl
+#	option	disable	1
+#	option	ipv6	1
+#	option	server_port	'param-server_port'
+#	option	session_timeout	'param-session_timeout'
+#	option	log	1
+#	option	local_address	'param-local_address'
+#	option	num_threads	'param-num_threads'
+
+config ctrls
+	option	disable	1
+#	option	ipv6	1
+#	option	server_port	'param-server_port'
+#	option	session_timeout	'param-session_timeout'
+
+config lmail
+	option	num_threads	4
+#	option	sleep_timeout	'param-sleep_timeout'
+#	option	log	1

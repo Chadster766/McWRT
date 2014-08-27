@@ -1,0 +1,3546 @@
+--- /dev/null
++++ b/ext/dio/config.m4
+@@ -0,0 +1,10 @@
++dnl
++dnl $Id: config.m4 291957 2009-12-10 17:13:14Z cyberspice $
++dnl 
++
++PHP_ARG_ENABLE(dio, whether to enable direct I/O support,
++[  --enable-dio            Enable direct I/O support])
++
++if test "$PHP_DIO" != "no"; then
++  PHP_NEW_EXTENSION(dio, dio.c dio_common.c dio_posix.c dio_stream_wrappers.c, $ext_shared)
++fi
+--- /dev/null
++++ b/ext/dio/dio.c
+@@ -0,0 +1,871 @@
++/*
++   +----------------------------------------------------------------------+
++   | PHP Version 5                                                        |
++   +----------------------------------------------------------------------+
++   | Copyright (c) 1997-2009 The PHP Group                                |
++   +----------------------------------------------------------------------+
++   | This source file is subject to version 3.0 of the PHP license,       |
++   | that is bundled with this package in the file LICENSE, and is        |
++   | available through the world-wide-web at the following url:           |
++   | http://www.php.net/license/3_0.txt.                                  |
++   | If you did not receive a copy of the PHP license and are unable to   |
++   | obtain it through the world-wide-web, please send a note to          |
++   | license@php.net so we can mail you a copy immediately.               |
++   +----------------------------------------------------------------------+
++   | Author: Sterling Hughes <sterling@php.net>                           |
++   | Author: Melanie Rhianna Lewis <cyberspice@php.net>                   |
++   +----------------------------------------------------------------------+
++ */
++
++#ifdef HAVE_CONFIG_H
++#include "config.h"
++#endif
++
++#include "php.h"
++#include "php_ini.h"
++#include "ext/standard/info.h"
++
++#include "php_dio.h"
++#include "php_dio_stream_wrappers.h"
++
++#include <sys/stat.h>
++#include <sys/types.h>
++
++#ifdef HAVE_UNISTD_H
++#include <unistd.h>
++#endif
++
++#include <fcntl.h>
++#ifndef PHP_WIN32
++#include <termios.h>
++#endif
++
++/* e.g. IRIX does not have CRTSCTS */
++#ifndef CRTSCTS
++# ifdef CNEW_RTSCTS
++#  define CRTSCTS CNEW_RTSCTS
++# else
++#  define CRTSCTS 0
++# endif /* CNEW_RTSCTS */
++#endif /* !CRTSCTS */
++
++/*
++   +----------------------------------------------------------------------+
++   |                       DEPRECATED FUNCTIONALITY                       |
++   +----------------------------------------------------------------------+
++   | The functions below are from the earlier DIO versions.  They will    |
++   | continue to be maintained but not extended.  It is thoroughly        |
++   | recommended that you should use either the stream wrappers or the    |
++   | DIO classes in new code. - Melanie                                   |
++   +----------------------------------------------------------------------+
++ */
++
++#define le_fd_name "Direct I/O File Descriptor"
++static int le_fd;
++
++static int new_php_fd(php_fd_t **f, int fd)
++{
++	if (!(*f = malloc(sizeof(php_fd_t)))) {
++		return 0;
++	}
++	(*f)->fd = fd;
++	return 1;
++}
++
++static void _dio_close_fd(zend_rsrc_list_entry *rsrc TSRMLS_DC)
++{
++	php_fd_t *f = (php_fd_t *) rsrc->ptr;
++	if (f) {
++		close(f->fd);
++		free(f);
++	}
++}
++
++/* {{{ proto resource dio_open(string filename, int flags[, int mode])
++   Open a new filename with specified permissions of flags and creation permissions of mode */
++PHP_FUNCTION(dio_open)
++{
++	php_fd_t *f;
++	char     *file_name;
++	int       file_name_length;
++	long      flags;
++	long      mode = 0;
++	int       fd;
++
++	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sl|l", &file_name, &file_name_length, &flags, &mode) == FAILURE) {
++		return;
++	}
++
++	if (php_check_open_basedir(file_name TSRMLS_CC) || DIO_SAFE_MODE_CHECK(file_name, "wb+")) {
++		RETURN_FALSE;
++	}
++
++	if (ZEND_NUM_ARGS() == 3) {
++		fd = open(file_name, flags, mode);
++	} else {
++		fd = open(file_name, flags);
++	}
++
++	if (fd == -1) {
++		php_error_docref(NULL TSRMLS_CC, E_WARNING, "cannot open file %s with flags %ld and permissions %ld: %s", file_name, flags, mode, strerror(errno));
++		RETURN_FALSE;
++	}
++
++	if (!new_php_fd(&f, fd)) {
++		RETURN_FALSE;
++	}
++
++	ZEND_REGISTER_RESOURCE(return_value, f, le_fd);
++}
++/* }}} */
++
++#ifndef PHP_WIN32
++
++/* {{{ proto resource dio_fdopen(int fd)
++   Returns a resource for the specified file descriptor. */
++PHP_FUNCTION(dio_fdopen)
++{
++	php_fd_t *f;
++	long lfd;
++	int fd;
++
++	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &lfd) == FAILURE) {
++		return;
++	}
++
++	fd = (int)lfd;
++
++	if ((fcntl(fd, F_GETFL, 0) == -1) && (errno == EBADF)) {
++		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Bad file descriptor %d", fd);
++		RETURN_FALSE;
++	}
++
++	if (!new_php_fd(&f, fd)) {
++		RETURN_FALSE;
++	}
++
++	ZEND_REGISTER_RESOURCE(return_value, f, le_fd);
++}
++/* }}} */
++
++
++/* {{{ proto resource dio_dup(resource fd)
++   Opens a duplicate of the specified open resource. */
++PHP_FUNCTION(dio_dup)
++{
++	zval     *r_fd;
++	php_fd_t *f, *df;
++	int dfd;
++
++	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &r_fd) == FAILURE) {
++		return;
++	}
++
++	ZEND_FETCH_RESOURCE(f, php_fd_t *, &r_fd, -1, le_fd_name, le_fd);
++
++	dfd = dup(f->fd);
++	if (dfd == -1) {
++		php_error_docref(NULL TSRMLS_CC, E_WARNING, "cannot duplication file descriptor %d: %s", f->fd, strerror(errno));
++		RETURN_FALSE;
++	}
++
++	if (!new_php_fd(&df, dfd)) {
++		RETURN_FALSE;
++	}
++
++	ZEND_REGISTER_RESOURCE(return_value, df, le_fd);
++}
++/* }}} */
++#endif
++
++/* {{{ proto string dio_read(resource fd[, int n])
++   Read n bytes from fd and return them, if n is not specified, read 1k */
++PHP_FUNCTION(dio_read)
++{
++	zval     *r_fd;
++	php_fd_t *f;
++	char     *data;
++	long      bytes = 1024;
++	ssize_t   res;
++
++	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|l", &r_fd, &bytes) == FAILURE) {
++		return;
++	}
++
++	ZEND_FETCH_RESOURCE(f, php_fd_t *, &r_fd, -1, le_fd_name, le_fd);
++
++	if (bytes <= 0) {
++		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Length parameter must be greater than 0.");
++		RETURN_FALSE;
++	}
++
++	data = emalloc(bytes + 1);
++	res = read(f->fd, data, bytes);
++	if (res <= 0) {
++		efree(data);
++		RETURN_NULL();
++	}
++
++	data = erealloc(data, res + 1);
++	data[res] = 0;
++
++	RETURN_STRINGL(data, res, 0);
++}
++/* }}} */
++
++/* {{{ proto int dio_write(resource fd, string data[, int len])
++   Write data to fd with optional truncation at length */
++PHP_FUNCTION(dio_write)
++{
++	zval     *r_fd;
++	php_fd_t *f;
++	char     *data;
++	int       data_len;
++	long      trunc_len = 0;
++	ssize_t   res;
++
++	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs|l", &r_fd, &data, &data_len, &trunc_len) == FAILURE) {
++		return;
++	}
++
++	if (trunc_len < 0 || trunc_len > data_len) {
++		php_error_docref(NULL TSRMLS_CC, E_WARNING, "length must be greater or equal to zero and less then the length of the specified string.");
++		RETURN_FALSE;
++	}
++
++	ZEND_FETCH_RESOURCE(f, php_fd_t *, &r_fd, -1, le_fd_name, le_fd);
++
++	res = write(f->fd, data, trunc_len ? trunc_len : data_len);
++	if (res == -1) {
++		php_error_docref(NULL TSRMLS_CC, E_WARNING, "cannot write data to file descriptor %d: %s", f->fd, strerror(errno));
++	}
++
++	RETURN_LONG(res);
++}
++/* }}} */
++
++#ifndef PHP_WIN32
++
++/* {{{ proto bool dio_truncate(resource fd, int offset)
++   Truncate file descriptor fd to offset bytes */
++PHP_FUNCTION(dio_truncate)
++{
++	zval     *r_fd;
++	php_fd_t *f;
++	long      offset;
++
++	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rl", &r_fd, &offset) == FAILURE) {
++		return;
++	}
++
++	ZEND_FETCH_RESOURCE(f, php_fd_t *, &r_fd, -1, le_fd_name, le_fd);
++
++	if (ftruncate(f->fd, offset) == -1) {
++		php_error_docref(NULL TSRMLS_CC, E_WARNING, "couldn't truncate %d to %ld bytes: %s", f->fd, offset, strerror(errno));
++		RETURN_FALSE;
++	}
++
++	RETURN_TRUE;
++}
++/* }}} */
++#endif
++
++#define ADD_FIELD(f, v) add_assoc_long_ex(return_value, (f), sizeof(f), v);
++
++/* {{{ proto array dio_stat(resource fd)
++   Get stat information about the file descriptor fd */
++PHP_FUNCTION(dio_stat)
++{
++	zval        *r_fd;
++	php_fd_t    *f;
++	struct stat  s;
++
++	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &r_fd) == FAILURE) {
++		return;
++	}
++
++	ZEND_FETCH_RESOURCE(f, php_fd_t *, &r_fd, -1, le_fd_name, le_fd);
++
++	if (fstat(f->fd, &s) == -1) {
++		php_error_docref(NULL TSRMLS_CC, E_WARNING, "cannot stat %d: %s", f->fd, strerror(errno));
++		RETURN_FALSE;
++	}
++
++	array_init(return_value);
++	ADD_FIELD("device", s.st_dev);
++	ADD_FIELD("inode", s.st_ino);
++	ADD_FIELD("mode", s.st_mode);
++	ADD_FIELD("nlink", s.st_nlink);
++	ADD_FIELD("uid", s.st_uid);
++	ADD_FIELD("gid", s.st_gid);
++	ADD_FIELD("device_type", s.st_rdev);
++	ADD_FIELD("size", s.st_size);
++#ifndef PHP_WIN32
++	ADD_FIELD("block_size", s.st_blksize);
++	ADD_FIELD("blocks", s.st_blocks);
++#endif
++	ADD_FIELD("atime", s.st_atime);
++	ADD_FIELD("mtime", s.st_mtime);
++	ADD_FIELD("ctime", s.st_ctime);
++}
++/* }}} */
++
++/* {{{ proto int dio_seek(resource fd, int pos, int whence)
++   Seek to pos on fd from whence */
++PHP_FUNCTION(dio_seek)
++{
++	zval     *r_fd;
++	php_fd_t *f;
++	long      offset;
++	long      whence = SEEK_SET;
++
++	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rl|l", &r_fd, &offset, &whence) == FAILURE) {
++		return;
++	}
++
++	ZEND_FETCH_RESOURCE(f, php_fd_t *, &r_fd, -1, le_fd_name, le_fd);
++
++	RETURN_LONG(lseek(f->fd, offset, whence));
++}
++/* }}} */
++
++#ifndef PHP_WIN32
++
++/* {{{ proto mixed dio_fcntl(resource fd, int cmd[, mixed arg])
++   Perform a c library fcntl on fd */
++PHP_FUNCTION(dio_fcntl)
++{
++	zval     *r_fd;
++	zval     *arg = NULL;
++	php_fd_t *f;
++	long      cmd;
++
++	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rl|z", &r_fd, &cmd, &arg) == FAILURE) {
++		return;
++	}
++
++	ZEND_FETCH_RESOURCE(f, php_fd_t *, &r_fd, -1, le_fd_name, le_fd);
++
++	switch (cmd) {
++		case F_SETLK:
++		case F_SETLKW: {
++			zval          **element;
++			struct flock    lk = {0};
++			HashTable      *fh;
++
++			if (!arg) {
++				php_error_docref(NULL TSRMLS_CC, E_WARNING, "expects argument 3 to be array or int, none given");
++				RETURN_FALSE;
++			}
++			if (Z_TYPE_P(arg) == IS_ARRAY) {
++				fh = HASH_OF(arg);
++				if (zend_hash_find(fh, "start", sizeof("start"), (void **) &element) == FAILURE) {
++					lk.l_start = 0;
++				} else {
++					lk.l_start = Z_LVAL_PP(element);
++				}
++
++				if (zend_hash_find(fh, "length", sizeof("length"), (void **) &element) == FAILURE) {
++					lk.l_len = 0;
++				} else {
++					lk.l_len = Z_LVAL_PP(element);
++				}
++
++				if (zend_hash_find(fh, "whence", sizeof("whence"), (void **) &element) == FAILURE) {
++					lk.l_whence = 0;
++				} else {
++					lk.l_whence = Z_LVAL_PP(element);
++				}
++
++				if (zend_hash_find(fh, "type", sizeof("type"), (void **) &element) == FAILURE) {
++					lk.l_type = 0;
++				} else {
++					lk.l_type = Z_LVAL_PP(element);
++				}
++			} else if (Z_TYPE_P(arg) == IS_LONG) {
++				lk.l_start  = 0;
++				lk.l_len    = 0;
++				lk.l_whence = SEEK_SET;
++				lk.l_type   = Z_LVAL_P(arg);
++			} else {
++				php_error_docref(NULL TSRMLS_CC, E_WARNING, "expects argument 3 to be array or int, %s given", zend_zval_type_name(arg));
++				RETURN_FALSE;
++			}
++
++			RETURN_LONG(fcntl(f->fd, cmd, &lk));
++			break;
++		}
++		case F_GETLK: {
++			struct flock lk = {0};
++
++			fcntl(f->fd, cmd, &lk);
++
++			array_init(return_value);
++			add_assoc_long(return_value, "type", lk.l_type);
++			add_assoc_long(return_value, "whence", lk.l_whence);
++			add_assoc_long(return_value, "start", lk.l_start);
++			add_assoc_long(return_value, "length", lk.l_len);
++			add_assoc_long(return_value, "pid", lk.l_pid);
++
++			break;
++		}
++		case F_DUPFD: {
++			php_fd_t *new_f;
++
++			if (!arg || Z_TYPE_P(arg) != IS_LONG) {
++				php_error_docref(NULL TSRMLS_CC, E_WARNING, "expects argument 3 to be int");
++				RETURN_FALSE;
++			}
++
++			if (!new_php_fd(&new_f, fcntl(f->fd, cmd, Z_LVAL_P(arg)))) {
++				RETURN_FALSE;
++			}
++			ZEND_REGISTER_RESOURCE(return_value, new_f, le_fd);
++			break;
++		}
++		default:
++			if (!arg || Z_TYPE_P(arg) != IS_LONG) {
++				php_error_docref(NULL TSRMLS_CC, E_WARNING, "expects argument 3 to be int");
++				RETURN_FALSE;
++			}
++
++			RETURN_LONG(fcntl(f->fd, cmd, Z_LVAL_P(arg)));
++	}
++}
++/* }}} */
++#endif
++
++#ifndef PHP_WIN32
++
++/* {{{ proto mixed dio_tcsetattr(resource fd,  array args )
++   Perform a c library tcsetattr on fd */
++PHP_FUNCTION(dio_tcsetattr)
++{
++	zval     *r_fd;
++	zval     *arg = NULL;
++	php_fd_t *f;
++	struct termios newtio;
++	int Baud_Rate, Data_Bits=8, Stop_Bits=1, Parity=0, Flow_Control=1, Is_Canonical=1;
++	long BAUD,DATABITS,STOPBITS,PARITYON,PARITY;
++	HashTable      *fh;
++	zval          **element;
++
++	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rz", &r_fd, &arg) == FAILURE) {
++		return;
++	}
++
++	ZEND_FETCH_RESOURCE(f, php_fd_t *, &r_fd, -1, le_fd_name, le_fd);
++
++	if (Z_TYPE_P(arg) != IS_ARRAY) {
++		php_error_docref(NULL TSRMLS_CC, E_WARNING,"tcsetattr, third argument should be an associative array");
++		return;
++	}
++
++	fh = HASH_OF(arg);
++
++	if (zend_hash_find(fh, "baud", sizeof("baud"), (void **) &element) == FAILURE) {
++		Baud_Rate = 9600;
++	} else {
++		Baud_Rate = Z_LVAL_PP(element);
++	}
++
++	if (zend_hash_find(fh, "bits", sizeof("bits"), (void **) &element) == FAILURE) {
++		Data_Bits = 8;
++	} else {
++		Data_Bits = Z_LVAL_PP(element);
++	}
++
++	if (zend_hash_find(fh, "stop", sizeof("stop"), (void **) &element) == FAILURE) {
++		Stop_Bits = 1;
++	} else {
++		Stop_Bits = Z_LVAL_PP(element);
++	}
++
++	if (zend_hash_find(fh, "parity", sizeof("parity"), (void **) &element) == FAILURE) {
++		Parity = 0;
++	} else {
++		Parity = Z_LVAL_PP(element);
++	}
++
++	if (zend_hash_find(fh, "flow_control", sizeof("flow_control"), (void **) &element) == FAILURE) {
++		Flow_Control = 1;
++	} else {
++		Flow_Control = Z_LVAL_PP(element);
++	}
++
++	if (zend_hash_find(fh, "is_canonical", sizeof("is_canonical"), (void **) &element) == FAILURE) {
++		Is_Canonical = 0;
++	} else {
++		Is_Canonical = Z_LVAL_PP(element);
++	}
++
++	/* assign to correct values... */
++	switch (Baud_Rate)  {
++		case 38400:
++			BAUD = B38400;
++			break;
++		case 19200:
++			BAUD = B19200;
++			break;
++		case 9600:
++			BAUD = B9600;
++			break;
++		case 4800:
++			BAUD = B4800;
++			break;
++		case 2400:
++			BAUD = B2400;
++			break;
++		case 1800:
++			BAUD = B1800;
++			break;
++		case 1200:
++			BAUD = B1200;
++			break;
++		case 600:
++			BAUD = B600;
++			break;
++		case 300:
++			BAUD = B300;
++			break;
++		case 200:
++			BAUD = B200;
++			break;
++		case 150:
++			BAUD = B150;
++			break;
++		case 134:
++			BAUD = B134;
++			break;
++		case 110:
++			BAUD = B110;
++			break;
++		case 75:
++			BAUD = B75;
++			break;
++		case 50:
++			BAUD = B50;
++			break;
++		default:
++			php_error_docref(NULL TSRMLS_CC, E_WARNING, "invalid baud rate %d", Baud_Rate);
++			RETURN_FALSE;
++	}
++	switch (Data_Bits) {
++		case 8:
++			DATABITS = CS8;
++			break;
++		case 7:
++			DATABITS = CS7;
++			break;
++		case 6:
++			DATABITS = CS6;
++			break;
++		case 5:
++			DATABITS = CS5;
++			break;
++		default:
++			php_error_docref(NULL TSRMLS_CC, E_WARNING, "invalid data bits %d", Data_Bits);
++			RETURN_FALSE;
++	}
++	switch (Stop_Bits) {
++		case 1:
++			STOPBITS = 0;
++			break;
++		case 2:
++			STOPBITS = CSTOPB;
++			break;
++		default:
++			php_error_docref(NULL TSRMLS_CC, E_WARNING, "invalid stop bits %d", Stop_Bits);
++			RETURN_FALSE;
++	}
++
++	switch (Parity) {
++		case 0:
++			PARITYON = 0;
++			PARITY = 0;
++			break;
++		case 1:
++			PARITYON = PARENB;
++			PARITY = PARODD;
++			break;
++		case 2:
++			PARITYON = PARENB;
++			PARITY = 0;
++			break;
++		default:
++			php_error_docref(NULL TSRMLS_CC, E_WARNING, "invalid parity %d", Parity);
++			RETURN_FALSE;
++	}
++
++	memset(&newtio, 0, sizeof(newtio));
++	tcgetattr(f->fd, &newtio);
++
++	if (Is_Canonical) {
++		newtio.c_iflag = IGNPAR | ICRNL;
++		newtio.c_oflag = 0;
++		newtio.c_lflag = ICANON;
++	} else {
++		cfmakeraw(&newtio);
++	}
++
++	newtio.c_cflag = BAUD | DATABITS | STOPBITS | PARITYON | PARITY | CLOCAL | CREAD;
++
++#ifdef CRTSCTS
++	if (Flow_Control) {
++		newtio.c_cflag |= CRTSCTS;
++	}
++#endif
++
++	if (Is_Canonical)
++
++	newtio.c_cc[VMIN] = 1;
++	newtio.c_cc[VTIME] = 0;
++	tcflush(f->fd, TCIFLUSH);
++	tcsetattr(f->fd,TCSANOW,&newtio);
++
++	RETURN_TRUE;
++}
++/* }}} */
++#endif
++
++/* {{{ proto void dio_close(resource fd)
++   Close the file descriptor given by fd */
++PHP_FUNCTION(dio_close)
++{
++	zval     *r_fd;
++	php_fd_t *f;
++
++	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &r_fd) == FAILURE) {
++		return;
++	}
++
++	ZEND_FETCH_RESOURCE(f, php_fd_t *, &r_fd, -1, le_fd_name, le_fd);
++
++	zend_list_delete(Z_LVAL_P(r_fd));
++}
++/* }}} */
++
++#define RDIOC(c) REGISTER_LONG_CONSTANT(#c, c, CONST_CS | CONST_PERSISTENT)
++
++/* {{{ dio_init_legacy_defines
++ * Initialises the legacy PHP defines
++ */
++static void dio_init_legacy_defines(int module_number TSRMLS_DC) {
++	RDIOC(O_RDONLY);
++	RDIOC(O_WRONLY);
++	RDIOC(O_RDWR);
++	RDIOC(O_CREAT);
++	RDIOC(O_EXCL);
++	RDIOC(O_TRUNC);
++	RDIOC(O_APPEND);
++#ifdef O_NONBLOCK
++	RDIOC(O_NONBLOCK);
++#endif
++#ifdef O_NDELAY
++	RDIOC(O_NDELAY);
++#endif
++#ifdef O_SYNC
++	RDIOC(O_SYNC);
++#endif
++#ifdef O_ASYNC
++	RDIOC(O_ASYNC);
++#endif
++#ifdef O_NOCTTY
++	RDIOC(O_NOCTTY);
++#endif
++#ifndef PHP_WIN32
++	RDIOC(S_IRWXU);
++	RDIOC(S_IRUSR);
++	RDIOC(S_IWUSR);
++	RDIOC(S_IXUSR);
++	RDIOC(S_IRWXG);
++	RDIOC(S_IRGRP);
++	RDIOC(S_IWGRP);
++	RDIOC(S_IXGRP);
++	RDIOC(S_IRWXO);
++	RDIOC(S_IROTH);
++	RDIOC(S_IWOTH);
++	RDIOC(S_IXOTH);
++	RDIOC(F_DUPFD);
++	RDIOC(F_GETFD);
++	RDIOC(F_GETFL);
++	RDIOC(F_SETFL);
++	RDIOC(F_GETLK);
++	RDIOC(F_SETLK);
++	RDIOC(F_SETLKW);
++	RDIOC(F_SETOWN);
++	RDIOC(F_GETOWN);
++	RDIOC(F_UNLCK);
++	RDIOC(F_RDLCK);
++	RDIOC(F_WRLCK);
++#endif
++}
++
++ZEND_BEGIN_ARG_INFO_EX(dio_open_args, 0, 0, 2)
++	ZEND_ARG_INFO(0, filename)
++	ZEND_ARG_INFO(0, flags)
++	ZEND_ARG_INFO(0, mode)
++ZEND_END_ARG_INFO()
++
++ZEND_BEGIN_ARG_INFO_EX(dio_fdopen_args, 0, 0, 1)
++	ZEND_ARG_INFO(0, fd)
++ZEND_END_ARG_INFO()
++
++ZEND_BEGIN_ARG_INFO_EX(dio_dup_args, 0, 0, 1)
++	ZEND_ARG_INFO(0, fd)
++ZEND_END_ARG_INFO()
++
++
++ZEND_BEGIN_ARG_INFO_EX(dio_read_args, 0, 0, 1)
++	ZEND_ARG_INFO(0, fd)
++	ZEND_ARG_INFO(0, n)
++ZEND_END_ARG_INFO()
++
++ZEND_BEGIN_ARG_INFO_EX(dio_write_args, 0, 0, 2)
++	ZEND_ARG_INFO(0, fd)
++	ZEND_ARG_INFO(0, data)
++	ZEND_ARG_INFO(0, len)
++ZEND_END_ARG_INFO()
++
++ZEND_BEGIN_ARG_INFO_EX(dio_stat_args, 0, 0, 1)
++	ZEND_ARG_INFO(0, fd)
++ZEND_END_ARG_INFO()
++
++ZEND_BEGIN_ARG_INFO_EX(dio_truncate_args, 0, 0, 2)
++	ZEND_ARG_INFO(0, fd)
++	ZEND_ARG_INFO(0, offset)
++ZEND_END_ARG_INFO()
++
++ZEND_BEGIN_ARG_INFO_EX(dio_seek_args, 0, 0, 3)
++	ZEND_ARG_INFO(0, fd)
++	ZEND_ARG_INFO(0, pos)
++	ZEND_ARG_INFO(0, whence)
++ZEND_END_ARG_INFO()
++
++ZEND_BEGIN_ARG_INFO_EX(dio_fcntl_args, 0, 0, 2)
++	ZEND_ARG_INFO(0, fd)
++	ZEND_ARG_INFO(0, cmd)
++	ZEND_ARG_INFO(0, arg)
++ZEND_END_ARG_INFO()
++
++ZEND_BEGIN_ARG_INFO_EX(dio_tcsetattr_args, 0, 0, 2)
++	ZEND_ARG_INFO(0, fd)
++	ZEND_ARG_INFO(0, args)
++ZEND_END_ARG_INFO()
++
++ZEND_BEGIN_ARG_INFO_EX(dio_close_args, 0, 0, 1)
++	ZEND_ARG_INFO(0, fd)
++ZEND_END_ARG_INFO()
++
++/*
++   +----------------------------------------------------------------------+
++   |                   END OF DEPRECATED FUNCTIONALITY                    |
++   +----------------------------------------------------------------------+
++ */
++
++ZEND_BEGIN_ARG_INFO_EX(dio_raw_args, 0, 0, 2)
++	ZEND_ARG_INFO(0, filename)
++	ZEND_ARG_INFO(0, mode)
++	ZEND_ARG_INFO(0, options)
++ZEND_END_ARG_INFO()
++
++ZEND_BEGIN_ARG_INFO_EX(dio_serial_args, 0, 0, 2)
++	ZEND_ARG_INFO(0, filename)
++	ZEND_ARG_INFO(0, mode)
++	ZEND_ARG_INFO(0, options)
++ZEND_END_ARG_INFO()
++
++static zend_object_handlers dio_raw_object_handlers;
++
++static zend_function_entry dio_functions[] = {
++	/* Class functions. */
++
++	/* Legacy functions (Deprecated - See dio_legacy.c) */
++	PHP_FE(dio_open, dio_open_args)
++#ifndef PHP_WIN32
++	PHP_FE(dio_fdopen, dio_fdopen_args)
++	PHP_FE(dio_dup, dio_dup_args)
++	PHP_FE(dio_truncate, dio_truncate_args)
++#endif
++	PHP_FE(dio_stat, dio_stat_args)
++	PHP_FE(dio_seek, dio_seek_args)
++#ifndef PHP_WIN32
++	PHP_FE(dio_fcntl, dio_fcntl_args)
++#endif
++	PHP_FE(dio_read, dio_read_args)
++	PHP_FE(dio_write, dio_write_args)
++	PHP_FE(dio_close, dio_close_args)
++#ifndef PHP_WIN32
++	PHP_FE(dio_tcsetattr, dio_tcsetattr_args)
++#endif
++
++	/* Stream functions */
++	PHP_FE(dio_raw, dio_raw_args)
++	PHP_FE(dio_serial, dio_serial_args)
++
++	/* End of functions */
++	{NULL, NULL, NULL}
++};
++
++zend_module_entry dio_module_entry = {
++	STANDARD_MODULE_HEADER,
++	"dio",
++	dio_functions,
++	PHP_MINIT(dio),
++	NULL,
++	NULL,	
++	NULL,
++	PHP_MINFO(dio),
++	PHP_DIO_VERSION,
++	STANDARD_MODULE_PROPERTIES
++};
++
++#ifdef COMPILE_DL_DIO
++ZEND_GET_MODULE(dio)
++#endif
++
++#define DIO_UNDEF_CONST -1
++
++/* {{{ PHP_MINIT_FUNCTION
++ */
++PHP_MINIT_FUNCTION(dio)
++{
++	/* Legacy resource destructor. */
++	le_fd = zend_register_list_destructors_ex(_dio_close_fd, NULL, le_fd_name, module_number);
++
++	dio_init_legacy_defines(module_number TSRMLS_CC);
++
++	/* Register the stream wrappers */
++	return (php_register_url_stream_wrapper(DIO_RAW_STREAM_NAME, &php_dio_raw_stream_wrapper TSRMLS_CC) == SUCCESS &&
++			php_register_url_stream_wrapper(DIO_SERIAL_STREAM_NAME, &php_dio_serial_stream_wrapper TSRMLS_CC) == SUCCESS) ? SUCCESS : FAILURE;
++}
++/* }}} */
++
++/* {{{ PHP_MSHUTDOWN_FUNCTION
++ */
++PHP_MSHUTDOWN_FUNCTION(dio)
++{
++	return (php_unregister_url_stream_wrapper(DIO_RAW_STREAM_NAME TSRMLS_CC) == SUCCESS &&
++			php_unregister_url_stream_wrapper(DIO_SERIAL_STREAM_NAME TSRMLS_CC) == SUCCESS) ? SUCCESS : FAILURE;
++}
++/* }}} */
++
++/* {{{ PHP_MINFO_FUNCTION
++ */
++PHP_MINFO_FUNCTION(dio)
++{
++	php_info_print_table_start();
++	php_info_print_table_header(2, "dio support", "enabled");
++	php_info_print_table_row(2, "version", PHP_DIO_VERSION);
++	php_info_print_table_end();
++}
++/* }}} */
++
++/*
++ * Local variables:
++ * c-basic-offset: 4
++ * tab-width: 4
++ * End:
++ * vim600: fdm=marker
++ * vim: sw=4 ts=4 noet
++ */
+--- /dev/null
++++ b/ext/dio/dio_common.c
+@@ -0,0 +1,230 @@
++/*
++   +----------------------------------------------------------------------+
++   | PHP Version 5                                                        |
++   +----------------------------------------------------------------------+
++   | Copyright (c) 2009 Melanie Rhianna Lewis                             |
++   +----------------------------------------------------------------------+
++   | This source file is subject to version 3.0 of the PHP license,       |
++   | that is bundled with this package in the file LICENSE, and is        |
++   | available through the world-wide-web at the following url:           |
++   | http://www.php.net/license/3_0.txt.                                  |
++   | If you did not receive a copy of the PHP license and are unable to   |
++   | obtain it through the world-wide-web, please send a note to          |
++   | license@php.net so we can mail you a copy immediately.               |
++   +----------------------------------------------------------------------+
++   | Author: Melanie Rhianna Lewis <cyberspice@php.net>                   |
++   +----------------------------------------------------------------------+
++ */
++
++#ifdef HAVE_CONFIG_H
++#include "config.h"
++#endif
++
++#include "php.h"
++
++#include "php_dio.h"
++#include "php_dio_common.h"
++
++/* {{{ dio_init_stream_data
++ * Initialises the command parts of the stream data.
++ */
++void dio_init_stream_data(php_dio_stream_data *data) {
++	data->stream_type = DIO_STREAM_TYPE_NONE;
++	data->end_of_file = 0;
++#ifdef DIO_HAS_FILEPERMS
++	data->has_perms = 0;
++	data->perms = 0;
++#endif
++#ifdef DIO_NONBLOCK
++	data->is_blocking = 1;
++	data->has_timeout = 0;
++	data->timeout_sec = 0;
++	data->timeout_usec = 0;
++	data->timed_out = 0;
++#endif
++	/* Serial options */
++	data->data_rate = 9600;
++	data->data_bits = 8;
++	data->stop_bits = 1;
++	data->parity = 0;
++	data->flow_control = 1;
++	data->canonical = 1;
++}
++/* }}} */
++
++/* {{{ dio_convert_to_long
++ * Returns as a long, the value of the zval regardless of its type.
++ */
++long dio_convert_to_long(zval *val) {
++	zval *copyval;
++	long  longval;
++
++	ALLOC_INIT_ZVAL(copyval);
++	*copyval = *val;
++	convert_to_long(copyval);
++	longval = Z_LVAL_P(copyval);
++	zval_ptr_dtor(&copyval);
++
++	return longval;
++}
++/* }}} */
++
++/* {{{ dio_assoc_array_get_basic_options
++ * Retrieves the basic open option values from an associative array
++ */
++void dio_assoc_array_get_basic_options(zval *options, php_dio_stream_data *data TSRMLS_DC) {
++#if defined(DIO_HAS_FILEPERMS) || defined(DIO_NONBLOCK)
++	zval **tmpzval;
++	HashTable *opthash;
++
++	opthash = HASH_OF(options);
++#endif
++
++#ifdef DIO_HAS_FILEPERMS
++	/* This is the file mode flags used by open(). */
++	if (zend_hash_find(opthash, "perms", sizeof("perms"), (void **)&tmpzval) == SUCCESS && tmpzval && *tmpzval) {
++		data->perms = (int)dio_convert_to_long(*tmpzval);
++		data->has_perms = 1;
++	}
++#endif
++
++#ifdef DIO_NONBLOCK
++	/* This sets the underlying stream to be blocking/non
++	   block (i.e. O_NONBLOCK) */
++	if (zend_hash_find(opthash, "is_blocking", sizeof("is_blocking"), (void **)&tmpzval) == SUCCESS && tmpzval && *tmpzval) {
++		data->is_blocking = dio_convert_to_long(*tmpzval) ? 1 : 0;
++	}
++
++	/* This is the timeout value for reads in seconds.  Only one of
++	   timeout_secs or timeout_usecs need be defined to define a timeout. */
++	if (zend_hash_find(opthash, "timeout_secs", sizeof("timeout_secs"), (void **)&tmpzval) == SUCCESS && tmpzval && *tmpzval) {
++		data->timeout_sec = dio_convert_to_long(*tmpzval);
++	}
++
++	/* This is the timeout value for reads in microseconds.  Only one of
++	   timeout_secs or timeout_usecs need be defined to define a timeout. */
++	if (zend_hash_find(opthash, "timeout_usecs", sizeof("timeout_usecs"), (void **)&tmpzval) == SUCCESS && tmpzval && *tmpzval) {
++		data->timeout_usec = dio_convert_to_long(*tmpzval);
++	}
++
++	data->has_timeout = (data->timeout_sec | data->timeout_usec) ? 1 : 0;
++#endif
++}
++/* }}} */
++
++/* {{{ dio_assoc_array_get_serial_options
++ * Retrieves the serial open option values from an associative array
++ */
++void dio_assoc_array_get_serial_options(zval *options, php_dio_stream_data *data TSRMLS_DC) {
++	zval **tmpzval;
++	HashTable *opthash;
++
++	opthash = HASH_OF(options);
++
++	if (zend_hash_find(opthash, "data_rate", sizeof("data_rate"), (void **)&tmpzval) == SUCCESS && tmpzval && *tmpzval) {
++		data->data_rate = dio_convert_to_long(*tmpzval);
++	}
++
++	if (zend_hash_find(opthash, "data_bits", sizeof("data_bits"), (void **)&tmpzval) == SUCCESS && tmpzval && *tmpzval) {
++		data->data_bits = (int)dio_convert_to_long(*tmpzval);
++	}
++
++	if (zend_hash_find(opthash, "stop_bits", sizeof("stop_bits"), (void **)&tmpzval) == SUCCESS && tmpzval && *tmpzval) {
++		data->stop_bits = (int)dio_convert_to_long(*tmpzval);
++	}
++
++	if (zend_hash_find(opthash, "parity", sizeof("parity"), (void **)&tmpzval) == SUCCESS && tmpzval && *tmpzval) {
++		data->parity = (int)dio_convert_to_long(*tmpzval);
++	}
++
++	if (zend_hash_find(opthash, "flow_control", sizeof("flow_control"), (void **)&tmpzval) == SUCCESS && tmpzval && *tmpzval) {
++		data->flow_control = (int)(dio_convert_to_long(*tmpzval) ? 1 : 0);
++	}
++
++	if (zend_hash_find(opthash, "is_canonical", sizeof("is_canonical"), (void **)&tmpzval) == SUCCESS && tmpzval && *tmpzval) {
++		data->canonical = (int)(dio_convert_to_long(*tmpzval) ? 1 : 0);
++	}
++}
++/* }}} */
++
++/* {{{ dio_stream_context_get_raw_options
++ * Extracts the option values for dio.raw mode from a context
++ */
++void dio_stream_context_get_basic_options(php_stream_context *context, php_dio_stream_data *data TSRMLS_DC) {
++#if defined(DIO_HAS_FILEPERMS) || defined(DIO_NONBLOCK)
++	zval **tmpzval;
++#endif
++
++#ifdef DIO_HAS_FILEPERMS
++	/* This is the file mode flags used by open(). */
++	if (php_stream_context_get_option(context, "dio", "perms", &tmpzval) == SUCCESS && tmpzval && *tmpzval) {
++		data->perms = (int)dio_convert_to_long(*tmpzval);
++		data->has_perms = 1;
++	}
++#endif
++
++#ifdef DIO_NONBLOCK
++	/* This sets the underlying stream to be blocking/non
++	   block (i.e. O_NONBLOCK) */
++	if (php_stream_context_get_option(context, "dio", "is_blocking", &tmpzval) == SUCCESS && tmpzval && *tmpzval) {
++		data->is_blocking = dio_convert_to_long(*tmpzval) ? 1 : 0;
++	}
++
++	/* This is the timeout value for reads in seconds.  Only one of
++	   timeout_secs or timeout_usecs need be defined to define a timeout. */
++	if (php_stream_context_get_option(context, "dio", "timeout_secs", &tmpzval) == SUCCESS && tmpzval && *tmpzval) {
++		data->timeout_sec = dio_convert_to_long(*tmpzval);
++	}
++
++	/* This is the timeout value for reads in microseconds.  Only one of
++	   timeout_secs or timeout_usecs need be defined to define a timeout. */
++	if (php_stream_context_get_option(context, "dio", "timeout_usecs", &tmpzval) == SUCCESS && tmpzval && *tmpzval) {
++		data->timeout_usec = dio_convert_to_long(*tmpzval);
++	}
++
++	data->has_timeout = (data->timeout_sec | data->timeout_usec) ? 1 : 0;
++#endif
++}
++/* }}} */
++
++/* {{{ dio_stream_context_get_serial_options
++ * Extracts the option values for dio.serial mode from a context
++ */
++void dio_stream_context_get_serial_options(php_stream_context *context, php_dio_stream_data *data TSRMLS_DC) {
++	zval **tmpzval;
++
++	if (php_stream_context_get_option(context, "dio", "data_rate", &tmpzval) == SUCCESS && tmpzval && *tmpzval) {
++		data->data_rate = dio_convert_to_long(*tmpzval);
++	}
++
++	if (php_stream_context_get_option(context, "dio", "data_bits", &tmpzval) == SUCCESS && tmpzval && *tmpzval) {
++		data->data_bits = (int)dio_convert_to_long(*tmpzval);
++	}
++
++	if (php_stream_context_get_option(context, "dio", "stop_bits", &tmpzval) == SUCCESS && tmpzval && *tmpzval) {
++		data->stop_bits = (int)dio_convert_to_long(*tmpzval);
++	}
++
++	if (php_stream_context_get_option(context, "dio", "parity", &tmpzval) == SUCCESS && tmpzval && *tmpzval) {
++		data->parity = (int)dio_convert_to_long(*tmpzval);
++	}
++
++	if (php_stream_context_get_option(context, "dio", "flow_control", &tmpzval) == SUCCESS && tmpzval && *tmpzval) {
++		data->flow_control = (int)(dio_convert_to_long(*tmpzval) ? 1 : 0);
++	}
++
++	if (php_stream_context_get_option(context, "dio", "is_canonical", &tmpzval) == SUCCESS && tmpzval && *tmpzval) {
++		data->canonical = (int)(dio_convert_to_long(*tmpzval) ? 1 : 0);
++	}
++}
++/* }}} */
++
++/*
++ * Local variables:
++ * c-basic-offset: 4
++ * tab-width: 4
++ * End:
++ * vim600: fdm=marker
++ * vim: sw=4 ts=4 noet
++ */
++
+--- /dev/null
++++ b/ext/dio/dio_posix.c
+@@ -0,0 +1,659 @@
++/*
++   +----------------------------------------------------------------------+
++   | PHP Version 5                                                        |
++   +----------------------------------------------------------------------+
++   | Copyright (c) 2009 Melanie Rhianna Lewis                             |
++   +----------------------------------------------------------------------+
++   | This source file is subject to version 3.0 of the PHP license,       |
++   | that is bundled with this package in the file LICENSE, and is        |
++   | available through the world-wide-web at the following url:           |
++   | http://www.php.net/license/3_0.txt.                                  |
++   | If you did not receive a copy of the PHP license and are unable to   |
++   | obtain it through the world-wide-web, please send a note to          |
++   | license@php.net so we can mail you a copy immediately.               |
++   +----------------------------------------------------------------------+
++   | Author: Melanie Rhianna Lewis <cyberspice@php.net>                   |
++   +----------------------------------------------------------------------+
++ */
++
++#ifdef HAVE_CONFIG_H
++#include "config.h"
++#endif
++
++#include "php.h"
++
++#include "php_dio_common.h"
++
++/* {{{ dio_stream_mode_to_flags
++ * Convert an fopen() mode string to open() flags
++ */
++static int dio_stream_mode_to_flags(const char *mode) {
++	int  flags = 0, ch = 0, bin = 1;
++
++	switch(mode[ch++]) {
++		case 'r':
++			flags = 0;
++			break;
++		case 'w':
++			flags = O_TRUNC | O_CREAT;
++			break;
++		case 'a':
++			flags = O_APPEND | O_CREAT;
++			break;
++		case 'x':
++			flags = O_EXCL | O_CREAT;
++			break;
++	}
++
++	if (mode[ch] != '+') {
++		bin = (mode[ch++] == 'b');
++	}
++
++	if (mode[ch] == '+') {
++		flags |= O_RDWR;
++	} else if (flags) {
++		flags |= O_WRONLY;
++	} else {
++		flags |= O_RDONLY;
++	}
++
++#if defined(_O_TEXT) && defined(O_BINARY)
++	if (bin) {
++		flags |= O_BINARY;
++	} else {
++		flags |= _O_TEXT;
++	}
++#endif
++
++	return flags;
++}
++/* }}} */
++
++/* {{{ dio_data_rate_to_define
++ * Converts a numeric data rate to a termios define
++ */
++static int dio_data_rate_to_define(long rate, speed_t *def) {
++	speed_t val;
++
++	switch (rate) {
++		case 0:
++			val = 0;
++			break;
++		case 50:
++			val = B50;
++			break;
++		case 75:
++			val = B75;
++			break;
++		case 110:
++			val = B110;
++			break;
++		case 134:
++			val = B134;
++			break;
++		case 150:
++			val = B150;
++			break;
++		case 200:
++			val = B200;
++			break;
++		case 300:
++			val = B300;
++			break;
++		case 600:
++			val = B600;
++			break;
++		case 1200:
++			val = B1200;
++			break;
++		case 1800:
++			val = B1800;
++			break;
++		case 2400:
++			val = B2400;
++			break;
++		case 4800:
++			val = B4800;
++			break;
++		case 9600:
++			val = B9600;
++			break;
++		case 19200:
++			val = B19200;
++			break;
++		case 38400:
++			val = B38400;
++			break;
++#ifdef B57600
++		case 57600:
++			val = B57600;
++			break;
++#endif
++#ifdef B115200
++		case 115200:
++			val = B115200;
++			break;
++#endif
++#ifdef B230400
++		case 230400:
++			val = B230400;
++			break;
++#endif
++#ifdef B460800
++		case 460800:
++			val = B460800;
++			break;
++#endif
++		default:
++			return 0;
++	}
++
++	*def = val;
++	return 1;
++}
++
++/* {{{ dio_data_bits_to_define
++ * Converts a number of data bits to a termios define
++ */
++static int dio_data_bits_to_define(int data_bits, int *def) {
++	int val;
++
++	switch (data_bits) {
++		case 8:
++			val = CS8;
++			break;
++		case 7:
++			val = CS7;
++			break;
++		case 6:
++			val = CS6;
++			break;
++		case 5:
++			val = CS5;
++			break;
++		default:
++			return 0;
++	}
++
++	*def = val;
++	return 1;
++}
++/* }}} */
++
++/* {{{ dio_stop_bits_to_define
++ * Converts a number of stop bits to a termios define
++ */
++static int dio_stop_bits_to_define(int stop_bits, int *def) {
++	int val;
++
++	switch (stop_bits) {
++		case 1:
++			val = 0;
++			break;
++		case 2:
++			val = CSTOPB;
++			break;
++		default:
++			return 0;
++	}
++
++	*def = val;
++	return 1;
++}
++/* }}} */
++
++/* {{{ dio_parity_to_define
++ * Converts a parity type to a termios define
++ */
++static int dio_parity_to_define(int parity, int *def) {
++	int val;
++
++	switch (parity) {
++		case 0:
++			val = 0;
++			break;
++		case 1:
++			val = PARENB | PARODD;
++			break;
++		case 2:
++			val = PARENB;
++			break;
++		default:
++			return 0;
++	}
++
++	*def = val;
++	return 1;
++}
++/* }}} */
++
++/* {{{ dio_create_stream_data
++ * Creates an initialised stream data structure.  Free with efree().
++ */
++php_dio_stream_data * dio_create_stream_data(void) {
++	php_dio_posix_stream_data * data = emalloc(sizeof(php_dio_posix_stream_data));
++	dio_init_stream_data(&(data->common));
++	data->fd = -1;
++	data->flags = 0;
++
++	return (php_dio_stream_data *)data;
++}
++/* }}} */
++
++/* {{{ dio_common_write
++ * Writes count chars from the buffer to the stream described by the stream data.
++ */
++size_t dio_common_write(php_dio_stream_data *data, const char *buf, size_t count) {
++	size_t ret;
++
++	/* Blocking writes can be interrupted by signals etc. If
++	 * interrupted try again. Not sure about non-blocking
++	 * writes but it doesn't hurt to check. */
++	do {
++		ret = write(((php_dio_posix_stream_data*)data)->fd, buf, count);
++		if (ret > 0) {
++			return ret;
++		}
++	} while (errno == EINTR);
++	return 0;
++}
++/* }}} */
++
++#ifdef DIO_NONBLOCK
++/* {{{ dio_timeval_subtract
++ * Calculates the difference between two timevals returning the result in the
++ * structure pointed to by diffptr.  Returns -1 as error if late time is
++ * earlier than early time.
++ */
++static int dio_timeval_subtract(struct timeval *late, struct timeval *early, struct timeval *diff) {
++	struct timeval *tmp;
++
++	/* Handle negatives */
++	if (late->tv_sec < early->tv_sec) {
++		return 0;
++	}
++
++	if ((late->tv_sec == early->tv_sec) && (late->tv_usec < early->tv_usec)) {
++		return 0;
++	}
++
++	/* Handle any carry.  If later usec is smaller than earlier usec simple
++	 * subtraction will result in negative value.  Since usec has a maximum
++	 * of one second by adding another second before the subtraction the
++	 * result will always be positive. */
++	if (late->tv_usec < early->tv_usec) {
++		late->tv_usec  += 1000000;
++		late->tv_sec--;
++	}
++
++	/* Once adjusted can just subtract values. */
++	diff->tv_sec  = late->tv_sec  - early->tv_sec;
++	diff->tv_usec = late->tv_usec - early->tv_usec;
++
++	return 1;
++}
++#endif
++
++/* {{{ dio_common_read
++ * Reads count chars to the buffer to the stream described by the stream data.
++ */
++size_t dio_common_read(php_dio_stream_data *data, const char *buf, size_t count) {
++	int fd = ((php_dio_posix_stream_data*)data)->fd;
++	size_t ret, total = 0;
++	char *ptr = (char*)buf;
++
++	struct timeval timeout, timeouttmp, before, after, diff;
++	fd_set rfds;
++
++	if (!data->has_timeout) {
++		/* Blocking reads can be interrupted by signals etc. If
++		 * interrupted try again. Not sure about non-blocking
++		 * reads but it doesn't hurt to check. */
++		do {
++			ret = read(fd, (char*)ptr, count);
++			if (ret > 0) {
++				return ret;
++			} else if (!ret) {
++				data->end_of_file = 1;
++			}
++		} while ((errno == EINTR) && !data->end_of_file);
++		return 0;
++	}
++#ifdef DIO_NONBLOCK
++	else {
++		/* Clear timed out flag */
++		data->timed_out = 0;
++
++		/* The initial timeout value */
++		timeout.tv_sec  = data->timeout_sec;
++		timeout.tv_usec = data->timeout_usec;
++
++		do {
++			/* The semantics of select() are that you cannot guarantee
++			 * that the timeval structure passed in has not been changed by
++			 * the select call.  So you keep a copy. */
++			timeouttmp = timeout;
++
++			/* The time before we wait for data. */
++			(void) gettimeofday(&before, NULL);
++
++			/* Wait for an event on our file descriptor. */
++			FD_ZERO(&rfds);
++			FD_SET(fd, &rfds);
++
++			ret = select(fd + 1, &rfds, NULL, NULL, &timeouttmp);
++			/* An error. */
++			if ((ret < 0) && (errno != EINTR) && (errno != EAGAIN)) {
++				return 0;
++			}
++
++			/* We have data to read. */
++			if ((ret > 0) && FD_ISSET(fd, &rfds)) {
++				ret = read(fd, ptr, count);
++				/* Another error */
++				if ((ret < 0) && (errno != EINTR) && (errno != EAGAIN)) {
++					return 0;
++				}
++
++				if (ret > 0) {
++					/* Got data, add it to the buffer. */
++					ptr   += ret;
++					total += ret;
++					count -= ret;
++				} else if (!ret) {
++					/* This should never happen since how can we have
++					 * data to read at an end of file, but still
++					 * just in case! */
++					data->end_of_file = 1;
++					break;
++				}
++			}
++
++			/* If not timed out and not end of file and not all data read
++			 * calculate how long it took us and loop if we still have time
++			 * out time left. */
++			if (count) {
++				(void) gettimeofday(&after, NULL);
++
++				/* Diff the timevals */
++				(void) dio_timeval_subtract(&after, &before, &diff);
++
++				/* Now adjust the timeout. */
++				if (!dio_timeval_subtract(&timeout, &diff, &timeout)) {
++					/* If it errors we've run out of time. */
++					data->timed_out = 1;
++					break;
++				} else if (!timeout.tv_sec && !(timeout.tv_usec / 1000)) {
++					/* Check for rounding issues (millisecond accuracy) */
++					data->timed_out = 1;
++					break;
++				}
++			}
++		} while (count); /* Until time out or end of file or all data read. */
++
++		return total;
++	}
++#endif
++}
++/* }}} */
++
++/* {{{ php_dio_stream_data
++ * Closes the php_stream.
++ */
++int dio_common_close(php_dio_stream_data *data) {
++	if (close(((php_dio_posix_stream_data*)data)->fd) < 0) {
++		return 0;
++	}
++
++	return 1;
++}
++/* }}} */
++
++/* {{{ dio_common_set_option
++ * Sets/gets stream options
++ */
++int dio_common_set_option(php_dio_stream_data *data, int option, int value, void *ptrparam) {
++	int fd = ((php_dio_posix_stream_data*)data)->fd;
++	int old_is_blocking;
++	int flags;
++
++	switch (option) {
++#ifdef DIO_NONBLOCK
++		case PHP_STREAM_OPTION_READ_TIMEOUT:
++			if (ptrparam) {
++				struct timeval *tv = (struct timeval*)ptrparam;
++
++				flags = fcntl(fd, F_GETFL, 0);
++
++				/* A timeout of zero seconds and zero microseconds disables
++				   any existing timeout. */
++				if (tv->tv_sec || tv->tv_usec) {
++					data->timeout_sec = tv->tv_sec;
++					data->timeout_usec = tv->tv_usec;
++					data->has_timeout = -1;
++					(void) fcntl(fd, F_SETFL, flags & ~DIO_NONBLOCK);
++				} else {
++					data->timeout_sec = 0;
++					data->timeout_usec = 0;
++					data->has_timeout = 0;
++					data->timed_out = 0;
++					(void) fcntl(fd, F_SETFL, flags | DIO_NONBLOCK);
++				}
++
++				return PHP_STREAM_OPTION_RETURN_OK;
++			} else {
++				return PHP_STREAM_OPTION_RETURN_ERR;
++			}
++
++		case PHP_STREAM_OPTION_BLOCKING:
++			flags = fcntl(fd, F_GETFL, 0);
++			if (value) {
++				flags &= ~DIO_NONBLOCK;
++			} else {
++				flags |= DIO_NONBLOCK;
++			}
++			(void) fcntl(fd, F_SETFL, flags);
++
++			old_is_blocking = data->is_blocking;
++			data->is_blocking = value;
++			return old_is_blocking ? PHP_STREAM_OPTION_RETURN_OK : PHP_STREAM_OPTION_RETURN_ERR;
++#endif /* O_NONBLOCK */
++
++		default:
++			break;
++	}
++
++	return 1;
++}
++/* }}} */
++
++/* {{{ dio_raw_open_stream
++ * Opens the underlying stream.
++ */
++int dio_raw_open_stream(char *filename, char *mode, php_dio_stream_data *data TSRMLS_DC) {
++	php_dio_posix_stream_data *pdata = (php_dio_posix_stream_data*)data;
++	pdata->flags = dio_stream_mode_to_flags(mode);
++
++#ifdef DIO_NONBLOCK
++	if (!data->is_blocking || data->has_timeout) {
++		pdata->flags |= DIO_NONBLOCK;
++	}
++#endif
++
++	/* Open the file and handle any errors. */
++#ifdef DIO_HAS_FILEPERMS
++	if (data->has_perms) {
++		pdata->fd = open(filename, pdata->flags, (mode_t)data->perms);
++	} else {
++		pdata->fd = open(filename, pdata->flags);
++	}
++#else
++	pdata->fd = open(filename, pdata->flags);
++#endif
++
++	if (pdata->fd < 0) {
++		switch (errno) {
++			case EEXIST:
++				php_error_docref(NULL TSRMLS_CC, E_WARNING, "File exists!");
++				return 0;
++			default:
++				return 0;
++		}
++	}
++
++	return 1;
++}
++/* }}} */
++
++/* {{{ dio_serial_init
++ * Initialises the serial settings storing the original settings before hand.
++ */
++static int dio_serial_init(php_dio_stream_data *data TSRMLS_DC) {
++	php_dio_posix_stream_data *pdata = (php_dio_posix_stream_data*)data;
++	int ret = 0, data_bits_def, stop_bits_def, parity_def;
++	struct termios tio;
++	speed_t rate_def;
++
++	if (!dio_data_rate_to_define(data->data_rate, &rate_def)) {
++		php_error_docref(NULL TSRMLS_CC, E_WARNING, "invalid data_rate value (%ld)", data->data_rate);
++		return 0;
++	}
++
++	if (!dio_data_bits_to_define(data->data_bits, &data_bits_def)) {
++		php_error_docref(NULL TSRMLS_CC, E_WARNING, "invalid data_bits value (%d)", data->data_bits);
++		return 0;
++	}
++
++	if (!dio_stop_bits_to_define(data->stop_bits, &stop_bits_def)) {
++		php_error_docref(NULL TSRMLS_CC, E_WARNING, "invalid stop_bits value (%d)", data->stop_bits);
++		return 0;
++	}
++
++	if (!dio_parity_to_define(data->parity, &parity_def)) {
++		php_error_docref(NULL TSRMLS_CC, E_WARNING, "invalid parity value (%d)", data->parity);
++		return 0;
++	}
++
++	ret = tcgetattr(pdata->fd, &(pdata->oldtio));
++	if (ret < 0) {
++		if ((errno == ENOTTY) || (errno == ENODEV)) {
++			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Not a serial port or terminal!");
++		}
++		return 0;
++	}
++
++	ret = tcgetattr(pdata->fd, &tio);
++	if (ret < 0) {
++		return 0;
++	}
++
++	if (data->canonical) {
++		tio.c_iflag = IGNPAR | ICRNL;
++		tio.c_oflag = 0;
++		tio.c_lflag = ICANON;
++	} else {
++		cfmakeraw(&tio);
++	}
++
++	cfsetispeed(&tio, rate_def);
++	cfsetospeed(&tio, rate_def);
++
++	tio.c_cflag &= ~CSIZE;
++	tio.c_cflag |= data_bits_def;
++	tio.c_cflag &= ~CSTOPB;
++	tio.c_cflag |= stop_bits_def;
++	tio.c_cflag &= ~(PARENB|PARODD);
++	tio.c_cflag |= parity_def;
++
++#ifdef CRTSCTS
++	tio.c_cflag &= ~(CLOCAL | CRTSCTS);
++#else
++	tio.c_cflag &= ~CLOCAL;
++#endif
++	if (!data->flow_control) {
++		tio.c_cflag |= CLOCAL;
++#ifdef CRTSCTS
++	} else {
++		tio.c_cflag |= CRTSCTS;
++#endif
++	}
++
++	ret = tcsetattr(pdata->fd, TCSANOW, &tio);
++	if (ret < 0) {
++		return 0;
++	}
++
++	return 1;
++}
++/* }}} */
++
++/* {{{ dio_serial_uninit
++ * Restores the serial settings back to their original state.
++ */
++int dio_serial_uninit(php_dio_stream_data *data) {
++	php_dio_posix_stream_data *pdata = (php_dio_posix_stream_data*)data;
++	int ret;
++
++	do {
++		ret = tcsetattr(pdata->fd, TCSANOW, &(pdata->oldtio));
++	} while ((ret < 0) && (errno == EINTR));
++
++	return 1;
++}
++/* }}} */
++
++/* {{{ dio_serial_flush
++ * Purges the serial buffers of data.
++ */
++int dio_serial_purge(php_dio_stream_data *data) {
++	php_dio_posix_stream_data *pdata = (php_dio_posix_stream_data*)data;
++	int ret;
++
++	if ((pdata->flags & O_RDWR) == O_RDWR) {
++		ret = tcflush(pdata->fd, TCIOFLUSH);
++	} else if ((pdata->flags & O_WRONLY) == O_WRONLY) {
++		ret = tcflush(pdata->fd, TCOFLUSH);
++	} else if ((pdata->flags & O_RDONLY) == O_RDONLY) {
++		ret = tcflush(pdata->fd, TCIFLUSH);
++	}
++
++	if (ret < 0) {
++		return 0;
++	}
++
++	return 1;
++}
++/* }}} */
++
++/* {{{ dio_serial_open_stream
++ * Opens the underlying stream.
++ */
++int dio_serial_open_stream(char *filename, char *mode, php_dio_stream_data *data TSRMLS_DC) {
++	php_dio_posix_stream_data *pdata = (php_dio_posix_stream_data*)data;
++
++#ifdef O_NOCTTY
++	/* We don't want a controlling TTY */
++	pdata->flags |= O_NOCTTY;
++#endif
++
++	if (!dio_raw_open_stream(filename, mode, data TSRMLS_CC)) {
++		return 0;
++	}
++
++	if (!dio_serial_init(data TSRMLS_CC)) {
++		close(pdata->fd);
++		return 0;
++	}
++
++	return 1;
++}
++/* }}} */
++
++/*
++ * Local variables:
++ * c-basic-offset: 4
++ * tab-width: 4
++ * End:
++ * vim600: fdm=marker
++ * vim: sw=4 ts=4 noet
++ */
+--- /dev/null
++++ b/ext/dio/dio_stream_wrappers.c
+@@ -0,0 +1,406 @@
++/*
++   +----------------------------------------------------------------------+
++   | PHP Version 5                                                        |
++   +----------------------------------------------------------------------+
++   | Copyright (c) 2009 Melanie Rhianna Lewis                             |
++   +----------------------------------------------------------------------+
++   | This source file is subject to version 3.0 of the PHP license,       |
++   | that is bundled with this package in the file LICENSE, and is        |
++   | available through the world-wide-web at the following url:           |
++   | http://www.php.net/license/3_0.txt.                                  |
++   | If you did not receive a copy of the PHP license and are unable to   |
++   | obtain it through the world-wide-web, please send a note to          |
++   | license@php.net so we can mail you a copy immediately.               |
++   +----------------------------------------------------------------------+
++   | Author: Melanie Rhianna Lewis <cyberspice@php.net>                   |
++   +----------------------------------------------------------------------+
++ */
++
++#ifdef HAVE_CONFIG_H
++#include "config.h"
++#endif
++
++#include "php.h"
++#include "ext/standard/url.h"
++
++#include "php_dio.h"
++#include "php_dio_common.h"
++#include "php_dio_stream_wrappers.h"
++
++/*
++   +----------------------------------------------------------------------+
++   | Raw stream handling                                                  |
++   +----------------------------------------------------------------------+
++*/
++
++/* {{{ dio_stream_write
++ * Write to the stream
++ */
++static size_t dio_stream_write(php_stream *stream, const char *buf, size_t count TSRMLS_DC)
++{
++	return dio_common_write((php_dio_stream_data*)stream->abstract, buf, count);
++}
++/* }}} */
++
++/* {{{ dio_stream_read
++ * Read from the stream
++ */
++static size_t dio_stream_read(php_stream *stream, char *buf, size_t count TSRMLS_DC)
++{
++	php_dio_stream_data* data = (php_dio_stream_data*)stream->abstract;
++	size_t bytes = dio_common_read(data, buf, count);
++	stream->eof = data->end_of_file;
++
++	return bytes;
++}
++/* }}} */
++
++/* {{{ dio_stream_flush
++ * Flush the stream.  For raw streams this does nothing.
++ */
++static int dio_stream_flush(php_stream *stream TSRMLS_DC)
++{
++	return 1;
++}
++/* }}} */
++
++/* {{{ dio_stream_close
++ * Close the stream
++ */
++static int dio_stream_close(php_stream *stream, int close_handle TSRMLS_DC)
++{
++	php_dio_stream_data *abstract = (php_dio_stream_data*)stream->abstract;
++
++	if (!dio_common_close(abstract)) {
++		return 0;
++	}
++
++	efree(abstract);
++	return 1;
++}
++/* }}} */
++
++/* {{{ dio_stream_set_option
++ * Set the stream options.
++ */
++static int dio_stream_set_option(php_stream *stream, int option, int value, void *ptrparam TSRMLS_DC)
++{
++	php_dio_stream_data *abstract = (php_dio_stream_data*)stream->abstract;
++
++	switch (option) {
++		case PHP_STREAM_OPTION_META_DATA_API:
++#ifdef DIO_NONBLOCK
++			add_assoc_bool((zval *)ptrparam, "timed_out", abstract->timed_out);
++			add_assoc_bool((zval *)ptrparam, "blocked", abstract->is_blocking);
++#endif
++			add_assoc_bool((zval *)ptrparam, "eof", stream->eof);
++			return PHP_STREAM_OPTION_RETURN_OK;
++
++#if PHP_MAJOR_VERSION >= 5
++		case PHP_STREAM_OPTION_CHECK_LIVENESS:
++			stream->eof = abstract->end_of_file;
++			return PHP_STREAM_OPTION_RETURN_OK;
++#endif /* PHP_MAJOR_VERSION >= 5 */
++
++		default:
++			break;
++	}
++
++	return dio_common_set_option(abstract, option, value, ptrparam);
++}
++/* }}} */
++
++php_stream_ops dio_raw_stream_ops = {
++	dio_stream_write,
++	dio_stream_read,
++	dio_stream_close,
++	dio_stream_flush,
++	"dio",
++	NULL, /* seek */
++	NULL, /* cast */
++	NULL, /* stat */
++	dio_stream_set_option,
++};
++
++/* {{{ dio_raw_fopen_wrapper
++ * fopen for the dio.raw stream.
++ */
++static php_stream *dio_raw_fopen_wrapper(php_stream_wrapper *wrapper,
++                                         char *path, char *mode,
++                                         int options, char **opened_path,
++                                         php_stream_context *context STREAMS_DC TSRMLS_DC) {
++	php_dio_stream_data *data;
++	php_stream *stream;
++	char *filename;
++
++	/* Check it was actually for us (not a corrupted function pointer
++	   somewhere!). */
++	if (strncmp(path, DIO_RAW_STREAM_PROTOCOL, sizeof(DIO_RAW_STREAM_PROTOCOL) - 1)) {
++		return NULL;
++	}
++
++	/* Get the actually file system name/path. */
++	filename = path + sizeof(DIO_RAW_STREAM_PROTOCOL) - 1;
++
++	/* Check we can actually access it. */
++	if (php_check_open_basedir(filename TSRMLS_CC) || DIO_SAFE_MODE_CHECK(filename, mode)) {
++		return NULL;
++	}
++
++	data = dio_create_stream_data();
++	data->stream_type = DIO_STREAM_TYPE_RAW;
++
++	/* Parse the context. */
++	if (context) {
++		dio_stream_context_get_basic_options(context, data TSRMLS_CC);
++	}
++
++	/* Try and open a raw stream. */
++	if (!dio_raw_open_stream(filename, mode, data TSRMLS_CC)) {
++		return NULL;
++	}
++
++	/* Create a PHP stream based on raw stream */
++	stream = php_stream_alloc(&dio_raw_stream_ops, data, 0, mode);
++	if (!stream) {
++		(void) dio_common_close(data);
++		efree(data);
++	}
++
++	return stream;
++}
++/* }}} */
++
++static php_stream_wrapper_ops dio_raw_stream_wops = {
++	dio_raw_fopen_wrapper,
++	NULL, /* stream_close */
++	NULL, /* stat */
++	NULL, /* stat_url */
++	NULL, /* opendir */
++	DIO_RAW_STREAM_NAME
++};
++
++php_stream_wrapper php_dio_raw_stream_wrapper = {
++	&dio_raw_stream_wops,
++	NULL,
++	0
++};
++
++/* {{{ proto dio_raw(string filename, string mode[, array options])
++ * Opens a raw direct IO stream.
++ */
++PHP_FUNCTION(dio_raw) {
++	zval *options = NULL;
++	php_dio_stream_data *data;
++	php_stream *stream;
++
++	char *filename;
++	int   filename_len;
++	char *mode;
++	int   mode_len;
++
++	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss|z", &filename, &filename_len, &mode, &mode_len, &options) == FAILURE) {
++		RETURN_FALSE;
++	}
++
++	/* Check the third argument is an array. */
++	if (options && (Z_TYPE_P(options) != IS_ARRAY)) {
++		RETURN_FALSE;
++	}
++
++	/* Check we can actually access the file. */
++	if (php_check_open_basedir(filename TSRMLS_CC) || DIO_SAFE_MODE_CHECK(filename, mode)) {
++		RETURN_FALSE;
++	}
++
++	data = dio_create_stream_data();
++	data->stream_type = DIO_STREAM_TYPE_RAW;
++
++	if (options) {
++		dio_assoc_array_get_basic_options(options, data TSRMLS_CC);
++	}
++
++	/* Try and open a raw stream. */
++	if (dio_raw_open_stream(filename, mode, data TSRMLS_CC)) {
++		stream = php_stream_alloc(&dio_raw_stream_ops, data, 0, mode);
++		if (!stream) {
++			(void) dio_common_close(data);
++			efree(data);
++			RETURN_FALSE;
++		}
++	}
++
++	php_stream_to_zval(stream, return_value);
++}
++/* }}} */
++
++/*
++   +----------------------------------------------------------------------+
++   | Serial stream handling                                               |
++   +----------------------------------------------------------------------+
++*/
++
++/* {{{ dio_stream_flush
++ * Flush the stream.  If the stream is read only, it flushes the read
++ * stream, if it is write only it flushes the write, otherwise it flushes
++ * both.
++ */
++static int dio_serial_stream_flush(php_stream *stream TSRMLS_DC)
++{
++	return dio_serial_purge((php_dio_stream_data*)stream->abstract);
++}
++/* }}} */
++
++/* {{{ dio_stream_close
++ * Close the stream.  Restores the serial settings to their value before
++ * the stream was open.
++ */
++static int dio_serial_stream_close(php_stream *stream, int close_handle TSRMLS_DC)
++{
++	php_dio_stream_data *abstract = (php_dio_stream_data*)stream->abstract;
++
++	if (!dio_serial_uninit(abstract)) {
++		return 0;
++	}
++
++	if (!dio_common_close(abstract)) {
++		return 0;
++	}
++
++	efree(abstract);
++	return 1;
++}
++/* }}} */
++
++php_stream_ops dio_serial_stream_ops = {
++	dio_stream_write,
++	dio_stream_read,
++	dio_serial_stream_close,
++	dio_serial_stream_flush,
++	"dio",
++	NULL, /* seek */
++	NULL, /* cast */
++	NULL, /* stat */
++	dio_stream_set_option,
++};
++
++/* {{{ dio_raw_fopen_wrapper
++ * fopen for the dio.raw stream.
++ */
++static php_stream *dio_serial_fopen_wrapper(php_stream_wrapper *wrapper,
++                                         char *path, char *mode,
++                                         int options, char **opened_path,
++                                         php_stream_context *context STREAMS_DC TSRMLS_DC) {
++	php_dio_stream_data *data;
++	php_stream *stream;
++	char *filename;
++
++	/* Check it was actually for us (not a corrupted function pointer
++	   somewhere!). */
++	if (strncmp(path, DIO_SERIAL_STREAM_PROTOCOL, sizeof(DIO_SERIAL_STREAM_PROTOCOL) - 1)) {
++		return NULL;
++	}
++
++	/* Get the actually file system name/path. */
++	filename = path + sizeof(DIO_SERIAL_STREAM_PROTOCOL) - 1;
++
++	/* Check we can actually access it. */
++	if (php_check_open_basedir(filename TSRMLS_CC) || DIO_SAFE_MODE_CHECK(filename, mode)) {
++		return NULL;
++	}
++
++	data = dio_create_stream_data();
++	data->stream_type = DIO_STREAM_TYPE_SERIAL;
++
++	/* Parse the context. */
++	if (context) {
++		dio_stream_context_get_basic_options(context, data TSRMLS_CC);
++		dio_stream_context_get_serial_options(context, data TSRMLS_CC);
++	}
++
++	/* Try and open a serial stream. */
++	if (!dio_serial_open_stream(filename, mode, data TSRMLS_CC)) {
++		return NULL;
++	}
++
++	stream = php_stream_alloc(&dio_serial_stream_ops, data, 0, mode);
++	if (!stream) {
++		efree(data);
++	}
++
++	return stream;
++}
++/* }}} */
++
++static php_stream_wrapper_ops dio_serial_stream_wops = {
++	dio_serial_fopen_wrapper,
++	NULL, /* stream_close */
++	NULL, /* stat */
++	NULL, /* stat_url */
++	NULL, /* opendir */
++	DIO_SERIAL_STREAM_NAME
++};
++
++php_stream_wrapper php_dio_serial_stream_wrapper = {
++	&dio_serial_stream_wops,
++	NULL,
++	0
++};
++
++/* {{{ proto dio_serial(string filename, string mode[, array options])
++ * Opens a serial direct IO stream.
++ */
++PHP_FUNCTION(dio_serial) {
++	zval *options = NULL;
++	php_dio_stream_data *data;
++	php_stream *stream;
++
++	char *filename;
++	int   filename_len;
++	char *mode;
++	int   mode_len;
++
++	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss|z", &filename, &filename_len, &mode, &mode_len, &options) == FAILURE) {
++		RETURN_FALSE;
++	}
++
++	/* Check the third argument is an array. */
++	if (options && (Z_TYPE_P(options) != IS_ARRAY)) {
++		php_error_docref(NULL TSRMLS_CC, E_WARNING,"dio_serial, the third argument should be an array of options");
++		RETURN_FALSE;
++	}
++
++	/* Check we can actually access the file. */
++	if (php_check_open_basedir(filename TSRMLS_CC) || DIO_SAFE_MODE_CHECK(filename, mode)) {
++		RETURN_FALSE;
++	}
++
++	data = dio_create_stream_data();
++	data->stream_type = DIO_STREAM_TYPE_SERIAL;
++
++	if (options) {
++		dio_assoc_array_get_basic_options(options, data TSRMLS_CC);
++		dio_assoc_array_get_serial_options(options, data TSRMLS_CC);
++	}
++
++	/* Try and open a serial stream. */
++	if (dio_serial_open_stream(filename, mode, data TSRMLS_CC)) {
++		stream = php_stream_alloc(&dio_serial_stream_ops, data, 0, mode);
++		if (!stream) {
++			efree(data);
++			RETURN_FALSE;
++		}
++	}
++
++	php_stream_to_zval(stream, return_value);
++}
++/* }}} */
++
++/*
++ * Local variables:
++ * c-basic-offset: 4
++ * tab-width: 4
++ * End:
++ * vim600: fdm=marker
++ * vim: sw=4 ts=4 noet
++ */
+--- /dev/null
++++ b/ext/dio/dio_win32.c
+@@ -0,0 +1,669 @@
++/*
++   +----------------------------------------------------------------------+
++   | PHP Version 5                                                        |
++   +----------------------------------------------------------------------+
++   | Copyright (c) 2009 Melanie Rhianna Lewis                             |
++   +----------------------------------------------------------------------+
++   | This source file is subject to version 3.0 of the PHP license,       |
++   | that is bundled with this package in the file LICENSE, and is        |
++   | available through the world-wide-web at the following url:           |
++   | http://www.php.net/license/3_0.txt.                                  |
++   | If you did not receive a copy of the PHP license and are unable to   |
++   | obtain it through the world-wide-web, please send a note to          |
++   | license@php.net so we can mail you a copy immediately.               |
++   +----------------------------------------------------------------------+
++   | Author: Melanie Rhianna Lewis <cyberspice@php.net>                   |
++   +----------------------------------------------------------------------+
++ */
++
++#ifdef HAVE_CONFIG_H
++#include "config.h"
++#endif
++
++#include "php.h"
++
++#include "php_dio_common.h"
++
++/* {{{ dio_data_rate_to_define
++ * Converts a numeric data rate to a termios define
++ */
++static int dio_data_rate_to_define(long rate, DWORD *def) {
++	switch (rate) {
++		case 75:
++		case 110:
++		case 134:
++		case 150:
++		case 300:
++		case 600:
++		case 1200:
++		case 1800:
++		case 2400:
++		case 4800:
++		case 7200:
++		case 9600:
++		case 14400:
++		case 19200:
++		case 38400:
++		case 57600:
++		case 115200:
++		case 56000:
++		case 128000:
++			break;
++		default:
++			return 0;
++	}
++
++	*def = (DWORD)rate;
++	return 1;
++}
++/* }}} */
++
++
++/* {{{ dio_data_bits_to_define
++ * Converts a number of data bits to a termios define
++ */
++static int dio_data_bits_to_define(int data_bits, DWORD *def) {
++	switch (data_bits) {
++		case 8:
++		case 7:
++		case 6:
++		case 5:
++		case 4:
++			break;
++		default:
++			return 0;
++	}
++
++	*def = (DWORD)data_bits;
++	return 1;
++}
++/* }}} */
++
++/* {{{ dio_stop_bits_to_define
++ * Converts a number of stop bits to a termios define
++ */
++static int dio_stop_bits_to_define(int stop_bits, DWORD *def) {
++	DWORD val;
++
++	switch (stop_bits) {
++		case 1:
++			val = 0;
++			break;
++		case 2:
++			val = 2;
++			break;
++		case 3:
++			val = 1;
++			break;
++		default:
++			return 0;
++	}
++
++	*def = val;
++	return 1;
++}
++/* }}} */
++
++/* {{{ dio_parity_to_define
++ * Converts a parity type to a termios define
++ */
++static int dio_parity_to_define(int parity, DWORD *def) {
++	switch (parity) {
++		case 0:
++		case 1:
++		case 2:
++			break;
++		default:
++			return 0;
++	}
++
++	*def = (DWORD)parity;
++	return 1;
++}
++/* }}} */
++
++/* {{{ dio_create_stream_data
++ * Creates an initialised stream data structure.  Free with efree().
++ */
++php_dio_stream_data * dio_create_stream_data(void) {
++	php_dio_win32_stream_data * data = emalloc(sizeof(php_dio_win32_stream_data));
++	memset(data, 0, sizeof(php_dio_win32_stream_data));
++	dio_init_stream_data(&(data->common));
++	data->handle = INVALID_HANDLE_VALUE;
++	data->desired_access = 0;
++	data->creation_disposition = 0;
++	data->olddcb.DCBlength = sizeof(DCB);
++
++	return (php_dio_stream_data *)data;
++}
++/* }}} */
++
++/* {{{ dio_common_write
++ * Writes count chars from the buffer to the stream described by the stream data.
++ */
++size_t dio_common_write(php_dio_stream_data *data, const char *buf, size_t count) {
++	php_dio_win32_stream_data *wdata = (php_dio_win32_stream_data*)data;
++	DWORD total = 0;
++
++	if (WriteFile(wdata->handle, buf, (DWORD)count, &total, NULL)) {
++		return (size_t)total;
++	}
++
++	return 0;
++}
++/* }}} */
++
++/* {{{ dio_buffer_read
++ * Reads any available chars from the canonical buffer.
++ */
++static size_t dio_buffer_read(php_dio_win32_stream_data *wdata, const char *buf, size_t count) {
++	php_dio_win32_canon_data *canon_data = wdata->canon_data;
++	size_t total = 0;
++
++	/* Read always follows write.  I.e. if read ptr > write ptr buffer has
++	   wrapped and so we need to copy two blocks of data. */
++	if (canon_data->read_pos > canon_data->write_pos) {
++
++		/* Check we actually need to copy both blocks */
++		if ((canon_data->size - canon_data->read_pos) > count) {
++
++			/* No we don't.  Just copy as much as we were asked for. */
++			memcpy((char*)buf, 
++				   &(canon_data->buf[canon_data->read_pos]), 
++				   count);
++			/* Update the read pointer. */
++			canon_data->read_pos += count;
++
++			/* Return the amount read. */
++			return count;
++		} else {
++
++			/* We need to copy both blocks so copy data up to the end of 
++			   the buffer. */
++			total = canon_data->size - canon_data->read_pos;
++			memcpy((char*)buf, 
++				   &(canon_data->buf[canon_data->read_pos]), 
++				   total);
++			canon_data->read_pos = 0;
++			count -= total;
++
++			/* Now copy the data from the start of the buffer either up
++			   count or the number of bytes in the buffer. */
++
++			if (canon_data->write_pos > count) {
++				memcpy((char*)buf, canon_data->buf, count);
++				canon_data->read_pos = count;
++				total += count;
++
++				return total;
++			} else {
++				memcpy((char*)buf, canon_data->buf, canon_data->write_pos);
++				canon_data->read_pos = canon_data->write_pos;
++				total += canon_data->write_pos;
++
++				return total;
++			}
++		}
++
++	/* Else if write follows read.  This is a simpler case.  We just copy 
++	   either all the data buffered or count, which ever is smaller. */
++	} else if (canon_data->write_pos > canon_data->read_pos) {
++		if ((canon_data->write_pos - canon_data->read_pos) > count) {
++			memcpy((char*)buf, 
++				   &(canon_data->buf[canon_data->read_pos]), 
++				   count);
++			canon_data->read_pos += count;
++
++			return count;
++		} else {
++			total = canon_data->write_pos - canon_data->read_pos;
++			memcpy((char*)buf, 
++				   &(canon_data->buf[canon_data->read_pos]), 
++				   total);
++			canon_data->read_pos += total;
++
++			return total;
++		}
++	}
++
++	/* Else we need to read more data from the data port. */
++	return 0;
++}
++
++/* {{{ dio_com_read
++ * Read chars from the data port.
++ */
++static size_t dio_com_read(php_dio_stream_data *data, const char *buf, size_t count) {
++	php_dio_win32_stream_data *wdata = (php_dio_win32_stream_data*)data;
++	DWORD err, total = 0;
++
++	if (ReadFile(wdata->handle, (void*)buf, (DWORD)count, &total, NULL)) {
++
++		if (total) {
++			return (size_t)total;
++		}
++
++		data->end_of_file = 1;
++	}
++
++	if (!data->end_of_file) {
++		err = GetLastError();
++
++		if (ERROR_HANDLE_EOF == err) {
++			data->end_of_file = 1;
++		}
++	}
++
++	return 0;
++}
++
++/* {{{ dio_canonical_read
++ * Reads chars from the input stream until the internal buffer is full or a new
++ * line is reached.
++ */
++static size_t dio_canonical_read(php_dio_win32_stream_data *wdata, const char *buf, size_t count) {
++	php_dio_win32_canon_data *canon_data = wdata->canon_data;
++	size_t total = 0;
++	char ch;
++
++	/* See if there's any buffered data and copy it. */
++	total = dio_buffer_read(wdata, buf, count);
++	if (total) {
++		return total;
++	}
++
++	/* Need to read more data from the data port.  Buffer should be empty(er)
++	   by now. */
++	do {
++		/* Is the buffer full? */
++		if (((canon_data->write_pos + 1) % canon_data->size) == 
++			canon_data->read_pos) {
++			break;
++		}
++
++		/* Read a byte from the input checking for EOF. */
++		if (!dio_com_read((php_dio_stream_data*)wdata, &ch, 1)) {
++			break;
++		}
++
++		/* Translate CR to newlines (same as ICRNL in POSIX) */
++		ch = (ch != '\r') ? ch : '\n';
++
++		/* We read a character!  So buffer it. */
++		canon_data->buf[canon_data->write_pos++] = ch;
++		if (canon_data->write_pos >= canon_data->size) {
++			canon_data->write_pos = 0;
++		}
++
++		/* End of line/input (^D)? */
++	} while ((ch != '\n') && (ch != 0x04));
++
++	return dio_buffer_read(wdata, buf, count);
++}
++/* }}} */
++
++/* {{{ dio_common_read
++ * Reads count chars to the buffer to the stream described by the stream data.
++ */
++size_t dio_common_read(php_dio_stream_data *data, const char *buf, size_t count) {
++
++	/* You ask for no bytes you'll get none :-) */
++	if (!count) {
++		return 0;
++	}
++
++	if (data->canonical) {
++		return dio_canonical_read((php_dio_win32_stream_data*)data, buf, count);
++	} else {
++		return dio_com_read(data, buf, count);
++	}
++}
++/* }}} */
++
++/* {{{ php_dio_stream_data
++ * Closes the php_stream.
++ */
++int dio_common_close(php_dio_stream_data *data) {
++	php_dio_win32_stream_data *wdata = (php_dio_win32_stream_data*)data;
++
++	if (data->canonical) {
++		efree(wdata->canon_data);
++	}
++
++	if (!CloseHandle(wdata->handle)) {
++		return 0;
++	}
++
++	return 1;
++}
++/* }}} */
++
++/* {{{ dio_common_set_option
++ * Sets/gets stream options
++ */
++int dio_common_set_option(php_dio_stream_data *data, int option, int value, void *ptrparam) {
++	COMMTIMEOUTS cto = { 0, 0, 0, 0, 0 };
++	int old_is_blocking = 0;
++
++	/* Can't do timeouts or non blocking with raw windows streams :-( */
++	if (DIO_STREAM_TYPE_SERIAL == data->stream_type) {
++		switch (option) {
++			case PHP_STREAM_OPTION_BLOCKING:
++				old_is_blocking   = data->is_blocking;
++				data->is_blocking = value ? 1 : 0;
++
++				/* Only change values if we need to change them. */
++				if (data->is_blocking != old_is_blocking) {
++					/* If we're not blocking but don't have a timeout
++					   set to return immediately */
++					if (!data->is_blocking && !data->has_timeout) {
++						cto.ReadIntervalTimeout = MAXDWORD;
++					}
++
++					/* If we have a timeout ignore the blocking and set
++					   the total time in which to read the data */
++					if (data->has_timeout) {
++						cto.ReadIntervalTimeout = MAXDWORD;
++						cto.ReadTotalTimeoutMultiplier  = MAXDWORD;
++						cto.ReadTotalTimeoutConstant = (data->timeout_usec / 1000) +
++							(data->timeout_sec * 1000);
++					}
++
++					if (!SetCommTimeouts(((php_dio_win32_stream_data*)data)->handle, &cto)) {
++						return PHP_STREAM_OPTION_RETURN_ERR;
++					}
++				}
++				return old_is_blocking ? PHP_STREAM_OPTION_RETURN_OK : PHP_STREAM_OPTION_RETURN_ERR;
++
++			case PHP_STREAM_OPTION_READ_TIMEOUT:
++				if (ptrparam) {
++					/* struct timeval is supported with PHP_WIN32 defined. */
++					struct timeval *tv = (struct timeval*)ptrparam;
++
++					/* A timeout of zero seconds and zero microseconds disables
++					   any existing timeout. */
++					if (tv->tv_sec || tv->tv_usec) {
++						data->timeout_sec = tv->tv_sec;
++						data->timeout_usec = tv->tv_usec;
++						data->has_timeout = -1;
++
++						cto.ReadIntervalTimeout = MAXDWORD;
++						cto.ReadTotalTimeoutMultiplier  = MAXDWORD;
++						cto.ReadTotalTimeoutConstant = (data->timeout_usec / 1000) +
++							(data->timeout_sec * 1000);
++					} else {
++						data->timeout_sec = 0;
++						data->timeout_usec = 0;
++						data->has_timeout = 0;
++						data->timed_out = 0;
++
++						/* If we're not blocking but don't have a timeout
++						   set to return immediately */
++						if (!data->is_blocking) {
++							cto.ReadIntervalTimeout = MAXDWORD;
++						}
++					}
++
++					if (!SetCommTimeouts(((php_dio_win32_stream_data*)data)->handle, &cto)) {
++						return PHP_STREAM_OPTION_RETURN_ERR;
++					} else {
++						return PHP_STREAM_OPTION_RETURN_OK;
++					}
++				} else {
++					return PHP_STREAM_OPTION_RETURN_ERR;
++				}
++
++			default:
++				break;
++		}
++	}
++
++	return 1;
++}
++/* }}} */
++
++/* {{{ dio_raw_open_stream
++ * Opens the underlying stream.
++ */
++int dio_raw_open_stream(char *filename, char *mode, php_dio_stream_data *data TSRMLS_DC) {
++	php_dio_win32_stream_data *wdata = (php_dio_win32_stream_data*)data;
++	DWORD err;
++
++	switch(*mode) {
++		case 'r':
++			wdata->creation_disposition = OPEN_EXISTING;
++			break;
++		case 'w':
++			wdata->creation_disposition = TRUNCATE_EXISTING;
++			break;
++		case 'a':
++			wdata->creation_disposition = OPEN_ALWAYS;
++			break;
++		case 'x':
++			wdata->creation_disposition = CREATE_NEW;
++			break;
++	}
++	mode ++;
++
++	if (*mode && (*mode != '+')) {
++		mode++;
++	}
++
++	if (*mode && (*mode == '+')) {
++		wdata->desired_access = GENERIC_READ | GENERIC_WRITE;
++	} else if (OPEN_EXISTING == wdata->creation_disposition) {
++		wdata->desired_access = GENERIC_READ;
++	} else {
++		wdata->desired_access = GENERIC_WRITE;
++	}
++
++	wdata->handle = CreateFile(filename, wdata->desired_access, 0,
++			NULL, wdata->creation_disposition, FILE_ATTRIBUTE_NORMAL, NULL);
++	if (INVALID_HANDLE_VALUE == wdata->handle) {
++		err = GetLastError();
++		switch (err) {
++			case ERROR_FILE_EXISTS:
++				php_error_docref(NULL TSRMLS_CC, E_WARNING, "File exists!");
++				return 0;
++
++			case ERROR_FILE_NOT_FOUND:
++				/* ERROR_FILE_NOT_FOUND with TRUNCATE_EXISTING means that
++				 * the file doesn't exist so now try to create it. */
++				if (TRUNCATE_EXISTING == wdata->creation_disposition) {
++					wdata->handle = CreateFile(filename, wdata->desired_access, 0,
++								NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
++					if (INVALID_HANDLE_VALUE == wdata->handle) {
++						err = GetLastError();
++						return 0;
++					}
++				} else {
++					return 0;
++				}
++				break;
++
++			default:
++				return 0;
++		}
++	}
++
++	/* If canonical allocate the canonical buffer. */
++	if (data->canonical) {
++		wdata->canon_data = emalloc(sizeof(php_dio_win32_canon_data));
++		memset(wdata->canon_data, 0, sizeof(php_dio_win32_canon_data));
++		wdata->canon_data->size = DIO_WIN32_CANON_BUF_SIZE;
++	}
++
++	return 1;
++}
++/* }}} */
++
++/* {{{ dio_serial_init
++ * Initialises the serial port
++ */
++static int dio_serial_init(php_dio_stream_data *data TSRMLS_DC) {
++	php_dio_win32_stream_data *wdata = (php_dio_win32_stream_data*)data;
++	DWORD err, rate_def, data_bits_def, stop_bits_def, parity_def;
++	DCB dcb;
++
++	if (!dio_data_rate_to_define(data->data_rate, &rate_def)) {
++		php_error_docref(NULL TSRMLS_CC, E_WARNING, "invalid data_rate value (%d) (%d)", data->data_rate, __LINE__);
++		return 0;
++	}
++
++	if (!dio_data_bits_to_define(data->data_bits, &data_bits_def)) {
++		php_error_docref(NULL TSRMLS_CC, E_WARNING, "invalid data_bits value (%d)", data->data_bits);
++		return 0;
++	}
++
++	if (!dio_stop_bits_to_define(data->stop_bits, &stop_bits_def)) {
++		php_error_docref(NULL TSRMLS_CC, E_WARNING, "invalid stop_bits value (%d)", data->stop_bits);
++		return 0;
++	}
++
++	if (!dio_parity_to_define(data->parity, &parity_def)) {
++		php_error_docref(NULL TSRMLS_CC, E_WARNING, "invalid parity value (%d)", data->parity);
++		return 0;
++	}
++
++	if (!GetCommState(wdata->handle, &(wdata->olddcb))) {
++		err = GetLastError();
++		php_error_docref(NULL TSRMLS_CC, E_WARNING, "GetCommState() failed! (%d)", err);
++		return 0;
++	}
++
++	/* Init the DCB structure */
++	memset(&dcb, 0, sizeof(DCB));
++	dcb.DCBlength = sizeof(DCB);
++
++	/* Set the communication parameters */
++	dcb.fBinary  = 1;
++	dcb.BaudRate = rate_def;
++	dcb.ByteSize = (BYTE)data_bits_def;
++	dcb.StopBits = (BYTE)stop_bits_def;
++	dcb.Parity   = (BYTE)parity_def;
++
++	/* Set the control line parameters */
++	dcb.fDtrControl       = DTR_CONTROL_DISABLE;
++	dcb.fDsrSensitivity   = FALSE;
++	dcb.fOutxDsrFlow      = FALSE;
++	dcb.fTXContinueOnXoff = FALSE;
++	dcb.fOutX             = FALSE;
++	dcb.fInX              = FALSE;
++	dcb.fErrorChar        = FALSE;
++	dcb.fNull             = FALSE;
++	dcb.fAbortOnError     = FALSE;
++
++	/* Hardware flow control */
++	if (data->flow_control) {
++		dcb.fOutxCtsFlow = TRUE;
++		dcb.fRtsControl  = RTS_CONTROL_HANDSHAKE;
++	} else {
++		dcb.fOutxCtsFlow = FALSE;
++		dcb.fRtsControl  = RTS_CONTROL_DISABLE;
++	}
++
++	if (!SetCommState(wdata->handle, &dcb)) {
++		return 0;
++	}
++
++	return 1;
++}
++/* }}} */
++
++
++/* {{{ dio_serial_uninit
++ * Restores the serial settings back to their original state.
++ */
++int dio_serial_uninit(php_dio_stream_data *data) {
++	php_dio_win32_stream_data *wdata = (php_dio_win32_stream_data*)data;
++
++	if (!SetCommState(wdata->handle, &(wdata->olddcb))) {
++		return 0;
++	}
++
++	return 1;
++}
++/* }}} */
++
++/* {{{ dio_serial_flush
++ * Purges the serial buffers of data.
++ */
++int dio_serial_purge(php_dio_stream_data *data) {
++	php_dio_win32_stream_data *wdata = (php_dio_win32_stream_data*)data;
++	BOOL ret;
++
++	/* Purge the canonical buffer if required */
++	if (data->canonical && ((wdata->desired_access & GENERIC_READ) == GENERIC_READ)) {
++		wdata->canon_data->read_pos  = 0;
++		wdata->canon_data->write_pos = 0;
++	}
++
++	/* Purge the com port */
++	if ((wdata->desired_access & (GENERIC_READ|GENERIC_WRITE)) == (GENERIC_READ|GENERIC_WRITE)) {
++		ret = PurgeComm(wdata->handle, PURGE_RXCLEAR|PURGE_TXCLEAR);
++	} else if ((wdata->desired_access & GENERIC_WRITE) == GENERIC_WRITE) {
++		ret = PurgeComm(wdata->handle, PURGE_TXCLEAR);
++	} else if ((wdata->desired_access & GENERIC_READ) == GENERIC_READ) {
++		ret = PurgeComm(wdata->handle, PURGE_RXCLEAR);
++	}
++
++	return ret;
++}
++/* }}} */
++
++/* {{{ dio_serial_open_stream
++ * Opens the underlying stream.
++ */
++int dio_serial_open_stream(char *filename, char *mode, php_dio_stream_data *data TSRMLS_DC) {
++	php_dio_win32_stream_data *wdata = (php_dio_win32_stream_data*)data;
++	COMMTIMEOUTS cto = { 0, 0, 0, 0, 0 };
++	DWORD err;
++
++	if (!dio_raw_open_stream(filename, mode, data TSRMLS_CC)) {
++		return 0;
++	}
++
++	if (!GetCommTimeouts(wdata->handle, &(wdata->oldcto))) {
++		err = GetLastError();
++		php_error_docref(NULL TSRMLS_CC, E_WARNING, "SetCommTimeouts() failed! (%d) Not a comm port?", err);
++		CloseHandle(wdata->handle);
++		return 0;
++	}
++
++	/* If we're not blocking but don't have a timeout
++	   set to return immediately */
++	if (!data->is_blocking && !data->has_timeout) {
++		cto.ReadIntervalTimeout = MAXDWORD;
++	}
++	
++	/* If we have a timeout ignore the blocking and set
++	   the total time in which to read the data */
++	if (data->has_timeout) {
++		cto.ReadIntervalTimeout = MAXDWORD;
++		cto.ReadTotalTimeoutMultiplier  = MAXDWORD;
++		cto.ReadTotalTimeoutConstant = (data->timeout_usec / 1000) + 
++			(data->timeout_sec * 1000);
++	}
++
++	if (!SetCommTimeouts(wdata->handle, &cto)) {
++		CloseHandle(wdata->handle);
++		return 0;
++	}
++
++	if (!dio_serial_init(data TSRMLS_CC)) {
++		CloseHandle(wdata->handle);
++		return 0;
++	}
++
++	return 1;
++}
++/* }}} */
++
++/*
++ * Local variables:
++ * c-basic-offset: 4
++ * tab-width: 4
++ * End:
++ * vim600: fdm=marker
++ * vim: sw=4 ts=4 noet
++ */
+--- /dev/null
++++ b/ext/dio/php_dio.h
+@@ -0,0 +1,60 @@
++/*
++   +----------------------------------------------------------------------+
++   | PHP Version 5                                                        |
++   +----------------------------------------------------------------------+
++   | Copyright (c) 1997-2004 The PHP Group                                |
++   +----------------------------------------------------------------------+
++   | This source file is subject to version 3.0 of the PHP license,       |
++   | that is bundled with this package in the file LICENSE, and is        |
++   | available through the world-wide-web at the following url:           |
++   | http://www.php.net/license/3_0.txt.                                  |
++   | If you did not receive a copy of the PHP license and are unable to   |
++   | obtain it through the world-wide-web, please send a note to          |
++   | license@php.net so we can mail you a copy immediately.               |
++   +----------------------------------------------------------------------+
++ */
++
++#ifndef PHP_DIO_H
++#define PHP_DIO_H
++
++#include "php.h"
++#include "php_dio_common.h"
++#include "php_dio_stream_wrappers.h"
++
++extern zend_module_entry dio_module_entry;
++#define phpext_dio_ptr &dio_module_entry
++
++#define PHP_DIO_VERSION "0.0.4RC4"
++
++/* Standard module functions. */
++PHP_MINIT_FUNCTION(dio);
++PHP_MSHUTDOWN_FUNCTION(dio);
++PHP_RINIT_FUNCTION(dio);
++PHP_RSHUTDOWN_FUNCTION(dio);
++PHP_MINFO_FUNCTION(dio);
++
++/* Legacy functions. */
++PHP_FUNCTION(dio_open);
++PHP_FUNCTION(dio_truncate);
++PHP_FUNCTION(dio_stat);
++PHP_FUNCTION(dio_seek);
++PHP_FUNCTION(dio_read);
++PHP_FUNCTION(dio_write);
++PHP_FUNCTION(dio_fcntl);
++PHP_FUNCTION(dio_close);
++PHP_FUNCTION(dio_tcsetattr);
++
++typedef struct {
++	int fd;
++} php_fd_t;
++
++#endif
++
++
++/*
++ * Local variables:
++ * tab-width: 4
++ * c-basic-offset: 4
++ * indent-tabs-mode: t
++ * End:
++ */
+--- /dev/null
++++ b/ext/dio/php_dio_common.h
+@@ -0,0 +1,77 @@
++/*
++   +----------------------------------------------------------------------+
++   | PHP Version 5                                                        |
++   +----------------------------------------------------------------------+
++   | Copyright (c) 2009 Melanie Rhianna Lewis                             |
++   +----------------------------------------------------------------------+
++   | This source file is subject to version 3.0 of the PHP license,       |
++   | that is bundled with this package in the file LICENSE, and is        |
++   | available through the world-wide-web at the following url:           |
++   | http://www.php.net/license/3_0.txt.                                  |
++   | If you did not receive a copy of the PHP license and are unable to   |
++   | obtain it through the world-wide-web, please send a note to          |
++   | license@php.net so we can mail you a copy immediately.               |
++   +----------------------------------------------------------------------+
++   | Author: Melanie Rhianna Lewis <cyberspice@php.net>                   |
++   +----------------------------------------------------------------------+
++ */
++
++#ifndef PHP_DIO_COMMON_H_
++#define PHP_DIO_COMMON_H_
++
++#ifdef PHP_WIN32
++#define PHP_DIO_API __declspec(dllexport)
++#else
++#define PHP_DIO_API
++#endif
++
++#ifdef PHP_WIN32
++#include "php_dio_win32.h"
++#else
++#include "php_dio_posix.h"
++#endif
++
++#define DIO_STREAM_TYPE_NONE   0
++#define DIO_STREAM_TYPE_RAW    1
++#define DIO_STREAM_TYPE_SERIAL 2
++
++long dio_convert_to_long(zval *val);
++
++php_dio_stream_data * dio_create_stream_data(void);
++
++void dio_init_stream_data(php_dio_stream_data *data);
++
++void dio_assoc_array_get_basic_options(zval *options, php_dio_stream_data *data TSRMLS_DC);
++
++void dio_assoc_array_get_serial_options(zval *options, php_dio_stream_data *data TSRMLS_DC);
++
++void dio_stream_context_get_basic_options(php_stream_context *context, php_dio_stream_data *data TSRMLS_DC);
++
++void dio_stream_context_get_serial_options(php_stream_context *context, php_dio_stream_data *data TSRMLS_DC);
++
++size_t dio_common_write(php_dio_stream_data *data, const char *buf, size_t count);
++
++size_t dio_common_read(php_dio_stream_data *data, const char *buf, size_t count);
++
++int dio_common_close(php_dio_stream_data *data);
++
++int dio_common_set_option(php_dio_stream_data *data, int option, int value, void *ptrparam);
++
++int dio_raw_open_stream(char *filename, char *mode, php_dio_stream_data *data TSRMLS_DC);
++
++int dio_serial_uninit(php_dio_stream_data *data);
++
++int dio_serial_purge(php_dio_stream_data *data);
++
++int dio_serial_open_stream(char *filename, char *mode, php_dio_stream_data *data TSRMLS_DC);
++
++#endif /* PHP_DIO_COMMON_H_ */
++
++/*
++ * Local variables:
++ * c-basic-offset: 4
++ * tab-width: 4
++ * End:
++ * vim600: fdm=marker
++ * vim: sw=4 ts=4 noet
++ */
+--- /dev/null
++++ b/ext/dio/php_dio_common_data.h
+@@ -0,0 +1,59 @@
++/*
++   +----------------------------------------------------------------------+
++   | PHP Version 5                                                        |
++   +----------------------------------------------------------------------+
++   | Copyright (c) 2009 Melanie Rhianna Lewis                             |
++   +----------------------------------------------------------------------+
++   | This source file is subject to version 3.0 of the PHP license,       |
++   | that is bundled with this package in the file LICENSE, and is        |
++   | available through the world-wide-web at the following url:           |
++   | http://www.php.net/license/3_0.txt.                                  |
++   | If you did not receive a copy of the PHP license and are unable to   |
++   | obtain it through the world-wide-web, please send a note to          |
++   | license@php.net so we can mail you a copy immediately.               |
++   +----------------------------------------------------------------------+
++   | Author: Melanie Rhianna Lewis <cyberspice@php.net>                   |
++   +----------------------------------------------------------------------+
++ */
++
++#ifndef PHP_DIO_COMMON_DATA_H_
++#define PHP_DIO_COMMON_DATA_H_
++
++/* This is the data structure 'base class'.  It is common data fields used
++ * by all versions of DIO.
++ */
++typedef struct _php_dio_stream_data {
++	/* Stream type */
++	int stream_type;
++	/* Stream options */
++	int end_of_file;
++#ifdef DIO_HAS_FILEPERMS
++	int has_perms;
++	int perms;
++#endif
++#ifdef DIO_NONBLOCK
++	int is_blocking;
++	int has_timeout;
++	long timeout_sec;
++	long timeout_usec;
++	int timed_out;
++#endif
++	/* Serial options */
++	long data_rate;
++	int data_bits;
++	int stop_bits;
++	int parity;
++	int flow_control;
++	int canonical;
++} php_dio_stream_data ;
++
++#endif /* PHP_DIO_COMMON_DATA_H_ */
++
++/*
++ * Local variables:
++ * c-basic-offset: 4
++ * tab-width: 4
++ * End:
++ * vim600: fdm=marker
++ * vim: sw=4 ts=4 noet
++ */
+--- /dev/null
++++ b/ext/dio/php_dio_posix.h
+@@ -0,0 +1,70 @@
++/*
++   +----------------------------------------------------------------------+
++   | PHP Version 5                                                        |
++   +----------------------------------------------------------------------+
++   | Copyright (c) 2009 Melanie Rhianna Lewis                             |
++   +----------------------------------------------------------------------+
++   | This source file is subject to version 3.0 of the PHP license,       |
++   | that is bundled with this package in the file LICENSE, and is        |
++   | available through the world-wide-web at the following url:           |
++   | http://www.php.net/license/3_0.txt.                                  |
++   | If you did not receive a copy of the PHP license and are unable to   |
++   | obtain it through the world-wide-web, please send a note to          |
++   | license@php.net so we can mail you a copy immediately.               |
++   +----------------------------------------------------------------------+
++   | Author: Melanie Rhianna Lewis <cyberspice@php.net>                   |
++   +----------------------------------------------------------------------+
++ */
++
++#ifndef PHP_DIO_POSIX_H_
++#define PHP_DIO_POSIX_H_
++
++#include <sys/stat.h>
++#include <sys/types.h>
++#include <sys/select.h>
++#include <sys/time.h>
++
++#ifdef HAVE_UNISTD_H
++#include <unistd.h>
++#endif
++
++#include <fcntl.h>
++#include <termios.h>
++
++
++/**
++ * Detect if we can support non blocking IO.
++ */
++#ifdef O_NONBLOCK
++#define DIO_NONBLOCK O_NONBLOCK
++#else
++#ifdef O_NDELAY
++#define DIO_NONBLOCK O_NDELAY
++#endif
++#endif
++
++/**
++ * POSIXy platforms have file permissions
++ */
++#define DIO_HAS_FILEPERMS
++
++#include "php_dio_common_data.h"
++
++typedef struct _php_dio_posix_stream_data {
++	php_dio_stream_data common;
++	int fd;
++	int flags;
++	/* Serial options */
++	struct termios oldtio;
++} php_dio_posix_stream_data ;
++
++#endif /* PHP_DIO_POSIX_H_ */
++
++/*
++ * Local variables:
++ * c-basic-offset: 4
++ * tab-width: 4
++ * End:
++ * vim600: fdm=marker
++ * vim: sw=4 ts=4 noet
++ */
+--- /dev/null
++++ b/ext/dio/php_dio_stream_wrappers.h
+@@ -0,0 +1,51 @@
++/*
++   +----------------------------------------------------------------------+
++   | PHP Version 5                                                        |
++   +----------------------------------------------------------------------+
++   | Copyright (c) 2009 Melanie Rhianna Lewis                             |
++   +----------------------------------------------------------------------+
++   | This source file is subject to version 3.0 of the PHP license,       |
++   | that is bundled with this package in the file LICENSE, and is        |
++   | available through the world-wide-web at the following url:           |
++   | http://www.php.net/license/3_0.txt.                                  |
++   | If you did not receive a copy of the PHP license and are unable to   |
++   | obtain it through the world-wide-web, please send a note to          |
++   | license@php.net so we can mail you a copy immediately.               |
++   +----------------------------------------------------------------------+
++   | Author: Melanie Rhianna Lewis <cyberspice@php.net>                   |
++   +----------------------------------------------------------------------+
++ */
++
++#ifndef PHP_DIO_STREAM_WRAPPERS_H_
++#define PHP_DIO_STREAM_WRAPPERS_H_
++
++#define DIO_RAW_STREAM_NAME         "dio.raw"
++#define DIO_RAW_STREAM_PROTOCOL     "dio.raw://"
++#define DIO_SERIAL_STREAM_NAME      "dio.serial"
++#define DIO_SERIAL_STREAM_PROTOCOL  "dio.serial://"
++
++/* To support PHP 5.4 and later */
++#if PHP_VERSION_ID < 50399
++#define DIO_SAFE_MODE_CHECK(f, m) (PG(safe_mode) && !php_checkuid(f, m, CHECKUID_CHECK_MODE_PARAM))
++#else
++#define DIO_SAFE_MODE_CHECK(f, m) (0)
++#endif
++
++extern php_stream_wrapper php_dio_raw_stream_wrapper;
++
++PHP_FUNCTION(dio_raw);
++
++extern php_stream_wrapper php_dio_serial_stream_wrapper;
++
++PHP_FUNCTION(dio_serial);
++
++#endif /* PHP_DIO_STREAM_WRAPPERS_H_ */
++
++/*
++ * Local variables:
++ * c-basic-offset: 4
++ * tab-width: 4
++ * End:
++ * vim600: fdm=marker
++ * vim: sw=4 ts=4 noet
++ */
+--- /dev/null
++++ b/ext/dio/php_dio_win32.h
+@@ -0,0 +1,62 @@
++/*
++   +----------------------------------------------------------------------+
++   | PHP Version 5                                                        |
++   +----------------------------------------------------------------------+
++   | Copyright (c) 2009 Melanie Rhianna Lewis                             |
++   +----------------------------------------------------------------------+
++   | This source file is subject to version 3.0 of the PHP license,       |
++   | that is bundled with this package in the file LICENSE, and is        |
++   | available through the world-wide-web at the following url:           |
++   | http://www.php.net/license/3_0.txt.                                  |
++   | If you did not receive a copy of the PHP license and are unable to   |
++   | obtain it through the world-wide-web, please send a note to          |
++   | license@php.net so we can mail you a copy immediately.               |
++   +----------------------------------------------------------------------+
++   | Author: Melanie Rhianna Lewis <cyberspice@php.net>                   |
++   +----------------------------------------------------------------------+
++ */
++
++#ifndef PHP_DIO_WIN32_H_
++#define PHP_DIO_WIN32_H_
++
++#include <windows.h>
++
++/* Windows platform can do non blocking. */
++#define DIO_NONBLOCK
++
++#include "php_dio_common_data.h"
++
++#define DIO_WIN32_CANON_BUF_SIZE 8192
++
++/* This is the buffer information when reading in canonical mode.  Data is 
++   read right up to either buffer being full or a newline being read.  Excess
++   data will be retained in the buffer until the next read. */
++typedef struct _php_dio_win32_canon_data {
++	size_t size;
++	size_t read_pos;
++	size_t write_pos;
++	char buf[DIO_WIN32_CANON_BUF_SIZE];
++
++} php_dio_win32_canon_data;
++
++typedef struct _php_dio_win32_stream_data {
++	php_dio_stream_data common;
++	HANDLE handle;
++	DWORD desired_access;
++	DWORD creation_disposition;
++	DCB olddcb;
++	COMMTIMEOUTS oldcto;
++	php_dio_win32_canon_data *canon_data;
++
++} php_dio_win32_stream_data ;
++
++#endif /* PHP_DIO_WIN32_H_ */
++
++/*
++ * Local variables:
++ * c-basic-offset: 4
++ * tab-width: 4
++ * End:
++ * vim600: fdm=marker
++ * vim: sw=4 ts=4 noet
++ */
+--- /dev/null
++++ b/ext/dio/tests/001.phpt
+@@ -0,0 +1,23 @@
++--TEST--
++Test dio legacy open
++--SKIPIF--
++<?php if (!extension_loaded("dio")) print "skip"; ?>
++--FILE--
++<?php 
++	$iswin = (strtoupper(substr(PHP_OS, 0, 3)) == 'WIN'); 
++
++	if (!$iswin) {
++		$filename = "/dev/null";
++	} else {
++		$filename = "NUL";
++	}
++	
++	$f = dio_open($filename,O_RDONLY);
++	if ($f) {
++		echo "Legacy open passed";
++	} else {
++		echo "Legacy open failed";
++	}
++?>
++--EXPECT--
++Legacy open passed
+--- /dev/null
++++ b/ext/dio/tests/dio_raw_stream_001.phpt
+@@ -0,0 +1,24 @@
++--TEST--
++Test dio raw stream open
++--SKIPIF--
++<?php if (!extension_loaded("dio")) print "skip"; ?>
++--FILE--
++<?php
++	$iswin = (strtoupper(substr(PHP_OS, 0, 3)) == 'WIN'); 
++
++	if (!$iswin) {
++		$filename = "dio.raw:///dev/null";
++	} else {
++		$filename = "dio.raw://NUL";
++	}
++	
++	$f = fopen($filename, "r+");
++	if ($f) {
++		echo "Raw open passed";
++		fclose($f);
++	} else {
++		echo "Raw open failed";
++	}
++?>
++--EXPECT--
++Raw open passed
+--- /dev/null
++++ b/ext/dio/tests/dio_raw_stream_002.phpt
+@@ -0,0 +1,27 @@
++--TEST--
++Test dio raw stream close
++--SKIPIF--
++<?php if (!extension_loaded("dio")) print "skip"; ?>
++--FILE--
++<?php 
++	$iswin = (strtoupper(substr(PHP_OS, 0, 3)) == 'WIN'); 
++
++	if (!$iswin) {
++		$filename = "dio.raw:///dev/null";
++	} else {
++		$filename = "dio.raw://NUL";
++	}
++
++	$f = fopen($filename, "r+");
++	if ($f) {
++		if (fclose($f)) {
++			echo "Raw close passed";
++		} else {
++			echo "Raw close failed";
++		}
++	} else {
++		echo "Raw open failed";
++	}
++?>
++--EXPECT--
++Raw close passed
+--- /dev/null
++++ b/ext/dio/tests/dio_raw_stream_003.phpt
+@@ -0,0 +1,29 @@
++--TEST--
++Test dio raw stream write
++--SKIPIF--
++<?php if (!extension_loaded("dio")) print "skip"; ?>
++--FILE--
++<?php 
++	$iswin = (strtoupper(substr(PHP_OS, 0, 3)) == 'WIN'); 
++
++	if (!$iswin) {
++		$filename = "dio.raw:///dev/null";
++	} else {
++		$filename = "dio.raw://NUL";
++	}
++
++	$f = fopen($filename, "r+");
++	if ($f) {
++		$data = str_repeat("+", 2048);
++		if (fwrite($f, $data)) {
++			echo "Raw write passed";
++		} else {
++			echo "Raw write failed";
++		}
++		fclose($f);
++	} else {
++		echo "Raw open failed";
++	}
++?>
++--EXPECT--
++Raw write passed
+--- /dev/null
++++ b/ext/dio/tests/dio_raw_stream_004.phpt
+@@ -0,0 +1,46 @@
++--TEST--
++Test dio raw read
++--SKIPIF--
++<?php
++	if (!extension_loaded('dio')) print 'skip';
++?>
++--FILE--
++<?php 
++	// Create a temp file with some content to read
++
++	// Create the temp file name
++	if (!function_exists('sys_get_temp_dir')) {
++		if (!($tmpdir = getenv('TEMP'))) {
++			$tmpdir = '';
++		}
++	} else {
++		$tmpdir = sys_get_temp_dir();
++	}
++	$filename = tempnam($tmpdir, 'dio_raw_stream_004.tmp');
++			
++	// Create the temp file
++	$tf = fopen($filename, "w");
++	if ($tf) {
++	 	fwrite($tf, str_repeat('*', 2048));	
++		fclose($tf);
++	} else {
++		echo "Can\'t create temp file";
++	}
++
++	$f = fopen('dio.raw://' . $filename, "r");
++	if ($f) {
++		$data = fread($f, 2048);
++		if ($data && (strlen($data) == 2048)) {
++			echo "Raw read passed";
++		} else {
++			echo "Raw read failed";
++		}
++		fclose($f);
++	} else {
++		echo "Raw open failed";
++	}
++
++	unlink($filename);
++?>
++--EXPECT--
++Raw read passed
+--- /dev/null
++++ b/ext/dio/tests/dio_raw_stream_005.phpt
+@@ -0,0 +1,45 @@
++--TEST--
++Test dio eof read
++--SKIPIF--
++<?php
++	if (!extension_loaded('dio')) print 'skip';
++?>
++--FILE--
++<?php 
++	// Create a temp file with some content to read
++
++	// Create the temp file name
++	if (!function_exists('sys_get_temp_dir')) {
++		if (!($tmpdir = getenv('TEMP'))) {
++			$tmpdir = '';
++		}
++	} else {
++		$tmpdir = sys_get_temp_dir();
++	}
++	$filename = tempnam($tmpdir, 'dio_raw_stream_005.tmp');
++			
++	// Create the temp file
++	$tf = fopen($filename, "w");
++	if ($tf) {
++		fclose($tf);
++	} else {
++		echo "Can\'t create temp file";
++	}
++
++	$f = fopen('dio.raw://' . $filename, "r");
++	if ($f) {
++		$data = fread($f, 2048);
++		if (feof($f)) {
++			echo "Raw feof passed";
++		} else {
++			echo "Raw feof failed";
++		}
++		fclose($f);
++	} else {
++		echo "Raw open failed";
++	}
++
++	unlink($filename);
++?>
++--EXPECT--
++Raw feof passed
+--- /dev/null
++++ b/ext/dio/tests/dio_raw_stream_006.phpt
+@@ -0,0 +1,46 @@
++--TEST--
++Test dio raw read
++--SKIPIF--
++<?php
++	if (!extension_loaded('dio')) print 'skip';
++?>
++--FILE--
++<?php 
++	// Create a temp file with some content to read
++
++	// Create the temp file name
++	if (!function_exists('sys_get_temp_dir')) {
++		if (!($tmpdir = getenv('TEMP'))) {
++			$tmpdir = '';
++		}
++	} else {
++		$tmpdir = sys_get_temp_dir();
++	}
++	$filename = tempnam($tmpdir, 'diotest');
++			
++	// Create the temp file
++	$tf = fopen($filename, "w");
++	if ($tf) {
++	 	fwrite($tf, str_repeat('*', 2048));	
++		fclose($tf);
++	} else {
++		echo "Can\'t create temp file";
++	}
++
++	$f = fopen('dio.raw://' . $filename, "r");
++	if ($f) {
++		$data = fread($f, 1024);
++		if (stream_set_blocking($f, false)) {
++			echo "Raw set blocking passed";
++		} else {
++			echo "Raw set blocking failed";
++		}
++		fclose($f);
++	} else {
++		echo "Raw open failed";
++	}
++
++	unlink($filename);
++?>
++--EXPECT--
++Raw set blocking passed
+--- /dev/null
++++ b/ext/dio/tests/dio_raw_stream_007.phpt
+@@ -0,0 +1,22 @@
++--TEST--
++Test dio_raw() call
++--SKIPIF--
++<?php if (!extension_loaded("dio")) print "skip"; ?>
++--FILE--
++<?php
++	$iswin = (strtoupper(substr(PHP_OS, 0, 3)) == 'WIN'); 
++
++	if (!$iswin) {
++		$filename = "/dev/null";
++	} else {
++		$filename = "NUL";
++	}
++
++	$f = dio_raw($filename, "r+");
++	if ($f) {
++		echo "dio_raw passed";
++		fclose($f);
++	}
++?>
++--EXPECT--
++dio_raw passed

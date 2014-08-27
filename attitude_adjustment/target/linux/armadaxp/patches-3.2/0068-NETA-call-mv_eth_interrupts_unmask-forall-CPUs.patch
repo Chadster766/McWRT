@@ -1,0 +1,41 @@
+From 23ab767f12c04af317b9f85af180a9aeb19dbb8f Mon Sep 17 00:00:00 2001
+From: Rami Rosen <rosenr@marvell.com>
+Date: Sun, 8 Jan 2012 18:13:26 +0200
+Subject: [PATCH 068/609] NETA call mv_eth_interrupts_unmask forall CPUs
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c   |    3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c
+index b82122a..6dd5742 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c
+@@ -48,6 +48,7 @@ disclaimer.
+ #include "mv_switch.h"
+ #endif /* CONFIG_MV_ETH_SWITCH_LINK */
+ 
++
+ static int mv_eth_start(struct net_device *dev);
+ static int mv_eth_set_mac_addr_internals(struct net_device *dev, void *addr);
+ 
+@@ -61,7 +62,6 @@ static int mv_eth_start(struct net_device *dev)
+ {
+ 	struct eth_port *priv = MV_ETH_PRIV(dev);
+ 	int group;
+-
+ 	/* in default link is down */
+ 	netif_carrier_off(dev);
+ 
+@@ -108,6 +108,7 @@ static int mv_eth_start(struct net_device *dev)
+ 
+ 		/* unmask interrupts */
+ 		mv_eth_interrupts_unmask(priv);
++		smp_call_function_many(cpu_online_mask, (smp_call_func_t)mv_eth_interrupts_unmask, (void *)priv, 1);
+ 
+ 		printk(KERN_NOTICE "%s: started\n", dev->name);
+ 	}
+-- 
+1.7.9.5
+

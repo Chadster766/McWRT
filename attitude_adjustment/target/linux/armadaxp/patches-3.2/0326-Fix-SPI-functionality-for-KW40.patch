@@ -1,0 +1,178 @@
+From e8e0bca78b5cebe17b56cdc3b3b56de3f1dd78cb Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 24 Oct 2012 10:35:41 +0200
+Subject: [PATCH 326/609] Fix SPI functionality for KW40
+
+	1. Enabled compilation of mv_mtd folder by moving it from
+           drivers/mtd/nand/Makefile to driver/mtd/Makefile
+	2. Enabled compilation of flashmap.c by modifying the
+	   the condtion from AXP to SPI
+	3. Added the SPI chip of KW40 to the HAL
+
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../arm/plat-armada/mv_drivers_lsp/mv_mtd/sflash.c |    4 +--
+ arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c      |   29 +++++++++++++++++++-
+ arch/arm/plat-armada/mv_hal/sflash/mvSFlashSpec.h  |   13 +++++++--
+ drivers/mtd/Makefile                               |    1 +
+ drivers/mtd/maps/Makefile                          |    6 ++--
+ drivers/mtd/nand/Makefile                          |    1 -
+ 6 files changed, 44 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/sflash.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/sflash.c
+index 3458e99..e61b0e0 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/sflash.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/sflash.c
+@@ -131,7 +131,7 @@ static struct mtd_info *sflash_probe(struct map_info *map)
+ 	memset(mtd, 0, sizeof(*mtd));
+ 	memset(sflash, 0, sizeof(*sflash));
+ 	    
+-	DB(printk("\nINFO: %s - Base address %08x",__FUNCTION__, sflash->baseAddr));
++	DB(printk("\nINFO: %s - Base address %08x\n",__FUNCTION__, map->phys));
+ #ifdef CONFIG_ARCH_FEROCEON_ORION	
+ 	/* First check that SPI bus mode is configured to connect to an external SFlash */
+     if (mvCtrlSpiBusModeDetect() != MV_SPI_CONN_TO_EXT_FLASH)
+@@ -144,7 +144,7 @@ static struct mtd_info *sflash_probe(struct map_info *map)
+ #endif
+ 	/* Try to detect the flash and initialize it over SPI */	
+ 	sflash->baseAddr         = map->phys;
+-    sflash->index            = MV_INVALID_DEVICE_NUMBER; /* will be detected in init */	
++	sflash->index            = MV_INVALID_DEVICE_NUMBER; /* will be detected in init */
+ 	sflash_disable_irqs(flags, sflash_in_irq);	
+ 	if (mvSFlashInit(sflash) != MV_OK)
+ 	{
+diff --git a/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c b/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c
+index 3c97d7c..e1adb4f 100644
+--- a/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c
++++ b/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c
+@@ -295,6 +295,30 @@ static MV_SFLASH_DEVICE_PARAMS sflash[] = {
+      MV_S25FL128_MAX_SPI_FREQ,
+      MV_M25P128_MAX_FAST_SPI_FREQ,
+      MV_M25P128_FAST_READ_DUMMY_BYTES
++    },
++    /* MACRONIX MX25L25735E SPI Flash, 64MB */
++    {
++	MV_MX25L_WREN_CMND_OPCD,
++	MV_MX25L_WRDI_CMND_OPCD,
++	MV_MX25L_RDID_CMND_OPCD,
++	MV_MX25L_RDSR_CMND_OPCD,
++	MV_MX25L_WRSR_CMND_OPCD,
++	MV_MX25L_READ_CMND_OPCD,
++	MV_MX25L_FAST_RD_CMND_OPCD,
++	MV_MX25L_PP_CMND_OPCD,
++	MV_MX25L_SE_CMND_OPCD,
++	MV_MX25L_BE_CMND_OPCD,
++	MV_MX25L_RES_CMND_OPCD,
++	MV_MX25L_DP_CMND_OPCD,
++	MV_MX25L257_SECTOR_SIZE,
++	MV_MX25L257_SECTOR_NUMBER,
++	MV_MXIC_PAGE_SIZE,
++	"MACRONIX MX25L25735E",
++	MV_MXIC_MANF_ID,
++	MV_MX25L257_DEVICE_ID,
++	MV_MX25L257_MAX_SPI_FREQ,
++	MV_MX25L257_MAX_FAST_SPI_FREQ,
++	MV_MX25L257_FAST_READ_DUMMY_BYTES
+     }
+ };
+ 
+@@ -588,6 +612,8 @@ MV_STATUS mvSFlashInit(MV_SFLASH_INFO *pFlinfo)
+ 
+     /* loop over the whole table and look for the appropriate SFLASH */
+     for (indx = 0; indx < MV_ARRAY_SIZE(sflash); indx++) {
++	DB(mvOsPrintf("%s Matching manufacturer %d device %d\n",
++		     __func__, sflash[indx].manufacturerId, sflash[indx].deviceId);)
+ 	if ((manf == sflash[indx].manufacturerId) && (dev == sflash[indx].deviceId)) {
+ 		pFlinfo->manufacturerId = manf;
+ 		pFlinfo->deviceId = dev;
+@@ -597,7 +623,8 @@ MV_STATUS mvSFlashInit(MV_SFLASH_INFO *pFlinfo)
+     }
+ 
+     if (!detectFlag) {
+-	mvOsPrintf("%s ERROR: Unknown SPI flash device!\n", __func__);
++	mvOsPrintf("%s ERROR: Unknown SPI flash device. Manufacturer %d, Device %d\n", __func__, manf, dev);
++	mvOsPrintf("%s sflash table size %d\n", __func__, MV_ARRAY_SIZE(sflash));
+ 	return MV_FAIL;
+     }
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/sflash/mvSFlashSpec.h b/arch/arm/plat-armada/mv_hal/sflash/mvSFlashSpec.h
+index c9b33b8..ea1138a 100644
+--- a/arch/arm/plat-armada/mv_hal/sflash/mvSFlashSpec.h
++++ b/arch/arm/plat-armada/mv_hal/sflash/mvSFlashSpec.h
+@@ -178,15 +178,22 @@ extern "C" {
+ #define     MV_MX25L6405_MAX_FAST_SPI_FREQ      50000000    /* 50MHz */
+ #define     MV_MX25L6405_FAST_READ_DUMMY_BYTES  1
+ #define     MV_MXIC_DP_EXIT_DELAY               30          /* 30 ms */
++#define	    MV_MX25L257_DEVICE_ID		0x2019
++#define	    MV_MX25L257_MAX_SPI_FREQ      	20000000    /* 20MHz */
++#define	    MV_MX25L257_MAX_FAST_SPI_FREQ       50000000    /* 104MHz */
++#define	    MV_MX25L257_FAST_READ_DUMMY_BYTES   1
++#define	    MV_MX25L257_ADDR_CYC_CNT	        4
+ 
+ /* Sector Sizes and population per device model*/
+ #define     MV_MX25L1605_SECTOR_SIZE            0x10000 /* 64K */
+ #define     MV_MX25L3205_SECTOR_SIZE            0x10000 /* 64K */
+ #define     MV_MX25L6405_SECTOR_SIZE            0x10000 /* 64K */
++#define     MV_MX25L257_SECTOR_SIZE        	0x10000 /* 64K */
+ #define     MV_MX25L1605_SECTOR_NUMBER          32
+ #define     MV_MX25L3205_SECTOR_NUMBER          64
+ #define     MV_MX25L6405_SECTOR_NUMBER          128
+-#define		MV_MXIC_PAGE_SIZE			        0x100   /* 256 byte */
++#define     MV_MX25L257_SECTOR_NUMBER 		512
++#define     MV_MXIC_PAGE_SIZE			0x100   /* 256 byte */
+ 
+ #define		MV_MX25L_WREN_CMND_OPCD			    0x06	/* Write Enable */
+ #define		MV_MX25L_WRDI_CMND_OPCD			    0x04	/* Write Disable */
+@@ -198,11 +205,11 @@ extern "C" {
+ #define		MV_MX25L_PP_CMND_OPCD			    0x02	/* Page Program */
+ #define		MV_MX25L_SE_CMND_OPCD			    0xD8	/* Sector Erase */
+ #define		MV_MX25L_BE_CMND_OPCD			    0xC7	/* Bulk Erase */
+-#define     MV_MX25L_DP_CMND_OPCD               0xB9    /* Deep Power Down */
++#define         MV_MX25L_DP_CMND_OPCD                       0xB9        /* Deep Power Down */
+ #define		MV_MX25L_RES_CMND_OPCD			    0xAB	/* Read Electronic Signature */
+ 
+ /* Status Register Write Protect Bit Masks - 4bits */
+-#define		MV_MX25L_STATUS_REG_WP_MASK	        (0x0F << MV_SFLASH_STATUS_REG_WP_OFFSET)
++#define     MV_MX25L_STATUS_REG_WP_MASK	        (0x0F << MV_SFLASH_STATUS_REG_WP_OFFSET)
+ #define     MV_MX25L_STATUS_BP_NONE             (0x00 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+ #define     MV_MX25L_STATUS_BP_1_OF_128         (0x01 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+ #define     MV_MX25L_STATUS_BP_1_OF_64          (0x02 << MV_SFLASH_STATUS_REG_WP_OFFSET)
+diff --git a/drivers/mtd/Makefile b/drivers/mtd/Makefile
+index a28f6ee..96b8df9 100644
+--- a/drivers/mtd/Makefile
++++ b/drivers/mtd/Makefile
+@@ -33,3 +33,4 @@ inftl-objs		:= inftlcore.o inftlmount.o
+ obj-y		+= chips/ lpddr/ maps/ devices/ nand/ onenand/ tests/
+ 
+ obj-$(CONFIG_MTD_UBI)		+= ubi/
++obj-$(CONFIG_MTD)		+= ../../arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/
+diff --git a/drivers/mtd/maps/Makefile b/drivers/mtd/maps/Makefile
+index b161f4d..4ac7fed 100644
+--- a/drivers/mtd/maps/Makefile
++++ b/drivers/mtd/maps/Makefile
+@@ -59,7 +59,7 @@ obj-$(CONFIG_MTD_BCM963XX)	+= bcm963xx-flash.o
+ obj-$(CONFIG_MTD_LATCH_ADDR)	+= latch-addr-flash.o
+ obj-$(CONFIG_MTD_LANTIQ)	+= lantiq-flash.o
+ 
+-ifeq ($(CONFIG_ARCH_ARMADA_XP),y)
+-	include $(srctree)/arch/arm/mach-armadaxp/config/mvRules.mk
+-	obj-$(CONFIG_MV_INCLUDE_SPI) += ../../../arch/arm/mach-armadaxp/flashmap.o
++ifeq ($(CONFIG_MV_INCLUDE_SPI),y)
++	include $(srctree)/$(MACHINE)/config/mvRules.mk
++	obj-$(CONFIG_MV_INCLUDE_SPI) += ../../../$(MACHINE)/flashmap.o
+ endif
+diff --git a/drivers/mtd/nand/Makefile b/drivers/mtd/nand/Makefile
+index e7bbd7e..413fac9 100644
+--- a/drivers/mtd/nand/Makefile
++++ b/drivers/mtd/nand/Makefile
+@@ -50,6 +50,5 @@ obj-$(CONFIG_MTD_NAND_RICOH)		+= r852.o
+ obj-$(CONFIG_MTD_NAND_JZ4740)		+= jz4740_nand.o
+ obj-$(CONFIG_MTD_NAND_GPMI_NAND)	+= gpmi-nand/
+ 
+-obj-$(CONFIG_MTD_NAND_NFC)			+= ../../../arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/
+ 
+ nand-objs := nand_base.o nand_bbt.o
+-- 
+1.7.9.5
+

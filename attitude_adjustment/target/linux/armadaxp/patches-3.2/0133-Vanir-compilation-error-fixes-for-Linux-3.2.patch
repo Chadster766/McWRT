@@ -1,0 +1,43 @@
+From 600eb91255455b85d156d6ccf27436812a754870 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Wed, 4 Apr 2012 08:41:17 +0300
+Subject: [PATCH 133/609] Vanir compilation error fixes for Linux-3.2
+
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ drivers/scsi/vanir/linux/linux_main.c |   10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/scsi/vanir/linux/linux_main.c b/drivers/scsi/vanir/linux/linux_main.c
+index 84a729a..4f90e42 100644
+--- a/drivers/scsi/vanir/linux/linux_main.c
++++ b/drivers/scsi/vanir/linux/linux_main.c
+@@ -77,19 +77,19 @@ static int mv_probe(struct pci_dev *dev, const struct pci_device_id *id)
+ 	if (ret)
+ 		goto err_req_region;
+ 
+-	if ( !pci_set_dma_mask(dev, DMA_64BIT_MASK) ) {
+-		ret = pci_set_consistent_dma_mask(dev, DMA_64BIT_MASK);
++	if ( !pci_set_dma_mask(dev, DMA_BIT_MASK(64)) ) {
++		ret = pci_set_consistent_dma_mask(dev, DMA_BIT_MASK(64));
+ 		if (ret) {
+ 			ret = pci_set_consistent_dma_mask(dev,
+-							  DMA_32BIT_MASK);
++							  DMA_BIT_MASK(32));
+ 			if (ret)
+ 				goto err_dma_mask;
+ 		}
+ 	} else {
+-		ret = pci_set_dma_mask(dev, DMA_32BIT_MASK);
++		ret = pci_set_dma_mask(dev, DMA_BIT_MASK(32));
+ 		if (ret)
+ 			goto err_dma_mask;
+-		ret = pci_set_consistent_dma_mask(dev, DMA_32BIT_MASK);
++		ret = pci_set_consistent_dma_mask(dev, DMA_BIT_MASK(32));
+ 		if (ret)
+ 			goto err_dma_mask;
+ 	}
+-- 
+1.7.9.5
+

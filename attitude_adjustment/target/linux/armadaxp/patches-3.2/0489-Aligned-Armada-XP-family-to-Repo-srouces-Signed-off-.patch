@@ -1,0 +1,112 @@
+From 044e83176a72e009d0e41b72b6365b21b6309138 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 13 Jan 2013 13:36:29 +0200
+Subject: [PATCH 489/609] Aligned Armada XP family to Repo srouces
+ Signed-off-by: Yehuda Yitschak
+ <yehuday@marvell.com>
+
+Change-Id: I7624d905b79d8994e50a1beb9020e719d9ae98aa
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/boardEnv/mvBoardEnvLib.c      |   62 ++++++++++----------
+ 1 file changed, 31 insertions(+), 31 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+index 4611026..9eb3d0b 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+@@ -321,9 +321,35 @@ MV_BOOL mvBoardIsPortInGmii(MV_U32 ethPortNum)
+ 		return MV_FALSE;
+ }
+ 
+-MV_BOOL mvBoardIsPortInRgmii(MV_U32 ethPortNum)
++
++/*******************************************************************************
++* mvBoardSwitchCpuPortGet - Get the the Ethernet Switch CPU port
++*
++* DESCRIPTION:
++*       This routine returns the Switch CPU port.
++*
++* INPUT:
++*       switchIdx - index of the switch. Only 0 is supported.
++*
++* OUTPUT:
++*       None.
++*
++* RETURN:
++*       the Switch CPU port, -1 if the switch is not connected.
++*
++*******************************************************************************/
++MV_32 mvBoardSwitchCpuPortGet(MV_U32 switchIdx)
+ {
+-	return !mvBoardIsPortInGmii(ethPortNum);
++	MV_U32 boardId = mvBoardIdGet();
++
++	if (!((boardId >= BOARD_ID_BASE) && (boardId < MV_MAX_BOARD_ID))) {
++		mvOsPrintf("mvBoardSwitchCpuPortGet: Board unknown.\n");
++		return -1;
++	}
++	if ((BOARD_INFO(boardId)->switchInfoNum == 0) || (switchIdx >= BOARD_INFO(boardId)->switchInfoNum))
++		return -1;
++
++	return BOARD_INFO(boardId)->pSwitchInfo[switchIdx].cpuPort;
+ }
+ 
+ /*******************************************************************************
+@@ -353,7 +379,6 @@ MV_32 mvBoardPhyAddrGet(MV_U32 ethPortNum)
+ 
+ 	return BOARD_INFO(boardId)->pBoardMacInfo[ethPortNum].boardEthSmiAddr;
+ }
+-
+ /*******************************************************************************
+ * mvBoardQuadPhyAddr0Get - Get the phy address
+ *
+@@ -410,35 +435,9 @@ MV_32 mvBoardPhyLinkCryptPortAddrGet(MV_U32 ethPortNum)
+ 	return BOARD_INFO(boardId)->pBoardMacInfo[ethPortNum].LinkCryptPortAddr;
+ }
+ 
+-
+-/*******************************************************************************
+-* mvBoardSwitchCpuPortGet - Get the the Ethernet Switch CPU port
+-*
+-* DESCRIPTION:
+-*       This routine returns the Switch CPU port.
+-*
+-* INPUT:
+-*       switchIdx - index of the switch. Only 0 is supported.
+-*
+-* OUTPUT:
+-*       None.
+-*
+-* RETURN:
+-*       the Switch CPU port, -1 if the switch is not connected.
+-*
+-*******************************************************************************/
+-MV_32 mvBoardSwitchCpuPortGet(MV_U32 switchIdx)
++MV_BOOL mvBoardIsPortInRgmii(MV_U32 ethPortNum)
+ {
+-	MV_U32 boardId = mvBoardIdGet();
+-
+-	if (!((boardId >= BOARD_ID_BASE) && (boardId < MV_MAX_BOARD_ID))) {
+-		mvOsPrintf("mvBoardSwitchCpuPortGet: Board unknown.\n");
+-		return -1;
+-	}
+-	if ((BOARD_INFO(boardId)->switchInfoNum == 0) || (switchIdx >= BOARD_INFO(boardId)->switchInfoNum))
+-		return -1;
+-
+-	return BOARD_INFO(boardId)->pSwitchInfo[switchIdx].cpuPort;
++	return !mvBoardIsPortInGmii(ethPortNum);
+ }
+ 
+ /*******************************************************************************
+@@ -472,6 +471,7 @@ MV_BOARD_MAC_SPEED mvBoardMacSpeedGet(MV_U32 ethPortNum)
+ 	}
+ 	return BOARD_INFO(boardId)->pBoardMacInfo[ethPortNum].boardMacSpeed;
+ }
++
+ /*******************************************************************************
+ * mvBoardSpecInitGet -
+ *
+-- 
+1.7.9.5
+

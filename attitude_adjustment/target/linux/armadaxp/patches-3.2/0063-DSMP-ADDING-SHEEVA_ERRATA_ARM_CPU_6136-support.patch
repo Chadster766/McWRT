@@ -1,0 +1,38 @@
+From 4bac9467017c9d725336472af1378ef3a4ed16ae Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Tue, 10 Jan 2012 14:31:28 +0200
+Subject: [PATCH 063/609] DSMP ADDING SHEEVA_ERRATA_ARM_CPU_6136 support
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mm/Kconfig |   14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
+index f729537..ee42804 100644
+--- a/arch/arm/mm/Kconfig
++++ b/arch/arm/mm/Kconfig
+@@ -1026,6 +1026,20 @@ config SHEEVA_ERRATA_ARM_CPU_6076
+ 		cache evictions to the same address.  If L1 locking is not used, this bug is unlikely to occur.
+ 		Fix
+ 		-
++config SHEEVA_ERRATA_ARM_CPU_6136
++
++        bool "Sheeva Errata 6136: Base value gets corrupted after a page-crossing, boundary-crossing Load-Store-Multiple (LDSTM)"
++        depends on  CPU_SHEEVA_PJ4B_V7 && ARMADA_XP_REV_A0
++        default y
++        help
++	The scenario required to hit the bug starts with an LDM which is a cross-boundary, cross-page address.  The first part
++	hits in the cache, while the second part suffers an MMU fault.  Under this scenario, the source register does not get
++	restored after the fault occurs, causing data corruption.  NOTE: This can only happen on an LDM whose source is also
++	one of the destinations.  This can also only happen if the LDM has two destination registers in the register list.
++	Workaround
++	Set the "ldstm_first Two Sgl" bit[12] in the Auxiliary Debug Modes Control 0 Register.  This effectively forces the first
++	issue of a LDSTM to be a single word, avoiding the buggy condition.
++
+ config SHEEVA_ERRATA_ARM_CPU_PMU_RESET
+ 	bool "Sheeva Errata CPU Performance counters reset"
+ 	depends on CPU_SHEEVA_PJ4B_V6 || CPU_SHEEVA_PJ4B_V7
+-- 
+1.7.9.5
+

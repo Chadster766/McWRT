@@ -1,0 +1,276 @@
+From a4722eb290fdf6367c2fd4c6bcb06be98e180b2d Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Wed, 7 Dec 2011 16:31:11 +0200
+Subject: [PATCH 032/609] DAMP: adding support for an option to skipp the
+ configuration stage of the serdeses in the O.S., if
+ we do end up skipping the configuration we assume
+ the bootloader configuration are done are correct.
+ Signed-off-by: Seif Mazareeb <seif@marvell.com>
+
+---
+ .../armada_xp_family/boardEnv/mvBoardEnvLib.c      |   58 ++++++++++++++++++++
+ .../armada_xp_family/boardEnv/mvBoardEnvLib.h      |    2 +
+ .../armada_xp_family/boardEnv/mvBoardEnvSpec.c     |   28 +++++-----
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvLib.c        |    7 ++-
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvLib.h        |    1 +
+ arch/arm/mach-armadaxp/core.c                      |   21 ++++++-
+ 6 files changed, 101 insertions(+), 16 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+index 29ca72c..0090672 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
+@@ -2248,6 +2248,64 @@ MV_VOID mvBoardSerdesZ1ASupport(void)
+ 	gSerdesZ1AMode = 1;
+ }
+ /*******************************************************************************
++* mvBoardIsSerdesConfigurationEnabled
++*
++* DESCRIPTION:
++*       Check if Serdes configuration is enabled on this board.
++*
++* INPUT:
++*       None.
++*
++* OUTPUT:
++*       None.
++*
++* RETURN:
++*       MV_STATUS - MV_OK, MV_ERROR.
++*
++*******************************************************************************/
++MV_BOOL mvBoardIsSerdesConfigurationEnabled(void)
++{
++
++	 MV_U32 boardId = mvBoardIdGet();
++
++	 if (!((boardId >= BOARD_ID_BASE) && (boardId < MV_MAX_BOARD_ID))) {
++                mvOsPrintf("mvBoardIsSerdesConfigurationEnabled:Board unknown.\n");
++                return MV_ERROR;
++        }
++	return (BOARD_INFO(boardId)->pBoardSerdesConfigValue->enableSerdesConfiguration);
++}
++
++
++/*******************************************************************************
++* mvBoardSerdesConfigurationEnableSet
++*
++* DESCRIPTION:
++*	Check if Serdes configuration is enabled on this board.
++*
++* INPUT:
++*       None.
++*
++* OUTPUT:
++*       None.
++*
++* RETURN:
++*       MV_STATUS - MV_OK, MV_ERROR.
++*
++*******************************************************************************/
++MV_STATUS  mvBoardSerdesConfigurationEnableSet(MV_BOOL enableSerdesConfiguration)
++{
++
++	MV_U32 boardId = mvBoardIdGet();
++	if (!((boardId >= BOARD_ID_BASE) && (boardId < MV_MAX_BOARD_ID))) {
++		mvOsPrintf("mvBoardIsSerdesConfigurationEnabled:Board unknown.\n");
++		return MV_ERROR;
++        }
++	BOARD_INFO(boardId)->pBoardSerdesConfigValue->enableSerdesConfiguration=enableSerdesConfiguration;
++	return MV_OK;
++}
++
++
++/*******************************************************************************
+ * mvBoardSledCpuNumGet - Get board SERDES configuration
+ *
+ * DESCRIPTION:
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
+index 86e86a7..9411275 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
+@@ -423,6 +423,8 @@ MV_STATUS mvBoardTwsiMuxChannelSet(MV_U8 muxChNum);
+ MV_STATUS mvBoardTwsiReadByteThruMux(MV_U8 muxChNum, MV_U8 chNum, MV_TWSI_SLAVE *pTwsiSlave, MV_U8 *data);
+ MV_BOARD_MAC_SPEED mvBoardMacSpeedGet(MV_U32 ethPortNum);
+ MV_VOID mvBoardSerdesZ1ASupport(void);
++MV_BOOL mvBoardIsSerdesConfigurationEnabled(void);
++MV_STATUS  mvBoardSerdesConfigurationEnableSet(MV_BOOL enableSerdesconfig);
+ MV_SERDES_CFG *mvBoardSerdesCfgGet(void);
+ MV_BOARD_PEX_INFO *mvBoardPexInfoGet(void);
+ MV_STATUS mvBoardConfIdSet(MV_U16 conf);
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+index 7e297fd..cd86135 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+@@ -183,11 +183,11 @@ MV_BOARD_MPP_INFO db88f78XX0InfoBoardMppConfigValue[] = {
+ 
+ MV_SERDES_CFG db88f78XX0InfoBoardSerdesConfigValue[] = {
+ 	/* Z1B */
+-	{0x32221111, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED, PEX_BUS_MODE_X4, 0x00000030},	/* Default */
+-	{0x31211111, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_MODE_X1, PEX_BUS_MODE_X4, 0x00000030},	/* PEX module */
++	{MV_TRUE, 0x32221111, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED, PEX_BUS_MODE_X4, 0x00000030},	/* Default */
++	{MV_TRUE, 0x31211111, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_MODE_X1, PEX_BUS_MODE_X4, 0x00000030},	/* PEX module */
+ 	/* Z1A */
+-	{0x32220000, 0x00000000, PEX_BUS_DISABLED, PEX_BUS_DISABLED, PEX_BUS_DISABLED, 0x00000030},	/* Default - Z1A */
+-	{0x31210000, 0x00000000, PEX_BUS_DISABLED, PEX_BUS_MODE_X1, PEX_BUS_DISABLED, 0x00000030}	/* PEX module - Z1A */
++	{MV_TRUE, 0x32220000, 0x00000000, PEX_BUS_DISABLED, PEX_BUS_DISABLED, PEX_BUS_DISABLED, 0x00000030},	/* Default - Z1A */
++	{MV_TRUE, 0x31210000, 0x00000000, PEX_BUS_DISABLED, PEX_BUS_MODE_X1, PEX_BUS_DISABLED, 0x00000030}	/* PEX module - Z1A */
+ };
+ 
+ MV_BOARD_TDM_INFO	db88f78XX0Tdm880[]	= { {1}, {2} };
+@@ -369,11 +369,11 @@ MV_BOARD_MPP_INFO db88f78XX0rev2InfoBoardMppConfigValue[] = {
+ 
+ MV_SERDES_CFG db88f78XX0rev2InfoBoardSerdesConfigValue[] = { //Faraj: change accordign to DB ==> stays the same
+ 	/* Z1B */
+-	{0x33221111, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_MODE_X4, PEX_BUS_MODE_X4, 0x00000030},	/* Default */
+-	{0x31211111, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_MODE_X1, PEX_BUS_MODE_X4, 0x00000030},	/* PEX module */
++	{MV_TRUE, 0x33221111, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_MODE_X4, PEX_BUS_MODE_X4, 0x00000030},	/* Default */
++	{MV_TRUE, 0x31211111, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_MODE_X1, PEX_BUS_MODE_X4, 0x00000030},	/* PEX module */
+ 	/* Z1A */
+-	{0x32220000, 0x00000000, PEX_BUS_DISABLED, PEX_BUS_DISABLED, PEX_BUS_DISABLED, 0x00000030},	/* Default - Z1A */
+-	{0x31210000, 0x00000000, PEX_BUS_DISABLED, PEX_BUS_MODE_X1, PEX_BUS_DISABLED, 0x00000030}	/* PEX module - Z1A */
++	{MV_TRUE, 0x32220000, 0x00000000, PEX_BUS_DISABLED, PEX_BUS_DISABLED, PEX_BUS_DISABLED, 0x00000030},	/* Default - Z1A */
++	{MV_TRUE, 0x31210000, 0x00000000, PEX_BUS_DISABLED, PEX_BUS_MODE_X1, PEX_BUS_DISABLED, 0x00000030}	/* PEX module - Z1A */
+ };
+ 
+ MV_BOARD_TDM_INFO	db88f78XX0rev2Tdm880[]	= { {1}, {2} };
+@@ -498,8 +498,8 @@ MV_BOARD_MPP_INFO rd78460nasInfoBoardMppConfigValue[] = {
+ };
+ 
+ MV_SERDES_CFG rd78460nasInfoBoardSerdesConfigValue[] = { //Faraj: change accordign to DB ==> stays the same
+-	{0x00226001, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED, PEX_BUS_MODE_X4, 0x00000030},	/* Default */
+-	{0x43320301, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED, PEX_BUS_MODE_X4, 0x00000030},	/* Switch module */
++	{MV_TRUE, 0x00226001, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED, PEX_BUS_MODE_X4, 0x00000030},	/* Default */
++	{MV_TRUE, 0x43320301, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED, PEX_BUS_MODE_X4, 0x00000030},	/* Switch module */
+ 
+ };
+ 
+@@ -607,8 +607,8 @@ MV_BOARD_MPP_INFO rd78460InfoBoardMppConfigValue[] = {
+ };
+ 
+ MV_SERDES_CFG rd78460InfoBoardSerdesConfigValue[] = {
+-	{0x22321111, 0x00000000, PEX_BUS_MODE_X4, PEX_BUS_DISABLED, PEX_BUS_DISABLED, 0x00000010},	/* CPU0 */
+-	{0x00321111, 0x00000000, PEX_BUS_MODE_X4, PEX_BUS_DISABLED, PEX_BUS_DISABLED, 0x00000010}	/* CPU1-3 */
++	{MV_TRUE, 0x22321111, 0x00000000, PEX_BUS_MODE_X4, PEX_BUS_DISABLED, PEX_BUS_DISABLED, 0x00000010},	/* CPU0 */
++	{MV_TRUE, 0x00321111, 0x00000000, PEX_BUS_MODE_X4, PEX_BUS_DISABLED, PEX_BUS_DISABLED, 0x00000010}	/* CPU1-3 */
+ };
+ 
+ MV_BOARD_INFO rd78460Info = {
+@@ -725,7 +725,7 @@ MV_BOARD_MPP_INFO db78X60pcacInfoBoardMppConfigValue[] = {
+ };
+ 
+ MV_SERDES_CFG db78X60pcacInfoBoardSerdesConfigValue[] = {
+-	 {0x22321111, 0x00000000, PEX_BUS_MODE_X4, PEX_BUS_DISABLED, PEX_BUS_DISABLED, 0x00000010} /* Default */
++	 {MV_TRUE, 0x22321111, 0x00000000, PEX_BUS_MODE_X4, PEX_BUS_DISABLED, PEX_BUS_DISABLED, 0x00000010} /* Default */
+ };
+ 
+ 
+@@ -846,7 +846,7 @@ MV_BOARD_MPP_INFO fpga88f78XX0InfoBoardMppConfigValue[] = {
+ };
+ 
+ MV_SERDES_CFG fpga88f78XX0InfoBoardSerdesConfigValue[] = {
+-	{0x00000000, 0x00000000, PEX_BUS_DISABLED, PEX_BUS_DISABLED, PEX_BUS_DISABLED, 0x00000000} /* No PEX in FPGA */
++	{MV_TRUE, 0x00000000, 0x00000000, PEX_BUS_DISABLED, PEX_BUS_DISABLED, PEX_BUS_DISABLED, 0x00000000} /* No PEX in FPGA */
+ };
+ 
+ MV_BOARD_TDM_INFO	fpga88f78XX0Tdm880[]	= { {1}, {2} };
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
+index 984effc..183ad32 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
+@@ -1939,7 +1939,6 @@ MV_STATUS mvCtrlSerdesPhyConfig(MV_VOID)
+ 	MV_BOARD_PEX_INFO 	*boardPexInfo = mvBoardPexInfoGet();
+ 	MV_STATUS	status = MV_OK;
+ 	MV_U32		tmp;
+-
+ /* this is a mapping of the final power management clock gating control register value @ 0x18220.*/
+ 	MV_U32	powermngmntctrlregmap = 0x0;
+ 	MV_U32	ethport = 0;
+@@ -2155,6 +2154,12 @@ MV_STATUS mvCtrlSerdesPhyConfig(MV_VOID)
+ 
+ 	} /* for each serdes lane*/
+ 
++
++	if(mvBoardIsSerdesConfigurationEnabled() == MV_FALSE){
++		mvOsPrintf("skipping Serdes configuration phase, assume bootloader did this work already !!!\n");
++		return MV_OK;
++	}
++
+ 	/*
+ 	 * If clock gatting was done in U-boot then we don't want
+ 	 *to try to access  a HW block that is clock gated
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
+index 13bd343..8025060 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
+@@ -124,6 +124,7 @@ typedef enum {
+ /* Configuration per SERDES line.
+    Each nibble is MV_SERDES_LINE_TYPE */
+ typedef struct _boardSerdesConf {
++	MV_U32 enableSerdesConfiguration; /*This will determine if mvCtrlSerdesPhyConfig will configure the serdes*/
+ 	MV_U32	serdesLine0_7;	/* Lines 0 to 7 SERDES MUX one nibble per line */
+ 	MV_U32	serdesLine8_15;	/* Lines 8 to 15 SERDES MUX one nibble per line */
+ 	MV_PEX_UNIT_CFG		pex0Mod;
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index 5bd1785..cbf855a 100644
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -306,6 +306,7 @@ __setup("sp_enable", spec_prefesth_setup);
+ #else
+ 	MV_U32 support_wait_for_interrupt = 0x1;
+ #endif
++
+ static int __init noWFI_setup(char *__unused)
+ {
+      support_wait_for_interrupt = 0;
+@@ -314,6 +315,15 @@ static int __init noWFI_setup(char *__unused)
+ 
+ __setup("noWFI", noWFI_setup);
+ 
++MV_U32 serdes_reconfig = 0x0;
++static int __init serdes_reconfig_setup(char *__unused)
++{
++     printk("Re-configuring Serdes,bootloader configuration will be overwritten !!!\n");
++     serdes_reconfig = 1;
++     return 1;
++}
++__setup("serdes_reconfigure", serdes_reconfig_setup);
++
+ MV_U32 support_Z1A_serdes_cfg = 0x0;
+ static int __init serdesZ1A_setup(char *__unused)
+ {
+@@ -1188,7 +1198,10 @@ static void __init axp_db_init(void)
+ 	/* Before initializing the HAL, select Z1A serdes cfg if needed */
+ 	if (support_Z1A_serdes_cfg)
+ 		mvBoardSerdesZ1ASupport();
+-
++	/*A0 we don't want to overwrite the Serdes configuration done by the bootloader */
++#ifdef CONFIG_ARMADA_XP_REV_A0
++        mvBoardSerdesConfigurationEnableSet(MV_FALSE);
++#endif
+ 	/* init the Board environment */
+ 	mvBoardEnvInit();
+ 
+@@ -1365,6 +1378,9 @@ static void __init axp_rdsrv_init(void)
+ 	/* Select appropriate Board ID for Machine */
+ 	gBoardId = RD_78460_SERVER_ID;
+ 
++#ifdef CONFIG_ARMADA_XP_REV_A0
++        mvBoardSerdesConfigurationEnableSet(MV_FALSE);
++#endif
+ 	/* init the Board environment */
+ 	mvBoardEnvInit();
+ 
+@@ -1469,6 +1485,9 @@ static void __init axp_fpga_init(void)
+ 	/* Select appropriate Board ID for Machine */
+ 	gBoardId = FPGA_88F78XX0_ID;
+ 
++#ifdef CONFIG_ARMADA_XP_REV_A0
++        mvBoardSerdesConfigurationEnableSet(MV_FALSE);
++#endif
+         /* init the Board environment */
+        	mvBoardEnvInit();
+ 
+-- 
+1.7.9.5
+

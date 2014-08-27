@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -e
+
+sync
+
+killall -q watchdog || true
+echo 1 >/dev/watchdog
+
+/usr/sbin/kexec --load /boot/maemo.zImage --append "root=1f03 rootfstype=jffs2 ro console=tty0 console=ttyMTD5"
+/usr/sbin/kexec --exec

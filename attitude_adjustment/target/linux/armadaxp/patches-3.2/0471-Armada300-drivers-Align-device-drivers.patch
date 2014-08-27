@@ -1,0 +1,1353 @@
+From a25906d39a22b66ec5bbddf739bec6e2378aae81 Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Thu, 13 Dec 2012 19:43:42 +0200
+Subject: [PATCH 471/609] Armada300,drivers: Align device drivers.
+
+Change-Id: Ibd0c302b8efd3bd9d9140dd4e361f6e82d53032f
+Signed-off-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ drivers/ata/libata-pmp.c                   |    7 +
+ drivers/dma/mv_xor.c                       |    2 +
+ drivers/mtd/nand/Kconfig                   |    6 +
+ drivers/mtd/nand/orion_nand.c              |  539 ++++++++++++++++++++++++++++
+ drivers/net/ethernet/marvell/Kconfig       |    2 +-
+ drivers/net/phy/marvell.c                  |    8 +-
+ drivers/scsi/thor/core/thor/core_exp.c     |    3 +
+ drivers/scsi/thor/core/thor/core_init.c    |   14 +
+ net/dsa/Kconfig                            |    8 +
+ net/dsa/Makefile                           |    1 +
+ net/dsa/mv88e6171R.c                       |  442 +++++++++++++++++++++++
+ sound/soc/kirkwood/Kconfig                 |   10 +
+ sound/soc/kirkwood/Makefile                |    2 +
+ sound/soc/kirkwood/kirkwood-db88f6281-bp.c |  120 +++++++
+ 14 files changed, 1161 insertions(+), 3 deletions(-)
+ create mode 100644 net/dsa/mv88e6171R.c
+ create mode 100644 sound/soc/kirkwood/kirkwood-db88f6281-bp.c
+
+diff --git a/drivers/ata/libata-pmp.c b/drivers/ata/libata-pmp.c
+index ace7628..f212bf6 100644
+--- a/drivers/ata/libata-pmp.c
++++ b/drivers/ata/libata-pmp.c
+@@ -446,6 +446,13 @@ static void sata_pmp_quirks(struct ata_port *ap)
+ 		 * otherwise.  Don't try hard to recover it.
+ 		 */
+ 		ap->pmp_link[ap->nr_pmp_links - 1].flags |= ATA_LFLAG_NO_RETRY;
++	} else if (vendor == 0x11ab && devid == 0x4140) {
++		/* Marvell 4140 quirks */
++		ata_for_each_link(link, ap, EDGE) {
++			/* port 4 is for SEMB device and it doesn't like SRST */
++			if (link->pmp == 4)
++				link->flags |= ATA_LFLAG_DISABLED;
++		}
+ 	} else if (vendor == 0x197b && devid == 0x2352) {
+ 		/* chip found in Thermaltake BlackX Duet, jmicron JMB350? */
+ 		ata_for_each_link(link, ap, EDGE) {
+diff --git a/drivers/dma/mv_xor.c b/drivers/dma/mv_xor.c
+index 159d099..a7092e0 100644
+--- a/drivers/dma/mv_xor.c
++++ b/drivers/dma/mv_xor.c
+@@ -33,7 +33,9 @@ static void mv_xor_issue_pending(struct dma_chan *chan);
+ unsigned int dummy1[MV_XOR_MIN_BYTE_COUNT];
+ unsigned int dummy2[MV_XOR_MIN_BYTE_COUNT];
+ dma_addr_t dummy1_addr, dummy2_addr;
++#ifdef CONFIG_PM
+ static struct mv_xor_save_regs saved_regs;
++#endif
+ 
+ #define to_mv_xor_chan(chan)		\
+ 	container_of(chan, struct mv_xor_chan, common)
+diff --git a/drivers/mtd/nand/Kconfig b/drivers/mtd/nand/Kconfig
+index cce7b70..817f99f 100644
+--- a/drivers/mtd/nand/Kconfig
++++ b/drivers/mtd/nand/Kconfig
+@@ -453,6 +453,12 @@ config MTD_NAND_ORION
+ 	  No board specific support is done by this driver, each board
+ 	  must advertise a platform_device for the driver to attach.
+ 
++config MTD_NAND_RS_ECC
++	bool "Support 4-bit RS NAND ECC"
++	depends on MTD_NAND_ORION
++	help
++	  Add support for 4-bit NAND ECC RS (Reed Solomon).
++
+ config MTD_NAND_FSL_ELBC
+ 	tristate "NAND support for Freescale eLBC controllers"
+ 	depends on PPC_OF
+diff --git a/drivers/mtd/nand/orion_nand.c b/drivers/mtd/nand/orion_nand.c
+index 29f505a..f6dd4fa 100644
+--- a/drivers/mtd/nand/orion_nand.c
++++ b/drivers/mtd/nand/orion_nand.c
+@@ -21,6 +21,529 @@
+ #include <mach/hardware.h>
+ #include <plat/orion_nand.h>
+ 
++#ifdef CONFIG_MTD_NAND_RS_ECC
++
++static struct nand_ecclayout mv_nand_rs_oobinfo = {
++	.eccbytes = 40,
++	.eccpos = {
++		24, 25, 26, 27, 28, 29, 30, 31,
++		32, 33, 34, 35, 36, 37, 38, 39,
++		40, 41, 42, 43, 44, 45, 46, 47,
++		48, 49, 50, 51, 52, 53, 54, 55,
++		56, 57, 58, 59, 60, 61, 62, 63
++	},
++
++	.oobfree = {{6, 18}}
++};
++
++#define	MV_NAND_ECC_4BIT	4
++#define MV_NAND_ECC_1BIT	1
++
++static unsigned int ecc_mode = MV_NAND_ECC_1BIT;
++
++static int ecc_mode_setup(char *str)
++{
++	int mode, ret;
++
++	ret = get_option(&str, &mode);
++	if (!ret)
++		printk("%s: wrong nandEcc string\n", __func__);
++
++	if (mode == MV_NAND_ECC_1BIT || mode == MV_NAND_ECC_4BIT)
++		ecc_mode = mode;
++	else
++		ecc_mode = MV_NAND_ECC_1BIT; /* default */
++
++	return 1;
++}
++
++__setup("nandEcc=", ecc_mode_setup);
++
++#define mm 10	  /* RS code over GF(2**mm) - the size in bits of a symbol*/
++#define	nn 1023   /* nn=2^mm -1   length of codeword */
++#define tt 4      /* number of errors that can be corrected */
++#define kk 1015   /* kk = number of information symbols  kk = nn-2*tt  */
++
++static char rs_initialized = 0;
++
++//typedef unsigned int gf;
++typedef u_short tgf;  /* data type of Galois Functions */
++
++/* Primitive polynomials -  irriducibile polynomial  [ 1+x^3+x^10 ]*/
++short pp[mm+1] = { 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1 };
++
++
++/* index->polynomial form conversion table */
++tgf alpha_to[nn + 1];
++
++/* Polynomial->index form conversion table */
++tgf index_of[nn + 1];
++
++/* Generator polynomial g(x) = 2*tt with roots @, @^2, .. ,@^(2*tt) */
++tgf Gg[nn - kk + 1];
++
++
++#define	minimum(a,b)	((a) < (b) ? (a) : (b))
++
++#define	BLANK(a,n) {\
++	short ci;\
++	for(ci=0; ci<(n); ci++)\
++		(a)[ci] = 0;\
++	}
++
++#define	COPY(a,b,n) {\
++	short ci;\
++	for(ci=(n)-1;ci >=0;ci--)\
++		(a)[ci] = (b)[ci];\
++	}
++#define	COPYDOWN(a,b,n) {\
++	short ci;\
++	for(ci=(n)-1;ci >=0;ci--)\
++		(a)[ci] = (b)[ci];\
++	}
++
++
++/* generate GF(2^m) from the irreducible polynomial p(X) in p[0]..p[mm]
++   lookup tables:  index->polynomial form   alpha_to[] contains j=alpha^i;
++                   polynomial form -> index form  index_of[j=alpha^i] = i
++   alpha=2 is the primitive element of GF(2^m)
++*/
++
++void generate_gf(void)
++{
++	register int i, mask;
++
++	mask = 1;
++	alpha_to[mm] = 0;
++	for (i = 0; i < mm; i++) {
++		alpha_to[i] = mask;
++		index_of[alpha_to[i]] = i;
++		if (pp[i] != 0)
++			alpha_to[mm] ^= mask;
++		mask <<= 1;
++	}
++	index_of[alpha_to[mm]] = mm;
++
++	mask >>= 1;
++	for (i = mm + 1; i < nn; i++) {
++		if (alpha_to[i - 1] >= mask)
++			alpha_to[i] = alpha_to[mm] ^ ((alpha_to[i - 1] ^ mask) << 1);
++		else
++			alpha_to[i] = alpha_to[i - 1] << 1;
++		index_of[alpha_to[i]] = i;
++	}
++	index_of[0] = nn;
++	alpha_to[nn] = 0;
++}
++
++/*
++ * Obtain the generator polynomial of the tt-error correcting,
++ * length nn = (2^mm -1)
++ * Reed Solomon code from the product of (X + @^i), i=1..2*tt
++*/
++void gen_poly(void)
++{
++	register int i, j;
++
++	Gg[0] = alpha_to[1]; /* primitive element*/
++	Gg[1] = 1;		     /* g(x) = (X+@^1) initially */
++	for (i = 2; i <= nn - kk; i++) {
++		Gg[i] = 1;
++		/*
++		 * Below multiply (Gg[0]+Gg[1]*x + ... +Gg[i]x^i) by
++		 * (@^i + x)
++		 */
++		for (j = i - 1; j > 0; j--)
++			if (Gg[j] != 0)
++				Gg[j] = Gg[j - 1] ^ alpha_to[((index_of[Gg[j]]) + i)%nn];
++			else
++				Gg[j] = Gg[j - 1];
++		Gg[0] = alpha_to[((index_of[Gg[0]]) + i) % nn];
++	}
++	/* convert Gg[] to index form for quicker encoding */
++	for (i = 0; i <= nn - kk; i++)
++		Gg[i] = index_of[Gg[i]];
++}
++
++/*
++ * take the string of symbols in data[i], i=0..(k-1) and encode
++ * systematically to produce nn-kk parity symbols in bb[0]..bb[nn-kk-1] data[]
++ * is input and bb[] is output in polynomial form. Encoding is done by using
++ * a feedback shift register with appropriate connections specified by the
++ * elements of Gg[], which was generated above. Codeword is   c(X) =
++ * data(X)*X**(nn-kk)+ b(X)
++ */
++static inline char encode_rs(u_short data[kk], u_short bb[nn-kk])
++{
++	register int i, j;
++	tgf feedback;
++
++	BLANK(bb,nn-kk);
++	for (i = kk - 1; i >= 0; i--) {
++		if(data[i] > nn)
++			return -1;	/* Illegal symbol */
++		feedback = index_of[data[i] ^ bb[nn - kk - 1]];
++		if (feedback != nn) {	/* feedback term is non-zero */
++			for (j = nn - kk - 1; j > 0; j--)
++				if (Gg[j] != nn)
++					bb[j] = bb[j - 1] ^ alpha_to[(Gg[j] + feedback)%nn];
++				else
++					bb[j] = bb[j - 1];
++			bb[0] = alpha_to[(Gg[0] + feedback)%nn];
++		} else {
++			for (j = nn - kk - 1; j > 0; j--)
++				bb[j] = bb[j - 1];
++			bb[0] = 0;
++		}
++	}
++	return 0;
++}
++
++/* assume we have received bits grouped into mm-bit symbols in data[i],
++   i=0..(nn-1), We first compute the 2*tt syndromes, then we use the
++   Berlekamp iteration to find the error location polynomial  elp[i].
++   If the degree of the elp is >tt, we cannot correct all the errors
++   and hence just put out the information symbols uncorrected. If the
++   degree of elp is <=tt, we  get the roots, hence the inverse roots,
++   the error location numbers. If the number of errors located does not
++   equal the degree of the elp, we have more than tt errors and cannot
++   correct them.  Otherwise, we then solve for the error value at the
++   error location and correct the error.The procedure is that found in
++   Lin and Costello.*/
++
++static inline int decode_rs(u_short data[nn])
++{
++	int deg_lambda, el, deg_omega;
++	int i, j, r;
++	tgf q,tmp,num1,num2,den,discr_r;
++	tgf recd[nn];
++	tgf lambda[nn-kk + 1], s[nn-kk + 1];	/* Err+Eras Locator poly
++						 * and syndrome poly  */
++	tgf b[nn-kk + 1], t[nn-kk + 1], omega[nn-kk + 1];
++	tgf root[nn-kk], reg[nn-kk + 1], loc[nn-kk];
++	int syn_error, count;
++
++	/* data[] is in polynomial form, copy and convert to index form */
++	for (i = nn-1; i >= 0; i--){
++
++		if(data[i] > nn)
++			return -1;	/* Illegal symbol */
++
++		recd[i] = index_of[data[i]];
++	}
++
++	/* first form the syndromes; i.e., evaluate recd(x) at roots of g(x)
++	 * namely @**(1+i), i = 0, ... ,(nn-kk-1)
++	 */
++
++	syn_error = 0;
++
++	for (i = 1; i <= nn-kk; i++) {
++		tmp = 0;
++
++		for (j = 0; j < nn; j++)
++			if (recd[j] != nn)	/* recd[j] in index form */
++				tmp ^= alpha_to[(recd[j] + (1+i-1)*j)%nn];
++
++		syn_error |= tmp;	/* set flag if non-zero syndrome =>
++					 * error */
++		/* store syndrome in index form  */
++		s[i] = index_of[tmp];
++	}
++
++	if (!syn_error) {
++		/*
++		 * if syndrome is zero, data[] is a codeword and there are no
++		 * errors to correct. So return data[] unmodified
++		 */
++		return 0;
++	}
++
++	BLANK(&lambda[1],nn-kk);
++
++	lambda[0] = 1;
++
++	for(i=0;i<nn-kk+1;i++)
++		b[i] = index_of[lambda[i]];
++
++	/*
++	 * Begin Berlekamp-Massey algorithm to determine error
++	 * locator polynomial
++	 */
++	r = 0;
++	el = 0;
++	while (++r <= nn-kk) {	/* r is the step number */
++		/* Compute discrepancy at the r-th step in poly-form */
++		discr_r = 0;
++
++		for (i = 0; i < r; i++) {
++			if ((lambda[i] != 0) && (s[r - i] != nn)) {
++				discr_r ^= alpha_to[(index_of[lambda[i]] + s[r - i])%nn];
++			}
++		}
++
++		discr_r = index_of[discr_r];	/* Index form */
++		if (discr_r == nn) {
++			/* 2 lines below: B(x) <-- x*B(x) */
++			COPYDOWN(&b[1],b,nn-kk);
++			b[0] = nn;
++		} else {
++			/* 7 lines below: T(x) <-- lambda(x) - discr_r*x*b(x) */
++			t[0] = lambda[0];
++			for (i = 0 ; i < nn-kk; i++) {
++				if(b[i] != nn)
++					//t[i+1] = lambda[i+1] ^ alpha_to[modnn(discr_r + b[i])];
++					t[i+1] = lambda[i+1] ^ alpha_to[(discr_r + b[i])%nn];
++				else
++					t[i+1] = lambda[i+1];
++			}
++			if (2 * el <= r - 1) {
++				el = r - el;
++				/*
++				 * 2 lines below: B(x) <-- inv(discr_r) *
++				 * lambda(x)
++				 */
++				for (i = 0; i <= nn-kk; i++)
++					//b[i] = (lambda[i] == 0) ? nn : modnn(index_of[lambda[i]] - discr_r + nn);
++					b[i] = (lambda[i] == 0) ? nn : ((index_of[lambda[i]] - discr_r + nn)%nn);
++			} else {
++				/* 2 lines below: B(x) <-- x*B(x) */
++				COPYDOWN(&b[1],b,nn-kk);
++				b[0] = nn;
++			}
++			COPY(lambda,t,nn-kk+1);
++		}
++	}
++
++	/* Convert lambda to index form and compute deg(lambda(x)) */
++	deg_lambda = 0;
++	for (i = 0; i < nn - kk + 1; i++) {
++		lambda[i] = index_of[lambda[i]];
++		if (lambda[i] != nn)
++			deg_lambda = i;
++	}
++
++	/*
++	 * Find roots of the error locator polynomial. By Chien
++	 * Search
++	 */
++	COPY(&reg[1],&lambda[1],nn-kk);
++	count = 0;		/* Number of roots of lambda(x) */
++	for (i = 1; i <= nn; i++) {
++		q = 1;
++		for (j = deg_lambda; j > 0; j--)
++			if (reg[j] != nn) {
++				//reg[j] = modnn(reg[j] + j);
++				reg[j] = (reg[j] + j)%nn;
++				q ^= alpha_to[reg[j]];
++			}
++		if (!q) {
++			/* store root (index-form) and error location number */
++			root[count] = i;
++			loc[count] = nn - i;
++			count++;
++		}
++	}
++
++#ifdef DEBUG
++	/*
++	 * printk("\n Final error positions:\t");
++	 * for (i = 0; i < count; i++)
++	 * printk("%d ", loc[i]);
++	 * printk("\n");
++	 */
++#endif
++
++	if (deg_lambda != count) {
++		/*
++		 * deg(lambda) unequal to number of roots => uncorrectable
++		 * error detected
++		 */
++		return -1;
++	}
++
++	/*
++	 * Compute err evaluator poly omega(x) = s(x)*lambda(x) (modulo
++	 * x**(nn-kk)). in index form. Also find deg(omega).
++	 */
++
++	deg_omega = 0;
++	for (i = 0; i < nn - kk; i++) {
++		tmp = 0;
++		j = (deg_lambda < i) ? deg_lambda : i;
++		for (; j >= 0; j--) {
++			if ((s[i + 1 - j] != nn) && (lambda[j] != nn))
++				//tmp ^= alpha_to[modnn(s[i + 1 - j] + lambda[j])];
++				tmp ^= alpha_to[(s[i + 1 - j] + lambda[j])%nn];
++		}
++		if (tmp != 0)
++			deg_omega = i;
++		omega[i] = index_of[tmp];
++	}
++	omega[nn-kk] = nn;
++
++	/*
++	 * Compute error values in poly-form. num1 = omega(inv(X(l))), num2 =
++	 * inv(X(l))**(1-1) and den = lambda_pr(inv(X(l))) all in poly-form
++	 */
++	for (j = count-1; j >=0; j--) {
++		num1 = 0;
++		for (i = deg_omega; i >= 0; i--) {
++			if (omega[i] != nn)
++				//num1  ^= alpha_to[modnn(omega[i] + i * root[j])];
++				num1  ^= alpha_to[(omega[i] + i * root[j])%nn];
++		}
++		//num2 = alpha_to[modnn(root[j] * (1 - 1) + nn)];
++		num2 = alpha_to[(root[j] * (1 - 1) + nn)%nn];
++		den = 0;
++
++		/* lambda[i+1] for i even is the formal derivative lambda_pr of lambda[i] */
++		for (i = minimum(deg_lambda,nn-kk-1) & ~1; i >= 0; i -=2) {
++			if(lambda[i+1] != nn)
++				//den ^= alpha_to[modnn(lambda[i+1] + i * root[j])];
++				den ^= alpha_to[(lambda[i+1] + i * root[j])%nn];
++		}
++		if (den == 0) {
++#ifdef DEBUG
++			printk("\n ERROR: denominator = 0\n");
++#endif
++			return -1;
++		}
++		/* Apply error to data */
++		if (num1 != 0) {
++			//data[loc[j]] ^= alpha_to[modnn(index_of[num1] + index_of[num2] + nn - index_of[den])];
++			data[loc[j]] ^= alpha_to[(index_of[num1] + index_of[num2] + nn - index_of[den])%nn];
++		}
++	}
++	return count;
++}
++
++/**
++ * mv_nand_calculate_ecc_rs - [NAND Interface] Calculate 4 symbol ECC code for 512 byte block
++ * @mtd:	MTD block structure
++ * @dat:	raw data
++ * @ecc_code:	buffer for ECC
++ */
++int mv_nand_calculate_ecc_rs(struct mtd_info *mtd, const u_char *data, u_char *ecc_code)
++{
++	int i;
++	u_short rsdata[nn];
++
++	/* Generate Tables in first run */
++	if (!rs_initialized) {
++		generate_gf();
++		gen_poly();
++		rs_initialized = 1;
++	}
++
++	for (i = 512; i < nn; i++)
++		rsdata[i] = 0;
++
++	for (i = 0; i < 512; i++)
++		rsdata[i] = (u_short) data[i];
++
++	if ((encode_rs(rsdata,&(rsdata[kk]))) != 0)
++		return -1;
++
++	*(ecc_code) 	= (unsigned char) rsdata[kk];
++	*(ecc_code+1) 	= ((rsdata[0x3F7])   >> 8) | ((rsdata[0x3F7+1]) << 2);
++	*(ecc_code+2) 	= ((rsdata[0x3F7+1]) >> 6) | ((rsdata[0x3F7+2]) << 4);
++	*(ecc_code+3) 	= ((rsdata[0x3F7+2]) >> 4) | ((rsdata[0x3F7+3]) << 6);
++	*(ecc_code+4) 	= ((rsdata[0x3F7+3]) >> 2);
++	*(ecc_code+5) 	= (unsigned char) rsdata[kk+4];
++	*(ecc_code+6)	= ((rsdata[0x3F7+4])   >> 8) | ((rsdata[0x3F7+1+4]) << 2);
++	*(ecc_code+7) 	= ((rsdata[0x3F7+1+4]) >> 6) | ((rsdata[0x3F7+2+4]) << 4);
++	*(ecc_code+8) 	= ((rsdata[0x3F7+2+4]) >> 4) | ((rsdata[0x3F7+3+4]) << 6);
++	*(ecc_code+9) 	= ((rsdata[0x3F7+3+4]) >> 2);
++
++	return 0;
++}
++
++/**
++ * mv_nand_correct_data - [NAND Interface] Detect and correct bit error(s)
++ * @mtd:	MTD block structure
++ * @dat:	raw data read from the chip
++ * @store_ecc:	ECC from the chip
++ * @calc_ecc:	the ECC calculated from raw data
++ *
++ * Detect and correct a 1 bit error for 256 byte block
++ */
++int mv_nand_correct_data_rs(struct mtd_info *mtd, u_char *data, u_char *store_ecc, u_char *calc_ecc)
++{
++	int ret,i=0;
++	u_short rsdata[nn];
++
++	/* Generate Tables in first run */
++	if (!rs_initialized) {
++		generate_gf();
++		gen_poly();
++		rs_initialized = 1;
++	}
++
++	/* is decode needed ? */
++	if ((*(u32*)store_ecc == *(u32*)calc_ecc) &&
++			(*(u32*)(store_ecc + 4) == *(u32*)(calc_ecc + 4)) &&
++			(*(u16*)(store_ecc + 8) == *(u16*)(calc_ecc + 8)))
++		return 0;
++
++	/* did we read an erased page ? */
++	for (i = 0; i < 512 ;i += 4) {
++		if (*(u32*)(data+i) != 0xFFFFFFFF) {
++			/* DBG("%s: trying to correct data\n",__FUNCTION__); */
++			goto correct;
++		}
++	}
++	/* page was erased, return gracefully */
++	return 0;
++
++correct:
++
++	for(i=512; i<nn; i++)
++		rsdata[i] = 0;
++
++	/* errors*/
++	//data[20] = 0xDD;
++	//data[30] = 0xDD;
++	//data[40] = 0xDD;
++	//data[50] = 0xDD;
++	//data[60] = 0xDD;
++
++	/* Ecc is calculated on chunks of 512B */
++	for (i = 0; i < 512; i++)
++		rsdata[i] = (u_short) data[i];
++
++	rsdata[kk]   = ( (*(store_ecc+1) & 0x03) <<8) | (*(store_ecc));
++	rsdata[kk+1] = ( (*(store_ecc+2) & 0x0F) <<6) | (*(store_ecc+1)>>2);
++	rsdata[kk+2] = ( (*(store_ecc+3) & 0x3F) <<4) | (*(store_ecc+2)>>4);
++	rsdata[kk+3] = (*(store_ecc+4) <<2) | (*(store_ecc+3)>>6);
++
++	rsdata[kk+4] = ( (*(store_ecc+1+5) & 0x03) <<8) | (*(store_ecc+5));
++	rsdata[kk+5] = ( (*(store_ecc+2+5) & 0x0F) <<6) | (*(store_ecc+1+5)>>2);
++	rsdata[kk+6] = ( (*(store_ecc+3+5) & 0x3F) <<4) | (*(store_ecc+2+5)>>4);
++	rsdata[kk+7] = (*(store_ecc+4+5) <<2) | (*(store_ecc+3+5)>>6);
++
++	ret = decode_rs(rsdata);
++
++	/* Check for excessive errors */
++	if ((ret > tt) || (ret < 0)) {
++		printk("%s: uncorrectable error !!!\n",__FUNCTION__);
++		return -1;
++	}
++
++	/* Copy corrected data */
++	for (i = 0; i < 512; i++)
++		data[i] = (unsigned char)rsdata[i];
++
++	return 0;
++}
++
++static void mv_nand_enable_hwecc(struct mtd_info *mtd, int mode)
++{
++	return;
++}
++
++#endif /* CONFIG_MTD_NAND_RS_ECC */
++
+ static void orion_nand_cmd_ctrl(struct mtd_info *mtd, int cmd, unsigned int ctrl)
+ {
+ 	struct nand_chip *nc = mtd->priv;
+@@ -112,6 +635,22 @@ static int __init orion_nand_probe(struct platform_device *pdev)
+ 	nc->read_buf = orion_nand_read_buf;
+ 	nc->ecc.mode = NAND_ECC_SOFT;
+ 
++#ifdef CONFIG_MTD_NAND_RS_ECC
++	printk("Using %s ECC for NAND device\n",
++		(ecc_mode == MV_NAND_ECC_4BIT ?
++		"Reed-Solomon 4-bit" : "Hamming 1-bit"));
++
++	if (ecc_mode == MV_NAND_ECC_4BIT) {
++		nc->ecc.hwctl		= mv_nand_enable_hwecc;
++		nc->ecc.calculate	= mv_nand_calculate_ecc_rs;
++		nc->ecc.correct	= mv_nand_correct_data_rs;
++		nc->ecc.size		= 512;
++		nc->ecc.bytes		= 10;
++		nc->ecc.layout = &mv_nand_rs_oobinfo;
++		nc->ecc.mode = NAND_ECC_HW;
++	}
++#endif
++
+ 	if (board->chip_delay)
+ 		nc->chip_delay = board->chip_delay;
+ 
+diff --git a/drivers/net/ethernet/marvell/Kconfig b/drivers/net/ethernet/marvell/Kconfig
+index 0029934..1a51360 100644
+--- a/drivers/net/ethernet/marvell/Kconfig
++++ b/drivers/net/ethernet/marvell/Kconfig
+@@ -20,7 +20,7 @@ if NET_VENDOR_MARVELL
+ 
+ config MV643XX_ETH
+ 	tristate "Marvell Discovery (643XX) and Orion ethernet support"
+-	depends on (MV64X60 || PPC32 || PLAT_ORION) && INET
++	depends on (MV64X60 || PPC32 || PLAT_ORION) && INET && !MV_ETHERNET
+ 	select INET_LRO
+ 	select PHYLIB
+ 	---help---
+diff --git a/drivers/net/phy/marvell.c b/drivers/net/phy/marvell.c
+index e8b9c53..9ab529f 100644
+--- a/drivers/net/phy/marvell.c
++++ b/drivers/net/phy/marvell.c
+@@ -271,7 +271,7 @@ static int marvell_of_reg_init(struct phy_device *phydev)
+ 
+ static int m88e1121_config_aneg(struct phy_device *phydev)
+ {
+-	int err, oldpage, mscr;
++	int err, oldpage, mscr, val;
+ 
+ 	oldpage = phy_read(phydev, MII_MARVELL_PHY_PAGE);
+ 
+@@ -315,7 +315,11 @@ static int m88e1121_config_aneg(struct phy_device *phydev)
+ 	oldpage = phy_read(phydev, MII_MARVELL_PHY_PAGE);
+ 
+ 	phy_write(phydev, MII_MARVELL_PHY_PAGE, MII_88E1121_PHY_LED_PAGE);
+-	phy_write(phydev, MII_88E1121_PHY_LED_CTRL, MII_88E1121_PHY_LED_DEF);
++	/* Fixes power-down issue on RD-88F6282-A board by bypassing WoL logic */
++	val = phy_read(phydev, MII_88E1121_PHY_LED_CTRL);
++	val &= ~0xfff;
++	val |= 0x813;
++	phy_write(phydev, MII_88E1121_PHY_LED_CTRL, val);
+ 	phy_write(phydev, MII_MARVELL_PHY_PAGE, oldpage);
+ 
+ 	err = genphy_config_aneg(phydev);
+diff --git a/drivers/scsi/thor/core/thor/core_exp.c b/drivers/scsi/thor/core/thor/core_exp.c
+index 76b6dc9..3fc66e1 100644
+--- a/drivers/scsi/thor/core/thor/core_exp.c
++++ b/drivers/scsi/thor/core/thor/core_exp.c
+@@ -3908,6 +3908,9 @@ void SATA_PortHandleInterrupt(
+ 			SATA_HandleHotplugInterrupt(pPort, intStatus);
+ 		}
+ 
++		if(!(pDevice->Device_Type&DEVICE_TYPE_ATAPI))
++			SATA_PortReportNoDevice(pCore, pPort);
++
+ 		return;
+ 	}
+ 
+diff --git a/drivers/scsi/thor/core/thor/core_init.c b/drivers/scsi/thor/core/thor/core_init.c
+index 68f71de..ed39527 100644
+--- a/drivers/scsi/thor/core/thor/core_init.c
++++ b/drivers/scsi/thor/core/thor/core_init.c
+@@ -1208,6 +1208,20 @@ void PATA_PortReset(
+ 	struct mod_notif_param param;
+ #endif /* SUPPORT_ERROR_HANDLING */
+ 
++	/* No running commands at this moment */
++	MV_ASSERT( pPort->Running_Slot==0 );
++	MV_ASSERT( pPort->Port_State==PORT_STATE_IDLE );
++
++#ifdef MV_DEBUG
++	{
++		MV_U8 i;
++		for ( i=0; i<MAX_SLOT_NUMBER; i++ )
++		{
++			MV_DASSERT(pPort->Running_Req[i]==NULL);
++		}
++	}
++#endif
++
+ 	/* If we already reached the max number of devices supported,
+ 	   disregard the rest */
+ 	if( pCore->Total_Device_Count >= MAX_DEVICE_SUPPORTED )
+diff --git a/net/dsa/Kconfig b/net/dsa/Kconfig
+index c53ded2..a7e4c0b 100644
+--- a/net/dsa/Kconfig
++++ b/net/dsa/Kconfig
+@@ -57,4 +57,12 @@ config NET_DSA_MV88E6123_61_65
+ 	  This enables support for the Marvell 88E6123/6161/6165
+ 	  ethernet switch chips.
+ 
++config NET_DSA_MV88E6171R
++	tristate "Marvell 6171R ethernet switch chip support"
++	select NET_DSA_MV88E6XXX
++	select NET_DSA_TAG_EDSA
++	---help---
++	  This enables support for the Marvell 88E6171R
++	  ethernet switch chips.
++
+ endif
+diff --git a/net/dsa/Makefile b/net/dsa/Makefile
+index 2374faf..83efec4 100644
+--- a/net/dsa/Makefile
++++ b/net/dsa/Makefile
+@@ -5,6 +5,7 @@ obj-$(CONFIG_NET_DSA_TAG_TRAILER) += tag_trailer.o
+ 
+ # switch drivers
+ obj-$(CONFIG_NET_DSA_MV88E6XXX) += mv88e6xxx.o
++obj-$(CONFIG_NET_DSA_MV88E6171R) += mv88e6171R.o
+ obj-$(CONFIG_NET_DSA_MV88E6060) += mv88e6060.o
+ obj-$(CONFIG_NET_DSA_MV88E6123_61_65) += mv88e6123_61_65.o
+ obj-$(CONFIG_NET_DSA_MV88E6131) += mv88e6131.o
+diff --git a/net/dsa/mv88e6171R.c b/net/dsa/mv88e6171R.c
+new file mode 100644
+index 0000000..aa6ab90
+--- /dev/null
++++ b/net/dsa/mv88e6171R.c
+@@ -0,0 +1,442 @@
++/*
++ * net/dsa/mv88e6171R.c - Marvell 88e6171R switch chip support
++ * Copyright (c) 2008-2009 Marvell Semiconductor
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ */
++
++#include <linux/list.h>
++#include <linux/netdevice.h>
++#include <linux/phy.h>
++#include "dsa_priv.h"
++#include "mv88e6xxx.h"
++
++static char *mv88e6171R_probe(struct mii_bus *bus, int sw_addr)
++{
++	int ret;
++
++	ret = __mv88e6xxx_reg_read(bus, sw_addr, REG_PORT(0), 0x03);
++	if (ret >= 0) {
++		ret &= 0xfff0;
++		if (ret == 0x1710)
++			return "Marvell 88E6171R";
++	}
++
++	return NULL;
++}
++
++static int mv88e6171R_switch_reset(struct dsa_switch *ds)
++{
++	int i;
++	int ret;
++
++	/*
++	 * Set all ports to the disabled state.
++	 */
++	for (i = 0; i < 7; i++) {
++		ret = REG_READ(REG_PORT(i), 0x04);
++		REG_WRITE(REG_PORT(i), 0x04, ret & 0xfffc);
++	}
++
++	/*
++	 * Wait for transmit queues to drain.
++	 */
++	msleep(2);
++
++	/*
++	 * Reset the switch.
++	 */
++	ret = REG_READ(REG_GLOBAL, 0x04);
++	ret |= 0x8000;
++	REG_WRITE(REG_GLOBAL, 0x04, ret);
++
++	/*
++	 * Wait up to one second for reset to complete.
++	 */
++	for (i = 0; i < 1000; i++) {
++		ret = REG_READ(REG_GLOBAL, 0x00);
++		if ((ret & 0xc800) == 0xc800)
++			break;
++
++		msleep(1);
++	}
++	if (i == 1000)
++		return -ETIMEDOUT;
++
++	return 0;
++}
++
++static int mv88e6171R_setup_global(struct dsa_switch *ds)
++{
++	int ret;
++	int i;
++
++	/*
++	 * Set the default address aging time to 5 minutes, and
++	 * enable address learn messages to be sent to all message
++	 * ports.
++	 */
++	REG_WRITE(REG_GLOBAL, 0x0a, 0x0148);
++
++	/*
++	 * Configure the priority mapping registers.
++	 */
++	ret = mv88e6xxx_config_prio(ds);
++	if (ret < 0)
++		return ret;
++
++	/*
++	 * Configure the upstream port, and configure the upstream
++	 * port as the port to which ingress and egress monitor frames
++	 * are to be sent.
++	 */
++	REG_WRITE(REG_GLOBAL, 0x1a, (dsa_upstream_port(ds) * 0x1110));
++
++	/*
++	 * Disable remote management for now, and set the switch's
++	 * DSA device number.
++	 */
++	REG_WRITE(REG_GLOBAL, 0x1c, ds->index & 0x1f);
++
++	/*
++	 * Send all frames with destination addresses matching
++	 * 01:80:c2:00:00:2x to the CPU port.
++	 */
++	REG_WRITE(REG_GLOBAL2, 0x02, 0xffff);
++
++	/*
++	 * Send all frames with destination addresses matching
++	 * 01:80:c2:00:00:0x to the CPU port.
++	 */
++	REG_WRITE(REG_GLOBAL2, 0x03, 0xffff);
++
++	/*
++	 * Disable the loopback filter, disable flow control
++	 * messages, disable flood broadcast override, disable
++	 * removing of provider tags, disable ATU age violation
++	 * interrupts, disable tag flow control, force flow
++	 * control priority to the highest, and send all special
++	 * multicast frames to the CPU at the highest priority.
++	 */
++	REG_WRITE(REG_GLOBAL2, 0x05, 0x00ff);
++
++	/*
++	 * Program the DSA routing table.
++	 */
++	for (i = 0; i < 32; i++) {
++		int nexthop;
++
++		nexthop = 0x1f;
++		if (i != ds->index && i < ds->dst->pd->nr_chips)
++			nexthop = ds->pd->rtable[i] & 0x1f;
++
++		REG_WRITE(REG_GLOBAL2, 0x06, 0x8000 | (i << 8) | nexthop);
++	}
++
++	/*
++	 * Clear all trunk masks.
++	 */
++	for (i = 0; i < 8; i++)
++		REG_WRITE(REG_GLOBAL2, 0x07, 0x8000 | (i << 12) | 0xff);
++
++	/*
++	 * Clear all trunk mappings.
++	 */
++	for (i = 0; i < 16; i++)
++		REG_WRITE(REG_GLOBAL2, 0x08, 0x8000 | (i << 11));
++
++	/*
++	 * Disable ingress rate limiting by resetting all ingress
++	 * rate limit registers to their initial state.
++	 */
++	for (i = 0; i < 7; i++)
++		REG_WRITE(REG_GLOBAL2, 0x09, 0x9000 | (i << 8));
++
++	/*
++	 * Initialise cross-chip port VLAN table to reset defaults.
++	 */
++	REG_WRITE(REG_GLOBAL2, 0x0b, 0x9000);
++
++	/*
++	 * Clear the priority override table.
++	 */
++	for (i = 0; i < 16; i++)
++		REG_WRITE(REG_GLOBAL2, 0x0f, 0x8000 | (i << 8));
++
++	return 0;
++}
++
++static int mv88e6171R_setup_port(struct dsa_switch *ds, int p)
++{
++	int addr = REG_PORT(p);
++	u16 val;
++
++	/*
++	 * MAC Forcing register: don't force link, speed, duplex
++	 * or flow control state to any particular values on physical
++	 * ports, but force the CPU port and all DSA ports to 1000 Mb/s
++	 * full duplex, enable RGMII Rx/Tx delay for cpu port.
++	 */
++	if (dsa_is_cpu_port(ds, p) || ds->dsa_port_mask & (1 << p))
++		REG_WRITE(addr, 0x01, 0xc03e);
++	else
++		REG_WRITE(addr, 0x01, 0x0003);
++
++	/*
++	 * Do not limit the period of time that this port can be
++	 * paused for by the remote end or the period of time that
++	 * this port can pause the remote end.
++	 */
++	REG_WRITE(addr, 0x02, 0x0000);
++
++	/*
++	 * Port Control: disable Drop-on-Unlock, disable Drop-on-Lock,
++	 * disable Header mode, enable IGMP/MLD snooping, disable VLAN
++	 * tunneling, determine priority by looking at 802.1p and IP
++	 * priority fields (IP prio has precedence), and set STP state
++	 * to Forwarding.
++	 *
++	 * If this is the CPU link, use DSA or EDSA tagging depending
++	 * on which tagging mode was configured.
++	 *
++	 * If this is a link to another switch, use DSA tagging mode.
++	 *
++	 * If this is the upstream port for this switch, enable
++	 * forwarding of unknown unicasts and multicasts.
++	 */
++#if 0
++	val = 0x0433;
++	if (dsa_is_cpu_port(ds, p)) {
++		if (ds->dst->tag_protocol == htons(ETH_P_EDSA))
++			val |= 0x3300;
++		else
++			val |= 0x0100;
++	}
++
++	if (ds->dsa_port_mask & (1 << p))
++		val |= 0x0100;
++	if (p == dsa_upstream_port(ds))
++		val |= 0x000c;
++	printk("p(%d),val(0x%x)\n",p,val);
++	REG_WRITE(addr, 0x04, val);
++#endif
++	/* TBD: review setting of this register */
++	REG_WRITE(addr, 0x04, 0x007f);
++
++	/*
++	 * Port Control 1: disable trunking.  Also, if this is the
++	 * CPU port, enable learn messages to be sent to this port.
++	 */
++	REG_WRITE(addr, 0x05, dsa_is_cpu_port(ds, p) ? 0x8000 : 0x0000);
++
++	/*
++	 * Port based VLAN map: give each port its own address
++	 * database, allow the CPU port to talk to each of the 'real'
++	 * ports, and allow each of the 'real' ports to only talk to
++	 * the upstream port.
++	 */
++	val = (p & 0xf) << 12;
++	if (dsa_is_cpu_port(ds, p))
++		val |= ds->phys_port_mask;
++	else
++		val |= 1 << dsa_upstream_port(ds);
++	REG_WRITE(addr, 0x06, val);
++
++	/*
++	 * Default VLAN ID and priority: don't set a default VLAN
++	 * ID, and set the default packet priority to zero.
++	 */
++	REG_WRITE(addr, 0x07, 0x0000);
++
++	/*
++	 * Port Control 2: don't force a good FCS, set the maximum
++	 * frame size to 10240 bytes, don't let the switch add or
++	 * strip 802.1q tags, don't discard tagged or untagged frames
++	 * on this port, do a destination address lookup on all
++	 * received packets as usual, disable ARP mirroring and don't
++	 * send a copy of all transmitted/received frames on this port
++	 * to the CPU.
++	 */
++	REG_WRITE(addr, 0x08, 0x2080);
++
++	/*
++	 * Egress rate control: disable egress rate control.
++	 */
++	REG_WRITE(addr, 0x09, 0x0001);
++
++	/*
++	 * Egress rate control 2: disable egress rate control.
++	 */
++	REG_WRITE(addr, 0x0a, 0x0000);
++
++	/*
++	 * Port Association Vector: when learning source addresses
++	 * of packets, add the address to the address database using
++	 * a port bitmap that has only the bit for this port set and
++	 * the other bits clear.
++	 */
++	REG_WRITE(addr, 0x0b, 1 << p);
++
++	/*
++	 * Port ATU control: disable limiting the number of address
++	 * database entries that this port is allowed to use.
++	 */
++	REG_WRITE(addr, 0x0c, 0x0000);
++
++	/*
++	 * Priorit Override: disable DA, SA and VTU priority override.
++	 */
++	REG_WRITE(addr, 0x0d, 0x0000);
++
++	/*
++	 * Port Ethertype: use the Ethertype DSA Ethertype value.
++	 */
++	REG_WRITE(addr, 0x0f, ETH_P_EDSA);
++
++	/*
++	 * Tag Remap: use an identity 802.1p prio -> switch prio
++	 * mapping.
++	 */
++	REG_WRITE(addr, 0x18, 0x3210);
++
++	/*
++	 * Tag Remap 2: use an identity 802.1p prio -> switch prio
++	 * mapping.
++	 */
++	REG_WRITE(addr, 0x19, 0x7654);
++
++	return 0;
++}
++
++static int mv88e6171R_setup(struct dsa_switch *ds)
++{
++	struct mv88e6xxx_priv_state *ps = (void *)(ds + 1);
++	int i;
++	int ret;
++
++	mutex_init(&ps->smi_mutex);
++	mutex_init(&ps->stats_mutex);
++
++	ret = mv88e6171R_switch_reset(ds);
++	if (ret < 0)
++		return ret;
++
++	/* @@@ initialise vtu and atu */
++
++	ret = mv88e6171R_setup_global(ds);
++	if (ret < 0)
++		return ret;
++
++	for (i = 0; i < 6; i++) {
++		ret = mv88e6171R_setup_port(ds, i);
++		if (ret < 0)
++			return ret;
++	}
++
++	return 0;
++}
++
++static int mv88e6171R_port_to_phy_addr(int port)
++{
++	if (port >= 0 && port <= 4)
++		return port;
++	return -1;
++}
++
++static int
++mv88e6171R_phy_read(struct dsa_switch *ds, int port, int regnum)
++{
++	int addr = mv88e6171R_port_to_phy_addr(port);
++	return mv88e6xxx_phy_read(ds, addr, regnum);
++}
++
++static int
++mv88e6171R_phy_write(struct dsa_switch *ds,
++			      int port, int regnum, u16 val)
++{
++	int addr = mv88e6171R_port_to_phy_addr(port);
++	return mv88e6xxx_phy_write(ds, addr, regnum, val);
++}
++
++static struct mv88e6xxx_hw_stat mv88e6171R_hw_stats[] = {
++	{ "in_good_octets", 8, 0x00, },
++	{ "in_bad_octets", 4, 0x02, },
++	{ "in_unicast", 4, 0x04, },
++	{ "in_broadcasts", 4, 0x06, },
++	{ "in_multicasts", 4, 0x07, },
++	{ "in_pause", 4, 0x16, },
++	{ "in_undersize", 4, 0x18, },
++	{ "in_fragments", 4, 0x19, },
++	{ "in_oversize", 4, 0x1a, },
++	{ "in_jabber", 4, 0x1b, },
++	{ "in_rx_error", 4, 0x1c, },
++	{ "in_fcs_error", 4, 0x1d, },
++	{ "out_octets", 8, 0x0e, },
++	{ "out_unicast", 4, 0x10, },
++	{ "out_broadcasts", 4, 0x13, },
++	{ "out_multicasts", 4, 0x12, },
++	{ "out_pause", 4, 0x15, },
++	{ "excessive", 4, 0x11, },
++	{ "collisions", 4, 0x1e, },
++	{ "deferred", 4, 0x05, },
++	{ "single", 4, 0x14, },
++	{ "multiple", 4, 0x17, },
++	{ "out_fcs_error", 4, 0x03, },
++	{ "late", 4, 0x1f, },
++	{ "hist_64bytes", 4, 0x08, },
++	{ "hist_65_127bytes", 4, 0x09, },
++	{ "hist_128_255bytes", 4, 0x0a, },
++	{ "hist_256_511bytes", 4, 0x0b, },
++	{ "hist_512_1023bytes", 4, 0x0c, },
++	{ "hist_1024_max_bytes", 4, 0x0d, },
++};
++
++static void
++mv88e6171R_get_strings(struct dsa_switch *ds, int port, uint8_t *data)
++{
++	mv88e6xxx_get_strings(ds, ARRAY_SIZE(mv88e6171R_hw_stats),
++			      mv88e6171R_hw_stats, port, data);
++}
++
++static void
++mv88e6171R_get_ethtool_stats(struct dsa_switch *ds,
++				  int port, uint64_t *data)
++{
++	mv88e6xxx_get_ethtool_stats(ds, ARRAY_SIZE(mv88e6171R_hw_stats),
++				    mv88e6171R_hw_stats, port, data);
++}
++
++static int mv88e6171R_get_sset_count(struct dsa_switch *ds)
++{
++	return ARRAY_SIZE(mv88e6171R_hw_stats);
++}
++
++static struct dsa_switch_driver mv88e6171R_switch_driver = {
++	.tag_protocol		= cpu_to_be16(ETH_P_EDSA),
++	.priv_size		= sizeof(struct mv88e6xxx_priv_state),
++	.probe			= mv88e6171R_probe,
++	.setup			= mv88e6171R_setup,
++	.set_addr		= mv88e6xxx_set_addr_indirect,
++	.phy_read		= mv88e6171R_phy_read,
++	.phy_write		= mv88e6171R_phy_write,
++	.poll_link		= mv88e6xxx_poll_link,
++	.get_strings		= mv88e6171R_get_strings,
++	.get_ethtool_stats	= mv88e6171R_get_ethtool_stats,
++	.get_sset_count		= mv88e6171R_get_sset_count,
++};
++
++static int __init mv88e6171R_init(void)
++{
++	register_switch_driver(&mv88e6171R_switch_driver);
++	return 0;
++}
++module_init(mv88e6171R_init);
++
++static void __exit mv88e6171R_cleanup(void)
++{
++	unregister_switch_driver(&mv88e6171R_switch_driver);
++}
++module_exit(mv88e6171R_cleanup);
+diff --git a/sound/soc/kirkwood/Kconfig b/sound/soc/kirkwood/Kconfig
+index 0d685f4..6541d80 100644
+--- a/sound/soc/kirkwood/Kconfig
++++ b/sound/soc/kirkwood/Kconfig
+@@ -19,6 +19,16 @@ config SND_KIRKWOOD_SOC_OPENRD
+ 	  Say Y if you want to add support for SoC audio on
+ 	  Openrd Client.
+ 
++config SND_KIRKWOOD_SOC_DB88F6281_BP
++	tristate "SoC Audio support for Kirkwood DB88F6281-BP Client"
++	depends on SND_KIRKWOOD_SOC && MACH_DB88F6281_BP
++	depends on I2C
++	select SND_KIRKWOOD_SOC_I2S
++	select SND_SOC_CS42L51
++	help
++	  Say Y if you want to add support for SoC audio on
++	  DB88F6281-BP Client.
++
+ config SND_KIRKWOOD_SOC_T5325
+ 	tristate "SoC Audio support for HP t5325"
+ 	depends on SND_KIRKWOOD_SOC && MACH_T5325 && I2C
+diff --git a/sound/soc/kirkwood/Makefile b/sound/soc/kirkwood/Makefile
+index 0f53471..527fb3a 100644
+--- a/sound/soc/kirkwood/Makefile
++++ b/sound/soc/kirkwood/Makefile
+@@ -6,8 +6,10 @@ obj-$(CONFIG_SND_KIRKWOOD_SOC) += snd-soc-kirkwood.o
+ obj-$(CONFIG_SND_KIRKWOOD_SOC_I2S) += snd-soc-kirkwood-i2s.o
+ 
+ snd-soc-openrd-objs := kirkwood-openrd.o
++snd-soc-db88f6281-bp-objs := kirkwood-db88f6281-bp.o
+ snd-soc-t5325-objs := kirkwood-t5325.o
+ 
+ obj-$(CONFIG_SND_KIRKWOOD_SOC_OPENRD) += snd-soc-openrd.o
++obj-$(CONFIG_SND_KIRKWOOD_SOC_DB88F6281_BP) += snd-soc-db88f6281-bp.o
+ obj-$(CONFIG_SND_KIRKWOOD_SOC_T5325) += snd-soc-t5325.o
+ obj-$(CONFIG_SND_ARMADA370_SOC) += snd-soc-a370.o
+diff --git a/sound/soc/kirkwood/kirkwood-db88f6281-bp.c b/sound/soc/kirkwood/kirkwood-db88f6281-bp.c
+new file mode 100644
+index 0000000..4a3d2e5
+--- /dev/null
++++ b/sound/soc/kirkwood/kirkwood-db88f6281-bp.c
+@@ -0,0 +1,120 @@
++/*
++ * kirkwood-openrd.c
++ *
++ * (c) 2010 Arnaud Patard <apatard@mandriva.com>
++ * (c) 2010 Arnaud Patard <arnaud.patard@rtp-net.org>
++ *
++ *  This program is free software; you can redistribute  it and/or modify it
++ *  under  the terms of  the GNU General  Public License as published by the
++ *  Free Software Foundation;  either version 2 of the  License, or (at your
++ *  option) any later version.
++ */
++
++#include <linux/module.h>
++#include <linux/moduleparam.h>
++#include <linux/interrupt.h>
++#include <linux/platform_device.h>
++#include <linux/slab.h>
++#include <sound/soc.h>
++#include <mach/kirkwood.h>
++#include <plat/audio.h>
++#include <asm/mach-types.h>
++#include "../codecs/cs42l51.h"
++
++static int db88f6281_bp_client_hw_params(struct snd_pcm_substream *substream,
++		struct snd_pcm_hw_params *params)
++{
++	struct snd_soc_pcm_runtime *rtd = substream->private_data;
++	struct snd_soc_dai *codec_dai = rtd->codec_dai;
++	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
++	int ret;
++	unsigned int freq, fmt;
++
++	fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_CBS_CFS;
++	ret = snd_soc_dai_set_fmt(cpu_dai, fmt);
++	if (ret < 0)
++		return ret;
++
++	ret = snd_soc_dai_set_fmt(codec_dai, fmt);
++	if (ret < 0)
++		return ret;
++
++	switch (params_rate(params)) {
++	default:
++	case 44100:
++		freq = 11289600;
++		break;
++	case 48000:
++		freq = 12288000;
++		break;
++	case 96000:
++		freq = 24576000;
++		break;
++	}
++
++	return snd_soc_dai_set_sysclk(codec_dai, 0, freq, SND_SOC_CLOCK_IN);
++
++}
++
++static struct snd_soc_ops db88f6281_bp_client_ops = {
++	.hw_params = db88f6281_bp_client_hw_params,
++};
++
++
++static struct snd_soc_dai_link db88f6281_bp_client_dai[] = {
++{
++	.name = "CS42L51",
++	.stream_name = "CS42L51 HiFi",
++	.cpu_dai_name = "kirkwood-i2s",
++	.platform_name = "kirkwood-pcm-audio",
++	.codec_dai_name = "cs42l51-hifi",
++	.codec_name = "cs42l51-codec.0-004a",
++	.ops = &db88f6281_bp_client_ops,
++},
++};
++
++
++static struct snd_soc_card db88f6281_bp_client = {
++	.name = "DB88F6281-BP Client",
++	.dai_link = db88f6281_bp_client_dai,
++	.num_links = ARRAY_SIZE(db88f6281_bp_client_dai),
++};
++
++static struct platform_device *db88f6281_bp_client_snd_device;
++
++static int __init db88f6281_bp_client_init(void)
++{
++	int ret;
++
++	if (!machine_is_db88f6281_bp())
++		return 0;
++
++	db88f6281_bp_client_snd_device = platform_device_alloc("soc-audio", -1);
++	if (!db88f6281_bp_client_snd_device)
++		return -ENOMEM;
++
++	platform_set_drvdata(db88f6281_bp_client_snd_device,
++			&db88f6281_bp_client);
++
++	ret = platform_device_add(db88f6281_bp_client_snd_device);
++	if (ret) {
++		printk(KERN_ERR "%s: platform_device_add failed\n", __func__);
++		platform_device_put(db88f6281_bp_client_snd_device);
++	}
++
++	return ret;
++}
++
++static void __exit db88f6281_bp_client_exit(void)
++{
++	platform_device_unregister(db88f6281_bp_client_snd_device);
++}
++
++module_init(db88f6281_bp_client_init);
++module_exit(db88f6281_bp_client_exit);
++
++/* Module information */
++MODULE_AUTHOR("Arnaud Patard <arnaud.patard@rtp-net.org>");
++MODULE_DESCRIPTION("ALSA SoC OpenRD Client");
++MODULE_LICENSE("GPL");
++MODULE_ALIAS("platform:soc-audio");
+-- 
+1.7.9.5
+

@@ -1,0 +1,426 @@
+#!/bin/sh 
+# Copyright (C) 2009 Fabian Omar Franzotti <fofware@gmail.com>
+# http://pastebin.ca/2098184
+#
+#include /lib/network
+. /etc/functions.sh
+. /lib/config/uci.sh
+
+local INTERFACE="$INTERFACE"
+local DEVICE="$DEVICE"
+
+saveundo () {
+	[ ! -e /var/mroute/$DEVICE ] && mkdir -p /var/mroute/$DEVICE
+	[ ! -e /var/mroute/$DEVICE/$1 ] && echo "rm /var/mroute/$DEVICE/$1" > /var/mroute/$DEVICE/$1
+	sed -e "1i $2" /var/mroute/$DEVICE/$1 > /var/mroute/$DEVICE/$1.tmp
+	mv -f /var/mroute/$DEVICE/$1.tmp /var/mroute/$DEVICE/$1
+}
+
+undo () {
+	file="/var/mroute/$DEVICE/$1"
+	echo "undo $file"
+	if [ -e "$file" ]; then
+		sh "$file"
+#		cat "$file" | awk '{ print $0; system( $0 ); }'
+		echo "End $file"
+#		rm $file
+	fi
+
+#	[ -e "$file" ] && {
+#		while read line; do echo "$line"; eval "$line"; done < $file
+#		echo "" > $file
+#	}
+#	
+#	[ -e "$file" ] && {
+#		sleep 3
+#		rm "$file"
+#	}
+
+}
+
+log_debug() {
+	if [ $DEBUG -eq $1 -o $1 -lt 4 ]; then
+		logger -t mroute -p $1 -s $2
+	fi
+}
+
+set_rtTables () {
+#
+# reserved values
+#
+#	echo 255 local > /etc/iproute2/rt_tables
+#	echo 254 main >> /etc/iproute2/rt_tables
+#	echo 253 default >> /etc/iproute2/rt_tables
+#	echo 0 unspec >> /etc/iproute2/rt_tables
+	local n
+	local RT
+	
+	n=200
+	RT=${1}_rt
+	if [ -z "`cat /etc/iproute2/rt_tables | grep $RT`" ] ; then
+		while [ "`cat /etc/iproute2/rt_tables | grep "^$n"`" ]
+		do
+			n=`expr $n + 1`
+		done
+		echo "$n $RT" >> /etc/iproute2/rt_tables 
+		log_debug 5 "set_rt_Tables:$n $RT"
+		n=`expr $n + 1`
+	fi
+	eval ${1}_RT_TABLE=$RT
+	log_debug 5 "set_rt_Tables:${1}_RT_TABLE=$RT.....OK"
+}
+
+uci_get() {
+	uci -P /var/state get "$1" 2>/dev/null
+}
+
+local iftype=$(uci_get "mroute.$INTERFACE")
+[ -z "$iftype" ] && exit 0
+
+add_new_wan () {
+	local network
+	local device
+	local ipaddr
+	local type
+	config_get network $1 network
+	[ -z "$network" ] && return
+	config_get ipaddr $1 ipaddr
+	config_get device $1 device
+	type=$(uci_get "mroute.$1")
+	[ "$type" = "lanif" ] && unset ipaddr
+	
+	add_net_to_rt $1 "add_new_wan" ${INTERFACE}_rt $network $device $ipaddr
+}
+
+add_marks () {
+	local outwan
+	local input
+	local protocol
+	local destination
+	local port
+	local mark
+	local RUN
+	local status 
+#	status=$(uci_get_state mroute $INTERFACE status)
+#	[ -z "$status" -o "$status" == "0" ] && return
+	config_get mark $1 mark
+	config_get outwan $1 outwan
+	[ -z "$mark" ] && return
+	[ -z "$outwan" ] && return
+	[ "$outwan" != "$INTERFACE" ] && return
+	config_get input $1 input
+	config_get protocol $1 protocol
+	config_get destination $1 destination
+	config_get ports $1 dport
+	if [ -z "$protocol" ]; then 
+		protocol=""
+	else 
+		protocol="-p $protocol"
+	fi
+	
+	if [ -z "$input" ]; then
+		RUN="ip rule add fwmark $mark table ${outwan}_rt"
+		DEL="ip rule del fwmark $mark table ${outwan}_rt"
+		input=""
+	else
+		RUN="ip rule add from $input fwmark $mark table ${outwan}_rt"
+		DEL="ip rule del from $input fwmark $mark table ${outwan}_rt"
+		input="-i $input"
+	fi
+	saveundo mark "$DEL"
+	echo $RUN
+	eval $RUN
+	if [ -z "$destination" ]; then
+		for port in $ports; do
+			RUN="iptables -A PREROUTING -t mangle $input $protocol --dport $port -j MARK --set-mark $mark"
+			DEL="iptables -D PREROUTING -t mangle $input $protocol --dport $port -j MARK --set-mark $mark"
+			saveundo iptables "$DEL"
+			echo $RUN
+			eval $RUN
+		done
+	else
+		for dest in $destination; do
+			dest="-d $dest"
+			if [ -z $ports ]; then
+				RUN="iptables -A PREROUTING -t mangle $input $protocol $dest -j MARK --set-mark $mark"
+				DEL="iptables -D PREROUTING -t mangle $input $protocol $dest -j MARK --set-mark $mark"
+				saveundo iptables "$DEL"
+				echo $RUN
+				eval $RUN
+			else
+				for port in $ports; do
+					RUN="iptables -A PREROUTING -t mangle $input $protocol $dest --dport $port -j MARK --set-mark $mark"
+					DEL="iptables -D PREROUTING -t mangle $input $protocol $dest --dport $port -j MARK --set-mark $mark"
+					saveundo iptables "$DEL"
+					echo $RUN
+					eval $RUN
+				done
+			fi
+		done
+	fi
+}
+
+add_wan_default () {
+	local RUN="ip route add default via $new_gateway table ${INTERFACE}_rt"
+	local DEL="ip route del default via $new_gateway table ${INTERFACE}_rt"
+	saveundo route "$DEL"
+	log_debug 5 "add_wan($new_name):$RUN"
+	echo $RUN
+	eval $RUN
+}
+
+add_net_to_rt () {
+	# iface = $1
+	# howsend = $2
+	# rt_table = $3
+	# network = $4
+	# device = $5
+	# ipaddr = $6
+	local RUN="ip route add $4 dev $5 src $6 table $3"
+	local DEL="ip route del $4 dev $5 src $6 table $3"
+	[ -z "$6" ] && {
+		RUN="ip route add $4 dev $5 table $3"
+		DEL="ip route del $4 dev $5 table $3"
+	}
+	log_debug 5 "$2 ($new_name)$1 $3:$RUN"
+	saveundo route "$DEL"
+	echo $RUN
+	eval $RUN
+}
+
+add_rule () {
+	local RUN
+	local mark=$(uci_get "mroute.${INTERFACE}.mark")
+	[ -n "$mark" ] && {
+		config_foreach add_lans_rules lanif
+	}
+	RUN="ip rule add from $new_ipaddr table ${INTERFACE}_rt"
+	DEL="ip rule del from $new_ipaddr table ${INTERFACE}_rt"
+	log_debug 5 "add_rule($new_name):$RUN"
+	saveundo rule "$DEL"
+	echo $RUN
+	eval $RUN
+}
+
+add_lans_rules () {
+	local lan_device
+	local lan_ipaddr
+	config_get lan_device $1 device
+	config_get lan_ipaddr $1 ipaddr
+	config_get lan_network $1 network
+	RUN="ip rule add from $lan_ipaddr fwmark $mark table ${INTERFACE}_rt"
+	DEL="ip rule del from $lan_ipaddr fwmark $mark table ${INTERFACE}_rt"
+	log_debug 5 "add_rule($new_name):$RUN"
+	saveundo rule "$DEL"
+	echo $RUN
+	eval $RUN
+}
+
+add_route () {
+	local gateway
+	local status
+	local device
+	local weight
+	local name
+	config_get gateway $1 gateway
+	config_get status $1 status
+	
+	[ -z "$gateway" -o -z "$status" ] && return
+	[ "$status" -eq "0" ] && return
+
+	config_get device $1 device
+	config_get weight $1 weight
+	config_get name $1 name
+	append ROUTE "nexthop via $gateway dev $device weight $weight"
+	ONE_ROUTE="ip route replace default scope global via $gateway dev $device"
+#	last_device=$device
+#	last_gateway=$gateway
+	COUNT=$(expr ${COUNT} + 1)
+}
+
+set_route () {
+	local LEVEL
+	local COUNT=0
+	local ROUTE
+	local ONE_ROUTE
+	
+	config_load mroute
+	config_foreach add_route wanif
+	case $COUNT in
+		0)
+			MSG="No active connections"
+			LEVEL=3
+			ROUTE=$(ip route | grep "default" | awk '{ print "ip route del default"}')
+		;;
+		1)
+			LEVEL=4
+			MSG="Active connection $(uci_get "mroute.$last_device.name")"
+			ROUTE=$ONE_ROUTE
+		;;
+		*)
+#			ROUTE=${ROUTE#* }
+			ROUTE="ip route replace default scope global $ROUTE"
+			MSG="Active Load Balancing connections ($COUNT)"
+			LEVEL=5
+		;;
+	esac
+	log_debug $LEVEL "$MSG"
+#	echo $ROUTE
+	log_debug $LEVEL "$ROUTE"
+	echo $RUN
+	eval $ROUTE
+}
+
+come_up () {
+	[ "$TYPE" = "wanif" ] && {
+		### When set network state gateway to "0.0.0.0" 10-routes do not change routes settings. ###
+		[ "$(uci_get "network.$INTERFACE.proto")" = "dhcp" ] && uci_set_state network $INTERFACE gateway "0.0.0.0"
+#		echo "Entering multi-wan configuration for ($new_name) $INTERFACE interface"
+		set_rtTables $INTERFACE
+		echo "0" > /proc/sys/net/ipv4/conf/$DEVICE/rp_filter
+		config_load mroute
+#		remove_wan $INTERFACE
+		
+		add_net_to_rt $INTERFACE "add_it_self" ${INTERFACE}_rt $new_network $DEVICE $new_ipaddr
+		config_foreach add_new_wan wanif
+		config_foreach add_new_wan lanif
+		add_net_to_rt $INTERFACE "add_new_wan" ${INTERFACE}_rt 127.0.0.0/8 lo
+
+		add_wan_default
+		add_rule
+		uci_set_state mroute $INTERFACE rt_table ${INTERFACE}_rt
+	}
+	uci_set_state mroute $INTERFACE device $DEVICE
+	uci_set_state mroute $INTERFACE proto $PROTO
+	uci_set_state mroute $INTERFACE ipaddr $new_ipaddr
+#	uci_set_state mroute $INTERFACE netmask $new_netmask
+	uci_set_state mroute $INTERFACE gateway $new_gateway
+	uci_set_state mroute $INTERFACE network $new_network
+	uci_set_state mroute $INTERFACE status "1"
+	[ "$TYPE" = "wanif" ] && {
+		local new_dns=$(uci_get_state network "$INTERFACE" dns)
+#		[ -z "$new_dns" ] && new_dns="$new_gateway 8.8.8.8 8.8.4.4"
+		uci_set_state mroute $INTERFACE dns "$new_dns"
+		setdns
+		set_route
+		config_foreach add_marks mangles
+		runping
+	}
+}
+
+go_down () {
+	[ "$TYPE" = "wanif" ] && {
+		stopping
+		undo iptables
+		undo mark
+		undo rule
+		undo route
+	}
+}
+
+setdns () {
+N="
+"
+	local resolv
+	for ldns in $(uci show mroute -P /var/state/ | grep 'dns=' | sed -e 's/.*dns=//g' | sed -e 's/^[ \t]+|[ \t]+$//g'); do
+		resolv="$resolv nameserver $ldns$N"
+	done
+	for ldns in $(uci show network -P /var/state/ | grep 'dns=' | sed -e 's/.*dns=//g' | sed -e 's/^[ \t]+|[ \t]+$//g'); do
+		resolv="$resolv nameserver $ldns$N"
+	done
+	resolv=$(echo "$resolv" | sed '/^$/d' | sed 's/^[ ]*//g' | sort | uniq)
+	echo "$resolv" >> /tmp/resolv.conf.auto
+	resolv=$(cat /tmp/resolv.conf.auto)
+	resolv=$(echo "$resolv" | sed '/^$/d' | sed 's/^[ ]*//g' | sort | uniq)
+	echo "$resolv" > /tmp/resolv.conf.auto
+#	echo "$resolv"
+}
+
+stopping() {
+	[ -f /var/mroute/$DEVICE/pid ] && {
+		kill $(cat /tmp/mroute/$DEVICE/pid)
+		rm /var/mroute/$DEVICE/pid > /dev/null  2>&1
+	}
+	
+	for pid in $(ps aux | grep 'mrping ${DEVICE} ${INTERFACE}' | sed -e '/grep/d' | awk '{print $1}'); do
+		RUN="kill $pid"
+		echo $RUN
+		eval $RUN
+	done
+}
+
+runping () {
+	mkdir -p /var/mroute/$DEVICE > /dev/null  2>&1
+	/lib/mroute/mrping $DEVICE $INTERFACE &
+	echo $! > /var/mroute/$DEVICE/pid
+}
+
+local TYPE=$(uci_get "mroute.$INTERFACE")
+local DEBUG=$(uci_get "mroute.settings.debug")
+
+local new_ipaddr=$(uci_get "network.$INTERFACE.ipaddr")
+local new_netmask=$(uci_get "network.$INTERFACE.netmask")
+new_netmask=${new_netmask:-"255.255.255.0"}
+local new_dns=$(uci_get "network.$INTERFACE.dns")
+local new_resolv_dns=$(uci_get "network.$INTERFACE.resolv_dns")
+local new_gateway=$(uci_get "network.$INTERFACE.lease_gateway")
+local new_name=$(uci_get "mroute.$INTERFACE.name")
+new_gateway=${new_gateway:-$(uci_get "network.$INTERFACE.gateway")}
+[ "$new_gateway" == "0.0.0.0" ] && unset new_gateway
+local calc=$(ipcalc.sh $new_ipaddr $new_netmask)
+local prefix=${calc##*=}
+local new_network=${calc##*NETWORK=}
+new_network=$(echo $new_network | sed 's/.PRE.*//')
+[ -z "$new_network" ] && new_network=$new_gateway || new_network="$new_network/$prefix"
+
+echo "$INTERFACE $ACTION"
+[ "$TYPE" != "wanif" ] && exit 0
+case "$ACTION" in
+	ifup)
+##		[ "$(uci_get "mroute.webadmin.enable")" = "1" ] && {
+#			go_down
+				[ -z "$new_gatewa" ] && {
+					come_up 
+				}
+##		}
+	;;
+	update)
+		echo "############## UPDATE $INTERFACE ################"
+		local old_device=$(uci_get_state mroute $INTERFACE device)
+		local old_ipaddr=$(uci_get_state mroute $INTERFACE ipaddr )
+		local old_netmask=$(uci_get_state mroute $INTERFACE netmask )
+		local old_gateway=$(uci_get_state mroute $INTERFACE gateway )
+		[ "$old_device" != "$DEVICE" -o \
+		  "$old_ipaddr" != "$new_ipaddr" -o \
+		  "$old_gateway" != "$new_gateway" -o \
+		  "$old_network" != "$new_network" ] && {
+			go_down
+			come_up
+		}
+		log_debug 5 "update proccess for $INTERFACE"
+	;;
+	ifdown)
+		[ "$TYPE" = "wanif" ] && {
+			uci_revert_state mroute $INTERFACE
+			uci_revert_state network $INTERFACE gateway
+			ip route
+			go_down
+			set_route
+		}
+	;;
+	changeRoute)
+		[ "$TYPE" = "wanif" ] && {
+			echo "################### $INTERFACE INTERNET($STATUS) ####################"
+			[ "$STATUS" = "1" ] && config_foreach add_marks mangles
+			[ "$STATUS" = "0" ] && {
+				undo iptables
+				undo mark
+#				rm -f /tmp/mroute/$DEVICE/iptables
+#				rm -f /tmp/mroute/$DEVICE/iptables
+			}
+			set_route
+			log_debug 5 "changRoute:ip route flush cahche"
+			ip route flush cache
+		}
+	;;
+esac

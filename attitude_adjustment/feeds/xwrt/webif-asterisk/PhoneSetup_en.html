@@ -1,0 +1,381 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta content="text/html; charset=ISO-8859-1" http-equiv="content-type"><title>MARS: User's Manual</title>
+<style media="all" type="text/css">
+td { font-family: Arial;
+}
+th { background-color: rgb(51, 51, 255);
+color: rgb(255, 255, 255);
+font-weight: bold;
+font-size: larger;
+}
+.title { font-weight: bold;
+font-size: larger;
+text-align: center;
+}
+</style><meta name="author" content="Noël Bouchard, Tele Data Inc."></head>
+<body><table style="text-align: left; width: 90%;" border="0" cellpadding="2" cellspacing="4"> <tbody><tr>
+<td style="background-color: rgb(51, 51, 255);" colspan="3"><br>
+</td> </tr> <tr class="title"> <td style="text-align: center;" colspan="1">MARS<br>
+A small hybrid PBX embedded in a WI-FI router.<br>Setup for
+GrandStream BT-200 Phone<br><a href="#X-Lite_Softphone_Setup">Setup for X-Lite Softphone</a><br></td>
+</tr> <tr> <td style="background-color: rgb(51, 51, 255); text-align: center;" colspan="1"><span style="color: rgb(255, 255, 255); font-weight: bold;">Basic
+Settings</span><br>
+</td> </tr><tr><td>These instructions are for a GrandStream BT-200 but should be similar with any other GrandStream VoIP phone.<br><br>1- Connect your VoIP phone to one LAN port of the MARS system<br><br>2- Find the current IP Address of the phone, using the phone menu.<br><br>3-
+Point your browser to this IP address to get the GS phone's HTTP
+interface. (The default pwd is: admin) and select the "Basic Settings"
+Tab.<br><br>4- Set the telephone to use a static IP address. &nbsp;
+(For simplicity, i like to use a static IP which ends with the
+extension number in the Local LAN. Ex: 192.168.1.200 for ext 200. This
+makes getting to the GS HTTP interface easier as it has a fixed IP
+address which allow to conveniently create bookmark in your browser to
+get to the GS phone interface.)<br>I<span style="font-weight: bold;">P Address: 192.168.1.200</span><br style="font-weight: bold;"><span style="font-weight: bold;">Subnet Mask: 255.255.255.0</span><br style="font-weight: bold;"><span style="font-weight: bold;">Default Router: 192.168.1.1 (MARS' system LAN IP address)</span><br style="font-weight: bold;"><span style="font-weight: bold;">DNS Server 1: 192.168.1.1 (MARS' system LAN IP address)</span><br><br>5-Set your TimeZone<br><br>6- <span style="font-weight: bold;">Device
+Mode: Switch</span> and save the configuration by pressing the "Update" button<br><br>7- Select the Advanced Settings Tab, and set the "<span style="font-weight: bold;">Local RTP Port</span>"
+to a value from 10000 to 10016. Each phone should be assigned a
+different RTP port with a separation of 2 port. I.e. Ext 200 uses RTP
+port 10000. Ext 201 uses 10002 ext 202 uses 10004 etc ... This step is
+not really required unless you plan to connect trough a NAT. In the
+default configuration, MARS'&nbsp;firewall "opens" port 10000 to 10128.<br><br>8- Save and update you changes by pressing the "Update" button<br><br>9- Select the "Account Tab" and set the following value (This example is for extension 200)<br><b>Account Name: &lt;User Name&gt;<br>SIP
+Server: 192.168.1.1 </b><span style="font-weight: bold;">(MARS' system LAN IP address)</span><br><b>Sip User ID: 200 (Extension number)<br></b><b>Authenticate ID: </b><b>200 (Extension number)</b><br><b>Authenticate
+Password: </b><b>200 (Extension number)<br></b><i><span style="font-weight: bold;"><br>Voice
+Mail UserID: *98<br></span></i><i><span style="font-weight: bold;">Send
+DTMF: &nbsp;</span></i><span style="font-weight: bold;">via RTP (RFC2833)
+</span><br><i><span style="font-weight: bold;">Enable
+Call Features: No<br></span></i><i style="font-weight: bold;">Preferred
+Vocoder: 1-PCMU &nbsp;2-GSM</i><br><br>10- Save and update you changes by pressing the "Update" button<br><br>After this step the GS phone should register with the MARS system and be ready to use.<br>Try calling *77 (Send) .. the system should say the extension number.<br>Call 7777 (Send or #) to simulate an incoming call (Automated attendant ...)<br>See the user Manual for more options.<br>NOTE: The first call to the system will take up to 5 seconds to be answered. The next calls will then be answered immediately.<br></td></tr><tr><td><table align="center" border="1" bordercolor="#336699" cellpadding="0" cellspacing="0" width="800"><tbody><tr><td valign="top"><t></t><table align="center" border="0" cellpadding="0" cellspacing="0" width="100%"><tbody><tr><td class="l" align="center" bgcolor="#f3c47c" height="48" valign="middle"><strong><font color="#336699" size="3"><b>Grandstream Device
+Configuration</b></font></strong></td>
+</tr><tr><td align="center" background="backline.gif" bgcolor="#f3c47c" height="20" valign="top"> <table cellpadding="0" cellspacing="0" width="75%"><tbody><tr> <td align="center" bgcolor="#999999" height="16"><span class="l"><b>STATUS</b></span></td>
+<td class="l" align="center" bgcolor="#336699"><b>BASIC
+SETTINGS</b></td>
+<td align="center" bgcolor="#999999"><span class="l"><b>ADVANCED
+SETTINGS</b></span></td>
+<td align="center" bgcolor="#999999"><span class="l"><b>ACCOUNT
+</b></span></td><!---
+<td bgcolor="#999999" align="center"><a href="config_a2.htm" class="l"><b>ACCOUNT 2</b></a></td>
+---></tr></tbody></table>
+</td> </tr> <tr bgcolor="#ffffcc"> <td>
+<table border="0" cellpadding="2" cellspacing="1" width="100%"> <tbody><tr><td align="right"><b>End
+User Password: </b></td>
+<td>&nbsp; <input name="P196" maxlength="30" size="30" type="password"> (purposely not displayed
+for security protection) </td> </tr> <tr> <td align="right" valign="top"><b>IP Address: </b></td>
+<td> <table width="70%"> <tbody><tr> <td><table border="0" cellpadding="1" cellspacing="1" width="100%"> <tbody><tr> <td><input name="P8" value="0" type="radio"> dynamically
+assigned via DHCP (default) or PPPoE <br> (will attempt PPPoE if
+DHCP fails and following is non-blank)<br> <table width="100%">
+<tbody><tr> <td width="10%">&nbsp;</td>
+<td width="45%">PPPoE account ID:</td> <td><input name="P82" value="" maxlength="64" size="30" type="text"></td> </tr> <tr> <td>&nbsp;</td>
+<td>PPPoE password:</td> <td><input name="P83" value="" maxlength="32" size="30" type="password"></td>
+</tr> <tr> <td>&nbsp;</td> <td>Host
+name <br>(Option 12):</td> <td><input name="P146" value="" maxlength="32" size="30" type="text"></td>
+</tr> <tr> <td>&nbsp;</td> <td>Domain
+name <br>(Option 15):</td> <td><input name="P147" value="" maxlength="32" size="30" type="text"></td>
+</tr> <tr> <td>&nbsp;</td> <td>Vendor
+Class ID <br>(Option 60):</td> <td><input name="P148" value="Grandstream BT200" maxlength="32" size="30" type="text"></td> </tr> </tbody></table>
+&nbsp;Preferred DNS server: <input name="P92" value="0" maxlength="3" size="3" type="text"> <b>.</b><input name="P93" value="0" maxlength="3" size="3" type="text"> <b>.</b><input name="P94" value="0" maxlength="3" size="3" type="text">
+<b>.</b><input name="P95" value="0" maxlength="3" size="3" type="text"> </td>
+</tr> <tr> <td><input name="P8" value="1" checked="checked" type="radio"> <span style="font-weight: bold;">statically configured
+as:</span> </td> </tr> </tbody></table>
+<table border="0" cellpadding="1" cellspacing="0" width="100%"> <tbody><tr> <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td>IP Address: &nbsp;<big><span style="font-weight: bold;">(*1)</span></big> </td>
+<td>&nbsp; <input name="P9" value="192" maxlength="3" size="3" type="text"> <b>.</b><input name="P10" value="168" maxlength="3" size="3" type="text">
+<b>.</b><input name="P11" value="1" maxlength="3" size="3" type="text"> <b>.</b><input name="P12" value="200" maxlength="3" size="3">
+</td> </tr> <tr> <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td>Subnet Mask: </td> <td>&nbsp; <input name="P13" value="255" maxlength="3" size="3" type="text"> <b>.</b><input name="P14" value="255" maxlength="3" size="3" type="text">
+<b>.</b><input name="P15" value="255" maxlength="3" size="3" type="text"> <b>.</b><input name="P16" value="0" maxlength="3" size="3" type="text"> </td> </tr> <tr> <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td>Default Router:&nbsp;<big><span style="font-weight: bold;">(*2)</span></big> </td>
+<td>&nbsp; <input name="P17" value="192" maxlength="3" size="3" type="text"> <b>.</b><input name="P18" value="168" maxlength="3" size="3" type="text">
+<b>.</b><input name="P19" value="1" maxlength="3" size="3" type="text"> <b>.</b><input name="P20" value="1" maxlength="3" size="3" type="text"> </td> </tr> <tr> <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td>DNS Server 1:<big><span style="font-weight: bold;">(*2)</span></big>
+</td> <td>&nbsp; <input name="P21" value="192" maxlength="3" size="3" type="text">
+<b>.</b><input name="P22" value="168" maxlength="3" size="3" type="text">
+<b>.</b><input name="P23" value="1" maxlength="3" size="3" type="text"> <b>.</b><input name="P24" value="1" maxlength="3" size="3" type="text"> </td> </tr> <tr> <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<td>DNS Server 2: </td> <td>&nbsp; <input name="P25" value="0" maxlength="3" size="3" type="text"> <b>.</b><input name="P26" value="0" maxlength="3" size="3" type="text">
+<b>.</b><input name="P27" value="0" maxlength="3" size="3" type="text"> <b>.</b><input name="P28" value="0" maxlength="3" size="3" type="text"> </td> </tr> </tbody></table></td>
+</tr> </tbody></table></td> </tr> <tr bgcolor="#ffffea"> <td align="right" valign="top"><b>Time
+Zone: </b></td> <td>&nbsp; <select name="P64"><option value="0">GMT-12:00
+(International Date Line West)</option><option value="60">GMT-11:00
+(Midway Island, Samoa)</option><option value="120">GMT-10:00
+(US Hawaiian Time)</option><option value="180">GMT-9:00
+(US Alaska Time)</option><option value="240">GMT-8:00
+(US Pacific Time, Los Angeles)</option><option value="300">GMT-7:00
+(US Mountain Time, Denver)</option><option value="360">GMT-6:00
+(US Central Time, Chicago)</option><option value="420" selected="selected">GMT-5:00 (US Eastern Time, New York)</option><option value="480">GMT-4:00 (Atlantic Time, Quebec)</option><option value="510">GMT-3:30 (Newfoundland)</option><option value="540">GMT-3:00 (Greenland)</option><option value="600">GMT-2:00 (Mid-Atlantic)</option><option value="660">GMT-1:00 (Azores, Cape Verdi Is.)</option><option value="720">GMT (London, Dublin, Edinburgh, Lisbon,
+Casablanca, Monrovia)</option><option value="780">GMT+1:00
+(Paris, Amsterdam, Berlin, Rome, Vienna, Madrid, Warsaw, Brussels)</option><option value="840">GMT+2:00 (Israel, Cairo, Athens, Helsinki,
+Istanbul, Buchrest)</option><option value="900">GMT+3:00
+(Moscow, Kuwait, Baghdad, Tehran, Nairobi)</option><option value="960">GMT+4:00 (Abu Dhabi, Baku)</option><option value="1020">GMT+5:00 (Islamabad, Ekaterinburg, Karachi,
+Tashkent)</option><option value="1050">GMT+5:30
+(Chennai, New Delhi, Mumbai)</option><option value="1065">GMT+5:45
+(Kathmandu)</option><option value="1080">GMT+6:00
+(Almaty, Astana, Dhaka, Novosibirsk)</option><option value="1110">GMT+6:30 (Rangoon)</option><option value="1140">GMT+7:00 (Bankok, Jakarta, Hanoi, Krasnoyarsk)</option><option value="1200">GMT+8:00 (Beijing, Singapore, Taipei, Kuala
+Lumpur, Irkutsk, Perth)</option><option value="1260">GMT+9:00
+(Japan, Korea, Yakutsk)</option><option value="1290">GMT+9:30
+(Adelaide, Darwin)</option><option value="1320">GMT+10:00
+(Brisbane, Sydney, Melbourne, Canberra, Guam, Hobart)</option><option value="1380">GMT+11:00 (Magadan, Solomon Is., New Caledonia)</option><option value="1440">GMT+12:00 (Auckland, Wellington, Fiji)</option><option value="1500">GMT+13:00 (Nuku'alofa)</option></select>
+<br> &nbsp; Allow DHCP Option 2 to override Time Zone
+setting: <br> &nbsp; &nbsp; <input name="P143" value="0" checked="checked" type="radio"> No
+&nbsp; &nbsp; <input name="P143" value="1" type="radio"> Yes </td> </tr> <tr bgcolor="#ffffea"> <td align="right"><b>Daylight
+Savings Time:</b></td> <td>&nbsp; <input name="P75" value="0" type="radio"> No
+&nbsp;&nbsp; &nbsp; <input name="P75" value="1" checked="checked" type="radio"> Yes &nbsp;<br>
+&nbsp;Optional Rule: <input name="P246" value="" maxlength="33" size="33" type="text"> </td>
+</tr> <tr bgcolor="#ffffea"> <td align="right"><b>Date
+Display Format:</b></td> <td>&nbsp; <input name="P102" value="0" type="radio">Year-Month-Day<br>
+&nbsp; <input name="P102" value="1" checked="checked" type="radio">Month-Day-Year<br>
+&nbsp; <input name="P102" value="2" type="radio">Day-Month-Year
+</td> </tr><tr> </tr><tr bgcolor="#ffffea">
+<td align="right" valign="top"><b>Display
+Account Name<br> instead of Date: </b></td> <td>&nbsp;
+<input name="P339" value="0" checked="checked" type="radio"> No &nbsp;&nbsp; &nbsp; <input name="P339" value="1" type="radio"> Yes </td>
+</tr> <tr><td colspan="2">&nbsp;</td>
+</tr> <tr> <td colspan="2" align="left"><font color="#df4600"><i><b>System Device Mode </b></i></font></td>
+</tr> <tr> <td align="right"><i>Device
+Mode:</i></td> <td>&nbsp; <input name="P231" value="0" checked="checked" type="radio">
+<big><span style="font-weight: bold;">Switch
+(default)</span></big> <input name="P231" value="1" type="radio"> NAT/Router
+&nbsp;&nbsp; &nbsp;
+<!--- <input type=radio name="P231" value=2 > Hub &nbsp;&nbsp; &nbsp;
+---></td></tr><tr><td colspan="2">&nbsp;</td>
+</tr> <tr> <td colspan="2" align="left"><font color="#df4600"><i><b>NAT/Router Configuration
+(Not used ...)</b></i></font></td>
+</tr> <tr> <td colspan="2">&nbsp;</td>
+</tr> <tr> <td align="right"><i>WAN
+side http access: </i></td> <td>&nbsp; <input name="P190" value="0" checked="checked" type="radio"> No &nbsp;&nbsp; &nbsp; <input name="P190" value="1" type="radio"> Yes
+&nbsp; (WAN side access to http server will be rejected if set to
+No) </td> </tr> <tr> <td align="right"><i>Reply
+to ICMP on WAN port: </i></td> <td>&nbsp; <input name="P189" value="0" checked="checked" type="radio"> No &nbsp;&nbsp; &nbsp; <input name="P189" value="1" type="radio"> Yes
+&nbsp; (Unit will not respond to PING from WAN side if set to No) </td>
+</tr> <tr> <td align="right"><i>Cloned
+WAN MAC Addr: </i></td> <td>&nbsp; <input name="P115" value="00" maxlength="2" size="2" type="text"> &nbsp; <input name="P116" value="0B" maxlength="2" size="2" type="text">
+&nbsp; <input name="P117" value="82" maxlength="2" size="2" type="text"> &nbsp; <input name="P118" value="09" maxlength="2" size="2" type="text"> &nbsp; <input name="P119" value="59" maxlength="2" size="2" type="text">
+&nbsp; <input name="P120" value="61" maxlength="2" size="2" type="text"> (in hex format) </td> </tr>
+<tr> <td align="right"><i>LAN Subnet Mask: </i></td>
+<td>&nbsp; <input name="P110" value="255.255.255.0" maxlength="15" size="30" type="text"> (default
+is 255.255.255.0) </td> </tr> <tr> <td align="right"><i>LAN DHCP Base IP: </i></td>
+<td>&nbsp; <input name="P111" value="192.168.2.1" maxlength="15" size="30" type="text"> (base IP
+for the LAN port, default is 192.168.2.1) </td> </tr> <tr>
+<td align="right"><i>DHCP IP Lease Time: </i></td>
+<td>&nbsp; <input name="P112" value="120" maxlength="4" size="7" type="text"> (in units
+of hours, default is 120 hours or 5 days) </td> </tr> <tr>
+<td align="right"><i>DMZ IP: </i></td> <td>&nbsp;
+<input name="P113" value="" maxlength="15" size="30" type="text"> </td> </tr> <tr>
+<td align="right"><i>Port Forwarding: </i></td>
+<td> &nbsp;&nbsp;&nbsp;&nbsp;WAN port
+&nbsp;&nbsp;&nbsp;LAN IP
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;LAN
+port &nbsp;&nbsp;Protocol <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input name="P150" value="0" maxlength="5" size="4" type="text">
+&nbsp;&nbsp; <input name="P158" value="" maxlength="15" size="14" type="text">
+&nbsp;&nbsp; <input name="P166" value="0" maxlength="5" size="4" type="text">
+&nbsp;&nbsp; <select name="P174"><option value="0" selected="selected">UDP Only</option><option value="1">TCP Only</option><option value="2">TCP/UDP</option></select>
+<br> &nbsp;&nbsp; &nbsp; <input name="P151" value="0" maxlength="5" size="4" type="text">
+&nbsp;&nbsp; <input name="P159" value="" maxlength="15" size="14" type="text">
+&nbsp;&nbsp; <input name="P167" value="0" maxlength="5" size="4" type="text">
+&nbsp;&nbsp; <select name="P175"><option value="0" selected="selected">UDP Only</option><option value="1">TCP Only</option><option value="2">TCP/UDP</option></select>
+<br> &nbsp;&nbsp; &nbsp; <input name="P152" value="0" maxlength="5" size="4" type="text">
+&nbsp;&nbsp; <input name="P160" value="" maxlength="15" size="14" type="text">
+&nbsp;&nbsp; <input name="P168" value="0" maxlength="5" size="4" type="text">
+&nbsp;&nbsp; <select name="P176"><option value="0" selected="selected">UDP Only</option><option value="1">TCP Only</option><option value="2">TCP/UDP</option></select>
+<br> &nbsp;&nbsp; &nbsp; <input name="P153" value="0" maxlength="5" size="4" type="text">
+&nbsp;&nbsp; <input name="P161" value="" maxlength="15" size="14" type="text">
+&nbsp;&nbsp; <input name="P169" value="0" maxlength="5" size="4" type="text">
+&nbsp;&nbsp; <select name="P177"><option value="0" selected="selected">UDP Only</option><option value="1">TCP Only</option><option value="2">TCP/UDP</option></select>
+<br> &nbsp;&nbsp; &nbsp; <input name="P154" value="0" maxlength="5" size="4" type="text">
+&nbsp;&nbsp; <input name="P162" value="" maxlength="15" size="14" type="text">
+&nbsp;&nbsp; <input name="P170" value="0" maxlength="5" size="4" type="text">
+&nbsp;&nbsp; <select name="P178"><option value="0" selected="selected">UDP Only</option><option value="1">TCP Only</option><option value="2">TCP/UDP</option></select>
+<br> &nbsp;&nbsp; &nbsp; <input name="P155" value="0" maxlength="5" size="4" type="text">
+&nbsp;&nbsp; <input name="P163" value="" maxlength="15" size="14" type="text">
+&nbsp;&nbsp; <input name="P171" value="0" maxlength="5" size="4" type="text">
+&nbsp;&nbsp; <select name="P179"><option value="0" selected="selected">UDP Only</option><option value="1">TCP Only</option><option value="2">TCP/UDP</option></select>
+<br> &nbsp;&nbsp; &nbsp; <input name="P156" value="0" maxlength="5" size="4" type="text">
+&nbsp;&nbsp; <input name="P164" value="" maxlength="15" size="14" type="text">
+&nbsp;&nbsp; <input name="P172" value="0" maxlength="5" size="4" type="text">
+&nbsp;&nbsp; <select name="P180"><option value="0" selected="selected">UDP Only</option><option value="1">TCP Only</option><option value="2">TCP/UDP</option></select>
+<br> &nbsp;&nbsp; &nbsp; <input name="P157" value="0" maxlength="5" size="4" type="text">
+&nbsp;&nbsp; <input name="P165" value="" maxlength="15" size="14" type="text">
+&nbsp;&nbsp; <input name="P173" value="0" maxlength="5" size="4" type="text">
+&nbsp;&nbsp; <select name="P181"><option value="0" selected="selected">UDP Only</option><option value="1">TCP Only</option><option value="2">TCP/UDP</option></select>
+<br> </td> </tr> <tr align="center" bgcolor="#f3c47c" height="28"> <td colspan="2"><input name="update" value="Update" type="submit">&nbsp;&nbsp;
+<input name="cancel" value="Cancel" onclick="document.location='login.htm'" type="button">&nbsp;&nbsp;
+<input name="reboot" value="Reboot" onclick="document.location='rs.htm'" type="button"> <input name="gnkey" value="0b82" type="hidden"> </td></tr></tbody></table></td></tr>
+<tr><td class="l" align="center" bgcolor="#336699"><font size="1">All Rights
+Reserved Grandstream Networks, Inc. 2004-2006</font></td></tr><tr><td><br><br>(*1)
+&nbsp;Set to&nbsp;192.168.1.<span style="font-weight: bold;">Ext</span>
+. Ex: 192.168.1.200 for extension 200, 192.168.1.201 for ext. 201 etc.<br>(*2)
+&nbsp;Set to the LAN IP address of the MARS system (default
+192.168.1.1)</td></tr></tbody></table></td>
+</tr></tbody></table></td></tr><tr><td style="background-color: rgb(51, 51, 255); text-align: center;"><span style="color: rgb(255, 255, 255); font-weight: bold;">Advanced
+Settings</span></td></tr><tr><td><table border="0" cellpadding="2" cellspacing="1" width="100%"><tbody><tr><td align="right"><i>local
+RTP port: </i></td> <td>&nbsp; <input name="P39" value="10002" maxlength="5" size="7" type="text"> (1024-65535, default 5004) Select from 10000 to
+10016</td> </tr>
+<tr> <td align="right" valign="top"><i>Use
+random port: </i></td> <td>&nbsp; <input name="P78" value="0" checked="checked" type="radio"> No &nbsp;&nbsp; &nbsp; <input name="P78" value="1" type="radio"> Yes</td></tr></tbody></table></td></tr><tr><td style="background-color: rgb(51, 51, 255); text-align: center;"><span style="color: rgb(255, 255, 255); font-weight: bold;">Account&nbsp;</span></td></tr><tr><td>
+<table align="center" border="1" bordercolor="#336699" cellpadding="0" cellspacing="0" width="800"><tbody><tr><td valign="top"><table align="center" border="0" cellpadding="0" cellspacing="0" width="100%"><tbody><tr><td class="l" align="center" bgcolor="#f3c47c" height="48" valign="middle"><strong><font color="#336699" size="3"><b>Grandstream Device
+Configuration</b></font></strong></td>
+</tr><tr><td align="center" background="backline.gif" bgcolor="#f3c47c" height="20" valign="top"> <table cellpadding="0" cellspacing="0" width="75%"><tbody><tr><td align="center" bgcolor="#999999"><span class="l"><b>STATUS</b></span></td>
+<td align="center" bgcolor="#999999"><span class="l"><b>BASIC
+SETTINGS</b></span></td>
+<td align="center" bgcolor="#999999"><span class="l"><b>ADVANCED
+SETTINGS</b></span></td>
+<td class="l" align="center" bgcolor="#336699"><b>ACCOUNT
+</b></td><!---
+<td bgcolor="#999999" align="center"><a href="config_a2.htm" class="l"><b>ACCOUNT 2</b></a></td>
+<td bgcolor="#999999" align="center"><a href="config_a3.htm" class="l"><b>ACCOUNT 3</b></a></td>
+<td bgcolor="#999999" align="center"><a href="config_a4.htm" class="l"><b>ACCOUNT 4</b></a></td>
+--->
+</tr></tbody></table> </td> </tr> <tr bgcolor="#ffffcc"> <td> <table border="0" cellpadding="2" cellspacing="1" width="100%"> <tbody><tr><td><br></td><td></td></tr><!-- <tr>
+<td align=right><b>Account Active: </b></td>
+<td>&nbsp; <input type=radio name="P271" value=0 >
+No &nbsp; &nbsp;&nbsp; <input type=radio name="P271" value=1 checked >
+Yes </td>
+</tr> --><tr><td align="right">Account Name:<b> </b></td>
+<td>&nbsp; <input name="P270" value="BT-200" maxlength="96" size="30" type="text"> (e.g.,
+MyCompany) </td> </tr> <tr> <td align="right"><b>SIP
+Server: </b></td> <td>&nbsp; <input name="P47" value="192.168.1.1" maxlength="96" size="30" type="text"> (e.g., sip.mycompany.com, or
+IP address) <span style="font-weight: bold;">MARS IP</span>
+</td> </tr> <tr> <td align="right">Outbound
+Proxy:<b> </b></td> <td>&nbsp; <input name="P48" value="" maxlength="96" size="30" type="text"> (e.g., proxy.myprovider.com, or IP address, if
+any) </td> </tr> <tr> <td align="right"><b>SIP
+User ID: </b></td> <td>&nbsp; <input name="P35" value="200" maxlength="64" size="30">
+(the user part of an SIP address) </td> </tr> <tr>
+<td align="right"><b>Authenticate ID: </b></td>
+<td>&nbsp; <input name="P36" value="200" maxlength="96" size="30"> (can be identical to or
+different from <b>SIP User ID</b>) </td> </tr>
+<tr> <td align="right"><b>Authenticate
+Password: </b></td> <td>&nbsp; <input value="200" name="P34" maxlength="64" size="30">
+(purposely not displayed for security protection) </td> </tr>
+<tr> <td align="right">Name:<b> </b></td>
+<td>&nbsp; <input name="P3" value="Noel" maxlength="60" size="30" type="text">
+(optional, e.g., John Doe) </td> </tr> <tr> <td align="right"><i>Use DNS SRV: </i></td> <td>&nbsp;
+<input name="P103" value="0" type="radio">
+No &nbsp; &nbsp;&nbsp; <input name="P103" value="1" checked="checked" type="radio"> Yes </td>
+</tr> <tr> <td align="right"><i><span style="font-weight: bold;">User
+ID is phone number</span>: </i></td> <td>&nbsp;&nbsp;<input name="P63" value="0" checked="checked" type="radio"> No &nbsp;&nbsp; &nbsp;&nbsp;<input name="P63" value="1" type="radio"> Yes </td>
+</tr> <tr> <td align="right"><i><span style="font-weight: bold;">SIP
+Registration:</span> </i></td> <td>&nbsp;&nbsp;<input name="P31" value="0" type="radio"> No
+&nbsp;&nbsp; &nbsp;&nbsp;<input name="P31" value="1" checked="checked" type="radio"> Yes </td>
+</tr> <tr> <td align="right"><i>Unregister
+On Reboot: </i></td> <td>&nbsp;&nbsp;<input name="P81" value="0" checked="checked" type="radio"> No &nbsp;&nbsp; &nbsp;&nbsp;<input name="P81" value="1" type="radio"> Yes </td>
+</tr> <tr> <td align="right"><i>Register
+Expiration: </i></td> <td>&nbsp; <input name="P32" value="60" maxlength="5" size="7" type="text"> (in minutes. default 1 hour, max 45 days)</td>
+</tr> <tr> <td align="right"><i><span style="font-weight: bold;">local
+SIP port:</span> </i></td> <td>&nbsp; <input name="P40" value="5060" maxlength="5" size="7" type="text"> (default 5060)</td> </tr> <tr>
+<td align="right" valign="top"><i>SIP T1
+Timeout: </i></td> <td>&nbsp;<select name="P209"><option value="50">0.5 sec</option><option value="100" selected="selected">1 sec</option><option value="200">2 sec</option></select> </td>
+</tr> <tr> <td align="right" valign="top"><i>SIP
+T2 Interval: </i></td> <td>&nbsp;<select name="P250"><option value="200">2 sec</option><option value="400" selected="selected">4 sec</option><option value="800">8 sec</option></select> </td>
+</tr> <tr> <td align="right" valign="top"><i>NAT
+Traversal (STUN): </i></td> <td>&nbsp; <input name="P52" value="1" checked="checked" type="radio"> No &nbsp;&nbsp;&nbsp; <input name="P52" value="2" type="radio"> No, but
+send keep-alive &nbsp;&nbsp;&nbsp; <input name="P52" value="0" type="radio"> Yes</td> </tr> <tr>
+<td align="right" valign="top"><i>SUBSCRIBE
+for MWI: </i></td> <td>&nbsp; <input name="P99" value="0" checked="checked" type="radio"> No<!-- , do not send SUBSCRIBE for Message Waiting Indication<br> -->
+&nbsp; &nbsp; <input name="P99" value="1" type="radio"> Yes<!-- , send periodical SUBSCRIBE for Message Waiting Indication -->
+</td></tr> <tr> <td align="right"><i>Proxy-Require:
+</i></td> <td>&nbsp; <input name="P197" value="" maxlength="64" size="30" type="text">
+<!-- (if specified, the content will appear in Proxy-Require header) --></td></tr><tr bgcolor="#ffffea"> <td align="right"><i><span style="font-weight: bold;">Voice
+Mail UserID:</span> </i></td> <td>&nbsp; <input name="P33" value="*98" maxlength="64" size="30" type="text"> (User ID/extension for 3rd party voice mail
+system) </td> </tr> <tr bgcolor="#ffffea"> <td align="right"><i><span style="font-weight: bold;">Send
+DTMF:</span> </i></td> <td>&nbsp;
+<input name="P73" value="0" type="radio">in-audio
+&nbsp; &nbsp; <input name="P73" value="1" checked="checked" type="radio"> via RTP (RFC2833)
+&nbsp; &nbsp; <input name="P73" value="2" type="radio"> via SIP INFO </td> </tr> <tr bgcolor="#ffffea"> <td align="right"><i>Early
+Dial: </i></td> <td>&nbsp; <input name="P29" value="0" checked="checked" type="radio"> No
+&nbsp; &nbsp; &nbsp; <input name="P29" value="1" type="radio"> Yes (use "Yes" only if proxy supports 484
+response) </td> </tr> <tr bgcolor="#ffffea">
+<td align="right"><i>Dial Plan Prefix: </i></td>
+<td>&nbsp; <input name="P66" value="" maxlength="32" size="7" type="text"> (this
+prefix string is added to each dialed number)</td> </tr> <tr bgcolor="#ffffea"> <td align="right" valign="top"><i><span style="font-weight: bold;">Enable
+Call Features:</span> </i></td> <td>&nbsp;
+<input name="P191" value="0" checked="checked" type="radio"> No &nbsp;&nbsp; &nbsp; <input name="P191" value="1" type="radio"> Yes (if
+Yes, Call Forwarding &amp; Call-Waiting-Disable are supported
+locally) </td> </tr> <tr bgcolor="#ffffea">
+<td align="right"><i>Session Expiration: </i></td>
+<td>&nbsp; <input name="P260" value="180" maxlength="5" size="7" type="text"> (in
+seconds. default 180 seconds)</td> </tr> <tr bgcolor="#ffffea"> <td align="right"><i>Min-SE:
+</i></td> <td>&nbsp; <input name="P261" value="90" maxlength="5" size="7" type="text">
+(in seconds. default and minimum 90 seconds)</td> </tr> <tr bgcolor="#ffffea"> <td align="right"><i>Caller
+Request Timer: </i></td> <td>&nbsp;&nbsp;<input name="P262" value="0" checked="checked" type="radio"> No &nbsp;&nbsp; &nbsp;&nbsp;<input name="P262" value="1" type="radio"> Yes
+(Request for timer when making outbound calls)</td> </tr> <tr bgcolor="#ffffea"> <td align="right"><i>Callee
+Request Timer: </i></td> <td>&nbsp;&nbsp;<input name="P263" value="0" checked="checked" type="radio"> No &nbsp;&nbsp; &nbsp;&nbsp;<input name="P263" value="1" type="radio"> Yes (When
+caller supports timer but did not request one)</td> </tr> <tr bgcolor="#ffffea"> <td align="right"><i>Force
+Timer: </i></td> <td>&nbsp;&nbsp;<input name="P264" value="0" checked="checked" type="radio"> No &nbsp;&nbsp; &nbsp;&nbsp;<input name="P264" value="1" type="radio"> Yes (Use
+timer even when remote party does not support)</td> </tr> <tr bgcolor="#ffffea"> <td align="right"><i>UAC
+Specify Refresher: </i></td> <td>&nbsp; <input name="P266" value="1" type="radio"> UAC
+&nbsp; <input name="P266" value="2" type="radio">
+UAS &nbsp; &nbsp; <input name="P266" value="0" checked="checked" type="radio"> Omit (Recommended)</td>
+</tr> <tr bgcolor="#ffffea"> <td align="right"><i>UAS
+Specify Refresher: </i></td> <td>&nbsp; <input name="P267" value="1" checked="checked" type="radio"> UAC &nbsp; <input name="P267" value="2" type="radio"> UAS (When UAC did not specify
+refresher tag)</td> </tr> <tr bgcolor="#ffffea">
+<td align="right"><i>Force INVITE: </i></td>
+<td>&nbsp;&nbsp;<input name="P265" value="0" checked="checked" type="radio"> No
+&nbsp;&nbsp; &nbsp;&nbsp;<input name="P265" value="1" type="radio"> Yes (Always refresh with
+INVITE instead of UPDATE)</td> </tr> <tr bgcolor="#ffffea"> <td align="right"><i>Enable
+100rel: </i></td> <td>&nbsp;&nbsp;<input name="P272" value="0" checked="checked" type="radio"> No &nbsp;&nbsp; &nbsp;&nbsp;<input name="P272" value="1" type="radio"> Yes </td>
+</tr> <tr bgcolor="#ffffea"> <td align="right"><i>Account
+Ring Tone:</i></td> <td> &nbsp; <input name="P104" value="0" type="radio">system ring
+tone <br> &nbsp; <input name="P104" value="1" type="radio">custom ring tone 1<br> &nbsp; <input name="P104" value="2" type="radio">custom ring
+tone 2<br> &nbsp; <input name="P104" value="3" checked="checked" type="radio">custom ring tone 3<br>
+</td> </tr> <tr bgcolor="#ffffea"> <td align="right"><i>Send Anonymous: </i></td>
+<td>&nbsp; <input name="P65" value="0" checked="checked" type="radio"> No
+&nbsp;&nbsp; &nbsp; <input name="P65" value="1" type="radio"> Yes &nbsp; (caller ID will be blocked if
+set to Yes) </td> </tr> <tr bgcolor="#ffffea">
+<td align="right"><i>Anonymous Method: </i></td>
+<td>&nbsp; <input name="P268" value="0" checked="checked" type="radio"> Use From Header
+&nbsp;&nbsp; &nbsp; <input name="P268" value="1" type="radio"> Use Privacy Header &nbsp;</td> </tr>
+<tr bgcolor="#ffffea"> <td align="right"><i>Auto
+Answer: </i></td> <td>&nbsp; <input name="P90" value="0" checked="checked" type="radio"> No &nbsp;&nbsp; &nbsp; <input name="P90" value="1" type="radio"> Yes
+&nbsp; </td> </tr> <tr bgcolor="#ffffea">
+<td align="right"><i>Allow Auto Answer by Call-Info:
+</i></td> <td>&nbsp; <input name="P298" value="0" type="radio"> No &nbsp;&nbsp;
+&nbsp; <input name="P298" value="1" checked="checked" type="radio"> Yes &nbsp; </td>
+</tr> <tr bgcolor="#ffffea"> <td align="right"><i>Turn
+off speaker on <br>remote disconnect: </i></td> <td>&nbsp;
+<input name="P299" value="0" checked="checked" type="radio"> No &nbsp;&nbsp; &nbsp; <input name="P299" value="1" type="radio"> Yes
+&nbsp; </td> </tr> <tr bgcolor="#ffffea">
+<td align="right"><i>Check SIP User ID <br>for
+incoming INVITE: </i></td> <td>&nbsp; <input name="P258" value="0" checked="checked" type="radio"> No &nbsp;&nbsp; &nbsp; <input name="P258" value="1" type="radio"> Yes
+&nbsp; </td> </tr> <tr bgcolor="#ffffea">
+<td align="right" valign="middle"><i>Preferred
+Vocoder: <br> (in listed order)</i></td> <td><table align="center" border="0" width="90%"> <tbody><tr><td><span style="font-weight: bold;">choice
+1:</span> &nbsp; <select name="P57"><option value="3">GSM</option><option value="4">G.723.1</option><option value="18">G.729A/B</option><option value="0" selected="selected">PCMU</option><option value="8">PCMA</option><option value="2">G.726-32</option><!--
+<option value=9 >G.722 (wide band)</option>
+<option value=98 >iLBC</option>
+--></select>
+<br><span style="font-weight: bold;">choice 2:
+&nbsp;</span> <select name="P58"><option value="3" selected="selected">GSM</option><option value="4">G.723.1</option><option value="18">G.729A/B</option><option value="0">PCMU</option><option value="8">PCMA</option><option value="2">G.726-32</option><!--
+<option value=9 >G.722 (wide band)</option>
+<option value=98 >iLBC</option>
+--></select>
+<br>choice 3: &nbsp; <select name="P59"><option value="3">GSM</option><option value="4">G.723.1</option><option value="18">G.729A/B</option><option value="0" selected="selected">PCMU</option><option value="8">PCMA</option><option value="2">G.726-32</option><!--
+<option value=9 >G.722 (wide band)</option>
+<option value=98 >iLBC</option>
+--></select>
+<br>choice 4: &nbsp; <select name="P60"><option value="3">GSM</option><option value="4">G.723.1</option><option value="18">G.729A/B</option><option value="0" selected="selected">PCMU</option><option value="8">PCMA</option><option value="2">G.726-32</option><!--
+<option value=9 >G.722 (wide band)</option>
+<option value=98 >iLBC</option>
+--></select>
+</td> <td>choice 5: &nbsp; <select name="P61"><option value="3">GSM</option><option value="4">G.723.1</option><option value="18">G.729A/B</option><option value="0" selected="selected">PCMU</option><option value="8">PCMA</option><option value="2">G.726-32</option><!--
+<option value=9 >G.722 (wide band)</option>
+<option value=98 >iLBC</option>
+--></select>
+<br>choice 6: &nbsp; <select name="P62"><option value="3">GSM</option><option value="4">G.723.1</option><option value="18">G.729A/B</option><option value="0" selected="selected">PCMU</option><option value="8">PCMA</option><option value="2">G.726-32</option><!--
+<option value=9 >G.722 (wide band)</option>
+<option value=98 >iLBC</option>
+--></select>
+<br>choice 7: &nbsp; <select name="P46"><option value="3">GSM</option><option value="4">G.723.1</option><option value="18">G.729A/B</option><option value="0" selected="selected">PCMU</option><option value="8">PCMA</option><option value="2">G.726-32</option><!--
+<option value=9 >G.722 (wide band)</option>
+<option value=98 >iLBC</option>
+--></select>
+<br>choice 8: &nbsp; <select name="P98"><option value="3">GSM</option><option value="4">G.723.1</option><option value="18">G.729A/B</option><option value="0" selected="selected">PCMU</option><option value="8">PCMA</option><option value="2">G.726-32</option><!--
+<option value=9 >G.722 (wide band)</option>
+<option value=98 >iLBC</option>
+--></select>
+</td> </tr> </tbody></table> </td></tr><tr bgcolor="#ffffea"> <td align="right"><i>SRTP
+Mode: </i></td> <td>&nbsp; <input name="P183" value="0" checked="checked" type="radio"> Disabled &nbsp;&nbsp; &nbsp; <input name="P183" value="1" type="radio"> Enabled
+but not forced &nbsp; &nbsp; &nbsp; <input name="P183" value="2" type="radio"> Enabled and forced &nbsp;
+</td> </tr> <tr> <td align="right" valign="top"><i>Special Feature: </i></td>
+<td>&nbsp; <select name="P198"><option value="100" selected="selected">Standard</option><option value="101">Nortel MCS</option><option value="102">Broadsoft</option><option value="108">CBCOM</option><option value="109">RNK</option></select>
+</td> </tr> <tr><td><br></td><td></td></tr><tr align="center" bgcolor="#f3c47c" height="28"><td colspan="2"> <input name="update" value="Update" type="submit"> &nbsp;&nbsp; <input name="cancel" value="Cancel" onclick="document.location='login.htm'" type="button">
+&nbsp;&nbsp; <input name="reboot" value="Reboot" onclick="document.location='rs.htm'" type="button"> <input name="gnkey" value="0b82" type="hidden"> </td>
+</tr> </tbody></table></td> </tr><tr><td class="l" align="center" bgcolor="#336699"><font size="1">All Rights
+Reserved Grandstream Networks, Inc. 2004-2006</font></td></tr>
+</tbody></table></td></tr></tbody></table></td></tr><tr><td style="background-color: rgb(51, 51, 255); text-align: center;" colspan="3"><span style="color: rgb(255, 255, 255); font-weight: bold;"><a name="X-Lite_Softphone_Setup"></a>X-Lite Softphone Setup</span></td></tr><tr><td colspan="3">These instructions are for X-Lite V3 but the setup is similar for most other software phones.<br><br>1- Right click on the display and select "Sip Account Setting"<br>2- Select add to create a new SIP account and enter the following values (This example is for&nbsp;extension 200):<br><br><big><span style="font-weight: bold;">Account:</span></big><br><span style="font-weight: bold;">Display Name: &nbsp;&lt;Phone's user name&gt;</span><br style="font-weight: bold;"><span style="font-weight: bold;">User Name: 200 </span><br style="font-weight: bold;"><span style="font-weight: bold;">Password: 200</span><br>Domain: 192.168.1.1<br><br>3- Press the Apply button and exit ... <br><br>X-lite should now connect to the MARS system. <br></td></tr><tr><td style="background-color: rgb(51, 51, 255);" colspan="3"></td></tr></tbody></table><br></body></html>

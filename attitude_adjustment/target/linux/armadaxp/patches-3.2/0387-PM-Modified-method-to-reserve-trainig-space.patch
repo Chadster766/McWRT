@@ -1,0 +1,228 @@
+From 4d60023b517da7d1c3e9d2e49043a8c054b849eb Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Tue, 1 Jan 2013 12:56:46 +0200
+Subject: [PATCH 387/609] PM: Modified method to reserve trainig space
+
+	Instead of saving and restoring the training space
+	this patch introduces a .reserve hook at the MACHINE
+	descriptor. in this hook we carve out the memory used
+	for DDR training so its not used by linux at all
+
+Change-Id: Id53c2780990c4a74ef78ea0cc94b1b98e512edf7
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/core.c  |   39 +++++++++++++++
+ arch/arm/plat-armada/suspend.c |  102 ----------------------------------------
+ 2 files changed, 39 insertions(+), 102 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index d5473a8..a34b2da 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -23,6 +23,7 @@
+ #include <linux/string.h>
+ #include <linux/sysdev.h>
+ #include <linux/mbus.h>
++#include <linux/memblock.h>
+ #include <asm/mach/time.h>
+ #include <linux/clocksource.h>
+ #include <mach/hardware.h>
+@@ -1694,6 +1695,38 @@ void __init axp_tag_fixup_mem32(struct tag *t, char **cmdline, struct meminfo *m
+ }
+ #endif /* CONFIG_FB_DOVE */
+ 
++#ifdef CONFIG_SUSPEND
++#define TRAINING_SPACE	(10*1024)
++
++void __init reserve_training_mem(void)
++{
++	int i;
++	MV_UNIT_WIN_INFO addr_win_map[MAX_TARGETS + 1];
++	phys_addr_t base;
++	phys_addr_t size = (phys_addr_t)(TRAINING_SPACE);
++
++	mvCtrlAddrWinMapBuild(addr_win_map, MAX_TARGETS + 1);
++	for (i = 0; i < MAX_TARGETS; i++) {
++		if (!MV_TARGET_IS_DRAM(i))
++			continue;
++
++		if (addr_win_map[i].enable == MV_FALSE)
++			continue;
++
++#ifdef CONFIG_PHYS_ADDR_T_64BIT
++		base  = ((phys_addr_t)addr_win_map[i].addrWin.baseHigh) << 32;
++#else
++		base = 0;
++#endif
++		base |=  addr_win_map[i].addrWin.baseLow;
++
++		pr_info("Reserving training memory: base=0x%p size=0x%x\n",
++				(void *)base, size);
++
++		memblock_reserve(base, size);
++	}
++}
++#endif
+ 
+ MACHINE_START(ARMADA_XP_DB, "Marvell Armada XP Development Board")
+ 	/* MAINTAINER("MARVELL") */
+@@ -1706,6 +1739,9 @@ MACHINE_START(ARMADA_XP_DB, "Marvell Armada XP Development Board")
+ 	/* reserve memory for LCD */
+ 	.fixup		= axp_tag_fixup_mem32,
+ #endif /* CONFIG_FB_DOVE */
++#ifdef CONFIG_SUSPEND
++	.reserve	= reserve_training_mem,
++#endif /* CONFIG_SUSPEND */
+ MACHINE_END
+ 
+ /*****************************************************************************
+@@ -1846,6 +1882,9 @@ MACHINE_START(ARMADA_XP_GP, "Marvell Armada XP GP Board")
+ 	/* reserve memory for LCD */
+ 	.fixup		= axp_tag_fixup_mem32,
+ #endif /* CONFIG_FB_DOVE */
++#ifdef CONFIG_SUSPEND
++	.reserve	= reserve_training_mem,
++#endif /* CONFIG_SUSPEND */
+ MACHINE_END
+ 
+ /*****************************************************************************
+diff --git a/arch/arm/plat-armada/suspend.c b/arch/arm/plat-armada/suspend.c
+index d44ad13..8c97a87 100644
+--- a/arch/arm/plat-armada/suspend.c
++++ b/arch/arm/plat-armada/suspend.c
+@@ -37,8 +37,6 @@ int armadaxp_powerdown(unsigned long);
+ void armadaxp_cpu_resume(void);
+ void smp_resume(void);
+ 
+-static char *saved_training_space;
+-
+ /*
+  * Store boot information used by bin header
+  */
+@@ -51,106 +49,8 @@ static char *saved_training_space;
+ #define SDRAM_WIN_CTRL_REG(x)	(0x20184 + (0x8*x))
+ #define MAX_CS_COUNT		4
+ 
+-#define TRAINING_SPACE 		(10*1024)
+-
+ /*#define DEBUG_DDR_SELF_REFRESH*/
+ 
+-/* Store/Restore 10KB in beginning of each DDR Chip Select
+- * since the DDR3 Training will overwrite this space
+- */
+-void armadaxp_save_training_space(void)
+-{
+-	char *store_addr;
+-	int i, cs, ctrl,  base;
+-	char *start[MAX_CS_COUNT];
+-	char *last = (char*)0xFFFFFFFF;
+-
+-	pr_info("Storing training space\n");
+-
+-	/* Create a list of memory areas to save */
+-	for (cs = 0; cs < MAX_CS_COUNT; cs++) {
+-		ctrl = MV_REG_READ(SDRAM_WIN_CTRL_REG(cs));
+-		base = MV_REG_READ(SDRAM_WIN_BASE_REG(cs));
+-
+-		if(ctrl & 0x1)
+-			start[cs] = (char*) phys_to_virt(base);
+-		else
+-			start[cs] = last;
+-	}
+-
+-	/*
+-	 * Allocate a buffer to store the memory
+-	 * Check that it deosnt overlap the store areas
+-	 * */
+-
+-	for (i = 0; i < 4; i++) {
+-		store_addr = kmalloc(MAX_CS_COUNT * TRAINING_SPACE, GFP_KERNEL);
+-
+-		/*
+-		 * Make sure that the allocated buffer deosn't overlap
+-		 * The DDR training space
+-		 */
+-		for (cs = 0; cs < MAX_CS_COUNT; cs++) {
+-			if ((start[cs] != last) &&
+-			    (store_addr > start[cs])  &&
+-			    (store_addr < (start[cs] + TRAINING_SPACE))) {
+-				kfree(store_addr);
+-				store_addr = 0;
+-				break;
+-			}
+-		}
+-		if(store_addr)
+-			break;
+-	}
+-
+-	if(store_addr == 0) {
+-		pr_info("Could not allocate space to store ddr trainig space\n");
+-		return;
+-	}
+-
+-	saved_training_space = store_addr;
+-
+-	/* Create a list of memory areas to save */
+-	for(cs = 0; cs < MAX_CS_COUNT; cs++) {
+-		if(start[cs] != last) {
+-			memcpy(store_addr, start[cs],TRAINING_SPACE);
+-			store_addr += TRAINING_SPACE;
+-		}
+-	}
+-}
+-
+-void armadaxp_restore_training_space(void)
+-{
+-	char *store_addr;
+-	int  cs, ctrl,  base;
+-	char *start[MAX_CS_COUNT];
+-	char *last = (char*)0xFFFFFFFF;
+-
+-	pr_info("Restoring training space\n");
+-
+-	/* Create a list of memory areas to restore */
+-	for (cs = 0; cs < MAX_CS_COUNT; cs++) {
+-		ctrl = MV_REG_READ(SDRAM_WIN_CTRL_REG(cs));
+-		base = MV_REG_READ(SDRAM_WIN_BASE_REG(cs));
+-
+-		if(ctrl & 0x1)
+-			start[cs] = (char*) phys_to_virt(base);
+-		else
+-			start[cs] = last;
+-	}
+-
+-	store_addr = saved_training_space;
+-
+-	/* Restore memory from buffer */
+-	for (cs = 0; cs < MAX_CS_COUNT; cs++)
+-	{
+-		if (start[cs] != last) {
+-			memcpy(start[cs], store_addr, TRAINING_SPACE);
+-			store_addr += TRAINING_SPACE;
+-		}
+-	}
+-}
+-
+ #ifdef DEBUG_DDR_SELF_REFRESH
+ /*
+  * Write a pattern to memory and check it after resume
+@@ -256,7 +156,6 @@ void armadaxp_suspend(void)
+ 	vfp_save();
+ #endif
+ 	aurora_l2_pm_enter();
+-	/*armadaxp_save_training_space(); Temporarly disabled to fix GP bug */
+ 	armadaxp_store_boot_info();
+ #ifdef DEBUG_DDR_SELF_REFRESH
+ 	write_pattern();
+@@ -268,7 +167,6 @@ void armadaxp_suspend(void)
+ #endif
+ 	cpu_init();
+ 	armadaxp_fabric_restore_deepIdle();
+-	/*armadaxp_restore_training_space(); Temporarly disabled */
+ 	aurora_l2_pm_exit();
+ #ifdef CONFIG_SMP
+ 	smp_resume();
+-- 
+1.7.9.5
+

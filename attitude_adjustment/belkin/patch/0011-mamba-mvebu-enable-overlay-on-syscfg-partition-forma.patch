@@ -1,0 +1,275 @@
+From d080067235f5ea163cbd24dadfe7194466ecce09 Mon Sep 17 00:00:00 2001
+From: Matthew Fatheree <Matthew.Fatheree@belkin.com>
+Date: Mon, 12 May 2014 22:47:32 +0700
+Subject: [PATCH 11/31] mamba mvebu: enable overlay on syscfg partition
+ formatted as ubifs
+
+Mamba use the syscfg partition formatted in ubifs type as the overlay
+partition to store the router configuration. these scripts are added to
+/lib/preinit to override the default jffs2 overlay and do overlay on the
+ubifs syscfg partition
+
+Signed-off-by: Matthew Fatheree <Matthew.Fatheree@belkin.com>
+---
+ .../base-files/lib/preinit/06_ubifs_mount_skip     |   18 +++++++++
+ .../lib/preinit/11_check_for_ubifs_syscfg          |   41 ++++++++++++++++++++
+ .../lib/preinit/21_check_ubifs_syscfg_ready        |   29 ++++++++++++++
+ .../base-files/lib/preinit/41_mount_ubifs_syscfg   |   30 ++++++++++++++
+ .../preinit/42_ubifs_syscfg_merge_overlay_hooks    |   24 ++++++++++++
+ .../lib/preinit/71_pivot_ubifs_syscfg_root         |   13 +++++++
+ .../lib/preinit/90_mount_no_ubifs_syscfg           |   12 ++++++
+ .../lib/preinit/99_10_mount_no_mtd_ubifs_syscfg    |   12 ++++++
+ target/linux/armadaxp/config-3.2                   |    2 +-
+ 9 files changed, 180 insertions(+), 1 deletion(-)
+ create mode 100644 target/linux/armadaxp/base-files/lib/preinit/06_ubifs_mount_skip
+ create mode 100644 target/linux/armadaxp/base-files/lib/preinit/11_check_for_ubifs_syscfg
+ create mode 100644 target/linux/armadaxp/base-files/lib/preinit/21_check_ubifs_syscfg_ready
+ create mode 100644 target/linux/armadaxp/base-files/lib/preinit/41_mount_ubifs_syscfg
+ create mode 100644 target/linux/armadaxp/base-files/lib/preinit/42_ubifs_syscfg_merge_overlay_hooks
+ create mode 100644 target/linux/armadaxp/base-files/lib/preinit/71_pivot_ubifs_syscfg_root
+ create mode 100644 target/linux/armadaxp/base-files/lib/preinit/90_mount_no_ubifs_syscfg
+ create mode 100644 target/linux/armadaxp/base-files/lib/preinit/99_10_mount_no_mtd_ubifs_syscfg
+
+diff --git a/target/linux/armadaxp/base-files/lib/preinit/06_ubifs_mount_skip b/target/linux/armadaxp/base-files/lib/preinit/06_ubifs_mount_skip
+new file mode 100644
+index 0000000..d29c673
+--- /dev/null
++++ b/target/linux/armadaxp/base-files/lib/preinit/06_ubifs_mount_skip
+@@ -0,0 +1,18 @@
++#!/bin/sh
++
++# Copyright (C) 2006 OpenWrt.org
++# Copyright (C) 2010 Vertical Communications
++
++# always skip jffs2 mount
++check_skip() {
++	return 0
++}
++
++check_ubifs_syscfg_skip() {
++    if [ "$pi_mount_ubifs_sysfs_skip_next" = "true" ]; then
++	return 0
++    else
++	return 1
++    fi
++}
++
+diff --git a/target/linux/armadaxp/base-files/lib/preinit/11_check_for_ubifs_syscfg b/target/linux/armadaxp/base-files/lib/preinit/11_check_for_ubifs_syscfg
+new file mode 100644
+index 0000000..5876615
+--- /dev/null
++++ b/target/linux/armadaxp/base-files/lib/preinit/11_check_for_ubifs_syscfg
+@@ -0,0 +1,41 @@
++#!/bin/sh
++
++# Copyright (C) 2006-2010 OpenWrt.org
++# Copyright (C) 2010 Vertical Communications
++
++get_current_rootfs_label() {
++	boot_part=`/usr/sbin/fw_printenv -n boot_part`
++	rootfs_label=""
++	if [ "$boot_part" -eq 1 ]
++	then
++		# primary boot image
++		rootfs_label="rootfs"
++	elif [ "$boot_part" -eq 2 ]
++	then
++		# alternative boot image
++		rootfs_label="alt_rootfs"
++	else
++		# try to guess from bootarg, should not come here
++		grep -q "mtdblock5" /proc/cmdline && boot_part=1 \
++			&& rootfs_label="rootfs"
++		grep -q "mtdblock7" /proc/cmdline && boot_part=2 \
++			&& rootfs_label="alt_rootfs"
++		fw_setenv boot_part $boot_part
++	fi
++	echo "$rootfs_label"
++}
++
++mount_no_ubifs_syscfg_mtd() {
++    mtd unlock $(get_current_rootfs_label)
++    mount -o remount,rw /dev/root /
++}
++
++check_for_ubifs_syscfg() {
++    check_ubifs_syscfg_skip || {
++		grep -qs syscfg /proc/mtd || {
++			mount_no_ubifs_syscfg_mtd && pi_mount_ubifs_sysfs_skip_next=true
++		}
++	}
++}
++
++boot_hook_add preinit_mount_root check_for_ubifs_syscfg
+diff --git a/target/linux/armadaxp/base-files/lib/preinit/21_check_ubifs_syscfg_ready b/target/linux/armadaxp/base-files/lib/preinit/21_check_ubifs_syscfg_ready
+new file mode 100644
+index 0000000..dafc6ae
+--- /dev/null
++++ b/target/linux/armadaxp/base-files/lib/preinit/21_check_ubifs_syscfg_ready
+@@ -0,0 +1,29 @@
++#!/bin/sh
++# Copyright (C) 2006-2010 OpenWrt.org
++# Copyright (C) 2010 Vertical Communications
++
++mount_no_ubifs_syscfg() {
++    echo "ubifs sysfs not ready yet; using ramdisk"
++    ramoverlay
++}
++
++ubifs_syscfg_ready () {
++	# return 1 on failed
++	mtdpart="$(find_mtd_part syscfg)"
++	[ -z "$mtdpart" ] && return 1
++	grep -qs ubifs /proc/filesystems ||  return 1
++	mtdpart_idx="$(echo $mtdpart | tr -d "/dev/mtdblock")"
++	ubiattach -m $mtdpart_idx /dev/ubi_ctrl
++	{ ubinfo /dev/ubi0_0 | grep Name  | grep -qs syscfg ; } || return 1
++	echo "ubifs_syscfg_ready...OK"
++}
++
++check_for_ubifs_syscfg_mtd() {
++    check_ubifs_syscfg_skip || {
++	ubifs_syscfg_ready || {
++	    mount_no_ubifs_syscfg && pi_mount_ubifs_sysfs_skip_next=true
++	}
++    }
++}
++
++boot_hook_add preinit_mount_root check_for_ubifs_syscfg_mtd
+diff --git a/target/linux/armadaxp/base-files/lib/preinit/41_mount_ubifs_syscfg b/target/linux/armadaxp/base-files/lib/preinit/41_mount_ubifs_syscfg
+new file mode 100644
+index 0000000..b875239
+--- /dev/null
++++ b/target/linux/armadaxp/base-files/lib/preinit/41_mount_ubifs_syscfg
+@@ -0,0 +1,30 @@
++#!/bin/sh
++# Copyright (C) 2006-2010 OpenWrt.org
++# Copyright (C) 2010 Vertical Communications
++
++SYSCFG_UBIFS_MNT=/tmp/syscfg
++find_mount_ubifs_syscfg () {
++    mkdir -p /tmp/overlay
++	mkdir -p ${SYSCFG_UBIFS_MNT}
++	mount -t ubifs -o noatime ubi0:syscfg $SYSCFG_UBIFS_MNT || return 1
++	[ ! -d $SYSCFG_UBIFS_MNT/openwrt_overlay ] && mkdir -p $SYSCFG_UBIFS_MNT/openwrt_overlay
++	mount -o bind $SYSCFG_UBIFS_MNT/openwrt_overlay /tmp/overlay
++	echo "find_mount_ubifs_syscfg...OK"
++}
++
++ubifs_syscfg_not_mounted() {
++    if [ "$pi_ubifs_syscfg_mount_success" != "true" ]; then
++	return 0
++    else
++	return 1
++    fi
++}
++
++do_mount_ubifs_syscfg() {
++    check_ubifs_syscfg_skip || {
++	find_mount_ubifs_syscfg && pi_ubifs_syscfg_mount_success=true
++    }
++}
++
++boot_hook_add preinit_mount_root do_mount_ubifs_syscfg
++
+diff --git a/target/linux/armadaxp/base-files/lib/preinit/42_ubifs_syscfg_merge_overlay_hooks b/target/linux/armadaxp/base-files/lib/preinit/42_ubifs_syscfg_merge_overlay_hooks
+new file mode 100644
+index 0000000..c92402b
+--- /dev/null
++++ b/target/linux/armadaxp/base-files/lib/preinit/42_ubifs_syscfg_merge_overlay_hooks
+@@ -0,0 +1,24 @@
++#!/bin/sh
++# Copyright (C) 2010 OpenWrt.org
++
++ubifs_syscfg_merge_overlay_hooks() {
++	ubifs_syscfg_not_mounted || [ ! -d /tmp/overlay/lib/preinit ] || {
++		echo "- merge overlay components -"
++
++		mkdir -p /tmp/preinit-hook-merge
++		ln -sf /lib/preinit/* /tmp/overlay/lib/preinit/[0-9][0-9]_* /tmp/preinit-hook-merge/
++
++		boot_hook_splice_start
++
++		local pipart
++		for pipart in /tmp/preinit-hook-merge/*; do
++			. $pipart
++		done
++
++		boot_hook_splice_finish
++
++		rm -rf /tmp/preinit-hook-merge
++	}
++}
++
++boot_hook_add preinit_mount_root ubifs_syscfg_merge_overlay_hooks
+diff --git a/target/linux/armadaxp/base-files/lib/preinit/71_pivot_ubifs_syscfg_root b/target/linux/armadaxp/base-files/lib/preinit/71_pivot_ubifs_syscfg_root
+new file mode 100644
+index 0000000..ae3f505
+--- /dev/null
++++ b/target/linux/armadaxp/base-files/lib/preinit/71_pivot_ubifs_syscfg_root
+@@ -0,0 +1,13 @@
++#!/bin/sh
++# Copyright (C) 2006-2010 OpenWrt.org
++# Copyright (C) 2010 Vertical Communications
++
++ubifs_syscfg_rootfs_pivot() {
++    check_ubifs_syscfg_skip || ubifs_syscfg_not_mounted || {
++	echo "switching to ubifs sysfs overlay"
++	mount -o move /tmp/overlay /overlay 2>&-
++	fopivot /overlay /rom && pi_mount_ubifs_sysfs_skip_next=true
++    }
++}
++
++boot_hook_add preinit_mount_root ubifs_syscfg_rootfs_pivot
+diff --git a/target/linux/armadaxp/base-files/lib/preinit/90_mount_no_ubifs_syscfg b/target/linux/armadaxp/base-files/lib/preinit/90_mount_no_ubifs_syscfg
+new file mode 100644
+index 0000000..2305f36
+--- /dev/null
++++ b/target/linux/armadaxp/base-files/lib/preinit/90_mount_no_ubifs_syscfg
+@@ -0,0 +1,12 @@
++#!/bin/sh
++# Copyright (C) 2006-2010 OpenWrt.org
++# Copyright (C) 2010 Vertical Communications
++
++do_mount_no_ubifs_syscfg() {
++    check_ubifs_syscfg_skip || {
++	mount_no_ubifs_syscfg && pi_mount_ubifs_sysfs_skip_next=true
++    }
++}
++
++boot_hook_add preinit_mount_root do_mount_no_ubifs_syscfg
++
+diff --git a/target/linux/armadaxp/base-files/lib/preinit/99_10_mount_no_mtd_ubifs_syscfg b/target/linux/armadaxp/base-files/lib/preinit/99_10_mount_no_mtd_ubifs_syscfg
+new file mode 100644
+index 0000000..ba63157
+--- /dev/null
++++ b/target/linux/armadaxp/base-files/lib/preinit/99_10_mount_no_mtd_ubifs_syscfg
+@@ -0,0 +1,12 @@
++#!/bin/sh
++# Copyright (C) 2006-2010 OpenWrt.org
++# Copyright (C) 2010 Vertical Communications
++
++do_mount_no_ubifs_syscfg_mtd() {
++    check_ubifs_syscfg_skip || {
++	mount_no_ubifs_syscfg_mtd
++    }
++}
++
++boot_hook_add preinit_mount_root do_mount_no_ubifs_syscfg_mtd
++
+diff --git a/target/linux/armadaxp/config-3.2 b/target/linux/armadaxp/config-3.2
+index e79af6a..8594ddd 100644
+--- a/target/linux/armadaxp/config-3.2
++++ b/target/linux/armadaxp/config-3.2
+@@ -50,7 +50,7 @@ CONFIG_MV_INCLUDE_SWITCH=y
+ # CONFIG_NTFS_DEBUG is not set
+ CONFIG_NTFS_FS=y
+ CONFIG_NTFS_RW=y
+-# CONFIG_OVERLAYFS_FS is not set
++CONFIG_OVERLAYFS_FS=y
+ CONFIG_PM=y
+ # CONFIG_PMBUS is not set
+ CONFIG_PM_CLK=y
+-- 
+1.7.9.5
+

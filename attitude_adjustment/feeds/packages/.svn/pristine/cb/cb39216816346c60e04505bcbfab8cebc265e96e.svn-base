@@ -1,0 +1,23 @@
+--- a/Makefile
++++ b/Makefile
+@@ -30,6 +30,9 @@ else
+ UNAME_M:=$(DEB_HOST_GNU_TYPE)
+ endif
+ 
++AR ?= ar
++RANLIB ?= ranlib
++
+ # If you want to build for a kernel other than the current kernel, set KVERS
+ ifndef KVERS
+ KVERS:=$(shell uname -r)
+@@ -352,8 +355,8 @@ ztspeed: CFLAGS=
+ sethdlc-new: CFLAGS+=-I$(KINCLUDES)
+ 
+ $(LTZ_A): $(LTZ_A_OBJS)
+-	ar rcs $@ $^
+-	ranlib $@
++	$(AR) rcs $@ $^
++	$(RANLIB) $@
+ 
+ $(LTZ_SO): $(LTZ_SO_OBJS)
+ 	$(CC) $(CFLAGS) -shared -Wl,-soname,$(LTZ_SO).$(LTZ_SO_MAJOR_VER).$(LTZ_SO_MINOR_VER) -o $@ $^ $(LDFLAGS) $(LDLIBS) -lm

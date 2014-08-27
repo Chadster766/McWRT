@@ -1,0 +1,123 @@
+From 1163bb4fca3858e5412397d19f05f90c6d453a97 Mon Sep 17 00:00:00 2001
+From: Eli Nidam <elini@marvell.com>
+Date: Wed, 10 Oct 2012 17:48:42 +0200
+Subject: [PATCH 402/609] Fixed compilation warning
+
+Change-Id: Ic8a057ccec653e2bea22726295e5be00e49047fa
+Signed-off-by: Eli Nidam <elini@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/nfc/mvNfc.c |   26 +++++++++++++-------------
+ arch/arm/plat-armada/mv_hal/xor/mvXor.c |    2 +-
+ 2 files changed, 14 insertions(+), 14 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
+index 9a982bb..3058b69 100644
+--- a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
++++ b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
+@@ -2653,7 +2653,7 @@ static MV_STATUS mvNfcTimingSet(MV_U32 tclk, MV_NFC_FLASH_INFO *flInfo)
+ 	MV_U32 tadl_nfc, tch_nfc, tcs_nfc, twh_nfc, twp_nfc, trh_nfc, trp_nfc;
+ 	MV_U32 tr_nfc, trhw_nfc, twhr_nfc, tar_nfc;
+ 	MV_U32 tr_pre_nfc = 0;
+-	MV_U32 ret = MV_OK;
++/*	MV_U32 ret = MV_OK; */
+ 
+ 	switch (tclk) {
+ 	case 125000000:
+@@ -2696,37 +2696,37 @@ static MV_STATUS mvNfcTimingSet(MV_U32 tclk, MV_NFC_FLASH_INFO *flInfo)
+ 	trp_nfc = (trp - 1);
+ 
+ 	if (check_limit(tadl_nfc, 5) != tadl_nfc) {
+-		ret = MV_OUT_OF_RANGE;
++/*		ret = MV_OUT_OF_RANGE; */
+ 		tadl_nfc = check_limit(tadl_nfc, 5);
+ 	}
+ 
+ 	if (check_limit(tch_nfc, 3) != tch_nfc) {
+-		ret = MV_OUT_OF_RANGE;
++/*		ret = MV_OUT_OF_RANGE; */
+ 		tch_nfc = check_limit(tch_nfc, 3);
+ 	}
+ 
+ 	if (check_limit(tcs_nfc, 3) != tcs_nfc) {
+-		ret = MV_OUT_OF_RANGE;
++/*		ret = MV_OUT_OF_RANGE; */
+ 		tcs_nfc = check_limit(tcs_nfc, 3);
+ 	}
+ 
+ 	if (check_limit(twh_nfc, 3) != twh_nfc) {
+-		ret = MV_OUT_OF_RANGE;
++/*		ret = MV_OUT_OF_RANGE; */
+ 		twh_nfc = check_limit(twh_nfc, 3);
+ 	}
+ 
+ 	if (check_limit(twp_nfc, 3) != twp_nfc) {
+-		ret = MV_OUT_OF_RANGE;
++/*		ret = MV_OUT_OF_RANGE; */
+ 		twp_nfc = check_limit(twp_nfc, 3);
+ 	}
+ 
+ 	if (check_limit(trh_nfc, 3) != trh_nfc) {
+-		ret = MV_OUT_OF_RANGE;
++/*		ret = MV_OUT_OF_RANGE; */
+ 		trh_nfc = check_limit(trh_nfc, 3);
+ 	}
+ 
+ 	if (check_limit(trp_nfc, 4) != trp_nfc) {
+-		ret = MV_OUT_OF_RANGE;
++/*		ret = MV_OUT_OF_RANGE; */
+ 		trp_nfc = check_limit(trp_nfc, 4);
+ 	}
+ 
+@@ -2760,7 +2760,7 @@ static MV_STATUS mvNfcTimingSet(MV_U32 tclk, MV_NFC_FLASH_INFO *flInfo)
+ 
+ 	if (twhr_nfc >= 16) {
+ 		twhr_nfc = 15; /* worst case - best we can do */
+-		ret = MV_OUT_OF_RANGE;
++/*		ret = MV_OUT_OF_RANGE; */
+ 	}
+ 
+ 	tar_nfc = twhr_nfc; /* our initial assumption */
+@@ -2777,22 +2777,22 @@ static MV_STATUS mvNfcTimingSet(MV_U32 tclk, MV_NFC_FLASH_INFO *flInfo)
+ #endif
+ 
+ 	if (check_limit(tr_nfc, 16) != tr_nfc) {
+-		ret = MV_OUT_OF_RANGE;
++/*		ret = MV_OUT_OF_RANGE; */
+ 		tr_nfc = check_limit(tr_nfc, 16);
+ 	}
+ 
+ 	if (check_limit(trhw_nfc, 2) != trhw_nfc) {
+-		ret = MV_OUT_OF_RANGE;
++/*		ret = MV_OUT_OF_RANGE; */
+ 		trhw_nfc = check_limit(trhw_nfc, 2);
+ 	}
+ 
+ 	if (check_limit(twhr_nfc, 4) != twhr_nfc) {
+-		ret = MV_OUT_OF_RANGE;
++/*		ret = MV_OUT_OF_RANGE; */
+ 		twhr_nfc = check_limit(twhr_nfc, 4);
+ 	}
+ 
+ 	if (check_limit(tar_nfc, 4) != tar_nfc) {
+-		ret = MV_OUT_OF_RANGE;
++/*		ret = MV_OUT_OF_RANGE; */
+ 		tar_nfc = check_limit(tar_nfc, 5);
+ 	}
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/xor/mvXor.c b/arch/arm/plat-armada/mv_hal/xor/mvXor.c
+index 42eb51f..4c3a638 100644
+--- a/arch/arm/plat-armada/mv_hal/xor/mvXor.c
++++ b/arch/arm/plat-armada/mv_hal/xor/mvXor.c
+@@ -501,7 +501,7 @@ MV_STATUS mvXorCommandSet(MV_U32 chan, MV_COMMAND command)
+ 		return MV_OK;
+ 	}
+ 	/* command is paused and current state is active */
+-	else if ((MV_PAUSED == command) && (MV_ACTIVE == state)) {
++	else if ((MV_PAUSE == command) && (MV_ACTIVE == state)) {
+ 		MV_REG_BIT_SET(XOR_ACTIVATION_REG(XOR_UNIT(chan), XOR_CHAN(chan)), XEXACTR_XEPAUSE_MASK);
+ 		return MV_OK;
+ 	}
+-- 
+1.7.9.5
+

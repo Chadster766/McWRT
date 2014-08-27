@@ -1,0 +1,73 @@
+From 063257a9f41cdf8d5b0b7c80161b014e7e7edebb Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Tue, 12 Mar 2013 12:50:11 +0200
+Subject: [PATCH 560/609] NAND: Adjust NAND Flash driver to work in Big Endian
+ mode
+
+Change-Id: I4d49c503671667d29482ecf5b2f607598d4980ed
+Signed-off-by: Zbigniew Bodek <zbb@semihalf.com>
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1257
+Reviewed-by: Lior Amsalem <alior@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/nfc/mvNfc.c |   16 ++++++++++++----
+ 1 file changed, 12 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
+index d780c6d..be5e849 100644
+--- a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
++++ b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
+@@ -138,6 +138,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define maxx(a, b)		((a > b) ? a : b)
+ #define check_limit(val, pwr)	((val > ((1 << pwr)-1)) ? ((1 << pwr)-1) : val)
+ 
++#ifdef CONFIG_CPU_BIG_ENDIAN
++#define MV_LE32_TO_CPU(x)	le32_to_cpu(x)
++#define MV_CPU_TO_LE32(x)	cpu_to_le32(x)
++#else
++#define MV_LE32_TO_CPU(x)	(x)
++#define MV_CPU_TO_LE32(x)	(x)
++#endif
++
+ #define DBGPRINT(x) 	printk x
+ #define DBGLVL	 	KERN_INFO
+ 
+@@ -1912,7 +1920,7 @@ MV_STATUS mvNfcReadWrite(MV_NFC_CTRL *nfcCtrl, MV_NFC_CMD_TYPE cmd, MV_U32 *virt
+ 		} else {	/* PIO mode */
+ 
+ 			for (i = 0; i < data_len; i += 4) {
+-				*virtBufAddr = MV_REG_READ(NFC_DATA_BUFF_REG);
++				*virtBufAddr = MV_LE32_TO_CPU(MV_REG_READ(NFC_DATA_BUFF_REG));
+ 				virtBufAddr++;
+ 			}
+ 		}
+@@ -1937,7 +1945,7 @@ MV_STATUS mvNfcReadWrite(MV_NFC_CTRL *nfcCtrl, MV_NFC_CMD_TYPE cmd, MV_U32 *virt
+ 		} else {	/* PIO mode */
+ 
+ 			for (i = 0; i < data_len; i += 4) {
+-				MV_REG_WRITE(NFC_DATA_BUFF_REG, *virtBufAddr);
++				MV_REG_WRITE(NFC_DATA_BUFF_REG, MV_CPU_TO_LE32(*virtBufAddr));
+ 				virtBufAddr++;
+ 			}
+ 		}
+@@ -1975,14 +1983,14 @@ MV_VOID mvNfcReadWritePio(MV_NFC_CTRL *nfcCtrl, MV_U32 *buff, MV_U32 data_len, M
+ 	switch (mode) {
+ 	case MV_NFC_PIO_READ:
+ 		for (i = 0; i < data_len; i += 4) {
+-			*buff = MV_REG_READ(NFC_DATA_BUFF_REG);
++			*buff = MV_LE32_TO_CPU(MV_REG_READ(NFC_DATA_BUFF_REG));
+ 			buff++;
+ 		}
+ 		break;
+ 
+ 	case MV_NFC_PIO_WRITE:	/* Program a single page of 512B or 2KB */
+ 		for (i = 0; i < data_len; i += 4) {
+-			MV_REG_WRITE(NFC_DATA_BUFF_REG, *buff);
++			MV_REG_WRITE(NFC_DATA_BUFF_REG, MV_CPU_TO_LE32(*buff));
+ 			buff++;
+ 		}
+ 		break;
+-- 
+1.7.9.5
+

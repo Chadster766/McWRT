@@ -1,0 +1,38 @@
+$Id$
+
+	• Part of the FreeWRT patches:
+	  – no hostname(1)
+	  – ls(1) has no -o option
+	• OpenWrt and FreeWRT-1.0 fix:
+	  – since this is not ~/.mkshrc make sure subshells find it
+
+--- a/dot.mkshrc	Sat Nov 26 18:15:38 2011
++++ b/dot.mkshrc	Sun Dec 11 21:31:27 2011
+@@ -21,7 +21,7 @@
+ #-
+ # ${ENV:-~/.mkshrc}: mksh initialisation file for interactive shells
+ 
+-: ${EDITOR:=/bin/ed} ${TERM:=vt100} ${HOSTNAME:=$(ulimit -c 0;hostname -s 2>&-)}
++: ${EDITOR:=/bin/ed} ${TERM:=vt100} ${HOSTNAME:=$(</proc/sys/kernel/hostname)}
+ [[ $HOSTNAME = @(localhost|*([	 ])) ]] && HOSTNAME=$(ulimit -c 0;hostname 2>&-)
+ : ${HOSTNAME:=nil}; if (( USER_ID )); then PS1='$'; else PS1='#'; fi
+ function precmd {
+@@ -40,7 +40,7 @@ unalias ls
+ alias l='ls -F'
+ alias la='l -a'
+ alias ll='l -l'
+-alias lo='l -alo'
++alias lo='l -al'
+ whence -p rot13 >&- || alias rot13='tr \
+     abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ \
+     nopqrstuvwxyzabcdefghijklmNOPQRSTUVWXYZABCDEFGHIJKLM'
+@@ -365,5 +365,9 @@ alias cls='print -n \\033c'
+ #export LANG=C LC_CTYPE=$p LC_MEASUREMENT=$p LC_MESSAGES=$p LC_PAPER=$p
+ 
+ unset p
++
++# we need this in OpenWrt for subshells that are not login shells
++: ${ENV=/etc/mkshrc}
++[[ -z $ENV ]] || export ENV
+ 
+ : place customisations above this line

@@ -1,0 +1,65 @@
+#!/bin/sh
+. /etc/functions.sh
+
+uci_get() {
+	uci -P /var/state get "$1" 2>/dev/null
+}
+
+export ENTITY=$1
+HOST=$2
+export KEY_SIZE=$(uci_get "openssl.$ENTITY.CA_default_bits")
+export KEY_EXPIRE=$(uci_get "openssl.$ENTITY.CA_default_days")
+export KEY_CRLDAYS=$(uci_get "openssl.$ENTITY.CA_default_crldays")
+export KEY_MD=$(uci_get "openssl.$ENTITY.CA_default_md")
+
+DEFHOST=$(uci_get "certificate.newcert.commonName")
+export KEY_COUNTRY=$(uci_get "certificate.newcert.countryName")
+export KEY_PROVINCE=$(uci_get "certificate.newcert.stateName_default")
+export KEY_CITY=$(uci_get "certificate.newcert.localityName")
+export KEY_ORG=$(uci_get "certificate.newcert.organizationName")
+export KEY_ORG_UNIT=$(uci_get "certificate.newcert.organizationUnitName")
+export KEY_EMAIL=$(uci_get "certificate.newcert.emailAddress")
+export KEY_COMMON_NAME=${HOST:-"$DEFHOST"}
+#export KEY_PASSWD="pepito"
+#export KEY_PASSWD=$(uci_get "openssl.$ENTITY.passwd")
+
+#DEFHOST=$(uci_get "openssl.$ENTITY.poly_match_commonName_default")
+#export KEY_SIZE=$(uci_get "openssl.$ENTITY.CA_default_bits")
+#export KEY_EXPIRE=$(uci_get "openssl.$ENTITY.CA_default_days")
+#export KEY_CRLDAYS=$(uci_get "openssl.$ENTITY.CA_default_crldays")
+#export KEY_MD=$(uci_get "openssl.$ENTITY.CA_default_md")
+#export KEY_COUNTRY=$(uci_get "openssl.$ENTITY.poly_match_countryName_default")
+#export KEY_PROVINCE=$(uci_get "openssl.$ENTITY.poly_match_stateOrProvinceName_default")
+#export KEY_CITY=$(uci_get "openssl.$ENTITY.poly_match_localityName_default")
+#export KEY_ORG=$(uci_get "openssl.$ENTITY.poly_match_organizationName_default")
+#export KEY_ORG_UNIT=$(uci_get "openssl.$ENTITY.poly_match_organizationUnitName_default")
+#export KEY_EMAIL=$(uci_get "openssl.$ENTITY.poly_match_emailAddress_default")
+#export KEY_COMMON_NAME=${HOST:-"$DEFHOST"}
+#export KEY_PASSWD="pepito"
+##export KEY_PASSWD=$(uci_get "openssl.$ENTITY.passwd")
+
+
+export MATCH_COUNTRY=$(uci_get "openssl.$ENTITY.poly_match_countryName")
+export MATCH_PROVINCE=$(uci_get "openssl.$ENTITY.poly_match_stateOrProvinceName")
+export MATCH_CITY=$(uci_get "openssl.$ENTITY.poly_match_localityName")
+export MATCH_ORG=$(uci_get "openssl.$ENTITY.poly_match_organizationName")
+export MATCH_ORG_UNIT=$(uci_get "openssl.$ENTITY.poly_match_organizationUnitName")
+export MATCH_EMAIL=$(uci_get "openssl.$ENTITY.poly_match_emailAddress")
+export MATCH_COMMON=$(uci_get "openssl.$ENTITY.poly_match_commonName")
+
+#echo "Size $KEY_SIZE"
+#echo "Days $KEY_EXPIRE"
+#echo "CRL Days DAYS$KEY_CRLDAYS"
+#echo "Msg Diggest $KEY_MD"
+
+#echo "Country Name $KEY_COUNTRY"
+#echo "State Name $KEY_PROVINCE"
+#echo "City Name $KEY_CITY"
+#echo "Organization Name $KEY_ORG"
+#echo "Organization Unit $KEY_ORG_UNIT"
+#echo "E-Mail Address $KEY_EMAIL"
+#echo "Common Name $KEY_COMMON_NAME"
+
+#[ -z $KEY_PASSWD ] && {
+#	echo "pepe"
+#}

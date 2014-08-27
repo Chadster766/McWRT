@@ -1,0 +1,30 @@
+From 4b6c4c701763d92146a675b9e232d2bde14c147c Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Wed, 5 Sep 2012 18:01:34 +0300
+Subject: [PATCH 275/609] Fix Bug in address decode table build
+
+Fill all unused entries in DRAM structure to be disabled.
+
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.c    |    3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.c
+index 96026aa..e64ced1 100755
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.c
+@@ -287,6 +287,9 @@ MV_STATUS mvCtrlAddrWinMapBuild(MV_UNIT_WIN_INFO *pAddrWinMap, MV_U32 len)
+ 			j++;
+ 		}
+ 	}
++	
++	for (; j < 4; j++)
++		ioDdrWin[j].enable = MV_FALSE;
+ 
+ 	/* Fill in the pAddrWinMap fields       */
+ 	for (i = 0; i < MAX_TARGETS; i++) {
+-- 
+1.7.9.5
+

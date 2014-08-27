@@ -1,0 +1,58 @@
+From 4fc42e4b6a13371ee471a8170b49fac43cc2401c Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Tue, 8 Jan 2013 12:04:50 +0200
+Subject: [PATCH 395/609] Fix: SMP: Fix interrupt affinity function - Add test
+ for online CPUs
+
+	This fix solves CPU hotplug failures when changing the interrupts affinity
+
+Change-Id: I76160d280b13f7fdbba0937a5e96a01f066bd156
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/irq.c |   15 ++++++++++-----
+ 1 file changed, 10 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/irq.c b/arch/arm/mach-armadaxp/irq.c
+index 7ab3f02..d0b7183 100644
+--- a/arch/arm/mach-armadaxp/irq.c
++++ b/arch/arm/mach-armadaxp/irq.c
+@@ -104,15 +104,17 @@ void axp_irq_unmask(struct irq_data *d)
+ int axp_set_affinity(struct irq_data *d, const struct cpumask *mask_val,bool force)
+ {
+ 	MV_U32 addr, temp;
++	struct cpumask mask_temp;
+ 	u32 irq=d->irq;
+ 	addr = (CPU_INT_SOURCE_CONTROL_REG(irq));
+ 
+ 	spin_lock(&irq_controller_lock);
+-	cpumask_copy(d->affinity, mask_val);
+-	d->node = cpumask_first(mask_val);
++	cpumask_and(&mask_temp, mask_val, cpu_online_mask);
++	cpumask_copy(d->affinity, &mask_temp);
++	d->node = cpumask_first(&mask_temp);
+ 	temp = MV_REG_READ(addr);
+ 	temp &= ~0xf;
+-	temp |= *cpus_addr(*mask_val);
++	temp |= *cpus_addr(mask_temp);
+ 	MV_REG_WRITE(addr, temp);
+ 	spin_unlock(&irq_controller_lock);
+ 
+@@ -230,9 +232,12 @@ void axp_irq_unmask(struct irq_data *d)
+ #ifdef CONFIG_SMP
+ int axp_set_affinity(struct irq_data *d, const struct cpumask *mask_val,bool force)
+ {
+-	cpumask_copy((*d).affinity, mask_val);
++	struct cpumask mask_temp;
++
++	cpumask_and(&mask_temp, mask_val, cpu_online_mask);
++	cpumask_copy((*d).affinity, &mask_temp);
+ 	spin_lock(&irq_controller_lock);
+-	(*d).node = cpumask_first(mask_val);
++	(*d).node = cpumask_first(&mask_temp);
+ 	spin_unlock(&irq_controller_lock);
+ 	axp_irq_unmask(d);
+ 	return 0;
+-- 
+1.7.9.5
+

@@ -1,0 +1,41 @@
+From 1ea76354c4acfb83caa5e1adb6c715a79d850d53 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Mon, 3 Dec 2012 17:41:19 +0200
+Subject: [PATCH 447/609] Fix for Compilation error in piuxiu support patch
+ below. The newly added code uses a routine compiled
+ with PERF support only.
+
+Author: Hanna Hawa <hannah@marvell.com>
+Date:   Tue Nov 20 13:32:32 2012 +0200
+
+    Added pmu_request_irq function to support Code Performance Analyzer (Pixiu)
+
+Change-Id: I20ff36717d330024cde19408f5ed1ea085478261
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/irq.c |    3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/mach-armadaxp/irq.c b/arch/arm/mach-armadaxp/irq.c
+index f1ba69c..13a1991 100644
+--- a/arch/arm/mach-armadaxp/irq.c
++++ b/arch/arm/mach-armadaxp/irq.c
+@@ -328,6 +328,7 @@ void __init axp_init_irq(void)
+ 
+ }
+ 
++#if (defined(CONFIG_PERF_EVENTS) && defined(CONFIG_HW_PERF_EVENTS))
+ /*
+  * This functions used by Pixiu driver under tools/pixiu.
+  */
+@@ -353,5 +354,5 @@ void pmu_free_irq(int irq)
+         free_irq(irq, NULL);
+ }
+ EXPORT_SYMBOL(pmu_free_irq);
+-
++#endif
+ 
+-- 
+1.7.9.5
+

@@ -1,0 +1,104 @@
+#!/bin/sh
+
+. /etc/functions.sh
+. /lib/config/uci.sh
+
+internetping () {
+	ip route replace default via $gateway dev $DEVICE table default > /dev/null 2>&1
+	ping -W $TIMEOUT -I $DEVICE -c 1 $TESTIP > /dev/null  2>&1
+	cps=$?
+	if [ "$cps" -eq 1 ]; then
+		internetc=$(expr $internetc + 1)
+	else
+		internetc="0"
+	fi
+#	echo "$MYINTERFACE ping $DEVICE $TESTIP Error($cps) count($internetc)"
+	if [ "$STATUS" -eq "0" ]; then
+		[ "$internetc" -eq 0 ] && {
+			STATUS=1
+			uci_set_state mroute "$MYINTERFACE" status 1
+			env -i ACTION="changeRoute" INTERFACE="$MYINTERFACE" DEVICE="$DEVICE" PROTO="$proto" STATUS="$STATUS" /sbin/hotplug-call iface
+			return
+		}
+		[ "$internetc" -ne 0 ] && {
+			gatewayping
+		}
+	else
+		[ "$internetc" -eq 2 ] && {
+			STATUS="0"
+#			echo "$MYINTERFACE Internet = $STATUS - cps = $cps"
+			uci_set_state mroute "$MYINTERFACE" status 0
+			env -i ACTION="changeRoute" INTERFACE="$MYINTERFACE" DEVICE="$DEVICE" PROTO="$proto" STATUS="$STATUS" /sbin/hotplug-call iface
+		}
+		[ "$internetc" -ne 0 ] && {
+			gatewayping
+		}
+	fi
+}
+
+gatewayping () {
+	ip route replace default via $gateway dev $DEVICE table default > /dev/null 2>&1
+	ping -W $TIMEOUT -I $DEVICE -c 1 $gateway > /dev/null  2>&1
+	gwp=$?
+	if [ "$gwp" == "1" ]; then
+		gatewayerror=$(expr $gatewayerror + 1)
+		[ "$gatewayerror" -gt 1 ] && {
+#			echo "RESET INTERFACE $MYINTERFACE"
+			ifup $MYINTERFACE
+		}
+	else
+		gatewayerror=0
+	fi
+#	echo "$MYINTERFACE ping $DEVICE $gateway Error($gwp) count($internetc)"
+}
+
+myping(){
+	internetping
+#	echo "$MYINTERFACE Internet=$STATUS - cps=$cps count($internetc)"
+	[ "$STATUS" -eq 1 ] && rx_packets=$(cat /sys/class/net/$DEVICE/statistics/rx_packets)
+}
+
+local DEVICE=$1
+local MYINTERFACE=$2
+#echo "PING $MYINTERFACE"
+#
+uci_load mroute
+TESTIP="$CONFIG_settings_testip"
+TIMEOUT="$CONFIG_settings_timeout"
+SLEEPTIME="$CONFIG_settings_sleeptime"
+local proto=$(uci_get_state network "$MYINTERFACE" proto)
+local gateway=$(uci_get_state mroute "$MYINTERFACE" gateway)
+ping -W $TIMEOUT -I $device -c 1 $TESTIP > /dev/null  2>&1
+cps=$?
+ping -W $TIMEOUT -I $device -c 1 $gateway > /dev/null  2>&1
+gwp=$?
+rx_bytes=$(cat /sys/class/net/$DEVICE/statistics/rx_bytes)
+rx_packets=$(cat /sys/class/net/$DEVICE/statistics/rx_packets)
+rx_prev=0
+count=0
+internetc=0
+gatewayerror=0
+
+STATUS="1" #$(uci_get_state mroute "$MYINTERFACE" status)
+while : ; do
+	devstatus=$(cat /sys/class/net/$DEVICE/operstate)
+	if [ "up" == "$devstatus" ]; then
+		if [ "$rx_packets" == "$rx_prev" ]; then #### No RX trafic in MYINTERFACE
+#			count=$(expr $count + 1)
+#			if [ "$count" -eq 2 ]; then
+				myping 
+#			fi
+		else
+			count=0
+			sleep $SLEEPTIME
+#			echo "$MYINTERFACE $rx_packets"
+			rx_prev="$rx_packets"
+			rx_packets=$(cat /sys/class/net/$DEVICE/statistics/rx_packets)			
+		fi
+		sleep 1
+#		sleep $SLEEPTIME
+	else
+#		echo "$MYINTERFACE $devstatus"
+		ifup $MYINTERFACE
+	fi
+done

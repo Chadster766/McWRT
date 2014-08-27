@@ -1,0 +1,38 @@
+Description: Fix reading FTP data is ASCII mode
+ In ASCII mode, if you don't have a line in the next block that you're
+ trying to read, then ftplib would set the first character to '\0'.
+ .
+ Upstream probably intented to return an empty string when requesting
+ to read only 1 character since that doesn't make much sense when the
+ EOL delimiter is 2 characters already (\r\n). However, due to the
+ way data is read, max can be set to 1 just after having read max-1
+ legitimate bytes and we should not be overwriting the first byte.
+ .
+ Patch is not submitted upstream since upstream is not actively
+ maintaining it.
+Origin: vendor, see Author
+Author: Raphaël Hertzog <hertzog@debian.org>
+Last-Update: 2009-11-24
+
+---
+The information above should follow the Patch Tagging Guidelines, please
+checkout http://dep.debian.net/deps/dep3/ to learn about the format. Here
+are templates for supplementary fields that you might want to add:
+
+Origin: <vendor|upstream|other>, <url of original patch>
+Bug: <url in upstream bugtracker>
+Bug-Debian: http://bugs.debian.org/<bugnumber>
+Forwarded: <no|not-needed|url proving that it has been forwarded>
+Reviewed-By: <name and email of someone who approved the patch>
+Last-Update: <YYYY-MM-DD>
+
+--- a/src/ftplib.c
++++ b/src/ftplib.c
+@@ -220,7 +220,6 @@ static int readline(char *buf,int max,ne
+     	}
+     	if (max == 1)
+     	{
+-	    *buf = '\0';
+ 	    break;
+     	}
+     	if (ctl->cput == ctl->cget)

@@ -1,0 +1,39 @@
+From 0cb08422e89253fa9208e492621ecbbb2069941d Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Sun, 24 Mar 2013 10:51:13 +0200
+Subject: [PATCH 584/609] MTD, UBI: Fix ubi_init error during boot - allow to
+ mount root from UBI NAND
+
+- UBI module was being initialized earlier than NAND driver. Due to that
+  module initialization was failing and mounting rootfs from NAND was not
+  possible.
+  This commit changes UBI module initialization order and makes mounting
+  root from NAND possible.
+
+Change-Id: I1dc18bfafd4e19345daf9d461f1342f4268d30fb
+Signed-off-by: Zbigniew Bodek <zbb@semihalf.com>
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1378
+Reviewed-by: Tawfik Bayouk <tawfik@marvell.com>
+Tested-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ drivers/mtd/ubi/build.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/mtd/ubi/build.c b/drivers/mtd/ubi/build.c
+index 1f9c363..bc431fb 100644
+--- a/drivers/mtd/ubi/build.c
++++ b/drivers/mtd/ubi/build.c
+@@ -1286,7 +1286,7 @@ out:
+ 	ubi_err("UBI error: cannot initialize UBI, error %d", err);
+ 	return err;
+ }
+-module_init(ubi_init);
++late_initcall(ubi_init);
+ 
+ static void __exit ubi_exit(void)
+ {
+-- 
+1.7.9.5
+

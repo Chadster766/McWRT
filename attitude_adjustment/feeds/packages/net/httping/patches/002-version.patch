@@ -1,0 +1,29 @@
+--- a/main.c
++++ b/main.c
+@@ -41,6 +41,8 @@
+ #include "utils.h"
+ #include "error.h"
+ 
++#define VERSION "1.5.2"
++
+ static volatile int stop = 0;
+ 
+ int quiet = 0;
+@@ -52,7 +54,7 @@ char last_error[ERROR_BUFFER_SIZE];
+ 
+ void version(void)
+ {
+-	fprintf(stderr, "HTTPing v" VERSION ", (C) 2003-2011 folkert@vanheusden.com\n");
++	fprintf(stderr, "HTTPing v%s (C) 2003-2011 folkert@vanheusden.com\n", VERSION);
+ #ifndef NO_SSL
+ 	fprintf(stderr, "SSL support included\n");
+ #endif
+@@ -639,7 +641,7 @@ int main(int argc, char *argv[])
+ 	if (useragent)
+ 		sprintf(&request[strlen(request)], "User-Agent: %s\r\n", useragent);
+ 	else
+-		sprintf(&request[strlen(request)], "User-Agent: HTTPing v" VERSION "\r\n");
++		sprintf(&request[strlen(request)], "User-Agent: HTTPing v%s\r\n", VERSION);
+ 	sprintf(&request[strlen(request)], "Host: %s\r\n", hostname);
+ 	if (referer)
+ 		sprintf(&request[strlen(request)], "Referer: %s\r\n", referer);

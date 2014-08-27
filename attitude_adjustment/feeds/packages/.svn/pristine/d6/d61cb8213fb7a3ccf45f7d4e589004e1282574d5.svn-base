@@ -1,0 +1,87 @@
+--- a/dovecot-example.conf
++++ b/dovecot-example.conf
+@@ -537,20 +537,20 @@
+ 
+ protocol imap {
+   # Login executable location.
+-  #login_executable = /usr/libexec/dovecot/imap-login
++  #login_executable = /usr/lib/dovecot/imap-login
+ 
+   # IMAP executable location. Changing this allows you to execute other
+   # binaries before the imap process is executed.
+   #
+   # This would write rawlogs into user's ~/dovecot.rawlog/, if it exists:
+-  #   mail_executable = /usr/libexec/dovecot/rawlog /usr/libexec/dovecot/imap
++  #   mail_executable = /usr/lib/dovecot/rawlog /usr/lib/dovecot/imap
+   # <doc/wiki/Debugging/Rawlog.txt>
+   #
+   # This would attach gdb into the imap process and write backtraces into
+   # /tmp/gdbhelper.* files:
+-  #   mail_executable = /usr/libexec/dovecot/gdbhelper /usr/libexec/dovecot/imap
++  #   mail_executable = /usr/lib/dovecot/gdbhelper /usr/lib/dovecot/imap
+   #
+-  #mail_executable = /usr/libexec/dovecot/imap
++  #mail_executable = /usr/lib/dovecot/imap
+ 
+   # Maximum IMAP command line length in bytes. Some clients generate very long
+   # command lines with huge mailboxes, so you may need to raise this if you get
+@@ -614,11 +614,11 @@ protocol imap {
+ 
+ protocol pop3 {
+   # Login executable location.
+-  #login_executable = /usr/libexec/dovecot/pop3-login
++  #login_executable = /usr/lib/dovecot/pop3-login
+ 
+   # POP3 executable location. See IMAP's mail_executable above for examples
+   # how this could be changed.
+-  #mail_executable = /usr/libexec/dovecot/pop3
++  #mail_executable = /usr/lib/dovecot/pop3
+ 
+   # Don't try to set mails non-recent or seen with POP3 sessions. This is
+   # mostly intended to reduce disk I/O. With maildir it doesn't move files
+@@ -743,7 +743,7 @@ protocol lda {
+ ##
+ 
+ # Executable location
+-#auth_executable = /usr/libexec/dovecot/dovecot-auth
++#auth_executable = /usr/lib/dovecot/dovecot-auth
+ 
+ # Set max. process size in megabytes.
+ #auth_process_size = 256
+@@ -872,7 +872,7 @@ auth default {
+   # database (passwd usually), you can use static userdb.
+   # REMEMBER: You'll need /etc/pam.d/dovecot file created for PAM
+   # authentication to actually work. <doc/wiki/PasswordDatabase.PAM.txt>
+-  passdb pam {
++  #passdb pam {
+     # [session=yes] [setcred=yes] [failure_show_msg=yes] [max_requests=<n>]
+     # [cache_key=<key>] [<service name>]
+     #
+@@ -905,15 +905,15 @@ auth default {
+     #   args = session=yes %Ls
+     #   args = cache_key=%u dovecot
+     #args = dovecot
+-  }
++  #}
+ 
+   # System users (NSS, /etc/passwd, or similiar)
+   # In many systems nowadays this uses Name Service Switch, which is
+   # configured in /etc/nsswitch.conf. <doc/wiki/AuthDatabase.Passwd.txt>
+-  #passdb passwd {
++  passdb passwd {
+     # [blocking=yes] - See userdb passwd for explanation
+     #args = 
+-  #}
++  }
+ 
+   # Shadow passwords for system users (NSS, /etc/shadow or similiar).
+   # Deprecated by PAM nowadays.
+@@ -1192,7 +1192,7 @@ plugin {
+   # a dictionary so it can be quickly determined which mailboxes contain
+   # expired mails. The actual expunging is done in a nightly cronjob, which
+   # you must set up:
+-  #   dovecot --exec-mail ext /usr/libexec/dovecot/expire-tool
++  #   dovecot --exec-mail ext /usr/lib/dovecot/expire-tool
+   #expire = Trash 7 Spam 30
+   #expire_dict = proxy::expire
+ 

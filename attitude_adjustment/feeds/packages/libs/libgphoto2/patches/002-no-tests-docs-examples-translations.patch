@@ -1,0 +1,86 @@
+--- a/configure.ac
++++ b/configure.ac
+@@ -637,20 +637,11 @@ camlibs/konica/localization/Makefile
+ libgphoto2/Makefile
+ libgphoto2.pc
+ libgphoto2-uninstalled.pc
+-examples/Makefile
+-tests/Makefile
+-tests/check-camera-list.sh
+-tests/ddb/Makefile
+-tests/ddb/check-ddb.sh
+ packaging/Makefile
+ packaging/linux-hotplug/Makefile
+ packaging/generic/Makefile
+ packaging/rpm/Makefile
+ packaging/rpm/package.spec
+-po/Makefile.in
+-doc/Makefile
+-doc/Doxyfile
+-doc/api/Makefile
+ ],[
+ dnl This relies on this code being called for each of the above files
+ dnl with ac_file set to the filename.
+--- a/libgphoto2_port/configure.ac
++++ b/libgphoto2_port/configure.ac
+@@ -485,7 +485,6 @@ AC_SUBST([AM_LDFLAGS])
+ # ---------------------------------------------------------------------------
+ AC_CONFIG_FILES([
+ Makefile
+-po/Makefile.in
+ libgphoto2_port/Makefile
+ libgphoto2_port.pc
+ libgphoto2_port-uninstalled.pc
+@@ -497,8 +496,6 @@ usbscsi/Makefile
+ disk/Makefile
+ ptpip/Makefile
+ gphoto2-port-config
+-test/Makefile
+-doc/Makefile
+ m4/Makefile
+ ])
+ AC_OUTPUT
+--- a/libgphoto2_port/Makefile.am
++++ b/libgphoto2_port/Makefile.am
+@@ -10,7 +10,7 @@ VERSION_FLAGS = -DLIBGPPORT_VERSION=\"@L
+ bin_SCRIPTS = gphoto2-port-config
+ 
+ # Note: @subdirs@ lists all the directories from AC_CONFIG_SUBDIRS()
+-SUBDIRS = po libgphoto2_port test @IOLIB_SUBDIRS@ doc m4
++SUBDIRS = libgphoto2_port @IOLIB_SUBDIRS@ m4
+ 
+ EXTRA_DIST =   		\
+ 	AUTHORS \
+--- a/libgphoto2_port/Makefile.in
++++ b/libgphoto2_port/Makefile.in
+@@ -325,7 +325,7 @@ VERSION_FLAGS = -DLIBGPPORT_VERSION=\"@L
+ bin_SCRIPTS = gphoto2-port-config
+ 
+ # Note: @subdirs@ lists all the directories from AC_CONFIG_SUBDIRS()
+-SUBDIRS = po libgphoto2_port test @IOLIB_SUBDIRS@ doc m4
++SUBDIRS = libgphoto2_port @IOLIB_SUBDIRS@ m4
+ EXTRA_DIST = AUTHORS ChangeLog COPYING.LIB NEWS README iolib.sym \
+ 	gphoto2-port-config.in libgphoto2_port.pc.in \
+ 	libgphoto2_port-uninstalled.pc.in \
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -8,7 +8,7 @@ bin_SCRIPTS = gphoto2-config
+ EXTRA_DIST = HACKING MAINTAINERS TESTERS installcheck.mk README.packaging
+ 
+ # Note: @subdirs@ lists all the directories from AC_CONFIG_SUBDIRS()
+-SUBDIRS = @subdirs@ libgphoto2 camlibs tests examples po packaging doc
++SUBDIRS = @subdirs@ libgphoto2 camlibs packaging
+ 
+ EXTRA_DIST    += libgphoto2.pc.in
+ pkgconfig_DATA = libgphoto2.pc
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -357,7 +357,7 @@ EXTRA_DIST = HACKING MAINTAINERS TESTERS
+ 	ChangeLog INSTALL README.in README README.packaging
+ 
+ # Note: @subdirs@ lists all the directories from AC_CONFIG_SUBDIRS()
+-SUBDIRS = @subdirs@ libgphoto2 camlibs tests examples po packaging doc
++SUBDIRS = @subdirs@ libgphoto2 camlibs packaging
+ pkgconfig_DATA = libgphoto2.pc
+ noinst_DATA = libgphoto2-uninstalled.pc
+ doc_DATA = AUTHORS COPYING NEWS ABOUT-NLS ChangeLog README \

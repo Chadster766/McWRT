@@ -1,0 +1,220 @@
+From 52f533a6c32f8e1e376c5a335cc067da16d59b61 Mon Sep 17 00:00:00 2001
+From: Dmitry Torokhov <dmitry.torokhov@gmail.com>
+Date: Wed, 26 Jan 2011 15:49:39 +0100
+Subject: [PATCH] input-kbd - switch to using EVIOCGKEYCODE2 when available
+
+[mchehab@redhat.com: Ported it to the -git version]
+
+Signed-off-by: Dmitry Torokhov <dmitry.torokhov@gmail.com>
+Signed-off-by: Mauro Carvalho Chehab <mchehab@redhat.com>
+---
+ input-kbd.c |  110 +++++++++++++++++++++++++++++++++++++++--------------------
+ input.c     |    4 +-
+ 2 files changed, 75 insertions(+), 39 deletions(-)
+
+diff --git a/input-kbd.c b/input-kbd.c
+index c432d0d..aaf23b9 100644
+--- a/input-kbd.c
++++ b/input-kbd.c
+@@ -9,9 +9,22 @@
+ 
+ #include "input.h"
+ 
++struct input_keymap_entry_v2 {
++#define KEYMAP_BY_INDEX	(1 << 0)
++	uint8_t  flags;
++	uint8_t  len;
++	uint16_t index;
++	uint32_t keycode;
++	uint8_t  scancode[32];
++};
++
++#ifndef EVIOCGKEYCODE_V2
++#define EVIOCGKEYCODE_V2 _IOR('E', 0x04, struct input_keymap_entry_v2)
++#endif
++
+ struct kbd_entry {
+-	int scancode;
+-	int keycode;
++	unsigned int scancode;
++	unsigned int keycode;
+ };
+ 
+ struct kbd_map {
+@@ -23,7 +36,7 @@ struct kbd_map {
+ 
+ /* ------------------------------------------------------------------ */
+ 
+-static struct kbd_map* kbd_map_read(int fd)
++static struct kbd_map* kbd_map_read(int fd, unsigned int version)
+ {
+ 	struct kbd_entry entry;
+ 	struct kbd_map *map;
+@@ -32,17 +45,35 @@ static struct kbd_map* kbd_map_read(int fd)
+ 	map = malloc(sizeof(*map));
+ 	memset(map,0,sizeof(*map));
+ 	for (map->size = 0; map->size < 65536; map->size++) {
+-		entry.scancode = map->size;
+-		entry.keycode  = KEY_RESERVED;
+-		rc = ioctl(fd, EVIOCGKEYCODE, &entry);
+-		if (rc < 0) {
+-			map->size--;
+-			break;
++		if (version < 0x10001) {
++			entry.scancode = map->size;
++			entry.keycode  = KEY_RESERVED;
++			rc = ioctl(fd, EVIOCGKEYCODE, &entry);
++			if (rc < 0) {
++				map->size--;
++				break;
++			}
++		} else {
++			struct input_keymap_entry_v2 ke = {
++				.index = map->size,
++				.flags = KEYMAP_BY_INDEX,
++				.len = sizeof(uint32_t),
++				.keycode = KEY_RESERVED,
++			};
++
++			rc = ioctl(fd, EVIOCGKEYCODE_V2, &ke);
++			if (rc < 0)
++				break;
++			memcpy(&entry.scancode, ke.scancode,
++				sizeof(entry.scancode));
++			entry.keycode = ke.keycode;
+ 		}
++
+ 		if (map->size >= map->alloc) {
+ 			map->alloc += 64;
+ 			map->map = realloc(map->map, map->alloc * sizeof(entry));
+ 		}
++
+ 		map->map[map->size] = entry;
+ 
+ 		if (KEY_RESERVED != entry.keycode)
+@@ -156,37 +187,25 @@ static void kbd_print_bits(int fd)
+ 	}
+ }
+ 
+-static void show_kbd(int nr)
++static void show_kbd(int fd, unsigned int protocol_version)
+ {
+ 	struct kbd_map *map;
+-	int fd;
+ 
+-	fd = device_open(nr,1);
+-	if (-1 == fd)
+-		return;
+ 	device_info(fd);
+ 
+-	map = kbd_map_read(fd);
+-	if (NULL != map) {
+-		kbd_map_print(stdout,map,0);
+-	} else {
++	map = kbd_map_read(fd, protocol_version);
++	if (map)
++		kbd_map_print(stdout, map, 0);
++	else
+ 		kbd_print_bits(fd);
+-	}
+-
+-	close(fd);
+ }
+ 
+-static int set_kbd(int nr, char *mapfile)
++static int set_kbd(int fd, unsigned int protocol_version, char *mapfile)
+ {
+ 	struct kbd_map *map;
+ 	FILE *fp;
+-	int fd;
+ 
+-	fd = device_open(nr,1);
+-	if (-1 == fd)
+-		return -1;
+-
+-	map = kbd_map_read(fd);
++	map = kbd_map_read(fd, protocol_version);
+ 	if (NULL == map) {
+ 		fprintf(stderr,"device has no map\n");
+ 		close(fd);
+@@ -203,14 +222,12 @@ static int set_kbd(int nr, char *mapfile)
+ 			return -1;
+ 		}
+ 	}
+-	
++
+ 	if (0 != kbd_map_parse(fp,map) ||
+ 	    0 != kbd_map_write(fd,map)) {
+-		close(fd);
+ 		return -1;
+ 	}
+ 
+-	close(fd);
+ 	return 0;
+ }
+ 
+@@ -224,8 +241,10 @@ static int usage(char *prog, int error)
+ 
+ int main(int argc, char *argv[])
+ {
+-	int c,devnr;
++	int c, devnr, fd;
+ 	char *mapfile = NULL;
++	unsigned int protocol_version;
++	int rc = EXIT_FAILURE;
+ 
+ 	for (;;) {
+ 		if (-1 == (c = getopt(argc, argv, "hf:")))
+@@ -245,12 +264,29 @@ int main(int argc, char *argv[])
+ 		usage(argv[0],1);
+ 
+ 	devnr = atoi(argv[optind]);
+-	if (mapfile) {
+-		set_kbd(devnr,mapfile);
+-	} else {
+-		show_kbd(devnr);
++
++	fd = device_open(devnr, 1);
++	if (fd < 0)
++		goto out;
++
++	if (ioctl(fd, EVIOCGVERSION, &protocol_version) < 0) {
++		fprintf(stderr,
++			"Unable to query evdev protocol version: %s\n",
++			strerror(errno));
++		goto out_close;
+ 	}
+-	return 0;
++
++	if (mapfile)
++		set_kbd(fd, protocol_version, mapfile);
++	else
++		show_kbd(fd, protocol_version);
++
++	rc = EXIT_SUCCESS;
++
++out_close:
++	close(fd);
++out:
++	return rc;
+ }
+ 
+ /* ---------------------------------------------------------------------
+diff --git a/input.c b/input.c
+index d57a31e..a9bd5e8 100644
+--- a/input.c
++++ b/input.c
+@@ -101,8 +101,8 @@ int device_open(int nr, int verbose)
+ 		close(fd);
+ 		return -1;
+ 	}
+-	if (EV_VERSION != version) {
+-		fprintf(stderr, "protocol version mismatch (expected %d, got %d)\n",
++	if (EV_VERSION > version) {
++		fprintf(stderr, "protocol version mismatch (expected >= %d, got %d)\n",
+ 			EV_VERSION, version);
+ 		close(fd);
+ 		return -1;
+-- 
+1.7.2.3
+

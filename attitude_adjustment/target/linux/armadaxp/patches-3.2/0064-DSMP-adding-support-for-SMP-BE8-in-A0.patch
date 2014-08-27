@@ -1,0 +1,109 @@
+From 89837e8b92ac6b915c511c45a4f69cc3b476eebd Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Wed, 11 Jan 2012 13:03:15 +0200
+Subject: [PATCH 064/609] DSMP adding support for SMP BE8 in A0
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/Makefile                                 |    1 +
+ arch/arm/boot/compressed/head.S                   |    2 +-
+ arch/arm/include/asm/spinlock.h                   |    4 +---
+ arch/arm/mach-armadaxp/headsmp.S                  |    6 +++++-
+ arch/arm/mach-armadaxp/include/mach/entry-macro.S |    7 ++++---
+ 5 files changed, 12 insertions(+), 8 deletions(-)
+
+diff --git a/arch/arm/Makefile b/arch/arm/Makefile
+index bece298..4e1e1a1 100644
+--- a/arch/arm/Makefile
++++ b/arch/arm/Makefile
+@@ -13,6 +13,7 @@
+ LDFLAGS_vmlinux	:=-p --no-undefined -X
+ ifeq ($(CONFIG_CPU_ENDIAN_BE8),y)
+ LDFLAGS_vmlinux	+= --be8
++LDFLAGS_MODULE += --be8
+ endif
+ 
+ OBJCOPYFLAGS	:=-O binary -R .comment -S
+diff --git a/arch/arm/boot/compressed/head.S b/arch/arm/boot/compressed/head.S
+index 6d8f123..13eb723 100644
+--- a/arch/arm/boot/compressed/head.S
++++ b/arch/arm/boot/compressed/head.S
+@@ -122,10 +122,10 @@ start:
+ 		.type	start,#function
+ 		.rept	7
+ 		mov	r0, r0
++		.endr
+ #ifdef CONFIG_BE8_ON_LE
+ 		setend	be
+ #endif
+-		.endr
+    ARM(		mov	r0, r0		)
+    ARM(		b	1f		)
+  THUMB(		adr	r12, BSYM(1f)	)
+diff --git a/arch/arm/include/asm/spinlock.h b/arch/arm/include/asm/spinlock.h
+index 25f6224..2f66e73 100644
+--- a/arch/arm/include/asm/spinlock.h
++++ b/arch/arm/include/asm/spinlock.h
+@@ -149,8 +149,6 @@ static inline void arch_write_lock(arch_rwlock_t *rw)
+ 	WFE("ne")
+ #endif
+ "	strexeq	%0, %2, [%1]\n"
+-"	teq	%0, #0\n"
+-"	bne	1b"
+ 	: "=&r" (tmp)
+ 	: "r" (&rw->lock), "r" (0x80000000)
+ 	: "cc");
+@@ -216,7 +214,7 @@ static inline void arch_read_lock(arch_rwlock_t *rw)
+ "	adds	%0, %0, #1\n"
+ "	strexpl	%1, %0, [%2]\n"
+ #ifndef CONFIG_SHEEVA_ERRATA_ARM_CPU_BTS61
+-	WFE("mi")
++	WFE("ne")
+ #endif
+ "	rsbpls	%0, %1, #0\n"
+ "	bmi	1b"
+diff --git a/arch/arm/mach-armadaxp/headsmp.S b/arch/arm/mach-armadaxp/headsmp.S
+index 4fbd61c..318b254 100644
+--- a/arch/arm/mach-armadaxp/headsmp.S
++++ b/arch/arm/mach-armadaxp/headsmp.S
+@@ -24,6 +24,9 @@ ENTRY(axp_secondary_startup)
+         .word 0x800080e3 /* orr r0, r0, #0x80 */
+         .word 0x100f01ee /* mcr p15, 0, r0, c1, c0 */
+ #endif
++#ifdef CONFIG_BE8_ON_LE
++        setend  be
++#endif
+ 	mrc	p15, 0, r0, c0, c0, 5
+ 	and	r0, r0, #15
+ 	adr	r4, 1f
+@@ -62,7 +65,8 @@ l0_dis_skip:
+ 	mcr	p15, 1, r7, c15, c2, 0	
+ sp_ena_skip:
+ #endif
+-pen:	ldr	r7, [r6]
++pen:	dsb
++	ldr	r7, [r6]
+ 	cmp	r7, r0
+ 	bne	pen
+ 
+diff --git a/arch/arm/mach-armadaxp/include/mach/entry-macro.S b/arch/arm/mach-armadaxp/include/mach/entry-macro.S
+index e74c8f2..794a156 100644
+--- a/arch/arm/mach-armadaxp/include/mach/entry-macro.S
++++ b/arch/arm/mach-armadaxp/include/mach/entry-macro.S
+@@ -88,9 +88,10 @@
+ 	clz	\irqnr, \irqnr
+ 	mov	\tmp, #31
+ 	sub	\irqnr, \tmp, \irqnr
+-	mov 	\tmp, #1
+-	lsl	\tmp, \irqnr
+-	mvn	\tmp, \tmp
++	mov     \tmp, #1
++	lsl     \tmp, \irqnr
++	bic 	\tmp, \tmp, \tmp
++	HTOLL   \tmp, \tmp
+ 	strh   	\tmp, [\base, #AXP_IN_DOORBELL_CAUSE]	@ clean irq
+ 1002:
+ 	.endm
+-- 
+1.7.9.5
+

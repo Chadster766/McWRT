@@ -1,0 +1,267 @@
+From d8cf99ffb34458c822d4902f451070668b44e3ec Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Tue, 14 Aug 2012 11:16:40 -0400
+Subject: [PATCH 245/609] Fix bugs in TXQs usage in multi core environment
+
+  1. Fix TOS to TXQ mapping
+  2. Fix TX_DONE processing for TXQs shared between different CPUs
+
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |   93 ++++++++++++--------
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h     |   15 +++-
+ 2 files changed, 66 insertions(+), 42 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 7e37a99..b00f5ea 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -680,6 +680,7 @@ int mv_eth_ctrl_txq_cpu_own(int port, int txp, int txq, int add, int cpu)
+ {
+ 	int mode;
+ 	struct tx_queue *txq_ctrl;
++	struct cpu_ctrl	*cpuCtrl;
+ 	struct eth_port *pp = mv_eth_port_by_id(port);
+ 
+ 	if ((pp == NULL) || (pp->txq_ctrl == NULL))
+@@ -689,18 +690,22 @@ int mv_eth_ctrl_txq_cpu_own(int port, int txp, int txq, int add, int cpu)
+ 	mode = mv_eth_ctrl_txq_mode_get(port, txp, txq, NULL);
+ 
+ 	txq_ctrl = &pp->txq_ctrl[txp * CONFIG_MV_ETH_TXQ + txq];
++	cpuCtrl = pp->cpu_config[cpu];
++
+ 	if (add) {
+ 		if ((mode != MV_ETH_TXQ_CPU) && (mode != MV_ETH_TXQ_FREE))
+ 			return -EINVAL;
+ 
+ 		txq_ctrl->cpu_owner[cpu]++;
++
+ 	} else {
+ 		if (mode != MV_ETH_TXQ_CPU)
+ 			return -EINVAL;
+ 
+ 		txq_ctrl->cpu_owner[cpu]--;
+ 	}
+-	mv_eth_txq_update_shared(txq_ctrl);
++
++	mv_eth_txq_update_shared(txq_ctrl, pp);
+ 
+ 	return 0;
+ }
+@@ -852,7 +857,7 @@ int	mv_eth_cpu_txq_mask_set(int port, int cpu, int txqMask)
+ 					port, i, cpuCtrl->txq_tos_map[i], txqMask);
+ 				txq_ctrl = &pp->txq_ctrl[pp->txp * CONFIG_MV_ETH_TXQ + cpuCtrl->txq_tos_map[i]];
+ 				txq_ctrl->cpu_owner[cpu]--;
+-				mv_eth_txq_update_shared(txq_ctrl);
++				mv_eth_txq_update_shared(txq_ctrl, pp);
+ 				cpuCtrl->txq_tos_map[i] = MV_ETH_TXQ_INVALID;
+ 			}
+ 
+@@ -2259,7 +2264,7 @@ inline u32 mv_eth_tx_done_pon(struct eth_port *pp, int *tx_todo)
+ 
+ inline u32 mv_eth_tx_done_gbe(struct eth_port *pp, u32 cause_tx_done, int *tx_todo)
+ {
+-	int txp, txq;
++	int txq;
+ 	struct tx_queue *txq_ctrl;
+ 	unsigned long flags = 0;
+ 	u32 tx_done = 0;
+@@ -2269,25 +2274,30 @@ inline u32 mv_eth_tx_done_gbe(struct eth_port *pp, u32 cause_tx_done, int *tx_to
+ 	STAT_INFO(pp->stats.tx_done++);
+ 
+ 	while (cause_tx_done != 0) {
++
+ 		/* For GbE ports we get TX Buffers Threshold Cross per queue in bits [7:0] */
+-		txp = pp->txp_num; /* 1 for GbE ports */
+-		while (txp--) {
+-			txq = mv_eth_tx_done_policy(cause_tx_done);
+-			if (txq == -1)
+-				break;
++		txq = mv_eth_tx_done_policy(cause_tx_done);
+ 
+-			txq_ctrl = &pp->txq_ctrl[txp * CONFIG_MV_ETH_TXQ + txq];
+-			mv_eth_lock(txq_ctrl, flags);
++		if (txq == -1)
++			break;
+ 
+-			if ((txq_ctrl) && (txq_ctrl->txq_count)) {
+-				tx_done += mv_eth_txq_done(pp, txq_ctrl);
+-				*tx_todo += txq_ctrl->txq_count;
+-			}
++		txq_ctrl = &pp->txq_ctrl[txq];
+ 
+-			mv_eth_unlock(txq_ctrl, flags);
++		if (txq_ctrl == NULL) {
++			printk(KERN_ERR "%s: txq_ctrl = NULL, txq=%d\n", __func__, txq);
++			return -EINVAL;
++		}
+ 
+-			cause_tx_done &= ~((1 << txq) << NETA_CAUSE_TXQ_SENT_DESC_OFFS);
++		mv_eth_lock(txq_ctrl, flags);
++
++		if ((txq_ctrl) && (txq_ctrl->txq_count)) {
++			tx_done += mv_eth_txq_done(pp, txq_ctrl);
++			*tx_todo += txq_ctrl->txq_count;
+ 		}
++
++		mv_eth_unlock(txq_ctrl, flags);
++
++		cause_tx_done &= ~((1 << txq) << NETA_CAUSE_TXQ_SENT_DESC_OFFS);
+ 	}
+ 
+ 	STAT_DIST((tx_done < pp->dist_stats.tx_done_dist_size) ? pp->dist_stats.tx_done_dist[tx_done]++ : 0);
+@@ -4737,7 +4747,7 @@ static void mv_eth_tx_done_timer_callback(unsigned long data)
+ 		tx_done = mv_eth_tx_done_pon(pp, &tx_todo);
+ 	else {
+ 		/* check all possible queues, as there is no indication from interrupt */
+-		txq_mask = ((1 << CONFIG_MV_ETH_TXQ) - 1) & cpuCtrl->cpuTxqMask;
++		txq_mask = ((1 << CONFIG_MV_ETH_TXQ) - 1) & cpuCtrl->cpuTxqOwner;
+ 		tx_done = mv_eth_tx_done_gbe(pp, txq_mask, &tx_todo);
+ 	}
+ 
+@@ -4914,7 +4924,6 @@ int mv_eth_rxq_vlan_prio_set(int port, int rxq, unsigned char prio)
+ int mv_eth_txq_tos_map_set(int port, int txq, unsigned char tos, unsigned char cpu)
+ {
+ 	MV_U8 old_txq;
+-	struct tx_queue *txq_ctrl;
+ 	struct cpu_ctrl	*cpuCtrl;
+ 	struct eth_port *pp = mv_eth_port_by_id(port);
+ 
+@@ -4924,27 +4933,32 @@ int mv_eth_txq_tos_map_set(int port, int txq, unsigned char tos, unsigned char c
+ 	if ((pp == NULL) || (pp->txq_ctrl == NULL))
+ 		return -ENODEV;
+ 
+-	cpuCtrl = pp->cpu_config[cpu];
++	if ((cpu >= CONFIG_NR_CPUS) || (cpu < 0)) {
++		printk(KERN_ERR "cpu #%d is out of range: from 0 to %d\n",
++			cpu, CONFIG_NR_CPUS - 1);
++		return -EINVAL;
++	}
+ 
+-	/* Check that new txq can allocated for cpu */
+-	if (!(MV_BIT_CHECK(cpuCtrl->cpuTxqMask, txq))) {
+-		printk(KERN_ERR "%s:Error, Txq #%d masked for cpu #%d\n", __func__, txq, cpu);
++	if (!(MV_BIT_CHECK(pp->cpuMask, cpu))) {
++		printk(KERN_ERR "%s:Error, cpu #%d is masked \n", __func__, cpu);
+ 		return -EINVAL;
+ 	}
++
++	if (mvNetaMaxCheck(tos, MV_ETH_TXQ_INVALID))
++		return -EINVAL;
++
++	cpuCtrl = pp->cpu_config[cpu];
+ 	old_txq = cpuCtrl->txq_tos_map[tos];
+ 
+-	if (old_txq != MV_ETH_TXQ_INVALID) {
+-		if (old_txq == (MV_U8) txq)
+-			return 0;
++	/* The same txq - do nothing */
++	if (old_txq == (MV_U8) txq)
++		return 0;
+ 
++	if (txq == -1) {
++		/* delete tos to txq mapping - free TXQ */
+ 		if (mv_eth_ctrl_txq_cpu_own(port, pp->txp, old_txq, 0, cpu))
+ 			return -EINVAL;
+ 
+-		txq_ctrl = &pp->txq_ctrl[pp->txp * CONFIG_MV_ETH_TXQ + old_txq];
+-		txq_ctrl->cpu_owner[cpu]--;
+-	}
+-
+-	if (txq == -1) {
+ 		cpuCtrl->txq_tos_map[tos] = MV_ETH_TXQ_INVALID;
+ 		return 0;
+ 	}
+@@ -4952,16 +4966,16 @@ int mv_eth_txq_tos_map_set(int port, int txq, unsigned char tos, unsigned char c
+ 	if (mvNetaMaxCheck(txq, CONFIG_MV_ETH_TXQ))
+ 		return -EINVAL;
+ 
++	/* Check that new txq can be allocated for cpu */
++	if (!(MV_BIT_CHECK(cpuCtrl->cpuTxqMask, txq))) {
++		printk(KERN_ERR "%s: Error, Txq #%d masked for cpu #%d\n", __func__, txq, cpu);
++		return -EINVAL;
++	}
++
+ 	if (mv_eth_ctrl_txq_cpu_own(port, pp->txp, txq, 1, cpu))
+ 		return -EINVAL;
+ 
+ 	cpuCtrl->txq_tos_map[tos] = (MV_U8) txq;
+-	txq_ctrl = &pp->txq_ctrl[pp->txp * CONFIG_MV_ETH_TXQ + txq];
+-
+-	if (txq_ctrl == NULL)
+-		return -ENODEV;
+-
+-	mv_eth_txq_update_shared(txq_ctrl);
+ 
+ 	return 0;
+ }
+@@ -4986,6 +5000,7 @@ static int mv_eth_priv_init(struct eth_port *pp, int port)
+ 	for_each_possible_cpu(cpu) {
+ 		cpuCtrl = pp->cpu_config[cpu];
+ 		cpuCtrl->txq = CONFIG_MV_ETH_TXQ_DEF;
++		cpuCtrl->cpuTxqOwner = (1 << CONFIG_MV_ETH_TXQ_DEF);
+ 		cpuCtrl->cpuTxqMask = 0xFF;
+ 		mvNetaTxqCpuMaskSet(port, 0xFF , cpu);
+ 	}
+@@ -5277,15 +5292,15 @@ void mv_eth_port_status_print(unsigned int port)
+ 	       (pp->flags & MV_ETH_F_MH) ? "Enabled" : "Disabled", pp->tx_mh, pp->hw_cmd);
+ 
+ 	printk(KERN_CONT "\n");
+-	printk(KERN_CONT "CPU:   txq_def   causeRxTx    napi	cpuTxqMask\n");
++	printk(KERN_CONT "CPU:   txq_def   causeRxTx    napi	cpuTxqMask	cpuTxqOwner\n");
+ 	{
+ 		int cpu;
+ 		for_each_possible_cpu(cpu) {
+ 			cpuCtrl = pp->cpu_config[cpu];
+ 			if (MV_BIT_CHECK(pp->cpuMask, cpu))
+-				printk(KERN_ERR "  %d:      %d      0x%08x     %d	0x%02x\n",
++				printk(KERN_ERR "  %d:      %d      0x%08x     %d	0x%02x		0x%02x\n",
+ 					cpu, cpuCtrl->txq, cpuCtrl->causeRxTx, test_bit(NAPI_STATE_SCHED, &cpuCtrl->napi->state),
+-					cpuCtrl->cpuTxqMask);
++					cpuCtrl->cpuTxqMask, cpuCtrl->cpuTxqOwner);
+ 		}
+ 	}
+ 
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+index 2d0de10..73dc76a 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+@@ -333,6 +333,7 @@ struct dist_stats {
+ struct cpu_ctrl {
+ 	MV_U8  			cpuTxqMask;
+ 	MV_U8			cpuRxqMask;
++	MV_U8			cpuTxqOwner;
+ 	MV_U8  			txq_tos_map[256];
+ 	MV_U32			causeRxTx;
+ 	struct napi_struct	*napi;
+@@ -496,15 +497,23 @@ static inline void mv_eth_interrupts_mask(struct eth_port *pp)
+ }
+ 
+ 
+-static inline void mv_eth_txq_update_shared(struct tx_queue *txq_ctrl)
++static inline void mv_eth_txq_update_shared(struct tx_queue *txq_ctrl, struct eth_port *pp)
+ {
+ 	int numOfRefCpu, cpu;
++	struct cpu_ctrl	*cpuCtrl;
+ 
+ 	numOfRefCpu = 0;
+ 
+-	for_each_possible_cpu(cpu)
+-		if (txq_ctrl->cpu_owner[cpu] != 0)
++	for_each_possible_cpu(cpu) {
++		cpuCtrl = pp->cpu_config[cpu];
++
++		if (txq_ctrl->cpu_owner[cpu] == 0)
++			cpuCtrl->cpuTxqOwner &= ~(1 << txq_ctrl->txq);
++		else {
+ 			numOfRefCpu++;
++			cpuCtrl->cpuTxqOwner |= (1 << txq_ctrl->txq);
++		}
++	}
+ 
+ 	if ((txq_ctrl->nfpCounter != 0) || (numOfRefCpu > 1))
+ 		txq_ctrl->flags |=  MV_ETH_F_TX_SHARED;
+-- 
+1.7.9.5
+

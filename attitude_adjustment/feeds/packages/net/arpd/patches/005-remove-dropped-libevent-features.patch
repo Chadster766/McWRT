@@ -1,0 +1,29 @@
+--- a/arpd.c
++++ b/arpd.c
+@@ -449,9 +449,6 @@ arpd_recv(int fd, short type, void *ev)
+ void
+ terminate_handler(int sig)
+ {
+-	extern int event_gotsig;
+-
+-	event_gotsig = 1;
+ 	arpd_sig = sig;
+ }
+ 
+@@ -468,7 +465,6 @@ int
+ main(int argc, char *argv[])
+ {
+ 	struct event recv_ev;
+-	extern int (*event_sigcb)(void);
+ 	char *dev, *and_pcap_exp;
+ 	int c, debug;
+ 	FILE *fp;
+@@ -532,8 +528,6 @@ main(int argc, char *argv[])
+ 		perror("signal");
+ 		return (-1);
+ 	}
+-	event_sigcb = arpd_signal;
+-	
+ 	event_dispatch();
+ 
+ 	return (0);

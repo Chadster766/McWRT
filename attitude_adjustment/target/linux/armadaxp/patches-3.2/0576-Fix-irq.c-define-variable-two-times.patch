@@ -1,0 +1,31 @@
+From 354917f90553e41f080c3c879129a0562758d63d Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 24 Mar 2013 09:53:02 +0200
+Subject: [PATCH 576/609] Fix irq.c define variable two times
+
+Bug fix: should be integrated into stable branch
+
+Change-Id: Idfaba5bf6f4c0a574ee6a1f9290b376043c6fd6d
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1369
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Tested-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/irq.c |    1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/arch/arm/mach-armadaxp/irq.c b/arch/arm/mach-armadaxp/irq.c
+index 70500f8..7b651ec 100644
+--- a/arch/arm/mach-armadaxp/irq.c
++++ b/arch/arm/mach-armadaxp/irq.c
+@@ -113,7 +113,6 @@ void axp_irq_unmask(struct irq_data *d)
+ #endif
+ 
+ #if (defined(CONFIG_PERF_EVENTS) && defined(CONFIG_HW_PERF_EVENTS)) || defined(CONFIG_ERROR_HANDLING)
+-	int cpu;
+ 	if(d->irq == IRQ_AURORA_MP){
+ 		for_each_online_cpu(cpu) {
+ 			axp_unmask_fabric_interrupt(cpu);
+-- 
+1.7.9.5
+

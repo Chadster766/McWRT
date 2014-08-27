@@ -1,0 +1,300 @@
+From d59853f887398a955171df5b2f65e479fd3dbf1b Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Sun, 24 Jun 2012 17:01:20 +0300
+Subject: [PATCH 172/609] AXP - AMP: Added the following 1. Address decode
+ windows are initialized by single AMP group 2.
+ Cleaned whitespaces from core.c 3. Fixed Tabs in
+ sysmap.c Originaly by Yehuda Y.
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/ctrlEnv/mvSemaphore.c         |   10 ++++
+ .../armada_xp_family/ctrlEnv/mvSemaphore.h         |    7 ++-
+ .../armada_xp_family/ctrlEnv/sys/mvCpuIf.c         |   44 +++++++++++++++++
+ .../armada_xp_family/ctrlEnv/sys/mvCpuIf.h         |    1 +
+ arch/arm/mach-armadaxp/core.c                      |   50 +++++++++++++++++---
+ arch/arm/mach-armadaxp/sysmap.c                    |   28 +++++------
+ 6 files changed, 119 insertions(+), 21 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
+index 264d4f1..d71df4e 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
+@@ -112,3 +112,13 @@ MV_BOOL mvSemaUnlock(MV_32 num)
+ 	MV_REG_BYTE_WRITE(MV_SEMA_REG_BASE+(num), 0xFF);
+ 	return MV_TRUE;
+ }
++
++MV_32 mvReadAmpReg(int regId)
++{
++	return MV_REG_READ(MV_AMP_GLOBAL_REG(regId));
++}
++
++MV_32 mvWriteAmpReg(int regId, MV_32 value)
++{
++	return MV_REG_WRITE(MV_AMP_GLOBAL_REG(regId), value);
++}
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h
+index e63d590..c5bf5ca 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h
+@@ -69,6 +69,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #include "config.h"
+ #endif
+ 
++#define MV_AMP_GLOBAL_REG(x)	(0xC010 + (100*x))
++#define ADR_WIN_EN_REG			0
++
+ #define MV_SEMA_REG_BASE	(0x20500)
+ #define MV_MAX_SEMA 	    	128
+ #define MV_SEMA_SMI 		50
+@@ -81,6 +84,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define MV_SEMA_CLOCK		5
+ #define MV_SEMA_L2		6
+ #define MV_SEMA_TWSI		7
++#define MV_SEMA_ADR_WIN		8
+ 
+ #define MV_SEMA_BARRIER(cpu)	(50 + cpu)
+ 
+@@ -88,7 +92,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ MV_BOOL mvSemaLock(MV_32 num);
+ MV_BOOL mvSemaTryLock(MV_32 num);
+ MV_BOOL mvSemaUnlock(MV_32 num);
+-MV_VOID mvHwBarrier(MV_32 cpuCount);
++MV_32   mvReadAmpReg(int regId);
++MV_32 	mvWriteAmpReg(int regId, MV_32 value);
+ 
+ /* Turn on HW semapores only if AMP is enabled */
+ #ifndef CONFIG_MV_AMP_ENABLE
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
+index 248feb8..9e5c6e7 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
+@@ -87,6 +87,50 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ static MV_BOOL cpuTargetWinOverlap(MV_TARGET target, MV_ADDR_WIN *pAddrWin);
+ 
+ MV_TARGET sampleAtResetTargetArray[] = BOOT_TARGETS_NAME_ARRAY;
++
++/*******************************************************************************
++* mvCpuIfVerify - Verify that the address decode registers matches the table
++*
++* INPUT:
++*       cpuAddrWinMap 	- Address decode table
++*
++* RETURN:
++*       MV_OK - pass MV_ERROR - fail
++*
++*******************************************************************************/
++MV_STATUS mvCpuIfVerify(MV_CPU_DEC_WIN *cpuAddrWinMap)
++{
++	MV_CPU_DEC_WIN win;
++	MV_U32 target;
++	MV_32 diff;
++
++	for (target = 0; target < MAX_TARGETS; target++) {
++		memset(&win, 0, sizeof(MV_CPU_DEC_WIN));
++
++		if(win.enable == cpuAddrWinMap->enable)
++		{
++			if(win.enable)
++			{
++				diff  = (win.addrWin.baseLow  - cpuAddrWinMap->addrWin.baseLow);
++				diff |= (win.addrWin.baseHigh - cpuAddrWinMap->addrWin.baseHigh);
++				diff |= (win.addrWin.size     - cpuAddrWinMap->addrWin.size);
++				/*TODO - Need to compare the window attributes as well */
++
++				if(diff)
++				{
++					mvOsOutput("mvCpuIfVerify: Mismatched window size in target %d\n", target);
++					return MV_ERROR;
++				}
++			}
++		}
++		else
++		{
++			mvOsOutput("mvCpuIfVerify: Mismatched enable field in target %d\n", target);
++			return MV_ERROR;
++		}
++	}
++	return MV_OK;
++}
+ /*******************************************************************************
+ * mvCpuIfInitForCpu - Initialize Controller CPU interface
+ *
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.h
+index 2fcc208..41ff25c 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.h
+@@ -95,6 +95,7 @@ typedef struct _mvCpuIfDecWin {
+ /* mvCpuIfLib.h API list */
+ 
+ MV_STATUS mvCpuIfInit(MV_CPU_DEC_WIN *cpuAddrWinMap);
++MV_STATUS mvCpuIfVerify(MV_CPU_DEC_WIN *cpuAddrWinMap);
+ MV_STATUS mvCpuIfDramInit(MV_VOID);
+ MV_STATUS mvCpuIfTargetWinSet(MV_TARGET target, MV_CPU_DEC_WIN *pAddrDecWin);
+ MV_STATUS mvCpuIfTargetWinGet(MV_TARGET target, MV_CPU_DEC_WIN *pAddrDecWin);
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index 28b89ef..33d4698 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -53,6 +53,7 @@
+ #include "ctrlEnv/mvCtrlEnvLib.h"
+ #include "ctrlEnv/sys/mvCpuIf.h"
+ #include "ctrlEnv/mvUnitMap.h"
++#include "ctrlEnv/mvSemaphore.h"
+ #include "boardEnv/mvBoardEnvLib.h"
+ #include "mvDebug.h"
+ #include "mvSysHwConfig.h"
+@@ -73,7 +74,7 @@
+ #include <plat/mv_xor.h>
+ 
+ /* I2C */
+-#include <linux/i2c.h>	
++#include <linux/i2c.h>
+ #include <linux/mv643xx_i2c.h>
+ #include "ctrlEnv/mvCtrlEnvSpec.h"
+ #include "ctrlEnv/mvCtrlEnvRegs.h"
+@@ -148,7 +149,7 @@ struct mbus_dram_target_info armadaxp_mbus_dram_info;
+ /*********************************************************************************/
+ #ifdef MV_INCLUDE_EARLY_PRINTK
+ #define MV_UART0_LSR 	(*(volatile unsigned char *)(INTER_REGS_BASE + 0x12000 + 0x14))
+-#define MV_UART0_THR	(*(volatile unsigned char *)(INTER_REGS_BASE + 0x12000 + 0x0 ))	 
++#define MV_UART0_THR	(*(volatile unsigned char *)(INTER_REGS_BASE + 0x12000 + 0x0 ))
+ #define MV_UART1_LSR    (*(volatile unsigned char *)(INTER_REGS_BASE + 0x12100 + 0x14))
+ #define MV_UART1_THR    (*(volatile unsigned char *)(INTER_REGS_BASE + 0x12100 + 0x0 ))
+ #define MV_SERIAL_BASE 	((unsigned char *)(INTER_REGS_BASE + 0x12000 + 0x0 ))
+@@ -160,7 +161,7 @@ struct mbus_dram_target_info armadaxp_mbus_dram_info;
+ static void putstr(const char *s)
+ {
+ 	unsigned int model;
+-	
++
+ 	/* Get dev ID, make sure pex clk is on */
+ 	if((CLK_REG & 0x4) == 0)
+ 	{
+@@ -174,7 +175,7 @@ static void putstr(const char *s)
+         while (*s) {
+ 		while ((MV_UART0_LSR & UART_LSR_THRE) == 0);
+ 		MV_UART0_THR = *s;
+-		
++
+                 if (*s == '\n') {
+                         while ((MV_UART0_LSR & UART_LSR_THRE) == 0); 
+                         MV_UART0_THR = '\r';
+@@ -1093,7 +1094,7 @@ static void io_coherency_init(void)
+ 	reg |= (7 << 16);
+ 	MV_REG_WRITE(MV_CIB_CTRL_CFG_REG, reg);
+ 
+-#ifndef CONFIG_SMP 
++#ifndef CONFIG_SMP
+         /* enable CPUs in SMP group on Fabric coherency */
+ 	reg = MV_REG_READ(MV_COHERENCY_FABRIC_CTRL_REG);
+ 	reg &= ~(0x3<<24);
+@@ -1391,6 +1392,39 @@ static void cpu_fabric_common_init(void)
+ #endif
+ }
+ 
++
++#ifdef CONFIG_MV_AMP_ENABLE
++static int mvAmpInitCpuIf()
++{
++	if(mvUnitMapIsMine(MSTR) == MV_TRUE){
++
++		if(mvReadAmpReg(ADR_WIN_EN_REG) != 0)
++			printk("Warning: AMP Address decode windows reg != 0\n");
++
++		if (mvCpuIfInit(mv_sys_map()) != MV_OK)
++			return 1;
++
++		mvWriteAmpReg(ADR_WIN_EN_REG, 1);
++		printk("Initialized Address decode windows\n");
++	}
++	else
++	{
++		// Wait until master initializes address decode windows
++		while(mvReadAmpReg(ADR_WIN_EN_REG) == 0){
++			udelay(1);
++		}
++
++		if(mvCpuIfVerify(mv_sys_map()) != MV_OK)
++			return 1;
++
++		/*verify window decode */
++		printk("Verified Address decode windows\n");
++	}
++
++	return 0;
++}
++#endif
++
+ /*****************************************************************************
+  * DB BOARD: Main Initialization
+  ****************************************************************************/
+@@ -1430,7 +1464,11 @@ static void __init axp_db_init(void)
+ 	armadaxp_setup_cpu_mbus();
+ 
+ 	/* Init the CPU windows setting and the access protection windows. */
+-	if( mvCpuIfInit(mv_sys_map())) {
++#ifdef CONFIG_MV_AMP_ENABLE
++	if(mvAmpInitCpuIf()){
++#else
++	if(mvCpuIfInit(mv_sys_map())) {
++#endif
+ 		printk( "Cpu Interface initialization failed.\n" );
+ 		return;
+ 	}
+diff --git a/arch/arm/mach-armadaxp/sysmap.c b/arch/arm/mach-armadaxp/sysmap.c
+index e51ae53..eecef4e 100644
+--- a/arch/arm/mach-armadaxp/sysmap.c
++++ b/arch/arm/mach-armadaxp/sysmap.c
+@@ -59,10 +59,10 @@ struct map_desc  MEM_TABLE[] =	{
+ 
+ MV_CPU_DEC_WIN SYSMAP_ARMADA_XP[] = {
+ 	/* base low       	     base high        size       		WinNum     	enable */
+-	{{SDRAM_CS0_BASE,			0,	SDRAM_CS0_SIZE		},	0xFFFFFFFF,	DIS},	/* SDRAM_CS0 */
+-	{{SDRAM_CS1_BASE,			0,	SDRAM_CS1_SIZE		},	0xFFFFFFFF,	DIS},	/* SDRAM_CS1 */
+-	{{SDRAM_CS2_BASE,			0,	SDRAM_CS2_SIZE		},	0xFFFFFFFF,	DIS},	/* SDRAM_CS2 */
+-	{{SDRAM_CS3_BASE,			0,	SDRAM_CS3_SIZE		},	0xFFFFFFFF,	DIS},	/* SDRAM_CS3 */
++	{{SDRAM_CS0_BASE,		0,	SDRAM_CS0_SIZE		},	0xFFFFFFFF,	DIS},	/* SDRAM_CS0 */
++	{{SDRAM_CS1_BASE,		0,	SDRAM_CS1_SIZE		},	0xFFFFFFFF,	DIS},	/* SDRAM_CS1 */
++	{{SDRAM_CS2_BASE,		0,	SDRAM_CS2_SIZE		},	0xFFFFFFFF,	DIS},	/* SDRAM_CS2 */
++	{{SDRAM_CS3_BASE,		0,	SDRAM_CS3_SIZE		},	0xFFFFFFFF,	DIS},	/* SDRAM_CS3 */
+ 	{{DEVICE_CS0_PHYS_BASE,		0,	DEVICE_CS0_SIZE,	},	0x8,		EN},	/* DEVICE_CS0 */
+ 	{{DEVICE_CS1_PHYS_BASE,		0,	DEVICE_CS1_SIZE,	},	TBL_UNUSED,	DIS},	/* DEVICE_CS1 */
+ 	{{DEVICE_CS2_PHYS_BASE,		0,	DEVICE_CS2_SIZE,	},	TBL_UNUSED,	DIS},	/* DEVICE_CS2 */
+@@ -88,22 +88,22 @@ MV_CPU_DEC_WIN SYSMAP_ARMADA_XP[] = {
+ 	{{PEX9_MEM_PHYS_BASE,		0,	PEX9_MEM_SIZE		},	0x7,		EN},	/* PEX9_MEM */
+ 	{{PEX9_IO_PHYS_BASE,		0,	PEX9_IO_SIZE		},	TBL_UNUSED,	DIS},	/* PEX9_IO */
+ 	{{INTER_REGS_PHYS_BASE,		0,	INTER_REGS_SIZE		},	0x14,		EN},	/* INTER_REGS */
+-	{{UART_REGS_BASE,			0,	UART_SIZE			},	TBL_UNUSED,	DIS},	/* DMA_UART */
++	{{UART_REGS_BASE,		0,	UART_SIZE		},	TBL_UNUSED,	DIS},	/* DMA_UART */
+ 	{{SPI_CS0_PHYS_BASE,		0,	SPI_CS0_SIZE		},	0xe,		EN},	/* SPI_CS0 */
+-	{{TBL_UNUSED,				0,	TBL_UNUSED,			},	TBL_UNUSED,	DIS},	/* SPI_CS1 */
+-	{{TBL_UNUSED,				0,	TBL_UNUSED,			},	TBL_UNUSED,	DIS},	/* SPI_CS2 */
+-	{{TBL_UNUSED,				0,	TBL_UNUSED,			},	TBL_UNUSED,	DIS},	/* SPI_CS3 */
+-	{{TBL_UNUSED,				0,	TBL_UNUSED,			},	TBL_UNUSED,	DIS},	/* SPI_CS4 */
+-	{{TBL_UNUSED,				0,	TBL_UNUSED,			},	TBL_UNUSED,	DIS},	/* SPI_CS5 */
+-	{{TBL_UNUSED,				0,	TBL_UNUSED,			},	TBL_UNUSED,	DIS},	/* SPI_CS6 */
+-	{{TBL_UNUSED,				0,	TBL_UNUSED,			},	TBL_UNUSED,	DIS},	/* SPI_CS7 */
++	{{TBL_UNUSED,			0,	TBL_UNUSED,		},	TBL_UNUSED,	DIS},	/* SPI_CS1 */
++	{{TBL_UNUSED,			0,	TBL_UNUSED,		},	TBL_UNUSED,	DIS},	/* SPI_CS2 */
++	{{TBL_UNUSED,			0,	TBL_UNUSED,		},	TBL_UNUSED,	DIS},	/* SPI_CS3 */
++	{{TBL_UNUSED,			0,	TBL_UNUSED,		},	TBL_UNUSED,	DIS},	/* SPI_CS4 */
++	{{TBL_UNUSED,			0,	TBL_UNUSED,		},	TBL_UNUSED,	DIS},	/* SPI_CS5 */
++	{{TBL_UNUSED,			0,	TBL_UNUSED,		},	TBL_UNUSED,	DIS},	/* SPI_CS6 */
++	{{TBL_UNUSED,			0,	TBL_UNUSED,		},	TBL_UNUSED,	DIS},	/* SPI_CS7 */
+ 	{{BOOTROM_PHYS_BASE,		0,	BOOTROM_SIZE		},	0x9,		EN},	/* BOOTROM */
+ 	{{DEVICE_BOOTCS_PHYS_BASE,	0,	DEVICE_BOOTCS_SIZE	},	0xa,		EN},	/* DEV_BOOCS */
+ 	{{PMU_SCRATCH_PHYS_BASE,	0,	PMU_SCRATCH_SIZE	},	TBL_UNUSED,	DIS},	/* PMU SCRATCHPAD */
+ 	{{CRYPT_ENG_PHYS_BASE(0),	0,	CRYPT_ENG_SIZE		},	0xb,		EN},	/* CRYPT0_ENG */
+ 	{{CRYPT_ENG_PHYS_BASE(1),	0,	CRYPT_ENG_SIZE		},	0xc,		EN},	/* CRYPT1_ENG */
+-	{{PNC_BM_PHYS_BASE,			0,	PNC_BM_SIZE			},	0xd,		EN},	/* PNC_BM */
+-	{{TBL_TERM,					TBL_TERM, TBL_TERM		},	TBL_TERM,	TBL_TERM}
++	{{PNC_BM_PHYS_BASE,		0,	PNC_BM_SIZE		},	0xd,		EN},	/* PNC_BM */
++	{{TBL_TERM,				TBL_TERM, TBL_TERM	},	TBL_TERM,	TBL_TERM}
+ };
+ 
+ 
+-- 
+1.7.9.5
+

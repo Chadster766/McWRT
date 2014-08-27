@@ -1,0 +1,15 @@
+--- a/Makefile
++++ b/Makefile
+@@ -91,8 +91,11 @@ win32_demo:
+ install: $(PREFIX) all
+ 	cp --no-dereference $(STAGE)/libax* $(PREFIX)/lib
+ 	chmod 755 $(PREFIX)/lib/libax* 
++ifdef CONFIG_AXHTTPD
++	install -m 755 $(STAGE)/axhttpd $(PREFIX)/bin
++endif
+ ifdef CONFIG_SAMPLES
+-	install -m 755 $(STAGE)/ax* $(PREFIX)/bin 
++	install -m 755 $(STAGE)/axssl $(PREFIX)/bin 
+ endif
+ ifdef CONFIG_HTTP_HAS_AUTHORIZATION
+ 	install -m 755 $(STAGE)/htpasswd $(PREFIX)/bin 

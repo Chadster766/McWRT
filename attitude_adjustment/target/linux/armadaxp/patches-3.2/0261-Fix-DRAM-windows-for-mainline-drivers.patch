@@ -1,0 +1,34 @@
+From b571b711a4b2d477eb21d613c0cbce873a2275b2 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Thu, 23 Aug 2012 10:35:37 +0300
+Subject: [PATCH 261/609] Fix DRAM windows for mainline drivers
+
+IO windows can take only up to 4GB regardless of kernel LPAE support.
+
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/core.c |    3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index 6ea8122..feacf05 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -461,12 +461,9 @@ void __init armadaxp_setup_cpu_mbus(void)
+ 		 */
+ 		if (size & 1) {
+ 			struct mbus_dram_window *w;
+-
+-#ifdef CONFIG_ARM_LPAE
+ 			if (base & 0xf)
+ 				/* BaseExtension is used (> 4GB).*/
+ 				continue;
+-#endif
+ 			w = &armadaxp_mbus_dram_info.cs[cs++];
+ 			w->cs_index = i;
+ 			w->mbus_attr = 0xf & ~(1 << i);
+-- 
+1.7.9.5
+

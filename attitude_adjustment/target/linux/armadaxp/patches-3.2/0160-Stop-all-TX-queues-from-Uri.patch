@@ -1,0 +1,127 @@
+From f7e70f0abb1cfa640365e1c3475832f6bee05314 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Mon, 9 Jul 2012 09:18:22 -0400
+Subject: [PATCH 160/609] Stop all TX queues from Uri
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_eth_switch.c |   15 +++++++--------
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c   |    1 -
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |    4 ++--
+ .../mv_network/mv_ethernet/mv_gateway.c            |    2 +-
+ 4 files changed, 10 insertions(+), 12 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_switch.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_switch.c
+index 65b88b4..e45416f 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_switch.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_switch.c
+@@ -216,7 +216,7 @@ int mv_eth_switch_config_get(int use_existing_config, int port)
+ 	int i = 0;
+ 
+ 	if ((port != MV_ETH_PORT_0) && (port != MV_ETH_PORT_1))	{
+-		printk("%s: invalid port number %d\n", __func__, port);
++		printk(KERN_ERR "%s: invalid port number %d\n", __func__, port);
+ 		return -EINVAL;
+ 	}
+ 
+@@ -225,8 +225,7 @@ int mv_eth_switch_config_get(int use_existing_config, int port)
+ 
+ 		if (net_config_str[port] != NULL) {
+ 			printk(KERN_ERR "      o Using UBoot netconfig string for port %d\n", port);
+-		}
+-		else {
++		} else {
+ 			printk(KERN_ERR "      o Using default netconfig string from Kconfig for port %d\n", port);
+ 			if (port == MV_ETH_PORT_0)
+ 				net_config_str[port] = CONFIG_MV_ETH_SWITCH_NETCONFIG_0;
+@@ -244,7 +243,7 @@ int mv_eth_switch_config_get(int use_existing_config, int port)
+ 		    (net_config_str[MV_ETH_PORT_1] != NULL) &&
+ 		    (switch_net_config[MV_ETH_PORT_0].netdev_max != 0) &&
+ 		    (switch_net_config[MV_ETH_PORT_1].netdev_max != 0)) {
+-			printk("%s: cannot have both GbE ports using the Gateway driver, change mv_net_config\n", __func__);
++			printk(KERN_ERR "%s: cannot have both GbE ports using the Gateway driver, change mv_net_config\n", __func__);
+ 			return -EINVAL;
+ 		}
+ 
+@@ -466,7 +465,7 @@ int    mv_eth_switch_start(struct net_device *dev)
+ 	netif_carrier_off(dev);
+ 
+ 	/* Stop the TX queue - it will be enabled upon PHY status change after link-up interrupt/timer */
+-	netif_stop_queue(dev);
++	netif_tx_stop_all_queues(dev);
+ 
+ 	/* start upper layer accordingly with ports_map */
+ #ifdef CONFIG_MV_ETH_SWITCH_LINK
+@@ -527,7 +526,7 @@ int     mv_eth_switch_stop(struct net_device *dev)
+ 
+ 	/* stop upper layer */
+ 	netif_carrier_off(dev);
+-	netif_stop_queue(dev);
++	netif_tx_stop_all_queues(dev);
+ 
+ 	/* stop switch from forwarding packets from this VLAN toward CPU port */
+ 	mv_switch_atu_db_flush(MV_SWITCH_VLAN_TO_GROUP(dev_priv->vlan_grp_id));
+@@ -650,13 +649,13 @@ void mv_eth_switch_update_link(unsigned int p, unsigned int link_up)
+ 		if ((prev_ports_link != 0) && (dev_priv->link_map == 0) && netif_running(mv_net_devs[i])) {
+ 			/* link down */
+ 			netif_carrier_off(mv_net_devs[i]);
+-			netif_stop_queue(mv_net_devs[i]);
++			netif_tx_stop_all_queues(mv_net_devs[i]);
+ 			printk(KERN_ERR "%s: link down\n", mv_net_devs[i]->name);
+ 		} else if ((prev_ports_link == 0) && (dev_priv->link_map != 0) && netif_running(mv_net_devs[i])) {
+ 			/* link up */
+ 			if (mv_eth_ctrl_is_tx_enabled(priv) == 1) {
+ 				netif_carrier_on(mv_net_devs[i]);
+-				netif_wake_queue(mv_net_devs[i]);
++				netif_tx_wake_all_queues(mv_net_devs[i]);
+ 				printk(KERN_ERR "%s: link up\n", mv_net_devs[i]->name);
+ 			}
+ 		}
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c
+index 547f1cc..5bee482 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c
+@@ -66,7 +66,6 @@ static int mv_eth_start(struct net_device *dev)
+ 	netif_carrier_off(dev);
+ 
+ 	/* Stop the TX queue - it will be enabled upon PHY status change after link-up interrupt/timer */
+-	//netif_stop_queue(dev);
+ 
+ 	printk(KERN_NOTICE "%s: mv_eth_start\n", dev->name);
+ 	netif_tx_stop_all_queues(dev);
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 4d94ab6..b69182d 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -2648,13 +2648,13 @@ void mv_eth_link_event(struct eth_port *pp, int print)
+ 		if (mv_eth_ctrl_is_tx_enabled(pp)) {
+ 			if (dev) {
+ 				netif_carrier_on(dev);
+-				netif_wake_queue(dev);
++				netif_tx_wake_all_queues(dev);
+ 			}
+ 		}
+ 	} else {
+ 		if (dev) {
+ 			netif_carrier_off(dev);
+-			netif_stop_queue(dev);
++			netif_tx_stop_all_queues(dev);
+ 		}
+ 		mvNetaPortDown(pp->port);
+ 		clear_bit(MV_ETH_F_LINK_UP_BIT, &(pp->flags));
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_network/mv_ethernet/mv_gateway.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_network/mv_ethernet/mv_gateway.c
+index 910991e..0e3b808 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_network/mv_ethernet/mv_gateway.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_network/mv_ethernet/mv_gateway.c
+@@ -1227,7 +1227,7 @@ static void mv_gtw_update_link_status(unsigned int p, unsigned int link_up)
+ 	        }
+ 	        else if (prev_ports_link == 0) {
+ 		        netif_carrier_on(mv_net_devs[i]);
+-                netif_wake_queue(mv_net_devs[i]);          
++			netif_wake_queue(mv_net_devs[i]);
+ 	        }
+ 	    }
+     }
+-- 
+1.7.9.5
+

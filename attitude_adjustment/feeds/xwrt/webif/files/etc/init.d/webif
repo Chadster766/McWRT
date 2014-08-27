@@ -1,0 +1,189 @@
+#!/bin/sh /etc/rc.common
+#
+# identification of the device
+#
+START=90
+
+start() {
+. /lib/config/uci.sh
+. /usr/lib/webif/functions.sh
+uci_load "webif"
+	# initialize default webif theme
+	if [ ! -e /www/themes/active ]; then
+		config_get newtheme theme id
+		# if theme isn't present, then install it
+		! exists "/www/themes/$newtheme/webif.css" && {
+			install_package "webif-theme-$newtheme"
+		}
+		if ! exists "/www/themes/$newtheme/webif.css"; then
+			rm -rf "/www/themes/active"
+			ln -sf "/www/themes/clubman" "/www/themes/active"
+		else
+			# create symlink to new active theme if its not already set right
+			current_theme=$(ls -l /www/themes/active 2>/dev/null | cut -d '>' -f 2 | sed s/'\/www\/themes\/'//g)
+			! equal "$current_theme" "$newtheme" && {
+				rm /www/themes/active 2>/dev/null
+				ln -s /www/themes/$newtheme /www/themes/active
+			}
+		fi
+	fi
+
+	#detect device
+	[ -z "$device_name" ] && [ -f "/proc/diag/model" ] && device_name=$(cat "/proc/diag/model")
+	[ -z "$device_name" ] && [ -f "/proc/sys/dev/wifi0/dev_name" ] && device_name=$(cat "/proc/sys/dev/wifi0/dev_name")
+	while [ "$device_name" = "Generic" -o -z "$device_name" ]; do
+		uname -a |grep -q "mips"
+		[ $? = "0" ] && {
+			dd if=/dev/mtd0 2>/dev/null | strings | grep "FON 2202"
+			[ $? = "0" ] && {
+				device_name="La Fonera 2"
+				break
+			}
+			dd if=/dev/$(cat /proc/mtd | sed '/boardconfig/!d; s/:.*//' ) 2>/dev/null | strings | grep -q "MR3201A-FLF-FON" || ifconfig eth0 |grep -q 00:18:84:..:..:..
+			[ $? = "0" ] && {
+				device_name="La Fonera (ACCTON MR3201A)"
+				break
+			}
+			ifconfig eth0 |grep -q 00:18:0A:..:..:..
+			[ $? = "0" ] && {
+				device_name="Meraki Mini"
+				break
+			}
+			cat /proc/cpuinfo |grep -q "WP54"
+			[ $? = "0" ] && {
+				device_name="Compex WP54"
+				break
+			}
+			cat /proc/cpuinfo |grep -q "MikroTik"
+			[ $? = "0" ] && {
+				device_name=`cat /proc/cpuinfo | sed -n -e 's/^machine\t*: \(.*\)$/\1/gp'`
+				break
+			}
+			cat /proc/cpuinfo |grep -q "NETGEAR"
+			[ $? = "0" ] && {
+				device_name=`cat /proc/cpuinfo | sed -n -e 's/^machine\t*: \(.*\)$/\1/gp'`
+				break
+			}
+		}
+
+		if $(uname -m | grep -q "i.86"); then
+			ifconfig eth0 |grep -q 00:0D:B9:..:..:..
+			[ $? = "0" ] && {
+				if [ "300" -lt `cat /proc/cpuinfo |grep "cpu MHz" |cut -d':' -f2 |cut -d'.' -f1` ]; then
+					device_name="PC Engines Alix"
+					break
+				else
+					device_name="PC Engines WRAP"
+					break
+				fi
+			}
+			cat /proc/cpuinfo |grep -q "Geode"
+			[ $? = "0" ] && {
+				device_name="Generic AMD Geode Device"
+				break
+			}
+			for id in $(ls -l /sys/devices/pci*/ 2>/dev/null | sed '/^d/!d; s/^.*[[:space:]]//g; /^\./d'); do
+				for vendor in vendor subsystem_vendor; do
+					if cat "/sys/devices/pci${id%:*}/$id/$vendor" 2>/dev/null | grep -qi "0x15ad"; then
+						device_name="VMware Virtual Machine"
+						break 3
+					fi
+				done
+			done
+		fi
+
+		# there is currently only the atngw100 support
+		if [ "$(uname -m)" = "avr32" ]; then
+			device_name="AVR32 Network Gateway 100 (atngw100)"
+		fi
+
+		cat /proc/cpuinfo |grep -q "IXP4\?\?"
+		[ $? = "0" ] && {
+			cat /proc/cpuinfo |grep "Gateway 7001 AP"
+			[ $? = "0" ] && {
+				device_name="Gateway 7001 AP"
+				break
+			}
+			cat /proc/cpuinfo |grep "D-Link DSM-G600 RevA"
+			[ $? = "0" ] && {
+				device_name="D-Link DSM-G600 RevA"
+				break
+			}
+			cat /proc/cpuinfo |grep "Freecom FSG-3"
+			[ $? = "0" ] && {
+				device_name="Freecom FSG-3"
+				break
+			}
+			cat /proc/cpuinfo |grep "Iomega NAS 100d"
+			[ $? = "0" ] && {
+				device_name="Iomega NAS 100d"
+				break
+			}
+			cat /proc/cpuinfo |grep "Linksys NSLU2"
+			[ $? = "0" ] && {
+				device_name="Linksys NSLU2"
+				break
+			}
+		}
+		break
+	done
+
+	#detect firmware info
+	firmware_name=$CONFIG_general_firmware_name
+	firmware_subtitle=$CONFIG_general_firmware_subtitle
+	firmware_version=$CONFIG_general_firmware_version
+
+	if grep -qi "KAMIKAZE" "/etc/banner"; then
+		firmware_name="OpenWrt Kamikaze"
+	elif grep -qi "BackFire" "/etc/banner"; then
+		firmware_name="OpenWrt BackFire"
+        elif grep -qi "ATTITUDE" "/etc/banner"; then
+                firmware_name="OpenWrt ATTITUDE ADJUSTMENT"
+	else
+		firmware_name="Unknown Wrt"
+	fi	
+	firmware_subtitle="With X-Wrt Extensions"
+
+	if [ -f "/etc/openwrt_version" ]; then
+		firmware_version=$(cat "/etc/openwrt_version")
+	elif grep -q "KAMIKAZE" "/etc/banner"; then
+		firmware_version=$(cat /etc/banner |grep KAMIKAZE |cut -d '(' -f 2 |cut -d ')' -f 1)
+	elif grep -q "BackFire" "/etc/banner"; then
+		firmware_version=$(cat /etc/banner |grep BackFire |cut -d '(' -f 2 |cut -d ')' -f 1)
+	elif grep -q "ATTITUDE" "/etc/banner"; then
+		firmware_version=$(cat /etc/banner |grep ATTITUDE |cut -d '(' -f 2 |cut -d ')' -f 1)
+	else
+		firmware_version="unknown"
+	fi
+
+	if [ "$CONFIG_general_firstboot" = "1" ]; then
+		opkg update
+		# force re-initialization of extension package lists
+		/usr/lib/webif/webif-mklanglist.sh
+		/usr/lib/webif/webif-mkthemelist.sh
+		uci_set "webif" "general" "firstboot" "0"
+	fi
+
+	#
+	# if any variables changed, commit the change
+	#
+
+	if [ "$CONFIG_general_firmware_version" != "$firmware_version" ] ||
+		[ "$CONFIG_general_firmware_name" != "$firmware_name" ] ||
+		[ "$CONFIG_general_firmware_subtitle" != "$firmware_subtitle" ]; then
+		echo "Committing new firmware id ..."
+		uci_set "webif" "general" "firmware_name" "$firmware_name"
+		uci_set "webif" "general" "firmware_version" "$firmware_version"
+		uci_set "webif" "general" "firmware_subtitle" "$firmware_subtitle"
+	fi
+
+	[ "$device_name" != "$CONFIG_general_device_name" ] && {
+		echo "Device: $device_name"
+		echo "Committing new device id ..."
+		uci_set "webif" "general" "device_name" "$device_name"
+	}
+
+	if [ -e "/tmp/.uci/webif" ]; then
+		uci_commit "webif"
+	fi
+}

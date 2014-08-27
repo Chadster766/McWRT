@@ -1,0 +1,38 @@
+diff --git a/arch/arm/mach-armadaxp/mv_hal_if/mvSysXor.c b/arch/arm/mach-armadaxp/mv_hal_if/mvSysXor.c
+index 20acd3e..df9cea9 100644
+--- a/arch/arm/mach-armadaxp/mv_hal_if/mvSysXor.c
++++ b/arch/arm/mach-armadaxp/mv_hal_if/mvSysXor.c
+@@ -68,20 +68,24 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #include "xor/mvXor.h"
+ #include "ctrlEnv/mvCtrlEnvAddrDec.h"
+ #include "ctrlEnv/mvCtrlEnvLib.h"
++#include "ctrlEnv/mvUnitMap.h"
+ #include "xor/mvXorRegs.h"
+ 
+ MV_VOID mvSysXorInit (void)
+ {
+ 	MV_UNIT_WIN_INFO addrWinMap[MAX_TARGETS + 1];
+-	MV_STATUS status;
++	MV_STATUS status, unit;
+ 
+ 	status = mvCtrlAddrWinMapBuild(addrWinMap, MAX_TARGETS + 1);
+-	if(status == MV_OK)
++	if (status == MV_OK)
+ 		status = mvXorWinInit(addrWinMap);
+ 
+-	if(status == MV_OK)
+-		mvXorHalInit(MV_XOR_MAX_CHAN);
++	if (status == MV_OK) {
++		for (unit = 0; unit < MV_XOR_MAX_UNIT; unit++) {
++			if (mvUnitMapIsMine(XOR0 + unit))
++				mvXorHalInit(unit);
++
++		}
++	}
+ 	return;
+ }
+-
+-
+-- 
+1.7.9.5
+

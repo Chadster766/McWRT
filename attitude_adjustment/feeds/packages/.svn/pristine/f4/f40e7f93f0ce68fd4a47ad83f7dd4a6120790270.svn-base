@@ -1,0 +1,20 @@
+--- a/linux.c
++++ b/linux.c
+@@ -82,7 +82,7 @@ int get_device_id(const int port, const 
+   if (port == USB || port == CUSTOM_USB) {
+ 
+     if (port == USB) {
+-      sprintf(device_file1, "/dev/usb/lp%d", portnumber);
++      sprintf(device_file1, "/dev/lp%d", portnumber);
+       sprintf(device_file2, "/dev/usblp%d", portnumber);
+       fd = open(device_file1, O_RDONLY);
+       if (fd == -1) {
+@@ -142,7 +142,7 @@ int open_printer_device(const int port, 
+   int fd;
+ 
+   if (port == USB) {
+-    sprintf(device_file1, "/dev/usb/lp%d", portnumber);
++    sprintf(device_file1, "/dev/lp%d", portnumber);
+     sprintf(device_file2, "/dev/usblp%d", portnumber);
+ #ifdef WITH_PARPORT
+   } else if (port == PARPORT) {

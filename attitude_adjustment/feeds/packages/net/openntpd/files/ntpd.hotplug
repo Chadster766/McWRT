@@ -1,0 +1,12 @@
+case "${ACTION:-ifup}" in
+	ifup)
+		ps | grep -v 'grep' | grep -v '20-ntpd' | grep -q 'ntpd' || {
+			route -n 2>/dev/null | grep -q '^0.0.0.0' && {
+				/etc/init.d/ntpd enabled && /etc/init.d/ntpd start 2>/dev/null >/dev/null
+			}
+		}
+	;;
+	ifdown)
+		route -n 2>/dev/null | grep -q '^0.0.0.0' || /etc/init.d/ntpd stop 2>/dev/null >/dev/null
+	;;
+esac

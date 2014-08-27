@@ -1,0 +1,1664 @@
+--- a/src/auth.c
++++ b/src/auth.c
+@@ -70,7 +70,7 @@
+ {
+ 	char* data;
+ 	char* data_extra;
+-	struct user_access_info* info = 0;
++	struct uhub_user_access_info* info = 0;
+ 	
+ 	if (!strncmp(line, cmd, strlen(cmd)))
+ 	{
+@@ -86,7 +86,7 @@
+ 			return -1;
+ 		}
+ 		
+-		info = hub_malloc_zero(sizeof(struct user_access_info));
++		info = hub_malloc_zero(sizeof(struct uhub_user_access_info));
+ 		
+ 		if (!info)
+ 		{
+@@ -340,7 +340,7 @@
+ 
+ static void acl_free_access_info(void* ptr)
+ {
+-	struct user_access_info* info = (struct user_access_info*) ptr;
++	struct uhub_user_access_info* info = (struct uhub_user_access_info*) ptr;
+ 	if (info)
+ 	{
+ 		hub_free(info->username);
+@@ -404,16 +404,16 @@
+ }
+ 
+ 
+-struct user_access_info* acl_get_access_info(struct acl_handle* handle, const char* name)
++struct uhub_user_access_info* acl_get_access_info(struct acl_handle* handle, const char* name)
+ {
+-	struct user_access_info* info = (struct user_access_info*) list_get_first(handle->users);
++	struct uhub_user_access_info* info = (struct uhub_user_access_info*) list_get_first(handle->users);
+ 	while (info)
+ 	{
+ 		if (strcasecmp(info->username, name) == 0)
+ 		{
+ 			return info;
+ 		}
+-		info = (struct user_access_info*) list_get_next(handle->users);
++		info = (struct uhub_user_access_info*) list_get_next(handle->users);
+ 	}
+ 	return NULL;
+ }
+@@ -492,7 +492,7 @@
+  * seconds since the unix epoch (modulus 1 million)
+  * and the SID of the user (0-1 million).
+  */
+-const char* password_generate_challenge(struct user* user)
++const char* password_generate_challenge(struct uhub_user* user)
+ {
+ 	char buf[32];
+ 	uint64_t tiger_res[3];
+@@ -511,10 +511,10 @@
+ }
+ 
+ 
+-int password_verify(struct user* user, const char* password)
++int password_verify(struct uhub_user* user, const char* password)
+ {
+ 	char buf[1024];
+-	struct user_access_info* access;
++	struct uhub_user_access_info* access;
+ 	const char* challenge;
+ 	char raw_challenge[64];
+ 	char password_calc[64];
+--- a/src/auth.h
++++ b/src/auth.h
+@@ -21,7 +21,7 @@
+ #define HAVE_UHUB_ACL_H
+ 
+ struct hub_config;
+-struct user;
++struct uhub_user;
+ struct ip_addr_encap;
+ 
+ enum password_status
+@@ -50,7 +50,7 @@
+ 
+ const char* get_user_credential_string(enum user_credentials cred);
+ 
+-struct user_access_info
++struct uhub_user_access_info
+ {
+ 	char* username;          /* name of user, cid or IP range */
+ 	char* password;          /* password */
+@@ -77,7 +77,7 @@
+ extern int acl_initialize(struct hub_config* config, struct acl_handle* handle);
+ extern int acl_shutdown(struct acl_handle* handle);
+ 
+-extern struct user_access_info* acl_get_access_info(struct acl_handle* handle, const char* name);
++extern struct uhub_user_access_info* acl_get_access_info(struct acl_handle* handle, const char* name);
+ extern int acl_is_cid_banned(struct acl_handle* handle, const char* cid);
+ extern int acl_is_ip_banned(struct acl_handle* handle, const char* ip_address);
+ extern int acl_is_ip_nat_override(struct acl_handle* handle, const char* ip_address);
+@@ -87,7 +87,7 @@
+ 
+ extern int acl_check_ip_range(struct ip_addr_encap* addr, struct ip_ban_record* info);
+ 
+-extern const char* password_generate_challenge(struct user* user);
+-extern int password_verify(struct user* user, const char* password);
++extern const char* password_generate_challenge(struct uhub_user* user);
++extern int password_verify(struct uhub_user* user, const char* password);
+ 
+ #endif /* HAVE_UHUB_ACL_H */
+--- a/src/commands.c
++++ b/src/commands.c
+@@ -19,7 +19,7 @@
+ 
+ #include "uhub.h"
+ 
+-typedef int (*command_handler)(struct user* user, const char* message);
++typedef int (*command_handler)(struct uhub_user* user, const char* message);
+ 
+ struct commands_handler
+ {
+@@ -32,7 +32,7 @@
+ 
+ static struct commands_handler command_handlers[];
+ 
+-static void send_message(struct user* user, const char* message)
++static void send_message(struct uhub_user* user, const char* message)
+ {
+ 	char* buffer = adc_msg_escape(message);
+ 	struct adc_message* command = adc_msg_construct(ADC_CMD_IMSG, strlen(buffer) + 6);
+@@ -42,7 +42,7 @@
+ 	hub_free(buffer);
+ }
+ 
+-static int command_access_denied(struct user* user, const char* command)
++static int command_access_denied(struct uhub_user* user, const char* command)
+ {
+ 	char temp[64];
+ 	snprintf(temp, 64, "*** Access denied: \"%s\"", command);
+@@ -51,7 +51,7 @@
+ }
+ 
+ 
+-static int command_stats(struct user* user, const char* message)
++static int command_stats(struct uhub_user* user, const char* message)
+ {
+ 	char temp[128];
+ 	snprintf(temp, 128, "*** Stats: %zu users, peak: %zu. Network (up/down): %d/%d KB/s, peak: %d/%d KB/s",
+@@ -67,7 +67,7 @@
+ }
+ 
+ 
+-static int command_help(struct user* user, const char* message)
++static int command_help(struct uhub_user* user, const char* message)
+ {
+ #define MAX_HELP_MSG 1024
+ 	size_t n;
+@@ -89,7 +89,7 @@
+     return 0;
+ }
+ 
+-static int command_uptime(struct user* user, const char* message)
++static int command_uptime(struct uhub_user* user, const char* message)
+ {
+ 	char tmp[128];
+ 	size_t d;
+@@ -124,20 +124,20 @@
+ 	return 0;
+ }
+ 
+-static int command_kick(struct user* user, const char* message)
++static int command_kick(struct uhub_user* user, const char* message)
+ {
+ 	send_message(user, "*** Kick not implemented!");
+ 	return 0;
+ }
+ 
+-static int command_reload(struct user* user, const char* message)
++static int command_reload(struct uhub_user* user, const char* message)
+ {
+ 	send_message(user, "*** Reloading configuration");
+ 	user->hub->status = hub_status_restart;
+ 	return 0;
+ }
+ 
+-static int command_shutdown(struct user* user, const char* message)
++static int command_shutdown(struct uhub_user* user, const char* message)
+ {
+ 	send_message(user, "*** Hub shuting down...");
+ 	user->hub->status = hub_status_shutdown;
+@@ -145,13 +145,13 @@
+ }
+ 
+ 
+-static int command_version(struct user* user, const char* message)
++static int command_version(struct uhub_user* user, const char* message)
+ {
+     send_message(user, "*** Powered by " PRODUCT "/" VERSION);
+     return 0;
+ }
+ 
+-static int command_myip(struct user* user, const char* message)
++static int command_myip(struct uhub_user* user, const char* message)
+ {
+     char tmp[128];
+     snprintf(tmp, 128, "*** Your IP: %s", ip_convert_to_string(&user->ipaddr));
+@@ -159,7 +159,7 @@
+     return 0;
+ }
+ 
+-int command_dipatcher(struct user* user, const char* message)
++int command_dipatcher(struct uhub_user* user, const char* message)
+ {
+ 	size_t n = 0;
+ 	for (n = 0; command_handlers[n].prefix; n++)
+--- a/src/commands.h
++++ b/src/commands.h
+@@ -23,7 +23,7 @@
+ #define CHAT_MSG_IGNORED  0
+ #define CHAT_MSG_INVALID -1
+ 
+-typedef int (*plugin_event_chat_message)(struct hub_info*, struct user*, struct adc_message*);
++typedef int (*plugin_event_chat_message)(struct hub_info*, struct uhub_user*, struct adc_message*);
+ 
+ struct command_info
+ {
+@@ -32,4 +32,4 @@
+ 	plugin_event_chat_message function;
+ };
+ 
+-int command_dipatcher(struct user* user, const char* message);
++int command_dipatcher(struct uhub_user* user, const char* message);
+--- a/src/hub.c
++++ b/src/hub.c
+@@ -19,7 +19,7 @@
+ 
+ #include "uhub.h"
+ 
+-int hub_handle_message(struct user* u, const char* line, size_t length)
++int hub_handle_message(struct uhub_user* u, const char* line, size_t length)
+ {
+ 	int ret = 0;
+ 	struct adc_message* cmd = 0;
+@@ -96,7 +96,7 @@
+ }
+ 
+ 
+-int hub_handle_support(struct user* u, struct adc_message* cmd)
++int hub_handle_support(struct uhub_user* u, struct adc_message* cmd)
+ {
+ 	int ret = 0;
+ 	int index = 0;
+@@ -161,7 +161,7 @@
+ }
+ 
+ 
+-int hub_handle_password(struct user* u, struct adc_message* cmd)
++int hub_handle_password(struct uhub_user* u, struct adc_message* cmd)
+ {
+ 	char* password = adc_msg_get_argument(cmd, 0);
+ 	int ret = 0;
+@@ -184,7 +184,7 @@
+ }
+ 
+ 
+-int hub_handle_chat_message(struct user* u, struct adc_message* cmd)
++int hub_handle_chat_message(struct uhub_user* u, struct adc_message* cmd)
+ {
+ 	char* message = adc_msg_get_argument(cmd, 0);
+ 	int ret = 0;
+@@ -206,14 +206,14 @@
+ 	return ret;
+ }
+ 
+-int on_kick(struct user* u, struct adc_message* cmd)
++int on_kick(struct uhub_user* u, struct adc_message* cmd)
+ {
+ 	hub_log(log_error, "on_kick() not implemented");
+ 	return -1;
+ }
+ 
+ #ifdef ADC_UDP_OPERATION
+-int hub_handle_autocheck(struct user* u, struct adc_message* cmd)
++int hub_handle_autocheck(struct uhub_user* u, struct adc_message* cmd)
+ {
+ 	char* port_str = adc_msg_get_argument(cmd, 0);
+ 	char* token    = adc_msg_get_argument(cmd, 1);
+@@ -245,13 +245,13 @@
+ #endif
+ 
+ 
+-void hub_send_autocheck(struct user* u, uint16_t port, const char* token)
++void hub_send_autocheck(struct uhub_user* u, uint16_t port, const char* token)
+ {
+ 	
+ }
+ 
+ 
+-void hub_send_support(struct user* u)
++void hub_send_support(struct uhub_user* u)
+ {
+ 	if (user_is_connecting(u) || user_is_logged_in(u))
+ 	{
+@@ -260,7 +260,7 @@
+ }
+ 
+ 
+-void hub_send_sid(struct user* u)
++void hub_send_sid(struct uhub_user* u)
+ {
+ 	struct adc_message* command;
+ 	if (user_is_connecting(u))
+@@ -274,7 +274,7 @@
+ }
+ 
+ 
+-void hub_send_ping(struct user* user)
++void hub_send_ping(struct uhub_user* user)
+ {
+ 	/* This will just send a newline, despite appearing to do more below. */
+ 	struct adc_message* ping = adc_msg_construct(0, 0);
+@@ -287,7 +287,7 @@
+ }
+ 
+ 
+-void hub_send_hubinfo(struct user* u)
++void hub_send_hubinfo(struct uhub_user* u)
+ {
+ 	struct adc_message* info = adc_msg_copy(u->hub->command_info);
+ 	int value = 0;
+@@ -356,7 +356,7 @@
+ }
+ 
+ 
+-void hub_send_handshake(struct user* u)
++void hub_send_handshake(struct uhub_user* u)
+ {
+ 	hub_send_support(u);
+ 	hub_send_sid(u);
+@@ -369,7 +369,7 @@
+ }
+ 
+ 
+-void hub_send_motd(struct user* u)
++void hub_send_motd(struct uhub_user* u)
+ {
+ 	if (u->hub->command_motd)
+ 	{
+@@ -378,7 +378,7 @@
+ }
+ 
+ 
+-void hub_send_password_challenge(struct user* u)
++void hub_send_password_challenge(struct uhub_user* u)
+ {
+ 	struct adc_message* igpa;
+ 	igpa = adc_msg_construct(ADC_CMD_IGPA, 38);
+@@ -399,33 +399,33 @@
+ 	{
+ 		case UHUB_EVENT_USER_JOIN:
+ 		{
+-			if (user_is_disconnecting((struct user*) message->ptr))
++			if (user_is_disconnecting((struct uhub_user*) message->ptr))
+ 				break;
+ 		
+ 			if (message->flags)
+ 			{
+-				hub_send_password_challenge((struct user*) message->ptr);
++				hub_send_password_challenge((struct uhub_user*) message->ptr);
+ 			}
+ 			else
+ 			{
+-				on_login_success((struct user*) message->ptr);
++				on_login_success((struct uhub_user*) message->ptr);
+ 			}
+ 			break;
+ 		}
+ 
+ 		case UHUB_EVENT_USER_QUIT:
+ 		{
+-			user_manager_remove((struct user*) message->ptr);
+-			send_quit_message((struct user*) message->ptr);
+-			on_logout_user((struct user*) message->ptr);
+-			user_schedule_destroy((struct user*) message->ptr);
++			user_manager_remove((struct uhub_user*) message->ptr);
++			send_quit_message((struct uhub_user*) message->ptr);
++			on_logout_user((struct uhub_user*) message->ptr);
++			user_schedule_destroy((struct uhub_user*) message->ptr);
+ 			break;
+ 		}
+ 		
+ 		case UHUB_EVENT_USER_DESTROY:
+ 		{
+ 			hub_log(log_trace, "hub_event_dispatcher: UHUB_EVENT_USER_DESTROY (ptr=%p)", message->ptr);
+-			user_destroy((struct user*) message->ptr);
++			user_destroy((struct uhub_user*) message->ptr);
+ 			break;
+ 		}
+ 		
+@@ -757,7 +757,7 @@
+  */
+ static inline int is_nick_in_use(struct hub_info* hub, const char* nick)
+ {
+-	struct user* lookup = get_user_by_nick(hub, nick);
++	struct uhub_user* lookup = get_user_by_nick(hub, nick);
+ 	if (lookup)
+ 	{
+ 		return 1;
+@@ -771,7 +771,7 @@
+  */
+ static inline int is_cid_in_use(struct hub_info* hub, const char* cid)
+ {
+-	struct user* lookup = get_user_by_cid(hub, cid);
++	struct uhub_user* lookup = get_user_by_cid(hub, cid);
+ 	if (lookup)
+ 	{
+ 		return 1;
+@@ -796,7 +796,7 @@
+  * @param msg See enum status_message
+  * @param level See enum status_level
+  */
+-void hub_send_status(struct user* user, enum status_message msg, enum msg_status_level level)
++void hub_send_status(struct uhub_user* user, enum status_message msg, enum msg_status_level level)
+ {
+ 	struct hub_config* cfg = user->hub->config;
+ 	struct adc_message* cmd = adc_msg_construct(ADC_CMD_ISTA, 6);
+--- a/src/hubevent.c
++++ b/src/hubevent.c
+@@ -19,27 +19,27 @@
+ 
+ #include "uhub.h"
+ 
+-static void log_user_login(struct user* u)
++static void log_user_login(struct uhub_user* u)
+ {
+ 	const char* cred = get_user_credential_string(u->credentials);
+ 	const char* addr = ip_convert_to_string(&u->ipaddr);
+ 	hub_log(log_user, "LoginOK     %s/%s %s \"%s\" (%s) \"%s\"", sid_to_string(u->id.sid), u->id.cid, addr, u->id.nick, cred, u->user_agent);
+ }
+ 
+-static void log_user_login_error(struct user* u, enum status_message msg)
++static void log_user_login_error(struct uhub_user* u, enum status_message msg)
+ {
+ 	const char* addr = ip_convert_to_string(&u->ipaddr);
+ 	const char* message = hub_get_status_message_log(u->hub, msg);
+ 	hub_log(log_user, "LoginError  %s/%s %s \"%s\" (%s) \"%s\"", sid_to_string(u->id.sid), u->id.cid, addr, u->id.nick, message, u->user_agent);
+ }
+ 
+-static void log_user_logout(struct user* u, const char* message)
++static void log_user_logout(struct uhub_user* u, const char* message)
+ {
+ 	const char* addr = ip_convert_to_string(&u->ipaddr);
+ 	hub_log(log_user, "Logout      %s/%s %s \"%s\" (%s)", sid_to_string(u->id.sid), u->id.cid, addr, u->id.nick, message);
+ }
+ 
+-static void log_user_nick_change(struct user* u, const char* nick)
++static void log_user_nick_change(struct uhub_user* u, const char* nick)
+ {
+ 	const char* addr = ip_convert_to_string(&u->ipaddr);
+ 	hub_log(log_user, "NickChange  %s/%s %s \"%s\" -> \"%s\"", sid_to_string(u->id.sid), u->id.cid, addr, u->id.nick, nick);
+@@ -47,7 +47,7 @@
+ 
+ 
+ /* Send MOTD, do logging etc */
+-void on_login_success(struct user* u)
++void on_login_success(struct uhub_user* u)
+ {
+ 	struct timeval timeout = { TIMEOUT_IDLE, 0 };
+ 	
+@@ -75,14 +75,14 @@
+ 		event_add(u->ev_read, &timeout);
+ }
+ 
+-void on_login_failure(struct user* u, enum status_message msg)
++void on_login_failure(struct uhub_user* u, enum status_message msg)
+ {
+ 	log_user_login_error(u, msg);
+ 	hub_send_status(u, msg, status_level_fatal);
+ 	user_disconnect(u, quit_logon_error);
+ }
+ 
+-void on_nick_change(struct user* u, const char* nick)
++void on_nick_change(struct uhub_user* u, const char* nick)
+ {
+ 	if (user_is_logged_in(u))
+ 	{
+@@ -90,7 +90,7 @@
+ 	}
+ }
+ 
+-void on_logout_user(struct user* user)
++void on_logout_user(struct uhub_user* user)
+ {
+ 	const char* reason = "";
+ 	
+--- a/src/hubevent.h
++++ b/src/hubevent.h
+@@ -23,22 +23,22 @@
+ /**
+  * This event is triggered whenever a user successfully logs in to the hub.
+  */
+-extern void on_login_success(struct user* u);
++extern void on_login_success(struct uhub_user* u);
+ 
+ /**
+  * This event is triggered whenever a user failed to log in to the hub.
+  */
+-extern void on_login_failure(struct user* u, enum status_message msg);
++extern void on_login_failure(struct uhub_user* u, enum status_message msg);
+ 
+ /**
+  * This event is triggered whenever a previously logged in user leaves the hub.
+  */
+-extern void on_logout_user(struct user* u);
++extern void on_logout_user(struct uhub_user* u);
+ 
+ /**
+  * This event is triggered whenever a user changes his/her nickname.
+  */
+-extern void on_nick_change(struct user* u, const char* nick);
++extern void on_nick_change(struct uhub_user* u, const char* nick);
+ 
+ 
+ #endif /* HAVE_UHUB_HUB_EVENT_H */
+--- a/src/hub.h
++++ b/src/hub.h
+@@ -94,7 +94,7 @@
+ 	struct event_queue* queue;
+ 	struct event_base* evbase;
+ 	struct hub_config* config;
+-	struct user_manager* users;
++	struct uhub_user_manager* users;
+ 	struct acl_handle* acl;
+ 	struct adc_message* command_info;    /* The hub's INF command */
+ 	struct adc_message* command_support; /* The hub's SUP command */
+@@ -116,103 +116,103 @@
+  *
+  * @return 0 on success, -1 on error
+  */
+-extern int hub_handle_message(struct user* u, const char* message, size_t length);
++extern int hub_handle_message(struct uhub_user* u, const char* message, size_t length);
+ 
+ /**
+  * Handle protocol support/subscription messages received clients.
+  *
+  * @return 0 on success, -1 on error
+  */
+-extern int hub_handle_support(struct user* u, struct adc_message* cmd);
++extern int hub_handle_support(struct uhub_user* u, struct adc_message* cmd);
+ 
+ /**
+  * Handle password messages received from clients.
+  *
+  * @return 0 on success, -1 on error
+  */
+-extern int hub_handle_password(struct user* u, struct adc_message* cmd);
++extern int hub_handle_password(struct uhub_user* u, struct adc_message* cmd);
+ 
+ /**
+  * Handle chat messages received from clients.
+  * @return 0 on success, -1 on error.
+  */
+-extern int hub_handle_chat_message(struct user* u, struct adc_message* cmd);
++extern int hub_handle_chat_message(struct uhub_user* u, struct adc_message* cmd);
+ 
+ /**
+  * Used internally by hub_handle_info
+  * @return 1 if nickname is OK, or 0 if nickname is not accepted.
+  */
+-extern int  hub_handle_info_check_nick(struct user* u, struct adc_message* cmd);
++extern int  hub_handle_info_check_nick(struct uhub_user* u, struct adc_message* cmd);
+ 
+ /**
+  * Used internally by hub_handle_info
+  * @return 1 if CID/PID is OK, or 0 if not valid.
+  */
+-extern int  hub_handle_info_check_cid(struct user* u, struct adc_message* cmd);
++extern int  hub_handle_info_check_cid(struct uhub_user* u, struct adc_message* cmd);
+ 
+ /**
+  * Can only be used by administrators or operators.
+  *
+  * @return 0 on success, -1 on error
+  */
+-extern int hub_handle_kick(struct user* u, struct adc_message* cmd);
++extern int hub_handle_kick(struct uhub_user* u, struct adc_message* cmd);
+ 
+ #ifdef ADC_UDP_OPERATION
+ /**
+  * Handle incoming autocheck message.
+  */
+-extern int hub_handle_autocheck(struct user* u, struct adc_message* cmd);
++extern int hub_handle_autocheck(struct uhub_user* u, struct adc_message* cmd);
+ #endif
+ 
+ /**
+  * Send the support line for the hub to a particular user.
+  * Only used during the initial handshake.
+  */
+-extern void hub_send_support(struct user* u);
++extern void hub_send_support(struct uhub_user* u);
+ 
+ /**
+  * Send a message assigning a SID for a user.
+  * This is only sent after hub_send_support() during initial handshake.
+  */
+-extern void hub_send_sid(struct user* u);
++extern void hub_send_sid(struct uhub_user* u);
+ 
+ /**
+  * Send a 'ping' message to user.
+  */
+-extern void hub_send_ping(struct user* user);
++extern void hub_send_ping(struct uhub_user* user);
+ 
+ /**
+  * Send a message containing hub information to a particular user.
+  * This is sent during user connection, but can safely be sent at any
+  * point later.
+  */
+-extern void hub_send_hubinfo(struct user* u);
++extern void hub_send_hubinfo(struct uhub_user* u);
+ 
+ /**
+  * Send handshake. This basically calls
+  * hub_send_support() and hub_send_sid()
+  */
+-extern void hub_send_handshake(struct user* u);
++extern void hub_send_handshake(struct uhub_user* u);
+ 
+ /**
+  * Send a welcome message containing the message of the day to 
+  * one particular user. This can be sent in any point in time.
+  */
+-extern void hub_send_motd(struct user* u);
++extern void hub_send_motd(struct uhub_user* u);
+ 
+ /**
+  * Send a password challenge to a user.
+  * This is only used if the user tries to access the hub using a
+  * password protected nick name.
+  */
+-extern void hub_send_password_challenge(struct user* u);
++extern void hub_send_password_challenge(struct uhub_user* u);
+ 
+ /**
+  * Send an autocheck message to a user.
+  * This is basically a UDP message. The user's client can then determine
+  * if UDP communication works by either hole punching or configuring UPnP.
+  */
+-extern void hub_send_autocheck(struct user* u, uint16_t port, const char* token);
++extern void hub_send_autocheck(struct uhub_user* u, uint16_t port, const char* token);
+ 
+ /**
+  * This starts the hub.
+@@ -244,7 +244,7 @@
+ /**
+  * Sends a status_message to a user.
+  */
+-extern void hub_send_status(struct user* user, enum status_message msg, enum msg_status_level level);
++extern void hub_send_status(struct uhub_user* user, enum status_message msg, enum msg_status_level level);
+ 
+ /**
+  * Returns the number of logged in users on the hub.
+--- a/src/inf.c
++++ b/src/inf.c
+@@ -39,9 +39,9 @@
+ 	adc_msg_remove_named_argument(cmd, ADC_INF_FLAG_REFERER);
+ }
+ 
+-static int user_is_protected(struct user* user);
++static int user_is_protected(struct uhub_user* user);
+ 
+-static int set_feature_cast_supports(struct user* u, struct adc_message* cmd)
++static int set_feature_cast_supports(struct uhub_user* u, struct adc_message* cmd)
+ {
+ 	char *it, *tmp;
+ 	
+@@ -89,7 +89,7 @@
+ /*
+  * FIXME: Only works for tiger hash. If a client doesnt support tiger we cannot let it in!
+  */
+-static int check_cid(struct user* user, struct adc_message* cmd)
++static int check_cid(struct uhub_user* user, struct adc_message* cmd)
+ {
+ 	size_t pos;
+ 	char* cid = adc_msg_get_named_argument(cmd, ADC_INF_FLAG_CLIENT_ID);
+@@ -150,7 +150,7 @@
+ }
+ 
+ 
+-static int check_required_login_flags(struct user* user, struct adc_message* cmd)
++static int check_required_login_flags(struct uhub_user* user, struct adc_message* cmd)
+ {
+ 	int num = 0;
+ 	
+@@ -186,7 +186,7 @@
+  * remove any wrong address, and replace it with the correct one
+  * as seen by the hub.
+  */
+-int check_network(struct user* user, struct adc_message* cmd)
++int check_network(struct uhub_user* user, struct adc_message* cmd)
+ {
+ 	const char* address = ip_convert_to_string(&user->ipaddr);
+ 	
+@@ -269,7 +269,7 @@
+ }
+ 
+ 
+-static int check_nick(struct user* user, struct adc_message* cmd)
++static int check_nick(struct uhub_user* user, struct adc_message* cmd)
+ {
+ 	char* nick;
+ 	char* tmp;
+@@ -317,10 +317,10 @@
+ }
+ 
+ 
+-static int check_logged_in(struct user* user, struct adc_message* cmd)
++static int check_logged_in(struct uhub_user* user, struct adc_message* cmd)
+ {
+-	struct user* lookup1 = get_user_by_nick(user->hub, user->id.nick);
+-	struct user* lookup2 = get_user_by_cid(user->hub,  user->id.cid);
++	struct uhub_user* lookup1 = get_user_by_nick(user->hub, user->id.nick);
++	struct uhub_user* lookup2 = get_user_by_cid(user->hub,  user->id.cid);
+ 	
+ 	if (lookup1 == user)
+ 	{
+@@ -358,7 +358,7 @@
+  * But this is not something we want to do, and is deprecated in the ADC specification.
+  * One should rather look at capabilities/features.
+  */
+-static int check_user_agent(struct user* user, struct adc_message* cmd)
++static int check_user_agent(struct uhub_user* user, struct adc_message* cmd)
+ {
+ 	char* ua_encoded = 0;
+ 	char* ua = 0;
+@@ -379,7 +379,7 @@
+ }
+ 
+ 
+-static int check_acl(struct user* user, struct adc_message* cmd)
++static int check_acl(struct uhub_user* user, struct adc_message* cmd)
+ {
+ 	if (acl_is_cid_banned(user->hub->acl, user->id.cid))
+ 	{
+@@ -399,7 +399,7 @@
+ 	return 0;
+ }
+ 
+-static int check_limits(struct user* user, struct adc_message* cmd)
++static int check_limits(struct uhub_user* user, struct adc_message* cmd)
+ {
+ 	char* arg = adc_msg_get_named_argument(cmd, ADC_INF_FLAG_SHARED_SIZE);
+ 	if (arg)
+@@ -525,10 +525,10 @@
+  * If the hub is configured to allow only registered users and the user
+  * is not recognized this will return 1.
+  */
+-static int set_credentials(struct user* user, struct adc_message* cmd)
++static int set_credentials(struct uhub_user* user, struct adc_message* cmd)
+ {
+ 	int ret = 0;
+-	struct user_access_info* info = acl_get_access_info(user->hub->acl, user->id.nick);
++	struct uhub_user_access_info* info = acl_get_access_info(user->hub->acl, user->id.nick);
+ 	
+ 	if (info)
+ 	{
+@@ -580,7 +580,7 @@
+ /**
+  * Determines if a user is to be let into the hub even if the hub is "full".
+  */
+-static int user_is_protected(struct user* user)
++static int user_is_protected(struct uhub_user* user)
+ {
+ 	switch (user->credentials)
+ 	{
+@@ -601,7 +601,7 @@
+  * Only registered users will be let in if the hub is configured for registered
+  * users only.
+  */
+-static int user_is_registered(struct user* user)
++static int user_is_registered(struct uhub_user* user)
+ {
+ 	switch (user->credentials)
+ 	{
+@@ -619,7 +619,7 @@
+ }
+ 
+ 
+-void update_user_info(struct user* u, struct adc_message* cmd)
++void update_user_info(struct uhub_user* u, struct adc_message* cmd)
+ {
+ 	char prefix[2];
+ 	char* argument;
+@@ -649,7 +649,7 @@
+ }
+ 
+ 
+-static int check_is_hub_full(struct user* user)
++static int check_is_hub_full(struct uhub_user* user)
+ {
+ 	/*
+ 	 * If hub is full, don't let users in, but we still want to allow
+@@ -663,7 +663,7 @@
+ }
+ 
+ 
+-static int check_registered_users_only(struct user* user)
++static int check_registered_users_only(struct uhub_user* user)
+ {
+ 	if (user->hub->config->registered_users_only && !user_is_registered(user))
+ 	{
+@@ -679,7 +679,7 @@
+ 			return ret; \
+ 	} while(0)
+ 
+-static int hub_handle_info_common(struct user* user, struct adc_message* cmd)
++static int hub_handle_info_common(struct uhub_user* user, struct adc_message* cmd)
+ {
+ 	/* Remove server restricted flags */
+ 	remove_server_restricted_flags(cmd);
+@@ -690,7 +690,7 @@
+ 	return 0;
+ }
+ 
+-static int hub_handle_info_low_bandwidth(struct user* user, struct adc_message* cmd)
++static int hub_handle_info_low_bandwidth(struct uhub_user* user, struct adc_message* cmd)
+ {
+ 	if (user->hub->config->low_bandwidth_mode)
+ 	{
+@@ -711,7 +711,7 @@
+ 	return 0;
+ }
+ 
+-int hub_handle_info_login(struct user* user, struct adc_message* cmd)
++int hub_handle_info_login(struct uhub_user* user, struct adc_message* cmd)
+ {
+ 	int need_auth = 0;
+ 	
+@@ -765,7 +765,7 @@
+  * - CID/PID (valid, not taken, etc).
+  * - IP addresses (IPv4 and IPv6)
+  */
+-int hub_handle_info(struct user* user, const struct adc_message* cmd_unmodified)
++int hub_handle_info(struct uhub_user* user, const struct adc_message* cmd_unmodified)
+ {
+ 	struct adc_message* cmd = adc_msg_copy(cmd_unmodified);
+ 	if (!cmd) return -1; /* OOM */
+--- a/src/inf.h
++++ b/src/inf.h
+@@ -47,7 +47,7 @@
+  *
+  * @return 0 on success, -1 on error
+  */
+-extern int hub_handle_info(struct user* u, const struct adc_message* cmd);
++extern int hub_handle_info(struct uhub_user* u, const struct adc_message* cmd);
+ 
+ 
+ #endif /* HAVE_UHUB_INF_PARSER_H */
+--- a/src/message.c
++++ b/src/message.c
+@@ -234,7 +234,7 @@
+ }
+ 
+ 
+-struct adc_message* adc_msg_parse_verify(struct user* u, const char* line, size_t length)
++struct adc_message* adc_msg_parse_verify(struct uhub_user* u, const char* line, size_t length)
+ {
+ 	struct adc_message* command = adc_msg_parse(line, length);
+ 	
+--- a/src/message.h
++++ b/src/message.h
+@@ -20,7 +20,7 @@
+ #ifndef HAVE_UHUB_COMMAND_H
+ #define HAVE_UHUB_COMMAND_H
+ 
+-struct user;
++struct uhub_user;
+ 
+ struct adc_message
+ {
+@@ -70,7 +70,7 @@
+  * The message is only considered valid if the user who sent it
+  * is the rightful origin of the message.
+  */
+-extern struct adc_message* adc_msg_parse_verify(struct user* u, const char* string, size_t length);
++extern struct adc_message* adc_msg_parse_verify(struct uhub_user* u, const char* string, size_t length);
+ 
+ /**
+  * This will parse 'string' and return it as a adc_message struct, or
+--- a/src/netevent.c
++++ b/src/netevent.c
+@@ -23,7 +23,7 @@
+ void net_on_read(int fd, short ev, void *arg)
+ {
+ 	static char buf[MAX_RECV_BUF];
+-	struct user* user = (struct user*) arg;
++	struct uhub_user* user = (struct uhub_user*) arg;
+ 	char* pos;
+ 	size_t offset;
+ 	size_t buflen;
+@@ -168,7 +168,7 @@
+ 
+ void net_on_write(int fd, short ev, void *arg)
+ {
+-	struct user* user = (struct user*) arg;
++	struct uhub_user* user = (struct uhub_user*) arg;
+ 	struct adc_message* msg;
+ 	int ret;
+ 	int length;
+@@ -259,7 +259,7 @@
+ void net_on_accept(int server_fd, short ev, void *arg)
+ {
+ 	struct hub_info* hub = (struct hub_info*) arg;
+-	struct user* user = 0;
++	struct uhub_user* user = 0;
+ 	struct ip_addr_encap ipaddr;
+ 	const char* addr;
+ 	struct timeval timeout = { TIMEOUT_CONNECTED, 0 };
+@@ -320,7 +320,7 @@
+ {
+ 	static char buffer[1024] = {0,};
+ 	// struct hub_info* hub = (struct hub_info*) arg;
+-	// struct user* user = 0;
++	// struct uhub_user* user = 0;
+ 	ssize_t size;
+ 	struct sockaddr_storage from;
+ 	socklen_t fromlen;
+--- a/src/plugin.h
++++ b/src/plugin.h
+@@ -19,12 +19,12 @@
+ 
+ typedef void (*plugin_event_startup)(struct hub*);
+ typedef void (*plugin_event_shutdown)(struct hub*);
+-typedef void (*plugin_event_user_login)(struct hub*, struct user*);
+-typedef void (*plugin_event_user_logout)(struct hub*, struct user*);
++typedef void (*plugin_event_user_login)(struct hub*, struct uhub_user*);
++typedef void (*plugin_event_user_logout)(struct hub*, struct uhub_user*);
+ typedef int  (*plugin_event_connect)(struct hub*, struct ip_addr_encap);
+-typedef void (*plugin_event_disconnect)(struct hub*, struct user*);
+-typedef int  (*plugin_event_message)(struct hub*, struct user*, struct adc_message*);
+-typedef void (*plugin_event_support)(struct hub*, struct user*, int);
++typedef void (*plugin_event_disconnect)(struct hub*, struct uhub_user*);
++typedef int  (*plugin_event_message)(struct hub*, struct uhub_user*, struct adc_message*);
++typedef void (*plugin_event_support)(struct hub*, struct uhub_user*, int);
+ 
+ struct uhub_plugin
+ {
+--- a/src/route.c
++++ b/src/route.c
+@@ -20,9 +20,9 @@
+ #include "uhub.h"
+ 
+ 
+-int route_message(struct user* u, struct adc_message* msg)
++int route_message(struct uhub_user* u, struct adc_message* msg)
+ {
+-	struct user* target = NULL;
++	struct uhub_user* target = NULL;
+ 
+ 	switch (msg->cache[0])
+ 	{
+@@ -59,7 +59,7 @@
+ }
+ 
+ 
+-static void queue_command(struct user* user, struct adc_message* msg__, int offset)
++static void queue_command(struct uhub_user* user, struct adc_message* msg__, int offset)
+ {
+ 	struct adc_message* msg = adc_msg_incref(msg__);
+ 	list_append(user->send_queue, msg);
+@@ -97,7 +97,7 @@
+  *         -1 if send queue is overflowed
+  *         0 if soft send queue is overflowed (not implemented at the moment)
+  */
+-static int check_send_queue(struct user* user, struct adc_message* msg)
++static int check_send_queue(struct uhub_user* user, struct adc_message* msg)
+ {
+ 	if (user_flag_get(user, flag_user_list))
+ 		return 1;
+@@ -111,7 +111,7 @@
+ 	return 1;
+ }
+ 
+-int route_to_user(struct user* user, struct adc_message* msg)
++int route_to_user(struct uhub_user* user, struct adc_message* msg)
+ {
+ 	int ret;
+ 	
+@@ -174,11 +174,11 @@
+ 
+ int route_to_all(struct hub_info* hub, struct adc_message* command) /* iterate users */
+ {
+-	struct user* user = (struct user*) list_get_first(hub->users->list);
++	struct uhub_user* user = (struct uhub_user*) list_get_first(hub->users->list);
+ 	while (user)
+ 	{
+ 		route_to_user(user, command);
+-		user = (struct user*) list_get_next(hub->users->list);
++		user = (struct uhub_user*) list_get_next(hub->users->list);
+ 	}
+ 	
+ 	return 0;
+@@ -190,7 +190,7 @@
+ 	int do_send;
+ 	char* tmp;
+ 	
+-	struct user* user = (struct user*) list_get_first(hub->users->list);
++	struct uhub_user* user = (struct uhub_user*) list_get_first(hub->users->list);
+ 	while (user)
+ 	{
+ 		if (user->feature_cast)
+@@ -209,7 +209,7 @@
+ 			}
+ 			
+ 			if (!do_send) {
+-				user = (struct user*) list_get_next(hub->users->list);
++				user = (struct uhub_user*) list_get_next(hub->users->list);
+ 				continue;
+ 			}
+ 			
+@@ -229,13 +229,13 @@
+ 				route_to_user(user, command);
+ 			}
+ 		}
+-		user = (struct user*) list_get_next(hub->users->list);
++		user = (struct uhub_user*) list_get_next(hub->users->list);
+ 	}
+ 	
+ 	return 0;
+ }
+ 
+-int route_info_message(struct user* u)
++int route_info_message(struct uhub_user* u)
+ {
+ 	if (!user_is_nat_override(u))
+ 	{
+@@ -245,12 +245,12 @@
+ 	{
+ 		struct adc_message* cmd = adc_msg_copy(u->info);
+ 		const char* address = ip_convert_to_string(&u->ipaddr);
+-		struct user* user = 0;
++		struct uhub_user* user = 0;
+ 		
+ 		adc_msg_remove_named_argument(cmd, ADC_INF_FLAG_IPV4_ADDR);
+ 		adc_msg_add_named_argument(cmd, ADC_INF_FLAG_IPV4_ADDR, address);
+ 	
+-		user = (struct user*) list_get_first(u->hub->users->list);
++		user = (struct uhub_user*) list_get_first(u->hub->users->list);
+ 		while (user)
+ 		{
+ 			if (user_is_nat_override(user))
+@@ -258,7 +258,7 @@
+ 			else
+ 				route_to_user(user, u->info);
+ 			
+-			user = (struct user*) list_get_next(u->hub->users->list);
++			user = (struct uhub_user*) list_get_next(u->hub->users->list);
+ 		}
+ 		adc_msg_free(cmd);
+ 	}
+--- a/src/route.h
++++ b/src/route.h
+@@ -23,12 +23,12 @@
+ /**
+  * Route a message by sending it to it's final destination.
+  */
+-extern int route_message(struct user* u, struct adc_message* msg);
++extern int route_message(struct uhub_user* u, struct adc_message* msg);
+ 
+ /**
+  * Transmit message directly to one user.
+  */
+-extern int route_to_user(struct user*, struct adc_message* command);
++extern int route_to_user(struct uhub_user*, struct adc_message* command);
+ 
+ /**
+  * Broadcast message to all users.
+@@ -45,7 +45,7 @@
+  * This will ensure the correct IP is seen by other users
+  * in case nat override is in use.
+  */
+-extern int route_info_message(struct user* user);
++extern int route_info_message(struct uhub_user* user);
+ 
+ 
+ #endif /* HAVE_UHUB_ROUTE_H */
+--- a/src/sid.h
++++ b/src/sid.h
+@@ -28,7 +28,7 @@
+ 
+ struct sid_map
+ {
+-	struct user* ptr;
++	struct uhub_user* ptr;
+ 	struct sid_map* next;
+ };
+ 
+@@ -58,7 +58,7 @@
+ 
+ 
+ extern void sid_initialize(struct sid_pool*);
+-extern sid_t sid_alloc(struct sid_pool*, struct user*);
++extern sid_t sid_alloc(struct sid_pool*, struct uhub_user*);
+ extern void sid_free(struct sid_pool*, sid_t);
+ 
+ 
+--- a/src/user.c
++++ b/src/user.c
+@@ -19,13 +19,13 @@
+ 
+ #include "uhub.h"
+ 
+-struct user* user_create(struct hub_info* hub, int sd)
++struct uhub_user* user_create(struct hub_info* hub, int sd)
+ {
+-	struct user* user = NULL;
++	struct uhub_user* user = NULL;
+ 	
+ 	hub_log(log_trace, "user_create(), hub=%p, sd=%d", hub, sd);
+ 
+-	user = (struct user*) hub_malloc_zero(sizeof(struct user));
++	user = (struct uhub_user*) hub_malloc_zero(sizeof(struct uhub_user));
+ 
+ 	if (user == NULL)
+ 		return NULL; /* OOM */
+@@ -61,7 +61,7 @@
+ 	adc_msg_free((struct adc_message*) ptr);
+ }
+ 
+-void user_destroy(struct user* user)
++void user_destroy(struct uhub_user* user)
+ {
+ 	hub_log(log_trace, "user_destroy(), user=%p", user);
+ 
+@@ -98,7 +98,7 @@
+ 	hub_free(user);
+ }
+ 
+-void user_set_state(struct user* user, enum user_state state)
++void user_set_state(struct uhub_user* user, enum user_state state)
+ {
+ 	if ((user->state == state_cleanup && state != state_disconnected) || (user->state == state_disconnected))
+ 	{
+@@ -109,7 +109,7 @@
+ 	user->state = state;
+ }
+ 
+-void user_set_info(struct user* user, struct adc_message* cmd)
++void user_set_info(struct uhub_user* user, struct adc_message* cmd)
+ {
+ 	adc_msg_free(user->info);
+ 	user->info = adc_msg_incref(cmd);
+@@ -156,44 +156,44 @@
+ 	}
+ }
+ 
+-void user_support_add(struct user* user, int fourcc)
++void user_support_add(struct uhub_user* user, int fourcc)
+ {
+ 	int feature_mask = convert_support_fourcc(fourcc);
+ 	user->flags |= feature_mask;
+ }
+ 
+-int user_flag_get(struct user* user, enum user_flags flag)
++int user_flag_get(struct uhub_user* user, enum user_flags flag)
+ {
+     return user->flags & flag;
+ }
+ 
+-void user_flag_set(struct user* user, enum user_flags flag)
++void user_flag_set(struct uhub_user* user, enum user_flags flag)
+ {
+     user->flags |= flag;
+ }
+ 
+-void user_flag_unset(struct user* user, enum user_flags flag)
++void user_flag_unset(struct uhub_user* user, enum user_flags flag)
+ {
+     user->flags &= ~flag;
+ }
+ 
+-void user_set_nat_override(struct user* user)
++void user_set_nat_override(struct uhub_user* user)
+ {
+ 	user_flag_set(user, flag_nat);
+ }
+ 
+-int user_is_nat_override(struct user* user)
++int user_is_nat_override(struct uhub_user* user)
+ {
+ 	return user_flag_get(user, flag_nat);
+ }
+ 
+-void user_support_remove(struct user* user, int fourcc)
++void user_support_remove(struct uhub_user* user, int fourcc)
+ {
+ 	int feature_mask = convert_support_fourcc(fourcc);
+ 	user->flags &= ~feature_mask;
+ }
+ 
+-void user_schedule_destroy(struct user* user)
++void user_schedule_destroy(struct uhub_user* user)
+ {
+ 	struct event_data post;
+ 	memset(&post, 0, sizeof(post));
+@@ -202,7 +202,7 @@
+ 	event_queue_post(user->hub->queue, &post);
+ }
+ 
+-void user_disconnect(struct user* user, int reason)
++void user_disconnect(struct uhub_user* user, int reason)
+ {
+ 	struct event_data post;
+ 	int need_notify = 0;
+@@ -242,7 +242,7 @@
+ 
+ }
+ 
+-int user_have_feature_cast_support(struct user* user, char feature[4])
++int user_have_feature_cast_support(struct uhub_user* user, char feature[4])
+ {
+ 	char* tmp = list_get_first(user->feature_cast);
+ 	while (tmp)
+@@ -256,7 +256,7 @@
+ 	return 0;
+ }
+ 
+-int user_set_feature_cast_support(struct user* u, char feature[4])
++int user_set_feature_cast_support(struct uhub_user* u, char feature[4])
+ {
+ 	if (!u->feature_cast)
+ 	{
+@@ -272,7 +272,7 @@
+ 	return 1;
+ }
+ 
+-void user_clear_feature_cast_support(struct user* u)
++void user_clear_feature_cast_support(struct uhub_user* u)
+ {
+ 	if (u->feature_cast)
+ 	{
+@@ -282,21 +282,21 @@
+ 	}
+ }
+ 
+-int user_is_logged_in(struct user* user)
++int user_is_logged_in(struct uhub_user* user)
+ {
+ 	if (user->state == state_normal)
+ 		return 1;
+ 	return 0;
+ }
+ 
+-int user_is_connecting(struct user* user)
++int user_is_connecting(struct uhub_user* user)
+ {
+ 	if (user->state == state_protocol || user->state == state_identify || user->state == state_verify)
+ 		return 1;
+ 	return 0;
+ }
+ 
+-int user_is_disconnecting(struct user* user)
++int user_is_disconnecting(struct uhub_user* user)
+ {
+ 	if (user->state == state_cleanup || user->state == state_disconnected)
+ 		return 1;
+--- a/src/user.h
++++ b/src/user.h
+@@ -73,7 +73,7 @@
+ };
+ 
+ 
+-struct user_info
++struct uhub_user_info
+ {
+ 	sid_t sid;                    /** session ID */
+ 	char cid[MAX_CID_LEN+1];      /** global client ID */
+@@ -85,7 +85,7 @@
+  * as the number of bytes and files shared, and the number of hubs the
+  * user is connected to, etc.
+  */
+-struct user_counts
++struct uhub_user_counts
+ {
+ 	uint64_t             shared_size;             /** Shared size in bytes */
+ 	size_t               shared_files;            /** The number of shared files */
+@@ -96,14 +96,14 @@
+ 	size_t               hub_count_total;         /** The number of hubs connected to in total */
+ };
+ 
+-struct user
++struct uhub_user
+ {
+ 	int                  sd;                      /** socket descriptor */
+ 	struct event*        ev_read;                 /** libevent struct for read events */
+ 	struct event*        ev_write;                /** libevent struct for write events */
+ 	enum user_state      state;                   /** see enum user_state */
+ 	enum user_credentials credentials;            /** see enum user_credentials */
+-	struct user_info     id;                      /** Contains nick name and CID */
++	struct uhub_user_info     id;                      /** Contains nick name and CID */
+ 	int                  flags;                   /** see enum user_features */
+ 	char                 user_agent[MAX_UA_LEN+1];/** User agent string */
+ 	time_t               tm_connected;            /** time when user connected */
+@@ -120,7 +120,7 @@
+ 	struct hub_info*     hub;                     /** The hub instance this user belong to */
+ 	int                  quit_reason;             /** Quit reason (see user_quit_reason) */
+ 	struct ip_addr_encap ipaddr;                  /** IP address of connected user */
+-	struct user_counts   limits;                  /** Data used for limitation */
++	struct uhub_user_counts   limits;                  /** Data used for limitation */
+ #ifdef SSL_SUPPORT
+ 	SSL*                 ssl;                     /** SSL handle */
+ #endif /*  SSL_SUPPORT */
+@@ -137,19 +137,19 @@
+  * @param sd socket descriptor associated with the user
+  * @return User object or NULL if not enough memory is available.
+  */
+-extern struct user* user_create(struct hub_info* hub, int sd);
++extern struct uhub_user* user_create(struct hub_info* hub, int sd);
+ 
+ /**
+  * Delete a user.
+  *
+  * !WRONG! If the user is logged in a quit message is issued.
+  */
+-extern void user_destroy(struct user* user);
++extern void user_destroy(struct uhub_user* user);
+ 
+ /**
+  * Will post a message that will delete the user later.
+  */
+-extern void user_schedule_destroy(struct user* user);
++extern void user_schedule_destroy(struct uhub_user* user);
+ 
+ /**
+  * Disconnect a user.
+@@ -165,36 +165,36 @@
+  * @param user User to disconnect
+  * @param reason See enum user_quit_reason
+  */
+-extern void user_disconnect(struct user* user, int reason);
++extern void user_disconnect(struct uhub_user* user, int reason);
+ 
+ /**
+  * This associates a INF message to the user.
+  * If the user already has a INF message associated, then this is
+  * released before setting the new one.
+  */
+-extern void user_set_info(struct user* user, struct adc_message* info);
++extern void user_set_info(struct uhub_user* user, struct adc_message* info);
+ 
+ /**
+  * Specify a user's state.
+  * NOTE: DON'T, unless you know what you are doing.
+  */
+-extern void user_set_state(struct user* user, enum user_state);
++extern void user_set_state(struct uhub_user* user, enum user_state);
+ 
+ /**
+  * Returns 1 if the user is in state state_normal, or 0 otherwise.
+  */
+-extern int user_is_logged_in(struct user* user);
++extern int user_is_logged_in(struct uhub_user* user);
+ 
+ /**
+  * Returns 1 if the user is in state_protocol, state_identify or state_verify.
+  * Returns 0 otherwise.
+  */
+-extern int user_is_connecting(struct user* user);
++extern int user_is_connecting(struct uhub_user* user);
+ 
+ /**
+  * Returns 1 only if the user is in state_cleanup or state_disconnected.
+  */
+-extern int user_is_disconnecting(struct user* user);
++extern int user_is_disconnecting(struct uhub_user* user);
+ 
+ /**
+  * User supports the protocol extension as given in fourcc.
+@@ -204,7 +204,7 @@
+  *
+  * @see enum user_flags
+  */
+-extern void user_support_add(struct user* user, int fourcc);
++extern void user_support_add(struct uhub_user* user, int fourcc);
+ 
+ /**
+  * User no longer supports the protocol extension as given in fourcc.
+@@ -212,26 +212,26 @@
+  * the hub.
+  * @see enum user_flags
+  */
+-extern void user_support_remove(struct user* user, int fourcc);
++extern void user_support_remove(struct uhub_user* user, int fourcc);
+ 
+ /**
+  * Sets the nat override flag for a user, this allows users on the same
+  * subnet as a natted hub to spoof their IP in order to use active mode
+  * on a natted hub.
+  */
+-extern void user_set_nat_override(struct user* user);
+-extern int user_is_nat_override(struct user* user);
++extern void user_set_nat_override(struct uhub_user* user);
++extern int user_is_nat_override(struct uhub_user* user);
+ 
+ /**
+  * Set a flag. @see enum user_flags
+  */
+-extern void user_flag_set(struct user* user, enum user_flags flag);
+-extern void user_flag_unset(struct user* user, enum user_flags flag);
++extern void user_flag_set(struct uhub_user* user, enum user_flags flag);
++extern void user_flag_unset(struct uhub_user* user, enum user_flags flag);
+ 
+ /**
+  * Get a flag. @see enum user_flags
+  */
+-extern int user_flag_get(struct user* user, enum user_flags flag);
++extern int user_flag_get(struct uhub_user* user, enum user_flags flag);
+ 
+ /**
+  * Check if a user supports 'feature' for feature casting (basis for 'Fxxx' messages)
+@@ -241,7 +241,7 @@
+  * @param feature a feature to lookup (example: 'TCP4' or 'UDP4')
+  * @return 1 if 'feature' supported, or 0 otherwise
+  */
+-extern int user_have_feature_cast_support(struct user* user, char feature[4]);
++extern int user_have_feature_cast_support(struct uhub_user* user, char feature[4]);
+ 
+ /**
+  * Set feature cast support for feature.
+@@ -249,12 +249,12 @@
+  * @param feature a feature to lookup (example: 'TCP4' or 'UDP4')
+  * @return 1 if 'feature' supported, or 0 otherwise
+  */
+-extern int user_set_feature_cast_support(struct user* u, char feature[4]);
++extern int user_set_feature_cast_support(struct uhub_user* u, char feature[4]);
+ 
+ /**
+  * Remove all feature cast support features.
+  */
+-extern void user_clear_feature_cast_support(struct user* u);
++extern void user_clear_feature_cast_support(struct uhub_user* u);
+ 
+ 
+ 
+--- a/src/usermanager.c
++++ b/src/usermanager.c
+@@ -27,7 +27,7 @@
+ {
+ 	if (ptr)
+ 	{
+-		struct user* u = (struct user*) ptr;
++		struct uhub_user* u = (struct uhub_user*) ptr;
+ 		
+ 		/* Mark the user as already being disconnected.
+ 		 * This prevents the hub from trying to send
+@@ -81,10 +81,10 @@
+ 
+ int user_manager_init(struct hub_info* hub)
+ {
+-	struct user_manager* users = NULL;
++	struct uhub_user_manager* users = NULL;
+ 	struct timeval timeout = { TIMEOUT_STATS, 0 };
+ 
+-	users = (struct user_manager*) hub_malloc_zero(sizeof(struct user_manager));
++	users = (struct uhub_user_manager*) hub_malloc_zero(sizeof(struct uhub_user_manager));
+ 
+ 	users->list = list_create();
+ 	users->free_sid = 1;
+@@ -106,7 +106,7 @@
+ 
+ void user_manager_shutdown(struct hub_info* hub)
+ {
+-	struct user_manager* users = hub->users;
++	struct uhub_user_manager* users = hub->users;
+ 	event_del(&hub->ev_timer);
+ 
+ 	list_clear(users->list, &clear_user_list_callback);
+@@ -115,7 +115,7 @@
+ }
+ 
+ 
+-void user_manager_add(struct user* user)
++void user_manager_add(struct uhub_user* user)
+ {
+ 	list_append(user->hub->users->list, user);
+ 	user->hub->users->count++;
+@@ -125,7 +125,7 @@
+ 	user->hub->users->shared_files += user->limits.shared_files;
+ }
+ 
+-void user_manager_remove(struct user* user)
++void user_manager_remove(struct uhub_user* user)
+ {
+ 	list_remove(user->hub->users->list, user);
+ 	user->hub->users->count--;
+@@ -135,50 +135,50 @@
+ }
+ 
+ 
+-struct user* get_user_by_sid(struct hub_info* hub, sid_t sid)
++struct uhub_user* get_user_by_sid(struct hub_info* hub, sid_t sid)
+ {
+-	struct user* user = (struct user*) list_get_first(hub->users->list); /* iterate users */
++	struct uhub_user* user = (struct uhub_user*) list_get_first(hub->users->list); /* iterate users */
+ 	while (user)
+ 	{
+ 		if (user->id.sid == sid)
+ 			return user;
+-		user = (struct user*) list_get_next(hub->users->list);
++		user = (struct uhub_user*) list_get_next(hub->users->list);
+ 	}
+ 	return NULL;
+ }
+ 
+ 
+-struct user* get_user_by_cid(struct hub_info* hub, const char* cid)
++struct uhub_user* get_user_by_cid(struct hub_info* hub, const char* cid)
+ {
+-	struct user* user = (struct user*) list_get_first(hub->users->list); /* iterate users - only on incoming INF msg */
++	struct uhub_user* user = (struct uhub_user*) list_get_first(hub->users->list); /* iterate users - only on incoming INF msg */
+ 	while (user)
+ 	{
+ 		if (strcmp(user->id.cid, cid) == 0)
+ 			return user;
+-		user = (struct user*) list_get_next(hub->users->list);
++		user = (struct uhub_user*) list_get_next(hub->users->list);
+ 	}
+ 	return NULL;
+ }
+ 
+ 
+-struct user* get_user_by_nick(struct hub_info* hub, const char* nick)
++struct uhub_user* get_user_by_nick(struct hub_info* hub, const char* nick)
+ {
+-	struct user* user = (struct user*) list_get_first(hub->users->list); /* iterate users - only on incoming INF msg */
++	struct uhub_user* user = (struct uhub_user*) list_get_first(hub->users->list); /* iterate users - only on incoming INF msg */
+ 	while (user)
+ 	{
+ 		if (strcmp(user->id.nick, nick) == 0)
+ 			return user;
+-		user = (struct user*) list_get_next(hub->users->list);
++		user = (struct uhub_user*) list_get_next(hub->users->list);
+ 	}
+ 	return NULL;
+ }
+ 
+ 
+-int send_user_list(struct user* target)
++int send_user_list(struct uhub_user* target)
+ {
+ 	int ret = 1;
+ 	user_flag_set(target, flag_user_list);
+-	struct user* user = (struct user*) list_get_first(target->hub->users->list); /* iterate users - only on INF or PAS msg */
++	struct uhub_user* user = (struct uhub_user*) list_get_first(target->hub->users->list); /* iterate users - only on INF or PAS msg */
+ 	while (user)
+ 	{
+ 		if (user_is_logged_in(user))
+@@ -187,7 +187,7 @@
+ 			if (!ret)
+ 				break;
+ 		}
+-		user = (struct user*) list_get_next(user->hub->users->list);
++		user = (struct uhub_user*) list_get_next(user->hub->users->list);
+ 	}
+ 	
+ 	if (!target->send_queue_size)
+@@ -198,7 +198,7 @@
+ }
+ 
+ 
+-void send_quit_message(struct user* leaving)
++void send_quit_message(struct uhub_user* leaving)
+ {
+ 	struct adc_message* command = adc_msg_construct(ADC_CMD_IQUI, 6);
+ 	adc_msg_add_argument(command, (const char*) sid_to_string(leaving->id.sid));
+@@ -216,8 +216,8 @@
+ sid_t user_manager_get_free_sid(struct hub_info* hub)
+ {
+ #if 0
+-	struct user* user;
+-	user = (struct user*) list_get_first(hub->users->list); /* iterate normal users */
++	struct uhub_user* user;
++	user = (struct uhub_user*) list_get_first(hub->users->list); /* iterate normal users */
+ 	while (user)
+ 	{
+ 		if (user->sid == hub->users->free_sid)
+@@ -226,7 +226,7 @@
+ 			if (hub->users->free_sid >= SID_MAX) hub->users->free_sid = 1;
+ 			break;
+ 		}
+-		user = (struct user*) list_get_next(hub->users->list);
++		user = (struct uhub_user*) list_get_next(hub->users->list);
+ 	}
+ #endif
+ 	return hub->users->free_sid++;
+--- a/src/usermanager.h
++++ b/src/usermanager.h
+@@ -20,7 +20,7 @@
+ #ifndef HAVE_UHUB_USER_MANAGER_H
+ #define HAVE_UHUB_USER_MANAGER_H
+ 
+-struct user_manager
++struct uhub_user_manager
+ {
+ 	size_t count;                   /**<< "Number of all fully connected and logged in users" */
+ 	size_t count_peak;              /**<< "Peak number of users" */
+@@ -51,14 +51,14 @@
+ /**
+  * Add a new user to the user manager.
+  */
+-extern void user_manager_add(struct user* user);
++extern void user_manager_add(struct uhub_user* user);
+ 
+ /**
+  * Remove a user from the user manager.
+  * This user is connected, and will be moved to the leaving queue, pending
+  * all messages in the message queue, and resource cleanup.
+  */
+-extern void user_manager_remove(struct user* user);
++extern void user_manager_remove(struct uhub_user* user);
+ 
+ /**
+  * Returns a free sid for a new user.
+@@ -70,19 +70,19 @@
+  * NOTE: This will only search connected users.
+  * @return a user if found, or NULL if not found
+  */
+-extern struct user* get_user_by_sid(struct hub_info* hub, sid_t sid);
++extern struct uhub_user* get_user_by_sid(struct hub_info* hub, sid_t sid);
+ 
+ /**
+  * Lookup a user based on the client ID (cid).
+  * @return a user if found, or NULL if not found
+  */
+-extern struct user* get_user_by_cid(struct hub_info* hub, const char* cid);
++extern struct uhub_user* get_user_by_cid(struct hub_info* hub, const char* cid);
+ 
+ /**
+  * Lookup a user based on the nick name.
+  * @return a user if found, or NULL if not found
+  */
+-extern struct user* get_user_by_nick(struct hub_info* hub, const char* nick);
++extern struct uhub_user* get_user_by_nick(struct hub_info* hub, const char* nick);
+ 
+ /**
+  * Send the user list of connected clients to 'user'.
+@@ -90,13 +90,13 @@
+  *
+  * @return 1 if sending the user list succeeded, 0 otherwise.
+  */
+-extern int send_user_list(struct user* user);
++extern int send_user_list(struct uhub_user* user);
+ 
+ /**
+  * Send a quit message to all connected users when 'user' is
+  * leaving the hub (for whatever reason).
+  */
+-extern void send_quit_message(struct user* user);
++extern void send_quit_message(struct uhub_user* user);
+ 
+ 
+ #endif /* HAVE_UHUB_USER_MANAGER_H */

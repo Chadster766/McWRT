@@ -1,0 +1,19 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006 OpenWrt.org
+
+START=50
+
+start() {
+	user_exists scanlogd 51 || user_add scanlogd 51
+	group_exists scanlogd 51 || group_add scanlogd
+	[ -d  /var/run/scanlogd ] || {
+		mkdir -m 0755 -p /var/run/scanlogd
+		chmod 0755 /var/run/scanlogd
+		chown scanlogd:scanlogd /var/run/scanlogd
+	}
+	service_start /usr/sbin/scanlogd
+}
+
+stop() {
+	service_stop /usr/sbin/scanlogd
+}

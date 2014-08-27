@@ -1,0 +1,170 @@
+From 2216a6145300e0c8fc4e144b3453b93dc56fab66 Mon Sep 17 00:00:00 2001
+From: Piotr Nowak <pn@semihalf.com>
+Date: Mon, 15 Oct 2012 14:06:39 +0200
+Subject: [PATCH 317/609] PM, pex: Fix PM support in PCI Express.
+
+This commit fix previous implementation of Power Management
+in PCI-Express introduced in commit:
+SHA ID: fb80e48e7dc92d2a33be74476902114c9c56302a
+branch: devel-3.2.27-pm_v2
+
+No longer exists issue that after 2nd resume PCI-Express devices
+are unuseable. The problem was in PCI-Express Status Register
+(PCIeBusNum field). For some reason after 2nd resume this field
+was corrupted.
+
+Signed-off-by: Piotr Nowak <pn@semihalf.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/core.c |    7 ----
+ arch/arm/mach-armadaxp/pex.c  |   90 +++++++++++++++++++++++++++++++++++------
+ 2 files changed, 77 insertions(+), 20 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index 300e5d4..99a56ca 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -1450,9 +1450,6 @@ static int mvAmpInitCpuIf()
+ }
+ #endif
+ 
+-#ifdef CONFIG_MV_INCLUDE_PEX
+-extern void mv_pex_reinit(void);
+-#endif
+ 
+ /*****************************************************************************
+  * DB BOARD: Restore from suspend to RAM
+@@ -1488,10 +1485,6 @@ void axp_db_restore(void)
+ 	mvUsbPllInit();
+ #endif
+ 	mvSysEthPhyInit();
+-#ifdef CONFIG_MV_INCLUDE_PEX
+-	/* Reinitialize PEX root complex */
+-	mv_pex_reinit();
+-#endif
+ 
+ 	/* TODO - timer should be restored by kernel hook */
+ 	axp_timer_resume();
+diff --git a/arch/arm/mach-armadaxp/pex.c b/arch/arm/mach-armadaxp/pex.c
+index f1ee02c..ff84320 100644
+--- a/arch/arm/mach-armadaxp/pex.c
++++ b/arch/arm/mach-armadaxp/pex.c
+@@ -21,7 +21,9 @@
+ #include <linux/interrupt.h>
+ #include <linux/spinlock.h>
+ #include <linux/init.h>
+-                                                                                                                             
++#include <linux/module.h>
++#include <linux/platform_device.h>
++
+ #include <mach/hardware.h>
+ #include <asm/io.h>
+ #include <asm/irq.h>
+@@ -63,6 +65,12 @@ extern u32 mv_pci_mem_base_get(int ifNum);
+ extern int mv_is_pci_io_mapped(int ifNum);
+ extern MV_TARGET mv_pci_io_target_get(int ifNum);
+ 
++static struct platform_device mv_pex = {
++	.name		= "mv_pex",
++	.id		= 0,
++	.num_resources	= 0,
++};
++
+ static void* mv_get_irqmap_func[] __initdata =
+ {
+ 	mv_map_irq_0,
+@@ -442,23 +450,79 @@ static struct hw_pci mv_pci __initdata = {
+         .preinit                = mv_pex_preinit,
+ };
+ 
++static int mv_pex_probe(struct platform_device *dev)
++{
++	return 0;
++}
+ 
+-static int __init mv_pci_init(void)
++static int pex_status[MV_PEX_MAX_IF];
++static int pex_ifnum;
++
++static int mv_pex_suspend(struct platform_device *dev, pm_message_t state)
+ {
+-    /* WA - Disable PEX on RD-SERVER board */
+-    if (mvBoardIdGet() == RD_78460_SERVER_ID)
++	unsigned int pciIf;
++	MV_U32 pexHWInf = 0;
++	MV_BOARD_PEX_INFO* boardPexInfo = mvBoardPexInfoGet();
++
++	/* Save PCI Express status Register */
++	for (pciIf = 0; pciIf < pex_ifnum; pciIf++) {
++		pexHWInf = boardPexInfo->pexMapping[pciIf];
++		pex_status[pexHWInf] = MV_REG_READ(PEX_STATUS_REG(pexHWInf));
++	}
++
+ 	return 0;
++}
+ 
+-    mv_pci.nr_controllers = (mvBoardPexInfoGet())->boardPexIfNum;
+-    mv_pci.swizzle        = pci_std_swizzle;
+-    mv_pci.map_irq         = mv_map_irq_0;
+-    mv_pci.setup           = mv_pex_setup;
+-    mv_pci.scan            = mv_pex_scan_bus;
+-    mv_pci.preinit         = mv_pex_preinit;
+-    pci_common_init(&mv_pci);
+-    return 0;
++static int mv_pex_resume(struct platform_device *dev)
++{
++	unsigned int pciIf;
++	MV_U32 pexHWInf = 0;
++	MV_BOARD_PEX_INFO* boardPexInfo = mvBoardPexInfoGet();
++
++	mv_pex_reinit();
++
++	/* Restore PCI Express status Register */
++	for (pciIf = 0; pciIf < pex_ifnum; pciIf++) {
++		pexHWInf = boardPexInfo->pexMapping[pciIf];
++		MV_REG_WRITE(PEX_STATUS_REG(pexHWInf), pex_status[pexHWInf]);
++	}
++
++	return 0;
+ }
+ 
++static struct platform_driver mv_pex_driver = {
++	.probe    = mv_pex_probe,
++#ifdef CONFIG_PM
++	.suspend = mv_pex_suspend,
++	.resume  = mv_pex_resume,
++#endif /* CONFIG_PM */
++	.driver = {
++		.name = "mv_pex",
++	},
++};
+ 
+-subsys_initcall(mv_pci_init);
++static int __init mv_pex_init_module(void)
++{
++	MV_BOARD_PEX_INFO* boardPexInfo = mvBoardPexInfoGet();
++
++	/* WA - Disable PEX on RD-SERVER board */
++	if (mvBoardIdGet() == RD_78460_SERVER_ID)
++		return 0;
++
++	mv_pci.nr_controllers = (mvBoardPexInfoGet())->boardPexIfNum;
++	mv_pci.swizzle        = pci_std_swizzle;
++	mv_pci.map_irq         = mv_map_irq_0;
++	mv_pci.setup           = mv_pex_setup;
++	mv_pci.scan            = mv_pex_scan_bus;
++	mv_pci.preinit         = mv_pex_preinit;
++	pci_common_init(&mv_pci);
++	platform_device_register(&mv_pex);
++
++	pex_ifnum = boardPexInfo->boardPexIfNum;
++
++	return platform_driver_register(&mv_pex_driver);
++}
+ 
++module_init(mv_pex_init_module);
++MODULE_DESCRIPTION("Marvell PEX Driver");
++MODULE_LICENSE("GPL");
+-- 
+1.7.9.5
+

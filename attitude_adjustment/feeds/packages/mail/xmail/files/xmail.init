@@ -1,0 +1,221 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2008 OpenWrt.org
+
+START=90
+STOP=10
+
+MAIL_ROOT=
+DAEMON=/usr/bin/XMail
+NAME=XMail
+
+append_bool() {
+	local section="$1"
+	local option="$2"
+	local value="$3"
+	local _loctmp
+	config_get_bool _loctmp "$section" "$option" 0
+	[ "$_loctmp" -le 0 ] && return 0
+	append args "$value"
+}
+
+append_parm() {
+	local section="$1"
+	local option="$2"
+	local switch="$3"
+	local _loctmp
+	config_get _loctmp "$section" "$option"
+	[ -z "$_loctmp" ] && return 0
+	append args "$switch $_loctmp"
+}
+
+xmail() {
+	local cfg="$1"
+
+	append_parm "$cfg" mail_root "-Ms"
+	append_bool "$cfg" debug "-Md"
+	append_parm "$cfg" log_rotate "-Mr"
+	append_parm "$cfg" split_level "-Mx"
+	append_parm "$cfg" rx_buffer "-MR"
+	append_parm "$cfg" tx_buffer "-MS"
+	append_bool "$cfg" maildir_delivery "-MM"
+	append_bool "$cfg" mailbox_delivery "-Mm"
+	append_parm "$cfg" dns_cache_dirs "-MD"
+	append_bool "$cfg" ipv4_only "-M4"
+	append_bool "$cfg" ipv6_only "-M6"
+	append_bool "$cfg" ipv4_then_ipv6 "-M5"
+	append_bool "$cfg" ipv6_then_ipv4 "-M7"
+
+	config_get mail_root $cfg mail_root
+	[ -n "$mail_root" ] || return 0
+	MAIL_ROOT=$mail_root
+}
+
+pop3() {
+	local cfg="$1"
+
+	append_bool "$cfg" disable "-P-"
+	append_bool "$cfg" ipv6 "-P6"
+	append_parm "$cfg" server_port "-Pp"
+	append_parm "$cfg" session_timeout "-Pt"
+	append_bool "$cfg" log "-Pl"
+	append_parm "$cfg" delay_timeout "-Pw"
+	append_bool "$cfg" bad_login_hang "-Ph"
+	append_parm "$cfg" local_address "-PI"
+	append_parm "$cfg" num_threads "-PX"
+}
+
+pop3s() {
+	local cfg="$1"
+
+	append_bool "$cfg" disable "-B-"
+	append_bool "$cfg" ipv6 "-B6"
+	append_parm "$cfg" server_port "-Bp"
+	append_parm "$cfg" local_address "-BI"
+}
+
+smtp() {
+	local cfg="$1"
+
+	append_bool "$cfg" disable "-S-"
+	append_bool "$cfg" ipv6 "-S6"
+	append_parm "$cfg" server_port "-Sp"
+	append_parm "$cfg" session_timeout "-St"
+	append_bool "$cfg" log "-Sl"
+	append_parm "$cfg" local_address "-SI"
+	append_parm "$cfg" num_threads "-SX"
+	append_parm "$cfg" max_recipients "-Sr"
+	append_parm "$cfg" expire_timeout "-Se"
+}
+
+smtps() {
+	local cfg="$1"
+
+	append_bool "$cfg" disable "-X-"
+	append_bool "$cfg" ipv6 "-X6"
+	append_parm "$cfg" server_port "-Xp"
+	append_parm "$cfg" local_address "-XI"
+}
+
+smail() {
+	local cfg="$1"
+
+	append_parm "$cfg" num_threads "-Qn"
+	append_parm "$cfg" next_try_timeout "-Qt"
+	append_parm "$cfg" ratio "-Qi"
+	append_parm "$cfg" retries "-Qr"
+	append_bool "$cfg" log "-Ql"
+	append_parm "$cfg" filters_timeout "-QT"
+	append_bool "$cfg" filter_log "-Qg"
+}
+
+psync() {
+	local cfg="$1"
+
+	append_bool "$cfg" disable "-Y-"
+	append_parm "$cfg" interval "-Yi"
+	append_parm "$cfg" num_threads "-Yt"
+	append_parm "$cfg" timeout "-Yi"
+	append_bool "$cfg" log "-Yl"
+}
+
+finger() {
+	local cfg="$1"
+
+	append_bool "$cfg" disable "-F-"
+	append_bool "$cfg" ipv6 "-F6"
+	append_parm "$cfg" server_port "-Fp"
+	append_bool "$cfg" log "-Fl"
+	append_parm "$cfg" local_address "-FI"
+}
+
+ctrl() {
+	local cfg="$1"
+
+	append_bool "$cfg" disable "-C-"
+	append_bool "$cfg" ipv6 "-C6"
+	append_parm "$cfg" server_port "-Cp"
+	append_parm "$cfg" session_timeout "-Ct"
+	append_bool "$cfg" log "-Cl"
+	append_parm "$cfg" local_address "-CI"
+	append_parm "$cfg" num_threads "-CX"
+}
+
+ctrls() {
+	local cfg="$1"
+
+	append_bool "$cfg" disable "-W-"
+	append_bool "$cfg" ipv6 "-W6"
+	append_parm "$cfg" server_port "-Wp"
+	append_parm "$cfg" session_timeout "-Wt"
+}
+
+lmail() {
+	local cfg="$1"
+
+	append_parm "$cfg" num_threads "-Ln"
+	append_parm "$cfg" sleep_timeout "-Lt"
+	append_bool "$cfg" log "-Ll"
+}
+	
+start() {
+	test -f $DAEMON || exit 0
+	
+	set -e
+	ulimit -c 10000
+	ulimit -s 128
+
+	config_load xmail
+
+	args=""
+
+	config_foreach xmail xmail
+	config_foreach pop3 pop3
+	config_foreach pop3s pop3s
+	config_foreach smtp smtp
+	config_foreach smtps smtps
+	config_foreach smail smail
+	config_foreach psync psync
+	config_foreach finger finger
+	config_foreach ctrl ctrl
+	config_foreach ctrls ctrls
+	config_foreach lmail lmail
+
+	[ -z "$MAIL_ROOT" ] && exit 0
+	[ -d $MAIL_ROOT ] || exit 0
+
+	export MAIL_ROOT
+
+	rm -f /var/run/$NAME.pid
+
+	$DAEMON $args
+
+	MAX_WAIT=20
+	while [ ! -f /var/run/$NAME.pid -a $MAX_WAIT -gt 0 ]
+	do
+		sleep 1
+		MAX_WAIT=`expr $MAX_WAIT - 1`
+	done
+}
+
+stop() {
+	if [ -f /var/run/$NAME.pid ]
+	then
+		config_load xmail
+		config_foreach xmail xmail
+		[ -z "$MAIL_ROOT" ] || echo `date` > $MAIL_ROOT/.shutdown
+		kill -INT `cat /var/run/$NAME.pid`
+
+		MAX_WAIT=20
+		while [ -f $MAIL_ROOT/.shutdown -a $MAX_WAIT -gt 0 ]
+		do
+			sleep 1
+			MAX_WAIT=`expr $MAX_WAIT - 1`
+		done
+	fi
+}
+
+restart() {
+	stop
+	sleep 1
+	start
+}

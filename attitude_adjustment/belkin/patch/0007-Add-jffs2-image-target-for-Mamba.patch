@@ -1,0 +1,63 @@
+From c0d0720d9a0402c96b4553600ebe7726902055da Mon Sep 17 00:00:00 2001
+From: Matthew Fatheree <Matthew.Fatheree@belkin.com>
+Date: Sun, 11 May 2014 21:56:15 +0700
+Subject: [PATCH 07/31] Add jffs2 image target for Mamba
+
+Signed-off-by: Matthew Fatheree <Matthew.Fatheree@belkin.com>
+---
+ target/linux/armadaxp/config-3.2     |    5 ++++-
+ target/linux/armadaxp/image/Makefile |   13 +++++++++++--
+ 2 files changed, 15 insertions(+), 3 deletions(-)
+
+diff --git a/target/linux/armadaxp/config-3.2 b/target/linux/armadaxp/config-3.2
+index 64e3c47..4276798 100644
+--- a/target/linux/armadaxp/config-3.2
++++ b/target/linux/armadaxp/config-3.2
+@@ -1,9 +1,12 @@
++CONFIG_FS_POSIX_ACL=y
+ # CONFIG_JFFS2_COMPRESSION_OPTIONS is not set
+ CONFIG_JFFS2_FS=y
+ CONFIG_JFFS2_FS_DEBUG=0
++CONFIG_JFFS2_FS_POSIX_ACL=y
++CONFIG_JFFS2_FS_SECURITY=y
+ # CONFIG_JFFS2_FS_WBUF_VERIFY is not set
+ CONFIG_JFFS2_FS_WRITEBUFFER=y
+-# CONFIG_JFFS2_FS_XATTR is not set
++CONFIG_JFFS2_FS_XATTR=y
+ # CONFIG_JFFS2_LZMA is not set
+ # CONFIG_JFFS2_LZO is not set
+ CONFIG_JFFS2_RTIME=y
+diff --git a/target/linux/armadaxp/image/Makefile b/target/linux/armadaxp/image/Makefile
+index 57c4830..7f364ff 100644
+--- a/target/linux/armadaxp/image/Makefile
++++ b/target/linux/armadaxp/image/Makefile
+@@ -8,6 +8,12 @@ include $(TOPDIR)/rules.mk
+ include $(INCLUDE_DIR)/image.mk
+ 
+ JFFS2OPTS += --little-endian --pagesize=0x800 --no-cleanmarkers --pad
++JFFS2_BLOCKSIZE=128k
++
++# override add_jffs2_mark
++define add_jffs2_mark
++	echo "do nothing"
++endef
+ 
+ define Image/Prepare
+ 	cp $(LINUX_DIR)/arch/arm/boot/uImage $(KDIR)/uImage
+@@ -29,8 +35,11 @@ define Image/Build
+ endef
+ 
+ define Image/Build/jffs2-128k
+-	dd if=$(KDIR)/root.$(1) of=$(BIN_DIR)/$(IMG_PREFIX)-$(PROFILE)-$(1).img \
+-		bs=2048 conv=sync
++	( \
++		dd if=$(KDIR)/uImage bs=128k conv=sync; \
++		dd if=$(KDIR)/root.$(1) bs=128k conv=sync; \
++	) > $(BIN_DIR)/$(IMG_PREFIX)-$(PROFILE)-$(1).img
++	rm -f $(KDIR)/root.$(1)
+ endef
+ 
+ define Image/Build/squashfs
+-- 
+1.7.9.5
+

@@ -1,0 +1,37 @@
+From 3c0de953be3bcfa4ed4009daf2c6fa248afb7cea Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Sun, 16 Dec 2012 18:58:33 +0200
+Subject: [PATCH 363/609] PM: A370: Add deep idle SR support
+
+Change-Id: Ibfc8a2481d59fa9ea18201087e319220a11985ac
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/armada_suspend.S |   11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/arch/arm/plat-armada/armada_suspend.S b/arch/arm/plat-armada/armada_suspend.S
+index cf4bb2b..6d314d4 100644
+--- a/arch/arm/plat-armada/armada_suspend.S
++++ b/arch/arm/plat-armada/armada_suspend.S
+@@ -76,6 +76,17 @@ ENTRY(armadaxp_cpu_suspend)
+ 
+ 	bl armadaxp_snoop_dis_virt
+ 
++#ifdef CONFIG_ARMADA_DEEP_IDLE_SUPPORT_DRAM_SR
++	ldr	r3, =(INTER_REGS_BASE + 0x1418)
++	ldr	r4, [r3]
++	orr	r4, r4, #0x7
++
++	dsb				@ Data Synchronization Barrier
++
++	.align 5
++	str	r4, [r3]		@ Self refresh command
++#endif
++
+ /*
+  * ===================================
+  * == WFI instruction => Enter idle ==
+-- 
+1.7.9.5
+

@@ -1,0 +1,66 @@
+From f7f3d3eb5ddc3978cda3ea0cc7d1a257b0f2bb26 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Sun, 16 Dec 2012 13:47:32 +0200
+Subject: [PATCH 365/609] Fix bug in internal registers address switching.
+
+Perform byte-swap before writing the registers in BE mode.
+
+Bug Fix: This patch should be merged into stable branch.
+
+Change-Id: I6fc6662c5d3ed8ad1d10fe653d83eaafc24f6de9
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/boot/compressed/head.S |   29 +++++++++++++++++------------
+ 1 file changed, 17 insertions(+), 12 deletions(-)
+
+diff --git a/arch/arm/boot/compressed/head.S b/arch/arm/boot/compressed/head.S
+index bf25225..ce9a3b6 100644
+--- a/arch/arm/boot/compressed/head.S
++++ b/arch/arm/boot/compressed/head.S
+@@ -122,17 +122,6 @@
+ 		.align
+ 		.arm				@ Always enter in ARM state
+ start:
+-#ifdef CONFIG_ARCH_ARMADA_XP
+-		/* Update Internal Regs offset in case UBoot is configured
+-		** to use a different base address.
+-		*/
+-		mrc p15, 4, r0, c15, c0, 0	@ Get the internal registers base address
+-		lsl r0, r0, #13			@ the address is R-shifted, need to recover it
+-		ldr r5, =0x20080
+-		add r0, r0, r5
+-		ldr r6, =INTER_REGS_PHYS_BASE
+-		str r6, [r0]
+-#endif
+ 		.type	start,#function
+ 		.rept	7
+ 		mov	r0, r0
+@@ -149,7 +138,23 @@ start:
+ 		.word	start			@ absolute load/run zImage address
+ 		.word	_edata			@ zImage end address
+  THUMB(		.thumb			)
+-1:		mov	r7, r1			@ save architecture ID
++1:
++#ifdef CONFIG_ARCH_ARMADA_XP
++		/* Update Internal Regs offset in case UBoot is configured
++		** to use a different base address.
++		*/
++		mrc p15, 4, r0, c15, c0, 0	@ Get the internal registers base address
++		lsl r0, r0, #13			@ the address is R-shifted, need to recover it
++		ldr r5, =0x20080
++		add r0, r0, r5
++		ldr r6, =INTER_REGS_PHYS_BASE
++#ifdef CONFIG_BE8_ON_LE
++		rev r6, r6
++#endif
++		str r6, [r0]
++#endif
++
++		mov	r7, r1			@ save architecture ID
+ 		mov	r8, r2			@ save atags pointer
+ 
+ #ifndef __ARM_ARCH_2__
+-- 
+1.7.9.5
+

@@ -1,0 +1,30 @@
+Index: openswan-2.6.38/programs/pluto/Makefile
+===================================================================
+--- openswan-2.6.38.orig/programs/pluto/Makefile	2012-03-23 22:33:43.000000000 +0100
++++ openswan-2.6.38/programs/pluto/Makefile	2012-08-14 15:17:29.000000000 +0200
+@@ -58,10 +58,6 @@
+ 
+ ALLFLAGS = $(CPPFLAGS) $(CFLAGS) ${CROSSFLAGS}
+ 
+-ifneq ($(LD_LIBRARY_PATH),)
+-LDFLAGS+=-L$(LD_LIBRARY_PATH)
+-endif
+-
+ LIBSADNS = $(OPENSWANLIB)
+ LIBSADNS += -lresolv # -lefence
+ 
+Index: openswan-2.6.38/programs/Makefile.program
+===================================================================
+--- openswan-2.6.38.orig/programs/Makefile.program	2012-08-14 15:17:32.000000000 +0200
++++ openswan-2.6.38/programs/Makefile.program	2012-08-14 15:17:38.000000000 +0200
+@@ -55,10 +55,6 @@
+ 
+ CFLAGS+= ${WERROR}
+ 
+-ifneq ($(LD_LIBRARY_PATH),)
+-LDFLAGS=-L$(LD_LIBRARY_PATH)
+-endif
+-
+ ifeq ($(USE_DMALLOC),true)
+ CFLAGS+=-DDMALLOC
+ LIBS+= -ldmalloc

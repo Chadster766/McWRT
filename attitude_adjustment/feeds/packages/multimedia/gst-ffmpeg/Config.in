@@ -1,0 +1,269 @@
+menu "Configuration"
+	depends PACKAGE_gst-ffmpeg
+
+config GST_FFMPEG_IPV6
+	bool "Enable IPv6"
+	default IPV6
+
+config GST_FFMPEG_PATENTED
+	bool "Include patented codecs and technologies"
+	default BUILD_PATENTED
+
+config GET_FFMPEG_LIBDLNA_SUPPORT
+	bool "Include support for libdlna/ushare"
+	depends GST_FFMPEG_PATENTED
+	select GST_FFMPEG_DECODER_ac3
+	select GST_FFMPEG_DECODER_atrac3
+	select GST_FFMPEG_DECODER_h264
+	select GST_FFMPEG_DECODER_jpegls
+	select GST_FFMPEG_DECODER_mp3
+	select GST_FFMPEG_DECODER_mpeg1video
+	select GST_FFMPEG_DECODER_mpeg2video
+	select GST_FFMPEG_DECODER_mpeg4
+	select GST_FFMPEG_DECODER_mpeg4aac
+	select GST_FFMPEG_DECODER_mpegvideo
+	select GST_FFMPEG_DECODER_wmav1
+	select GST_FFMPEG_DECODER_wmav2
+	select GST_FFMPEG_DECODER_png
+	select GST_FFMPEG_DEMUXER_ac3
+	select GST_FFMPEG_DEMUXER_h264
+	select GST_FFMPEG_DEMUXER_mp3
+	select GST_FFMPEG_DEMUXER_mpegvideo
+
+comment "Encoders ---"
+
+config GST_FFMPEG_ENCODER_ac3
+	bool "AC3"
+	depends GST_FFMPEG_PATENTED
+	select GST_FFMPEG_PARSER_ac3
+
+config GST_FFMPEG_ENCODER_jpegls
+	bool "JPEG-LS"
+
+config GST_FFMPEG_ENCODER_mpeg1video
+	bool "MPEG-1 Video"
+
+config GST_FFMPEG_ENCODER_mpeg2video
+	bool "MPEG-2 Video"
+	depends GST_FFMPEG_PATENTED
+
+config GST_FFMPEG_ENCODER_mpeg4
+	bool "MPEG-4"
+	depends GST_FFMPEG_PATENTED
+
+config GST_FFMPEG_ENCODER_pcm_s16be
+	bool "PCM signed 16-bit big-endian"
+
+config GST_FFMPEG_ENCODER_pcm_s16le
+	bool "PCM signed 16-bit little-endian"
+
+config GST_FFMPEG_ENCODER_png
+	bool "PNG"
+	select GST_FFMPEG_ENCODER_zlib
+
+config GST_FFMPEG_ENCODER_vorbis
+	bool "Vorbis"
+
+config GST_FFMPEG_ENCODER_zlib
+	bool "Zlib"
+
+comment "Decoders ---"
+
+config GST_FFMPEG_DECODER_aac
+	bool "AAC (Advanced Audio Coding)"
+	depends GST_FFMPEG_PATENTED
+	select GST_FFMPEG_PARSER_aac
+
+config GST_FFMPEG_DECODER_ac3
+	bool "AC3"
+	depends GST_FFMPEG_PATENTED
+	select GST_FFMPEG_PARSER_ac3
+
+config GST_FFMPEG_DECODER_atrac3
+	bool "ATRAC3"
+	depends GST_FFMPEG_PATENTED
+
+config GST_FFMPEG_DECODER_gif
+	bool "GIF"
+
+config GST_FFMPEG_DECODER_h264
+	bool "H.264"
+	depends GST_FFMPEG_PATENTED
+
+config GST_FFMPEG_DECODER_jpegls
+	bool "JPEG-LS"
+
+config GST_FFMPEG_DECODER_mp2
+	bool "MP2 (MPEG Audio Layer 2)"
+	depends GST_FFMPEG_PATENTED
+
+config GST_FFMPEG_DECODER_mp3
+	bool "MP3 (MPEG Audio Layer 2)"
+	depends GST_FFMPEG_PATENTED
+
+config GST_FFMPEG_DECODER_mpegvideo
+	bool "MPEG Video"
+
+config GST_FFMPEG_DECODER_mpeg1video
+	bool "MPEG-1 Video"
+
+config GST_FFMPEG_DECODER_mpeg2video
+	bool "MPEG-2 Video"
+	depends GST_FFMPEG_PATENTED
+
+config GST_FFMPEG_DECODER_mpeg4
+	bool "MPEG-4"
+	depends GST_FFMPEG_PATENTED
+
+config GST_FFMPEG_DECODER_mpeg4aac
+	bool "MPEG-4 (AAC)"
+	depends GST_FFMPEG_PATENTED
+
+config GST_FFMPEG_DECODER_pcm_s16be
+	bool "PCM signed 16-bit big-endian"
+
+config GST_FFMPEG_DECODER_pcm_s16le
+	bool "PCM signed 16-bit little-endian"
+
+config GST_FFMPEG_DECODER_png
+	bool "PNG"
+	select GST_FFMPEG_DECODER_zlib
+
+config GST_FFMPEG_DECODER_vorbis
+	bool "Vorbis"
+
+config GST_FFMPEG_DECODER_wmav1
+	bool "WMAv1"
+	depends GST_FFMPEG_PATENTED
+
+config GST_FFMPEG_DECODER_wmav2
+	bool "WMAv2"
+	depends GST_FFMPEG_PATENTED
+
+config GST_FFMPEG_DECODER_zlib
+	bool "Zlib"
+
+comment "Muxers ---"
+
+config GST_FFMPEG_MUXER_ac3
+	bool "AC3"
+	depends GST_FFMPEG_PATENTED
+
+config GST_FFMPEG_MUXER_ffm
+	bool "FFM (ffserver live feed)"
+
+config GST_FFMPEG_MUXER_h264
+	bool "H.264"
+	depends GST_FFMPEG_PATENTED
+
+config GST_FFMPEG_MUXER_mp3
+	bool "MP3 (MPEG Audio Layer 3)"
+
+config GST_FFMPEG_MUXER_mp4
+	bool "MP4"
+
+config GST_FFMPEG_MUXER_mpeg1video
+	bool "MPEG-1 Video"
+
+config GST_FFMPEG_MUXER_mpeg2video
+	bool "MPEG-2 Video"
+
+config GST_FFMPEG_MUXER_mpegts
+	bool "MPEG-2 (TS)"
+
+config GST_FFMPEG_MUXER_ogg
+	bool "Ogg"
+
+config GST_FFMPEG_MUXER_oss
+	bool "OSS (Open Sound System playback)"
+
+config GST_FFMPEG_MUXER_rtp
+	bool "RTP"
+
+comment "Demuxers ---"
+
+config GST_FFMPEG_DEMUXER_ac3
+	bool "AC3"
+
+config GST_FFMPEG_DEMUXER_ffm
+	bool "FFM (ffserver live feed)"
+
+config GST_FFMPEG_DEMUXER_h264
+	bool "H.264"
+	depends FFMPEG_PATENTED
+
+config GST_FFMPEG_DEMUXER_mp3
+	bool "MP3 (MPEG Audio Layer 3)"
+
+config GST_FFMPEG_DEMUXER_mpegvideo
+	bool "MPEG Video"
+
+config GST_FFMPEG_DEMUXER_mpegps
+	bool "MPEG-2 (PS)"
+
+config GST_FFMPEG_DEMUXER_mpegts
+	bool "MPEG-2 (TS)"
+
+config GST_FFMPEG_DEMUXER_ogg
+	bool "Ogg"
+
+config GST_FFMPEG_DEMUXER_rm
+	bool "RM"
+	help
+	  RealMedia format demuxer
+
+config GST_FFMPEG_DEMUXER_rtsp
+	bool "RTSP"
+	select GST_FFMPEG_DEMUXER_rm
+	select GST_FFMPEG_DEMUXER_sdp
+
+config GST_FFMPEG_DEMUXER_sdp
+	bool "SDP"
+	select GST_FFMPEG_DEMUXER_mpegts
+
+comment "Parsers ---"
+
+config GST_FFMPEG_PARSER_aac
+	bool "AAC (Advanced Audio Coding)"
+	depends GST_FFMPEG_PATENTED
+
+config GST_FFMPEG_PARSER_ac3
+	bool "AC3"
+
+config GST_FFMPEG_PARSER_h264
+	bool "H.264"
+	depends GST_FFMPEG_PATENTED
+	select GST_FFMPEG_DECODER_h264
+
+config GST_FFMPEG_PARSER_mpegaudio
+	bool "MPEG Audio"
+
+config GST_FFMPEG_PARSER_mpegvideo
+	bool "MPEG Video"
+
+config GST_FFMPEG_PARSER_mpeg4video
+	bool "MPEG-4 Video"
+
+comment "Protocols ---"
+
+config GST_FFMPEG_PROTOCOL_file
+	bool "file:"
+
+config GST_FFMPEG_PROTOCOL_http
+	bool "http:"
+
+config GST_FFMPEG_PROTOCOL_pipe
+	bool "pipe:"
+
+config GST_FFMPEG_PROTOCOL_rtp
+	bool "rtp:"
+	select GST_FFMPEG_PROTOCOL_udp
+
+config GST_FFMPEG_PROTOCOL_tcp
+	bool "tcp:"
+
+config GST_FFMPEG_PROTOCOL_udp
+	bool "udp:"
+
+endmenu
+

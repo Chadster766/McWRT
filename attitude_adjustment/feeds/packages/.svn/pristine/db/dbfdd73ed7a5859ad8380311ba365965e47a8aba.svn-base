@@ -1,0 +1,70 @@
+--- a/Makefile
++++ b/Makefile
+@@ -158,7 +158,7 @@ CFLAGS=			-I. -Iusl -Icli -isystem inclu
+ 				$(CPPFLAGS) $(CPPFLAGS.dmalloc) \
+ 				-DSYS_LIBDIR=$(SYS_LIBDIR)
+ LDFLAGS.l2tpd=		-Wl,-E -L. -Lusl -lusl -ldl $(LIBS.dmalloc) -lc
+-LDFLAGS.l2tpconfig=	-Lcli -lcli -lreadline $(LIBS.dmalloc) $(READLINE_LDFLAGS) -lc
++LDFLAGS.l2tpconfig=	-Lcli -lcli -lreadline -lncurses $(LIBS.dmalloc) $(READLINE_LDFLAGS) -lc
+ 
+ OPT_CFLAGS?=		-O
+ 
+@@ -185,11 +185,11 @@ RPCGENFLAGS=		-N -M -C -L
+ 
+ .PHONY:			all clean distclean install daemon app test
+ 
+-all:			generated-files daemon $(APP)
++all:			daemon $(APP)
+ 
+-daemon:			generated-files $(SUBDIRS:%=subdir-%) openl2tpd
++daemon:			$(SUBDIRS:%=subdir-%) openl2tpd
+ 
+-app:			generated-files l2tpconfig
++app:			l2tpconfig
+ 
+ test:			subdir-test
+ 			$(MAKE) -C $@ $(MFLAGS) $@
+@@ -197,7 +197,7 @@ test:			subdir-test
+ 
+ .PHONY:			$(SUBDIRS:%=subdir-%)
+ 
+-$(SUBDIRS:%=subdir-%):	FORCE
++$(SUBDIRS:%=subdir-%):	FORCE generated-files
+ 			$(MAKE) -C $(@:subdir-%=%) $(MFLAGS) EXTRA_CFLAGS="$(CPPFLAGS)"
+ 
+ ifeq ($(L2TP_FEATURE_LOCAL_CONF_FILE),y)
+@@ -212,10 +212,10 @@ LDFLAGS.l2tpd+=		-lfl
+ 			$(YACC) -d -o l2tp_config_parse.c $<
+ 
+ l2tp_config_token.o:	l2tp_config_token.c
+-			$(CC) -I. -MMD -w $(CFLAGS.optimize) -c -DYY_NO_UNPUT $<
++			$(CC) -I. -MMD -w $(CFLAGS.optimize) -c $(CPPFLAGS) -DYY_NO_UNPUT $<
+ 
+ l2tp_config_parse.o:	l2tp_config_parse.c l2tp_config_parse.h
+-			$(CC) -I. -MMD -w $(CFLAGS.optimize) -c -DYY_NO_UNPUT $<
++			$(CC) -I. -MMD -w $(CFLAGS.optimize) -c $(CPPFLAGS) -DYY_NO_UNPUT $<
+ endif
+ 
+ # Compile without -Wall because rpcgen-generated code is full of warnings.
+@@ -265,9 +265,13 @@ TAGS:
+ 			@for d in $(SUBDIRS); do $(MAKE) -C $$d $(MFLAGS) $@; done
+ 			etags $(wildcard *.c) $(wildcard *.h)
+ 
++$(L2TPD_SRCS.o):	generated-files
++
+ openl2tpd:		$(L2TPD_SRCS.o)
+ 			$(CC) -o $@ $^ $(LDFLAGS.l2tpd)
+ 
++$(L2TPCONFIG_SRCS.o):	generated-files
++
+ l2tpconfig:		$(L2TPCONFIG_SRCS.o)
+ 			$(CC) -o $@ $^ $(LDFLAGS.l2tpconfig)
+ 
+@@ -317,6 +321,7 @@ endif
+ 	else \
+ 		mv $@.tmp $@ ;\
+ 	fi
++	@echo '$@ generated.'
+ 
+ .PHONY:			all install-all install-daemon install-app
+ 

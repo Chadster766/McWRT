@@ -1,0 +1,59 @@
+From 0a544ea61dc368b507b96037e1f331a12dce80a9 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 3 Jan 2013 11:44:55 +0200
+Subject: [PATCH 386/609] Bug fix: Fixed UP boot failure
+
+	When enabling IO cache coherency the SMP/AMP bit
+	in the CP15 control register must also be set.
+	This patch turns this bit on in case IOCC is active
+	regardless of SMP/UP mode. It also cleans some mess regarding
+	the bit in the proc file.
+
+	Bug fix: Please integrate to QA release
+
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+
+Change-Id: I97a5438175021fd81fe468e615b8ac4b9532a6ba
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mm/proc-sheeva_pj4bv7.S |   17 ++---------------
+ 1 file changed, 2 insertions(+), 15 deletions(-)
+
+diff --git a/arch/arm/mm/proc-sheeva_pj4bv7.S b/arch/arm/mm/proc-sheeva_pj4bv7.S
+index e45b771..a3639d1 100644
+--- a/arch/arm/mm/proc-sheeva_pj4bv7.S
++++ b/arch/arm/mm/proc-sheeva_pj4bv7.S
+@@ -377,20 +377,6 @@ ENDPROC(cpu_v7_do_resume)
+ __pj4bv7_setup:
+ 	sheeva_pj4b_config
+ 
+-#if 0
+-@ CURRENTLY NOT SUPPORTED 
+-defined(CONFIG_SMP)
+-	mrc	p15, 0, r0, c1, c0, 1		@ Enable SMP/nAMP mode
+-	orr	r0, r0, #0x20
+-	mcr	p15, 0, r0, c1, c0, 1
+-#if 1
+-	mrc 	p15, 1, r0, c15, c2, 0
+-	orr	r0, r0, #0x2			@ SMP enable 
+-	mcr 	p15, 1, r0, c15, c2, 0
+-#endif
+-#endif
+-
+-
+ #if defined(CONFIG_ARMADA_XP_REV_A0) || defined(CONFIG_ARMADA_XP_REV_B0)
+ 
+ #ifdef CONFIG_ARMADA_XP_A0_WITH_B0
+@@ -428,7 +414,8 @@ defined(CONFIG_SMP)
+ 	
+ /* Auxiliary Functional Modes Control Register 0 */
+ 	mrc        p15, 1, r0, c15, c2, 0                         /* Read */
+-#ifdef CONFIG_SMP
++#if defined(CONFIG_SMP) || (defined(CONFIG_AURORA_IO_CACHE_COHERENCY) && \
++			    defined(CONFIG_ARCH_ARMADA_XP))
+ 	orr          r0, r0, #0x00002                                /* BIT1 SMP/nAMP --> '1' taking part in coherency */
+ #endif
+ 	orr     r0, r0, #0x00004                                /* BIT2 L1 parity --> '1' Enabled */
+-- 
+1.7.9.5
+

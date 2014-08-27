@@ -1,0 +1,45 @@
+From c0ea6daa24d03d0df3f9118b85980e637a0d958d Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Mon, 30 Jan 2012 17:28:46 +0200
+Subject: [PATCH 099/609] DSMP changes on top of 2.0.3 to fix BE8
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/include/mach/entry-macro.S |   10 ++++------
+ 1 file changed, 4 insertions(+), 6 deletions(-)
+ mode change 100644 => 100755 arch/arm/mach-armadaxp/include/mach/entry-macro.S
+
+diff --git a/arch/arm/mach-armadaxp/include/mach/entry-macro.S b/arch/arm/mach-armadaxp/include/mach/entry-macro.S
+old mode 100644
+new mode 100755
+index 1ebac5a..bcb34c4
+--- a/arch/arm/mach-armadaxp/include/mach/entry-macro.S
++++ b/arch/arm/mach-armadaxp/include/mach/entry-macro.S
+@@ -22,11 +22,8 @@
+ #ifndef CONFIG_ARMADAXP_USE_IRQ_INTERRUPT_ACK
+ 
+ #if defined(CONFIG_CPU_BIG_ENDIAN)
+-        	.macro	HTOLL sr, tt		@ sr   = A  ,B  ,C  ,D    
+-        	eor \tt, \sr, \sr, ror #16 ;    @ temp = A^C,B^	  
+-        	bic \tt, \tt, #0xff0000 ;       @ temp = A^C,0  ,C^A,D^B
+-        	mov \sr, \sr, ror #8 ;          @ sr   = D  ,A  ,B  ,C
+-        	eor \sr, \sr, \tt, lsr #8       @ sr   = D  ,C  ,B  ,A
++		.macro	HTOLL sr, tt		@ sr   = A  ,B  ,C  ,D
++		rev \sr, \sr
+         	.endm
+ #else		
+         	.macro	HTOLL sr, tt	
+@@ -92,8 +89,9 @@
+ 	sub	\irqnr, \tmp, \irqnr
+ 	mov     \tmp, #1
+ 	lsl     \tmp, \irqnr
++	HTOLL 	\tmp, \tmp
+ 	mvn     \tmp, \tmp
+-	strh   	\tmp, [\base, #AXP_IN_DOORBELL_CAUSE]	@ clean irq
++	str   	\tmp, [\base, #AXP_IN_DOORBELL_CAUSE]	@ clean irq
+ 1002:
+ 	.endm
+ 
+-- 
+1.7.9.5
+

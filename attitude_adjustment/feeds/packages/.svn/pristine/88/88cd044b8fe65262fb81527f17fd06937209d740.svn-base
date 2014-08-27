@@ -1,0 +1,101 @@
+diff -ur linuxigd-1.0.orig/iptc.c linuxigd-1.0/iptc.c
+--- linuxigd-1.0.orig/iptc.c	2009-05-05 14:01:59.000000000 +0200
++++ linuxigd-1.0/iptc.c	2009-05-05 14:05:48.000000000 +0200
+@@ -7,16 +7,24 @@
+ #include <iptables.h>
+ #include <libiptc/libiptc.h>
+ #include <linux/version.h>
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,22)
+-#include <linux/netfilter/nf_nat.h>
++#ifdef IPTABLES_143
++#  include <net/netfilter/nf_nat.h>
++#  define ip_nat_multi_range nf_nat_multi_range_compat
++#  define ip_nat_range nf_nat_range
+ #else
+-#include <linux/netfilter_ipv4/ip_nat.h>
++#  if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,22)
++#    include <linux/netfilter/nf_nat.h>
++#  else
++#    include <linux/netfilter_ipv4/ip_nat.h>
++#  endif
+ #endif
+ #include <arpa/inet.h> /* inet_addr */
+ #include "globals.h"
+ #include "util.h"
+ #include "iptc.h"
+ 
++#define IPTC_HANDLE struct iptc_handle *
++
+ struct ipt_natinfo
+ {
+ 	struct ipt_entry_target t;
+@@ -49,7 +57,7 @@
+                    const char *dnat_to,
+                    const int append)
+ {
+-	iptc_handle_t handle;
++	IPTC_HANDLE handle;
+ 	struct ipt_entry *chain_entry;
+ 	struct ipt_entry_match *entry_match = NULL;
+ 	struct ipt_entry_target *entry_target = NULL;
+@@ -126,15 +134,15 @@
+ 		return;
+ 	}
+ 	if (append)
+-		result = iptc_append_entry(labelit, chain_entry, &handle);
++		result = iptc_append_entry(labelit, chain_entry, handle);
+ 	else
+-		result = iptc_insert_entry(labelit, chain_entry, 0, &handle);
++		result = iptc_insert_entry(labelit, chain_entry, 0, handle);
+ 
+ 	if (!result) {
+ 		trace(1, "libiptc error: Can't add, %s", iptc_strerror(errno));
+ 		return;
+ 	}
+-	result = iptc_commit(&handle);
++	result = iptc_commit(handle);
+ 	if (!result) {
+ 	  trace(1, "libiptc error: Commit error, %s", iptc_strerror(errno));
+ 		return;
+@@ -159,7 +167,7 @@
+                       const char *target,
+                       const char *dnat_to)
+ {
+-	iptc_handle_t handle;
++	IPTC_HANDLE handle;
+ 	const struct ipt_entry *e;
+ 	ipt_chainlabel labelit;
+ 	int i, result;
+@@ -182,7 +190,7 @@
+ 	}
+ 	
+ 	/* check through rules to find match */
+-	for (e = iptc_first_rule(chain, &handle), i=0; e; e = iptc_next_rule(e, &handle), i++)  {
++	for (e = iptc_first_rule(chain, handle), i=0; e; e = iptc_next_rule(e, handle), i++)  {
+ 		if (s_src != INADDR_NONE && e->ip.src.s_addr != s_src) continue;
+ 		if (s_dest != INADDR_NONE && e->ip.dst.s_addr != s_dest) continue;
+ 		if (iniface && strcmp(e->ip.iniface, iniface) != 0) continue;
+@@ -190,7 +198,7 @@
+ 		if (protocol && strcmp(protocol, "TCP") == 0 && e->ip.proto != IPPROTO_TCP) continue;
+ 		if (protocol && strcmp(protocol, "UDP") == 0 && e->ip.proto != IPPROTO_UDP) continue;
+ 		if ((srcports || destports) && IPT_MATCH_ITERATE(e, matchcmp, srcports, destports) == 0) continue;
+-		if (target && strcmp(target, iptc_get_target(e, &handle)) != 0) continue;
++		if (target && strcmp(target, iptc_get_target(e, handle)) != 0) continue;
+ 		if (dnat_to && strcmp(target, "DNAT") == 0) {
+ 			struct ipt_entry_target *t;
+ 			struct ip_nat_multi_range *mr;
+@@ -214,12 +222,12 @@
+ 		break;
+ 	}
+ 	if (!e) return;
+-	result = iptc_delete_num_entry(chain, i, &handle);
++	result = iptc_delete_num_entry(chain, i, handle);
+ 	if (!result) {
+ 	  trace(1, "libiptc error: Delete error, %s", iptc_strerror(errno));
+ 		return;
+ 	}
+-	result = iptc_commit(&handle);
++	result = iptc_commit(handle);
+ 	if (!result) {
+ 	  trace(1, "libiptc error: Commit error, %s", iptc_strerror(errno));
+ 		return;

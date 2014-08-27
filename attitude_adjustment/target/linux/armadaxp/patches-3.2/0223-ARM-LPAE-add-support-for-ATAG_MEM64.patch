@@ -1,0 +1,69 @@
+From 5045150d2541ee3a5d68faa110d69ae4919a8ff6 Mon Sep 17 00:00:00 2001
+From: Will Deacon <will.deacon@arm.com>
+Date: Mon, 31 Jan 2011 13:50:46 +0000
+Subject: [PATCH 223/609] ARM: LPAE: add support for ATAG_MEM64
+
+LPAE provides support for memory banks with physical addresses of up
+to 40 bits.
+
+This patch adds a new atag, ATAG_MEM64, so that the Kernel can be
+informed about memory that exists above the 4GB boundary.
+
+Signed-off-by: Will Deacon <will.deacon@arm.com>
+Signed-off-by: Catalin Marinas <catalin.marinas@arm.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/include/asm/setup.h |    8 ++++++++
+ arch/arm/kernel/setup.c      |   10 ++++++++++
+ 2 files changed, 18 insertions(+)
+
+diff --git a/arch/arm/include/asm/setup.h b/arch/arm/include/asm/setup.h
+index 1e9dfdf..b477411 100644
+--- a/arch/arm/include/asm/setup.h
++++ b/arch/arm/include/asm/setup.h
+@@ -43,6 +43,13 @@ struct tag_mem32 {
+ 	__u32	start;	/* physical start address */
+ };
+ 
++#define ATAG_MEM64	0x54420002
++
++struct tag_mem64 {
++	__u64	size;
++	__u64	start;	/* physical start address */
++};
++
+ /* VGA text type displays */
+ #define ATAG_VIDEOTEXT	0x54410003
+ 
+@@ -163,6 +170,7 @@ struct tag {
+ 	union {
+ 		struct tag_core		core;
+ 		struct tag_mem32	mem;
++		struct tag_mem64	mem64;
+ 		struct tag_videotext	videotext;
+ 		struct tag_ramdisk	ramdisk;
+ 		struct tag_initrd	initrd;
+diff --git a/arch/arm/kernel/setup.c b/arch/arm/kernel/setup.c
+index 7d26ee9..a120050 100644
+--- a/arch/arm/kernel/setup.c
++++ b/arch/arm/kernel/setup.c
+@@ -640,6 +640,16 @@ static int __init parse_tag_mem32(const struct tag *tag)
+ 
+ __tagtable(ATAG_MEM, parse_tag_mem32);
+ 
++#ifdef CONFIG_PHYS_ADDR_T_64BIT
++static int __init parse_tag_mem64(const struct tag *tag)
++{
++	/* We only use 32-bits for the size. */
++	return arm_add_memory(tag->u.mem64.start, (unsigned long)tag->u.mem64.size);
++}
++
++__tagtable(ATAG_MEM64, parse_tag_mem64);
++#endif /* CONFIG_PHYS_ADDR_T_64BIT */
++
+ #if defined(CONFIG_VGA_CONSOLE) || defined(CONFIG_DUMMY_CONSOLE)
+ struct screen_info screen_info = {
+  .orig_video_lines	= 30,
+-- 
+1.7.9.5
+

@@ -1,0 +1,45 @@
+#!/bin/sh
+
+# Copyright (C) 2006-2010 OpenWrt.org
+# Copyright (C) 2010 Vertical Communications
+SYSCFG_UBIFS_MNT=/tmp/syscfg
+
+skip_if_rootfs_mounted() {
+	mtdpart_idx="$(echo $mtdpart | tr -d "/dev/mtdblock")"
+	overlay_mountpoint=/overlay
+	recover_ubifs=0
+
+	[ ! -e /dev/ubi0 ] && ubiattach -m $mtdpart_idx /dev/ubi_ctrl || recover_ubifs=1
+	if [ $recover_ubifs -eq 0 ]
+	then
+		ubi0_nod_id=`cat /sys/class/ubi/ubi0/dev | tr -s ":" " "`
+		[ ! -e /dev/ubi0 ] && mknod /dev/ubi0 c ${ubi0_nod_id}
+		if [ ! -e /sys/class/ubi/ubi0_0/dev ]
+		then
+			# no volume
+			recover_ubifs=1
+		else
+			# check for "syscfg" volume
+			ubi0_0_nod_id=`cat /sys/class/ubi/ubi0_0/dev | tr -s ":" " "`
+			[ ! -e /dev/ubi0_0 ] && mknod /dev/ubi0_0 c ${ubi0_0_nod_id}
+			{ ubinfo /dev/ubi0_0 | grep Name  | grep -qs "syscfg" ; } || \
+			recover_ubifs=1
+		fi
+	fi
+	if [ $recover_ubifs -eq 1 ]
+	then
+		echo "ubifs syscfg partition is damaged"
+		echo "try to recover by formatting $mtdpart..."
+		[ -e /dev/ubi0 ] && ubidetach -m $mtdpart_idx
+		ubiformat -y -q /dev/mtd$mtdpart_idx
+		ubiattach -m $mtdpart_idx /dev/ubi_ctrl
+		ubi0_nod_id=`cat /sys/class/ubi/ubi0/dev | tr -s ":" " "`
+		[ ! -e /dev/ubi0 ] && mknod /dev/ubi0 c ${ubi0_nod_id}
+		ubimkvol /dev/ubi0 -n 0 -N syscfg -t dynamic --maxavsize
+	fi
+	# finally mount the ubifs
+	[ ! -e $SYSCFG_UBIFS_MNT ] && mkdir -p $SYSCFG_UBIFS_MNT
+	mount -t ubifs -o noatime ubi0:syscfg $SYSCFG_UBIFS_MNT || return 1
+	[ ! -d $SYSCFG_UBIFS_MNT/openwrt_overlay ] && mkdir -p $SYSCFG_UBIFS_MNT/openwrt_overlay
+	mount -o bind $SYSCFG_UBIFS_MNT/openwrt_overlay $overlay_mountpoint
+}

@@ -1,0 +1,19 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2012 OpenWrt.org
+
+START=50
+
+SERVICE_USE_PID=1
+SERVICE_PID_FILE=/var/run/chilli.pid
+
+start() {
+	. /lib/functions/network.sh
+
+	local ipaddr
+	network_get_ipaddr ipaddr lan && \
+		service_start /usr/sbin/chilli --dns1="$ipaddr"
+}
+
+stop() {
+	service_stop /usr/sbin/chilli
+}

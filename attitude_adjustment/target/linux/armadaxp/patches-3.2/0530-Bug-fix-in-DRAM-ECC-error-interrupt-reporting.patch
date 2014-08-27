@@ -1,0 +1,68 @@
+From bab54ee68c473c7ae6a020711cfbcf5c89766747 Mon Sep 17 00:00:00 2001
+From: Igor Patrik <igorp@marvell.com>
+Date: Tue, 19 Feb 2013 14:46:14 +0200
+Subject: [PATCH 530/609] Bug fix in DRAM ECC error interrupt reporting.
+
+Bug fix should be merged to q1 branch.
+
+Change-Id: I332fbe231f0bdf631bd2e24dca9450c4f4285e65
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1160
+Reviewed-by: Star_Automation <star@marvell.com>
+Reviewed-by: Tawfik Bayouk <tawfik@marvell.com>
+Tested-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../plat-armada/mv_drivers_lsp/mv_error/mv_error.c |   14 +++++++-------
+ 1 file changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_error/mv_error.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_error/mv_error.c
+index a846ccb..b8d00c1 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_error/mv_error.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_error/mv_error.c
+@@ -77,6 +77,7 @@ static int listener_pid;
+ #define DDR_INTR_ERROR_CAUSE        0x014D0
+ #define DDR_INTR_ERROR_MASK         0x014D4
+ #define DDR_INTR_ERROR_ADDR         0x01450
++#define DDR_INTR_ERROR_MASK_ECC     0x3
+ #endif /*CONFIG_ERROR_HANDLING_DRAM_ECC */
+ 
+ struct axp_error_info_struct axp_error_info;
+@@ -316,6 +317,9 @@ static int armadaxp_error_event(struct notifier_block *this,
+ 	    mbus_error == 1 ? 0x20A20 : 0x20258;
+ 	/*Send Netlink message */
+ 	nl_send_msg(&nl_message, sizeof(nl_message));
++	/*unmask the interrupts*/
++	writel(DDR_INTR_ERROR_MASK_ECC,
++		(INTER_REGS_BASE | DDR_INTR_ERROR_MASK));
+ #endif
+ 
+ 	return NOTIFY_DONE;
+@@ -390,11 +394,6 @@ static int __init errorhandling_notification_setup(void)
+ 		return err;
+ 	}
+ 
+-#ifdef CONFIG_ERROR_HANDLING_DRAM_ECC
+-/*Enable the main mask of the interrupt*/
+-	writel(0x1100000F, INTER_REGS_BASE | 0x20b10);
+-#endif
+-
+ 	/*setup the axp_error_info struct */
+ 	axp_error_info.head = 0;
+ 	axp_error_info.tail = 0;
+@@ -412,10 +411,11 @@ static int __init errorhandling_notification_setup(void)
+ 
+ #ifdef CONFIG_ERROR_HANDLING_DRAM_ECC
+ 	/*Register DRAM ECC error handler */
+-	IO_error_register(0x3, DDR_INTR_ERROR_CAUSE, DDR_INTR_ERROR_MASK, 0x9);
++	IO_error_register(DDR_INTR_ERROR_MASK_ECC,
++		DDR_INTR_ERROR_CAUSE, DDR_INTR_ERROR_MASK, 0x9);
+ #endif
+ 
+-	printk("ARMADA XP error handling module was loaded \n");
++	printk(KERN_INFO "ARMADA XP error handling module was loaded\n");
+ 	return 0;
+ }
+ 
+-- 
+1.7.9.5
+

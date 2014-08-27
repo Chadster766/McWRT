@@ -1,0 +1,29 @@
+From 9881efd7a0b9025d6f030f4b33d82a79c545c674 Mon Sep 17 00:00:00 2001
+From: Raymond Huang <rhuang@marvell.com>
+Date: Mon, 6 Feb 2012 15:17:30 +0800
+Subject: [PATCH 230/609] fix the bug that SMP is not properly initialized in
+ LPAE mode
+
+Change-Id: I43ec1f9d91571731999d87bf19d01482ca5307b5
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mm/proc-sheeva_pj4bv7lpae.S |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/mm/proc-sheeva_pj4bv7lpae.S b/arch/arm/mm/proc-sheeva_pj4bv7lpae.S
+index f7f8117..0355a8b 100644
+--- a/arch/arm/mm/proc-sheeva_pj4bv7lpae.S
++++ b/arch/arm/mm/proc-sheeva_pj4bv7lpae.S
+@@ -452,7 +452,7 @@ __v7_proc_info:
+ 		PMD_SECT_AP_WRITE | \
+ 		PMD_SECT_AP_READ | \
+ 		PMD_SECT_AF
+-	W(b)	__v7_setup
++	W(b)	__pj4bv7_setup
+ 	.long	cpu_arch_name
+ 	.long	cpu_elf_name
+ 	.long	HWCAP_SWP|HWCAP_HALF|HWCAP_THUMB|HWCAP_FAST_MULT|HWCAP_EDSP|HWCAP_TLS
+-- 
+1.7.9.5
+

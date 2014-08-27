@@ -1,0 +1,111 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2007-2011 OpenWrt.org
+# Copyright (C) 2007 RoadRunner.cx
+
+START=52
+
+SERVICE_DAEMONIZE=1
+SERVICE_WRITE_PID=1
+
+genconf() {
+
+	[ -f /etc/config/gw6c ] || {
+		echo "You are missing configuration file /etc/config/gw6c"
+		return 1
+	}
+
+	config_load "gw6c"
+
+	config_get DISABLED basic disabled
+
+	[ "$DISABLED" == "1" ] && {
+		echo "You haven't edited your configuration file. Gateway6 is disabled."
+		return 1
+	}
+
+	config_get USERID basic userid
+	config_get PASSWORD basic passwd
+	config_get SERVER basic server
+	config_get AUTH_METHOD basic auth_method
+
+	config_get HOST_TYPE routing host_type
+	config_get PREFIX_LEN routing prefixlen
+	config_get IF_PREFIX routing ifprefix
+	config_get DNS_SERVER routing dns_server
+
+	config_get GW6C_CONF advanced gw6c_conf
+	config_get GW6C_DIR advanced gw6c_dir
+	config_get AUTO_RETRY advanced auto_retry
+	config_get RETRY_DELAY advanced retry_delay
+	config_get KEEPALIVE advanced keepalive
+	config_get KEEPALIVE_INTERVAL advanced interval
+	config_get TUNNEL_MODE advanced if_tunnel_mode
+	config_get IF_V6V4 advanced if_v6v4
+	config_get IF_V6UDPV4 advanced if_v6udpv4
+	config_get IF_V4V6 advanced if_v4v6
+	config_get CLIENT_V4 advanced client_v4
+	config_get CLIENT_V6 advanced client_v6
+	config_get TEMPLATE advanced template
+	config_get PROXY_CLIENT advanced proxy_client
+
+	config_get BROKER_LIST broker broker_list
+	config_get LAST_SERVER broker last_server
+	config_get ALWAYS_SAMESERV broker always_same_serv
+
+	config_get LOG_CONSOLE logging log_console
+	config_get LOG_STDERR logging log_stderr
+	config_get LOG_FILE logging log_file
+	config_get LOG_SYSLOG logging log_syslog
+	config_get LOG_FILENAME logging log_filename
+	config_get LOG_ROTATE logging log_rotation
+	config_get LOG_MAXSIZE logging log_maxsize
+	config_get SYSLOG_FACILITY logging syslog_facility
+
+	cat >$GW6C_CONF <<EOF
+userid=$USERID
+passwd=$PASSWORD
+server=$SERVER
+auth_method=$AUTH_METHOD
+host_type=$HOST_TYPE
+prefixlen=$PREFIX_LEN
+if_prefix=$IF_PREFIX
+dns_server=$DNS_SERVER
+gw6_dir=$GW6C_DIR
+auto_retry_connect=$AUTO_RETRY
+retry_delay=$RETRY_DELAY
+keepalive=$KEEPALIVE
+keepalive_interval=$KEEPALIVE_INTERVAL
+tunnel_mode=$TUNNEL_MODE
+if_tunnel_v6v4=$IF_V6V4
+if_tunnel_v6udpv4=$IF_V6UDPV4
+if_tunnel_v4v6=$IF_V4V6
+client_v4=$CLIENT_V4
+client_v6=$CLIENT_V6
+template=$TEMPLATE
+proxy_client=$PROXY_CLIENT
+broker_list=$BROKER_LIST
+last_server=$LAST_SERVER
+always_use_same_server=$ALWAYS_SAMESERV
+log_console=$LOG_CONSOLE
+log_stderr=$LOG_STDERR
+log_file=$LOG_FILE
+log_syslog=$LOG_SYSLOG
+log_filename=$LOG_FILENAME
+log_rotation=$LOG_ROTATE
+log_rotation_size=$LOG_MAXSIZE
+syslog_facility=$SYSLOG_FACILITY
+EOF
+}
+
+start() {
+	genconf
+	[ -n "$GW6C_CONF" ] || return 1
+	[ -f "$GW6C_CONF" ] || return 1
+	service_start /usr/sbin/gw6c -f "$GW6C_CONF"
+}
+
+stop() {
+	service_stop /usr/sbin/gw6c && {
+		echo 0 > /proc/sys/net/ipv6/conf/all/forwarding
+	}
+}

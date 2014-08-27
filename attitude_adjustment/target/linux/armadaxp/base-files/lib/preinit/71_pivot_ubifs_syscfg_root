@@ -1,0 +1,13 @@
+#!/bin/sh
+# Copyright (C) 2006-2010 OpenWrt.org
+# Copyright (C) 2010 Vertical Communications
+
+ubifs_syscfg_rootfs_pivot() {
+    check_ubifs_syscfg_skip || ubifs_syscfg_not_mounted || {
+	echo "switching to ubifs sysfs overlay"
+	mount -o move /tmp/overlay /overlay 2>&-
+	fopivot /overlay /rom && pi_mount_ubifs_sysfs_skip_next=true
+    }
+}
+
+boot_hook_add preinit_mount_root ubifs_syscfg_rootfs_pivot

@@ -1,0 +1,41 @@
+diff -urN xdd65.013007/Makefile xdd65.013007-new/Makefile
+--- xdd65.013007/Makefile	1970-01-01 07:00:00.000000000 +0700
++++ xdd65.013007-new/Makefile	2010-07-26 13:50:54.000000000 +0700
+@@ -0,0 +1,37 @@
++# XDD Makefile for Linux
++CFLAGS +=	-Os -pipe -fhonour-copts -DLINUX -D_GNU_SOURCE -D_LARGEFILE64_SOURCE
++SHELL =		/bin/sh
++PROJECT =	xdd
++OBJECTS =	xdd.o access_pattern.o barrier.o global_time.o initialization.o parse.o pclk.o read_after_write.o results.o sg.o ticker.o time_stamp.o verify.o
++HEADERS = 	xdd.h pclk.h ticker.h misc.h sg.h sg_err.h
++TSOBJECTS =	timeserver.o pclk.o ticker.o
++GTOBJECTS = gettime.o global_time.o pclk.o ticker.o
++
++all:	xdd timeserver gettime
++
++xdd:	$(OBJECTS) 
++	$(CC)  -o xdd $(CFLAGS) $(LDFLAGS) $(OBJECTS) -lpthread -v
++#	mv -f xdd bin/xdd.linux
++
++timeserver:	$(TSOBJECTS) 
++	$(CC)  -o timeserver $(CFLAGS) $(LDFLAGS) $(TSOBJECTS) -lpthread -v
++#	mv -f timeserver bin/timeserver.linux
++
++gettime:	$(GTOBJECTS) 
++	$(CC)  -o gettime $(CFLAGS) $(LDFLAGS) $(GTOBJECTS) -lpthread -v
++#	mv -f gettime bin/gettime.linux
++
++.c.o:
++	$(CC) $(CFLAGS) -o $@ -c $<
++
++dist:	clean
++	tar cf ../dist.tar .
++clean:
++	-rm -f xdd timeserver gettime a.out $(OBJECTS) $(TSOBJECTS) $(GTOBJECTS)
++
++install: all
++	mkdir -p $(DESTDIR)/usr/bin
++	cp -rv xdd $(DESTDIR)/usr/bin
++	cp -rv xdd timeserver gettime $(DESTDIR)/usr/bin
++
++	

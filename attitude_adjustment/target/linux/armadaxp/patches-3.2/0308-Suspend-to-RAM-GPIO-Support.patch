@@ -1,0 +1,182 @@
+From 18f9f0feae5ba459b17c76e08321aaadb549488b Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 23 Sep 2012 17:23:25 +0200
+Subject: [PATCH 308/609] Suspend to RAM: GPIO Support -
+
+	1. Added platform driver for GPIO
+	2. Added suspend resume functions for GPIO
+
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/core.c                      |   16 ++++
+ arch/arm/plat-armada/include/plat/gpio.h           |    2 -
+ .../plat-armada/mv_drivers_lsp/mv_gpio/mv_gpio.c   |   78 +++++++++++++++++++-
+ arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h        |    1 +
+ 4 files changed, 94 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index 2024b5d..c9f8145 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -757,6 +757,21 @@ static void __init eth_init(void)
+ 
+ #endif /* CONFIG_MV_ETHERNET */
+ 
++
++/************
++ * GPIO
++ ***********/
++static struct platform_device mv_gpio = {
++	.name	= "mv_gpio",
++	.id		= 0,
++	.num_resources	= 0,
++};
++
++static void __init mv_gpio_init()
++{
++	platform_device_register(&mv_gpio);
++}
++
+ /***********
+  * IPC NET *
+  ***********/
+@@ -1523,6 +1538,7 @@ static void __init axp_db_init(void)
+ 
+ 	print_board_info();
+ 
++	/* GPIO */
+ 	mv_gpio_init();
+ 
+ 	/* RTC */
+diff --git a/arch/arm/plat-armada/include/plat/gpio.h b/arch/arm/plat-armada/include/plat/gpio.h
+index e336005..28c6bd1 100644
+--- a/arch/arm/plat-armada/include/plat/gpio.h
++++ b/arch/arm/plat-armada/include/plat/gpio.h
+@@ -20,7 +20,5 @@
+ #define GPIO_INPUT_OK		(1 << 0)
+ #define GPIO_OUTPUT_OK		(1 << 1)
+ 
+-/* Initialize gpiolib. */
+-void __init mv_gpio_init(void);
+ 
+ #endif
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_gpio/mv_gpio.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_gpio/mv_gpio.c
+index 1d92103..ea8b51c 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_gpio/mv_gpio.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_gpio/mv_gpio.c
+@@ -16,6 +16,7 @@
+ #include <linux/bitops.h>
+ #include <linux/io.h>
+ #include <linux/gpio.h>
++#include <linux/platform_device.h>
+ 
+ #include "mvCommon.h"
+ #include "mvOs.h"
+@@ -141,6 +142,21 @@ static int mv_gpio_request(struct gpio_chip *chip, unsigned pin)
+ 	return -EINVAL;
+ }
+ 
++
++
++struct mv_gpio_regs {
++	int data_out;
++	int data_out_enable;
++	int blink_enable;
++	int data_in_polarity;
++	int interrupt_mask;
++	int interrupt_level_mask;
++	int blink_cntr_select;
++};
++
++#define MV_GPP_MAX_REG_SET 	(MV_GPP_MAX_PINS/32)
++static struct mv_gpio_regs regs[MV_GPP_MAX_REG_SET];
++
+ static struct gpio_chip mv_gpiochip = {
+ 	.label			= "mv_gpio",
+ 	.direction_input	= mv_gpio_direction_input,
+@@ -153,8 +169,68 @@ static struct gpio_chip mv_gpiochip = {
+ 	.can_sleep		= 0,
+ };
+ 
+-void __init mv_gpio_init(void)
++static int mv_gpio_probe(struct platform_device *dev)
+ {
+ 	gpiochip_add(&mv_gpiochip);
++
++	return 0;
++}
++
++static int mv_gpio_suspend(struct platform_device *dev, pm_message_t state)
++{
++	int i;
++	pr_info("Suspending GPIO\n");
++
++	for(i = 0; i < MV_GPP_MAX_REG_SET; i++)
++	{
++		regs[i].data_out 	= MV_REG_READ(GPP_DATA_OUT_REG(i));
++		regs[i].data_out_enable = MV_REG_READ(GPP_DATA_OUT_EN_REG(i));
++		regs[i].blink_enable 	= MV_REG_READ(GPP_BLINK_EN_REG(i));
++		regs[i].data_in_polarity = MV_REG_READ(GPP_DATA_IN_POL_REG(i));
++		regs[i].interrupt_mask 	= MV_REG_READ(GPP_INT_MASK_REG(i));
++		regs[i].interrupt_level_mask = MV_REG_READ(GPP_INT_LVL_REG(i));
++		regs[i].blink_cntr_select = MV_REG_READ(GPP_BLINK_SEL_REG(i));
++	}
++
++	return 0;
++}
++
++static int mv_gpio_resume(struct platform_device *dev)
++{
++	int i;
++	pr_info("Resuming GPIO\n");
++
++	for(i = 0; i < MV_GPP_MAX_REG_SET; i++)
++	{
++		MV_REG_WRITE(GPP_DATA_OUT_REG(i), regs[i].data_out);
++		MV_REG_WRITE(GPP_DATA_OUT_EN_REG(i), regs[i].data_out_enable);
++		MV_REG_WRITE(GPP_BLINK_EN_REG(i), regs[i].blink_enable);
++		MV_REG_WRITE(GPP_DATA_IN_POL_REG(i), regs[i].data_in_polarity);
++		MV_REG_WRITE(GPP_INT_MASK_REG(i), regs[i].interrupt_mask);
++		MV_REG_WRITE(GPP_INT_LVL_REG(i), regs[i].interrupt_level_mask);
++		MV_REG_WRITE(GPP_BLINK_SEL_REG(i), regs[i].blink_cntr_select);
++	}
++
++	return 0;
++}
++
++
++static struct platform_driver mv_gpio_driver = {
++	.probe    = mv_gpio_probe,
++#ifdef CONFIG_PM
++	.suspend = mv_gpio_suspend,
++	.resume  = mv_gpio_resume,
++#endif /* CONFIG_PM */
++	.driver = {
++		.name = "mv_gpio",
++	},
++};
++
++static int __init mv_gpio_init_module(void)
++{
++	return platform_driver_register(&mv_gpio_driver);
+ }
+ 
++module_init(mv_gpio_init_module);
++MODULE_DESCRIPTION("Marvell GPIO Driver");
++MODULE_LICENSE("GPL");
+diff --git a/arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h b/arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h
+index 7b5d6c2..e9824ae 100755
+--- a/arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h
++++ b/arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h
+@@ -152,6 +152,7 @@ extern "C" {
+ #define GPP_INT_CAUSE_REG(grp)			(MV_GPP_REGS_BASE(grp) + 0x14)
+ #define GPP_INT_MASK_REG(grp)			(MV_GPP_REGS_BASE(grp) + 0x18)
+ #define GPP_INT_LVL_REG(grp)			(MV_GPP_REGS_BASE(grp) + 0x1C)
++#define GPP_BLINK_SEL_REG(grp)			(MV_GPP_REGS_BASE(grp) + 0x20)
+ #define GPP_OUT_SET_REG(grp)			(0x18130 + ((grp) * 0x40))
+ #define GPP_64_66_DATA_OUT_SET_REG		0x181A4
+ #define GPP_OUT_CLEAR_REG(grp)			(0x18134 + ((grp) * 0x40))
+-- 
+1.7.9.5
+

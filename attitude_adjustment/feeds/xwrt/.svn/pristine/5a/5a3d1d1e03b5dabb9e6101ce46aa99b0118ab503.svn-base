@@ -1,0 +1,27 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2007 OpenWrt.org
+# Liran Tal <liran@enginx.com> <liran.tal@gmail.com>
+# Last updated: 16 August 2007
+
+START=70
+NAME=l2tpns
+BIN=$(which $NAME 2>/dev/null)
+DEFAULT=/etc/default/$NAME
+RUN_D=/var/run
+PID_F=$RUN_D/$NAME.pid
+
+start() {
+	[ -z "$BIN" ] && return
+	[ -f $DEFAULT ] && . $DEFAULT
+	mkdir -p $RUN_D
+	$BIN $OPTIONS
+}
+
+stop() {
+	[ -f $PID_F ] && kill $(cat $PID_F)
+}
+
+restart() {
+	[ -f $PID_F ] && stop && sleep 3
+	start
+}

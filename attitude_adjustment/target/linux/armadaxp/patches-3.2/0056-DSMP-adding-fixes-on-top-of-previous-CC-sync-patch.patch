@@ -1,0 +1,47 @@
+From bbac7bd0120268d21df45acd974bc45eee6547d9 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Mon, 16 Jan 2012 16:43:40 +0200
+Subject: [PATCH 056/609] DSMP adding fixes on top of previous CC sync patch
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/boardEnv/mvBoardEnvSpec.c     |    4 ++--
+ arch/arm/mach-armadaxp/config/mvSysHwConfig.h      |    7 +++++++
+ 2 files changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+index f009371..6b667cf 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+@@ -495,8 +495,8 @@ MV_BOARD_MPP_INFO rd78460nasInfoBoardMppConfigValue[] = {
+ };
+ 
+ MV_SERDES_CFG rd78460nasInfoBoardSerdesConfigValue[] = {
+-	{0x00223001, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED, PEX_BUS_MODE_X4, 0x00000030},	/* Default */
+-	{0x33320201, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED, PEX_BUS_MODE_X4, 0x00000030}	/* Switch module */
++	{MV_TRUE, 0x00223001, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED, PEX_BUS_MODE_X4, 0x00000030},	/* Default */
++	{MV_TRUE, 0x33320201, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED, PEX_BUS_MODE_X4, 0x00000030}	/* Switch module */
+ };
+ 
+ MV_BOARD_INFO rd78460nasInfo = {
+diff --git a/arch/arm/mach-armadaxp/config/mvSysHwConfig.h b/arch/arm/mach-armadaxp/config/mvSysHwConfig.h
+index 30807c3..8d245ca 100644
+--- a/arch/arm/mach-armadaxp/config/mvSysHwConfig.h
++++ b/arch/arm/mach-armadaxp/config/mvSysHwConfig.h
+@@ -95,6 +95,13 @@ disclaimer.
+ 
+ #ifdef CONFIG_MV_INCLUDE_PCI
+ #define MV_INCLUDE_PCI
++
++#define PCI_HOST_BUS_NUM(pciIf)		(pciIf)
++#define PCI_HOST_DEV_NUM(pciIf)		0
++
++#define PEX_HOST_BUS_NUM(pciIf)		(pciIf)
++#define PEX_HOST_DEV_NUM(pciIf)		0
++
+ #endif
+ 
+ #ifdef CONFIG_MV_INCLUDE_TWSI
+-- 
+1.7.9.5
+

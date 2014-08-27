@@ -1,0 +1,18 @@
+--- a/acinclude.m4
++++ b/acinclude.m4
+@@ -281,6 +281,7 @@
+ AC_DEFUN(AC_LIBNET_ENDIAN_CHECK,
+     [AC_MSG_CHECKING(machine endianess)
+ 
++    if \! test x${ac_cv_libnet_endianess+set} = xset ; then
+     cat > conftest.c << EOF
+ #       include <stdio.h>
+ #       include <stdlib.h>
+@@ -332,6 +333,7 @@
+             fi                                
+         fi
+         rm -f conftest* core core.conftest
++	fi
+ 
+         AC_MSG_RESULT($ac_cv_libnet_endianess)
+ 

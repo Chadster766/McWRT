@@ -1,0 +1,28 @@
+--- msr-tools-1.1.2/wrmsr.c.orig	2004-07-20 09:54:59.000000000 -0600
++++ msr-tools-1.1.2/wrmsr.c	2011-12-27 14:07:24.505887313 -0700
+@@ -90,7 +90,11 @@ int main(int argc, char *argv[])
+ 
+   reg = strtoul(argv[optind++], NULL, 0);
+ 
++#ifdef SMP
+   sprintf(msr_file_name, "/dev/cpu/%d/msr", cpu);
++#else
++  sprintf(msr_file_name, "/dev/msr%d", cpu);
++#endif
+   fd = open(msr_file_name, O_WRONLY);
+   if ( fd < 0 ) {
+     if ( errno == ENXIO ) {
+--- msr-tools-1.1.2/rdmsr.c.orig	2004-07-20 09:54:59.000000000 -0600
++++ msr-tools-1.1.2/rdmsr.c	2011-12-27 14:06:37.831584784 -0700
+@@ -167,7 +167,11 @@ int main(int argc, char *argv[])
+ 
+   reg = strtoul(argv[optind], NULL, 0);
+ 
++#ifdef SMP
+   sprintf(msr_file_name, "/dev/cpu/%d/msr", cpu);
++#else
++  sprintf(msr_file_name, "/dev/msr%d", cpu);
++#endif
+   fd = open(msr_file_name, O_RDONLY);
+   if ( fd < 0 ) {
+     if ( errno == ENXIO ) {

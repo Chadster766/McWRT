@@ -1,0 +1,28 @@
+From a282315ed7cb2f5f531758db6d9501a18a0f673a Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Mon, 10 Dec 2012 14:08:50 +0200
+Subject: [PATCH 452/609] fixed register Write at mvNetaTxpEjpSet - NETA Hal
+
+Change-Id: I71b45c558864f1af2152d2d83baa458c96d7b911
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
+index 1df122f..3472bd9 100755
+--- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
++++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
+@@ -2909,7 +2909,7 @@ MV_STATUS mvNetaTxpEjpSet(int port, int txp, int enable)
+ 	else
+ 		regVal = 0;
+ 
+-	MV_REG_WRITE(NETA_TX_CMD_1_REG(port, txp), 0);
++	MV_REG_WRITE(NETA_TX_CMD_1_REG(port, txp), regVal);
+ 
+ 	return MV_OK;
+ }
+-- 
+1.7.9.5
+

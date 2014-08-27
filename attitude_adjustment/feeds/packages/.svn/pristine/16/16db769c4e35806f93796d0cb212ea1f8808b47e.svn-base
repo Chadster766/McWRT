@@ -1,0 +1,34 @@
+diff --git a/mutella/common.h b/mutella/common.h
+--- a/mutella/common.h
++++ b/mutella/common.h
+@@ -50,7 +50,7 @@ CString restore_string(CString s, bool bFormMode = true);
+ bool QueryMatch(CString Result, const CString& Query);
+ // fast functions which do not copy the string
+ void MakeWordList(LPSTR szQuery, vector<char*>& QWords);
+-void MakeWordList(LPSTR szQuery, vector<char*>& QWords, vector<char*>& QWords);
++void MakeWordList(LPSTR szQuery, vector<char*>& QWordsInc, vector<char*>&QWordsExc);
+ bool MatchWordList(const CString& ResultLower, const vector<char*>& QWords, bool bMatchAll = true);
+ 
+ // slower but 'storage-independent' versions
+diff --git a/mutella/mutella.h b/mutella/mutella.h
+--- a/mutella/mutella.h
++++ b/mutella/mutella.h
+@@ -79,6 +79,7 @@ using std::insert_iterator;
+ #include <arpa/inet.h>
+ #include <netdb.h>
+ #include <errno.h>
++#include <cstring>
+ 
+ // library-type includes
+ #include "defines.h"
+diff --git a/mutella/tstring.h b/mutella/tstring.h
+--- a/mutella/tstring.h
++++ b/mutella/tstring.h
+@@ -22,6 +22,7 @@
+ #define __TSTRING_H__INCLUDED__
+ 
+ #include <stdarg.h>
++#include <climits>
+ #include <iostream>
+ 
+ #ifdef TSTRING_DEBUG

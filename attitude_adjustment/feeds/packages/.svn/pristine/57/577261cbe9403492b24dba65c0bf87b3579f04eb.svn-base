@@ -1,0 +1,115 @@
+--- a/include/array.c
++++ b/include/array.c
+@@ -1,7 +1,7 @@
+ #include "array.h"
+ 
+ /*
+-** split
++** array_split
+ **
+ ** Accepts a string argument converting all delimeters to nulls
+ ** Returns an allocated array pointer or NULL
+@@ -14,7 +14,7 @@
+ ** str is not to be deallocated while using this array
+ */
+ 
+-char** split(char* str, const char* del, int* cnt)
++char** array_split(char* str, const char* del, int* cnt)
+ {
+ 	char** args = NULL;
+ 	int inc;
+@@ -53,7 +53,7 @@ char** split(char* str, const char* del,
+ }
+ 
+ /*
+-** splice
++** array_splice
+ **
+ ** remove length elements from array starting at offset
+ ** All trailing elements will be left aligned
+@@ -70,7 +70,7 @@ char** split(char* str, const char* del,
+ ** Returns the number of elements removed
+ */
+ 
+-int splice(void** array, int cnt, int offset, int length)
++int array_splice(void** array, int cnt, int offset, int length)
+ {
+ 	int t;
+ 
+--- a/include/array.h
++++ b/include/array.h
+@@ -1,5 +1,5 @@
+ #include <string.h>
+ #include <stdlib.h>
+ 
+-char** split(char*, const char*, int*);
+-int splice(void**, int, int, int);
++char** array_split(char*, const char*, int*);
++int array_splice(void**, int, int, int);
+--- a/ipupdate.c
++++ b/ipupdate.c
+@@ -295,7 +295,7 @@ int DoUpdate(int check)
+ 				free(zone->keyname);
+ 				free(server->zones[j]);
+ 
+-				server->zonec -= splice((void**)server->zones, server->zonec, j, 1);
++				server->zonec -= array_splice((void**)server->zones, server->zonec, j, 1);
+ 				continue;
+ 			}
+ 
+@@ -317,7 +317,7 @@ int DoUpdate(int check)
+ 			free(server->zones);
+ 			free(cfg.servers[i]);
+ 
+-			cfg.serverc -= splice((void**)cfg.servers, cfg.serverc, i, 1);
++			cfg.serverc -= array_splice((void**)cfg.servers, cfg.serverc, i, 1);
+ 			continue;
+ 		}
+ 		i++;
+@@ -414,7 +414,7 @@ int checkcname(int *s, struct server *se
+ 			asprintf(&msg, "checkcname: server %s: zone %s: host %s: host disabled", server->name, zone->name, zone->hosts[i]);
+ 			PostMsgFree(msg);
+ 
+-			zone->hostc -= splice((void**)zone->hosts, zone->hostc, i, 1);
++			zone->hostc -= array_splice((void**)zone->hosts, zone->hostc, i, 1);
+ 			continue;
+ 		}
+ 
+@@ -446,7 +446,7 @@ int checkcname(int *s, struct server *se
+ 			asprintf(&msg, "checkcname: server %s: zone %s: host %s: host disabled", server->name, zone->name, zone->hosts[i]);
+ 			PostMsgFree(msg);
+ 	
+-			zone->hostc -= splice((void**)zone->hosts, zone->hostc, i, 1);
++			zone->hostc -= array_splice((void**)zone->hosts, zone->hostc, i, 1);
+ 			continue;
+ 		}
+ 		//append the record to the packet
+@@ -488,7 +488,7 @@ int checkcname(int *s, struct server *se
+ 			asprintf(&msg, "checkcname: server %s: zone %s: host %s: host disabled", server->name, zone->name, zone->hosts[i]);
+ 			PostMsgFree(msg);
+ 
+-			zone->hostc -= splice((void**)zone->hosts, zone->hostc, i, 1);
++			zone->hostc -= array_splice((void**)zone->hosts, zone->hostc, i, 1);
+ 			continue;
+ 		}
+ 
+@@ -561,7 +561,7 @@ int checkip(int *s, struct server *serve
+ 			asprintf(&msg, "checkip: server %s: zone %s: host %s: host disabled", server->name, zone->name, zone->hosts[i]);
+ 			PostMsgFree(msg);
+ 
+-			if (zone->hostc -= splice((void**)zone->hosts, zone->hostc, i, 1))
++			if (zone->hostc -= array_splice((void**)zone->hosts, zone->hostc, i, 1))
+ 			{
+ 				*((unsigned short*)&pkt.data[8]) = htons(zone->hostc);
+ 				continue;
+--- a/config.c
++++ b/config.c
+@@ -873,7 +873,7 @@ void cfg_zone(struct server *server, str
+ 				switch (cfg_readblock(data, &term, &ptr)) {
+ 				case CFG_QUOTED:
+ 					zone->hostp = term;
+-					zone->hosts = split(zone->hostp, ", \t\r\n", &zone->hostc);
++					zone->hosts = array_split(zone->hostp, ", \t\r\n", &zone->hostc);
+ 					if (zone->hostc > 32767)
+ 					{
+ 							asprintf(&msg, "getconfig: zone \"%s\": there may not be more than 32767 hosts", zone->name);

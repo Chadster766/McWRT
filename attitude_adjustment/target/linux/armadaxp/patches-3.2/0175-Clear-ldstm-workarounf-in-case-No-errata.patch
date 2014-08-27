@@ -1,0 +1,26 @@
+From 634aea2b1dbf36301a6d70bc483fd5ddd4ec35df Mon Sep 17 00:00:00 2001
+From: Badran Mohammad <mohammad@marvell.com>
+Date: Mon, 30 Apr 2012 19:23:20 +0300
+Subject: [PATCH 175/609] Clear ldstm workarounf in case No errata
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mm/proc-sheeva_pj4bv7.S |    2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/arch/arm/mm/proc-sheeva_pj4bv7.S b/arch/arm/mm/proc-sheeva_pj4bv7.S
+index 7fea579..ec52d8f 100644
+--- a/arch/arm/mm/proc-sheeva_pj4bv7.S
++++ b/arch/arm/mm/proc-sheeva_pj4bv7.S
+@@ -408,6 +408,8 @@ defined(CONFIG_SMP)
+ 	mrc        p15, 1, r0, c15, c1, 0                         /* Read */
+ #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6136
+ 	orr          r0, r0, #0x001000                              /* BIT12 ldstm_first Two_sgl --> '1' Force first issue to be single */
++#else
++        bic          r0, r0, #0x001000                              /* BIT12 ldstm_first Two_sgl --> '0' The first issue is double word */
+ #endif
+ 	orr          r0, r0, #0x400000                              /* BIT22 dvm_wakeup_dis --> '1' WFI/WFE will serve the DVM and back to idle */
+ 	mcr        p15, 1, r0, c15, c1, 0                         /* Write */
+-- 
+1.7.9.5
+

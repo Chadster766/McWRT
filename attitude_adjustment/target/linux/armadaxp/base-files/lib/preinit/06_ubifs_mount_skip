@@ -1,0 +1,18 @@
+#!/bin/sh
+
+# Copyright (C) 2006 OpenWrt.org
+# Copyright (C) 2010 Vertical Communications
+
+# always skip jffs2 mount
+check_skip() {
+	return 0
+}
+
+check_ubifs_syscfg_skip() {
+    if [ "$pi_mount_ubifs_sysfs_skip_next" = "true" ]; then
+	return 0
+    else 
+	return 1
+    fi
+}
+

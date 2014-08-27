@@ -1,0 +1,68 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2008 OpenWrt.org
+START=50
+
+SERVICE_DAEMONIZE=1
+SERVICE_WRITE_PID=1
+
+append_bool() {
+	local section="$1"
+	local option="$2"
+	local value="$3"
+	local _val
+	config_get_bool _val "$section" "$option" '0'
+	[ "$_val" -gt 0 ] && append args "$3"
+}
+
+append_string() {
+	local section="$1"
+	local option="$2"
+	local value="$3"
+	local _val
+	config_get _val "$section" "$option"
+	[ -n "$_val" ] && append args "$3 $_val"
+}
+
+section_enabled() {
+	config_get_bool enabled "$1" 'enabled' 0
+	[ $enabled -gt 0 ]
+}
+
+start_instance() {
+	local section="$1"
+
+	section_enabled "$section" || return 1
+
+	args=""
+	config_get uid "$section" 'user'
+	config_get servername "$section" 'servername'
+	config_get interface "$section" 'interface'
+	config_get options "$section" 'options'
+	config_get content_directories "$section" 'content_directories'
+	append_bool "$section" 'disable_webif' '-w'
+	append_bool "$section" 'disable_telnet' '-t'
+
+	SERVICE_UID="$uid" \
+	service_start /usr/bin/ushare -n "${servername:-OpenWrt}" -i "${interface:-br-lan}" -c "${content_directories:-/tmp}" $args ${options}
+}
+
+stop_instance() {
+	local section="$1"
+
+	section_enabled "$section" || return 1
+
+	config_get uid "$section" "user"
+
+	SERVICE_UID="$uid" \
+	service_stop /usr/bin/ushare
+}
+
+start() {
+	config_load 'ushare'
+	config_foreach start_instance 'ushare'
+}
+
+stop() {
+	config_load 'ushare'
+	config_foreach stop_instance 'ushare'
+}

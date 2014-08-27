@@ -1,0 +1,456 @@
+/* If you want to edit this file, adhere to these rules:
+ *
+ * CSS is seperated by layout, font, and color. It might be a little more
+ * work, but keeping it grouped like this allows for easier implementation
+ * of things like the color switcher.
+ *
+ * The class/id layout is pretty good, though not perfect. We want the structure
+ * to be flexible --- it isn't about the current theme as much as allowing future
+ * themes to do whatever without changing anything but the CSS. Do NOT change
+ * a bunch of classes and ids in the form code without some discussion with
+ * the group.
+ *
+ */
+ 
+/* ---  Layout  --- */
+* { margin: 0; padding: 0; }
+
+html, body {
+	height: 100%;
+	font-family: Verdana, Helvetica, sans-serif;
+	font-size: 1.0em;
+	color: Black;
+	background-color: White;
+}
+
+a { text-decoration: none; }
+
+dd {
+	margin-left: 1em;
+	margin-bottom: 0.2em;
+}
+
+img { border: 0; }
+
+option { padding-right: 1em; }
+
+th { text-align: left; }
+
+ul { list-style-type: none; }
+
+fieldset { border: 0; }
+
+/* Hide irrelevent elements when using CSS */
+hr,
+#submenu h3,
+#short-status h3 { display: none; }
+
+/* ---  Wrapper around everything  --- */
+#container {
+	position: relative;
+	min-height: 100%;
+	width: 100%;
+}
+
+/* ---  Header  --- */
+#header {
+	position: relative;
+	clear: both;
+	width: 100%;
+	height: 5.5em;
+	color: #ccc;
+	background-image: url('/themes/clubman/logo.png');
+	background-repeat: no-repeat;
+	background-position: 20px 15px;
+	background-color: #f9f9f9;
+}
+
+#header img {
+	display: none;
+	position: absolute;
+	top: 15px;
+	left: 15px;
+}
+#header em {
+	position: absolute;
+	bottom: 0;
+	display: block;
+/*
+	padding-top: 70px;
+	padding-bottom: 10px;
+*/
+	padding-left: 65px;
+	color: #808080;
+}
+
+#header h1 { display: none; }
+
+/* ---  Short-status  --- */
+#header #short-status {
+	position: absolute;
+	top: 0;
+	right: 0;
+	height: 5.5em;
+	width: 20em;
+	line-height: 1.0em;
+	background: #f9f9f9;
+	color: Black;
+}
+
+#short-status ul {
+	white-space: nowrap;
+	margin: 1em 0 0 2em;
+	font-size: 0.58em;
+}
+
+#short-status li {
+	float: left;
+	padding: 0 0 0 2.5%;
+	width: 47.5%;
+}
+#short-status li.sysname {
+	width: 100%;
+	padding: 0 0 0 0;
+	float: left;
+}
+/* ---  Navigation  --- */
+#mainmenu, #submenu {
+	color: Black;
+	width: 100%;
+	height: 2.0em;
+	line-height: 2.0em;
+}
+
+#mainmenu a:hover {
+	text-decoration: none;
+	font-weight: bold;
+	background: url(/themes/clubman/mainnav_hover_bg.png) repeat-x bottom left;
+}
+
+#submenu a:hover {
+	background-color: #A9DAEF;
+	text-decoration: none;
+	font-weight: bold;
+	background: url(/themes/clubman/mainnav_hover_bg_inverse.png) repeat-x top left;
+}
+
+#mainmenu .selected a {
+	background-color: #339bcc;
+	background: url(/themes/clubman/mainnav_active_bg.gif) repeat-x bottom left;
+}
+
+#submenu .selected a {
+	background-color: #339bcc;
+	background: url(/themes/clubman/mainnav_active_bg_inverse.gif) repeat-x top left;
+}
+
+#mainmenu {
+	font-size: 0.8em;
+	background: #f9f9f9 url(/themes/clubman/mainnav_bg.png) repeat-x bottom;
+	list-style: none;
+	border-bottom: none;
+	border-bottom-color: none;
+}
+
+#mainmenu li {
+	float: left;
+	list-style-type: none;
+	min-width: 4.2em;
+	text-align: center;
+}
+
+#mainmenu li, #submenu li { white-space: nowrap; }
+
+#mainmenu li a {
+	padding: 0 0.7em 0 0.7em;
+	display: block;
+	color: Black;
+}
+
+#submenu {
+	background: #f9f9f9 url(/themes/clubman/mainnav_bg_inverse.png) repeat-x top;
+	list-style: none;
+}
+
+#submenu li {
+	float: left;
+	list-style-type: none;
+	text-align: center;
+	font-size: 0.6em;
+}
+
+#submenu li a {
+	padding: 0 0.6em 0 0.6em;
+	display: block;
+	color: Black;
+}
+
+/* ---  Color switcher  --- */
+#colorswitcher { display: none; }
+
+
+/* ---  Content  --- */
+#content {
+	position: relative;
+	padding: 0 2% 6.5em 2%;
+}
+
+#content a { text-decoration: underline; }
+
+#content h2 {
+	font-size: 1.1em;
+	margin-top: 1.5em;
+	margin-bottom: 1.5em;
+}
+
+/* center image and headline vertically */
+#content h2 * { vertical-align: middle; }
+
+#content h3 {
+	margin-bottom: 0.6em;
+	padding: 0.2em;
+	font-size: 1em;
+	background: #f9f9f9 url(/themes/clubman/mainnav_bg.png) repeat-x bottom;
+	list-style: none;
+	border-bottom: none;
+	border-bottom-color: none;
+}
+
+#content h3.warning {
+	display: block;
+	color: #E7292C;
+	margin-bottom: 1em;
+	margin-left: 1%;
+	padding: 0.4em;
+	padding-left: 0.8em;
+	border-left: 0.5em solid #E7292C;
+	border-bottom: 1px solid #E7292C;
+	background-color: transparent;
+}
+
+#content .settings { margin-left: 1%; }
+
+#content .settings .clearfix {
+	clear: both;
+	margin-bottom: 1em;
+}
+
+#content .settings-content {
+	position: relative;
+	float: left;
+	width: 54%;
+	margin-left: 2%;
+}
+
+#content select, #content input { margin-top: 0.1em; }
+
+/* help area */
+#content .settings-help {
+	position: relative;
+	margin-left: 60%;
+}
+
+#content .settings-help h3 { display: none; }
+
+#content .settings-help h4 {
+	font-weight: bold;
+	font-size: 0.8em;
+	margin-bottom: 0.2em;
+}
+
+#content .settings-help p {
+	margin-bottom: 0.6em;
+	font-size: 0.7em;
+	padding-right: 1em;
+}
+
+.more-help {
+	margin-right: 10%;
+	text-align: right;
+}
+
+/* ---  Save buttons  --- */
+#save {
+	position: absolute;
+	bottom: 0;
+	right: 0;
+	width: 100%;
+	text-align: right;
+	z-index: 50;
+}
+
+#save legend { display: none; }
+
+#save .page-save {
+	margin-right: 0;
+	padding: 0.5em 1em 0.5em 0;
+	background-color: #f9f9f9;
+	clear: both;
+}
+
+/* apply/clear/review area */
+#save .apply {
+	height: 4em;
+	background: #f9f9f9 url(/themes/clubman/mainnav_bg_inverse.png) repeat-x top;
+	padding: 0.5em 1em 0.5em 0;
+	font-weight: bold;
+	line-height: 1.3em;
+}
+
+#save a { color: Black; }
+
+#save a:hover {
+	background: url(/themes/clubman/mainnav_hover_bg.png) repeat-x bottom left;
+	text-decoration: underline;
+}
+
+#save .apply li {
+	display: inline;
+	margin-right: 1em;
+}
+
+/* ---  Footer  --- */
+#footer { display: none; }
+
+/* ---  Page specific styling  --- */
+/* Packages page */
+.packages {
+	font-size: 0.8em;
+	text-align: left;
+}
+
+.repositories { font-size: 0.6em; }
+
+/* ---  General styling  --- */
+.separator { display: block; }
+
+.smalltext {
+	display: inline;
+	font-size: 0.9em;
+	font-weight: lighter;
+}
+
+
+.failed-validation {
+	display: inline;
+	width: 40%;
+	text-align: left;
+	font-size: 1.0em;
+	font-style: italic;
+	color: Red;
+}
+
+.warning,
+.update-available,
+.warning-light {
+	color: #9A2C2C;
+	display: inline;
+}
+
+/* background color for odd lines/list items */
+.odd { background-color: #E5E7E9; }
+
+/* Progressbar */
+.progressbar {
+	border: 1px solid #315579;
+	margin-top: 0.2em;
+	margin-bottom: 0.2em;
+	padding: 2px;
+	font-size: 0.8em;
+}
+
+.progress {
+	background-color: #AAC1D9;
+	padding: 0.1em 0 0.1em 0;
+	display: block;
+	text-align: center;
+}
+
+.gradualshine {
+        filter:alpha(opacity=30);
+        -moz-opacity:0.3;
+}
+
+.balloonstyle{
+        position:absolute;
+        top: -500px;
+        left: 0;
+        padding: 5px;
+        visibility: hidden;
+        border:1px solid black;
+        font:normal 12px Verdana;
+        line-height: 18px;
+        z-index: 100;
+        background-color: white;
+        width: 200px;
+        /*Remove below line to remove shadow. Below line should always appear last within this CSS*/
+        filter: progid:DXImageTransform.Microsoft.Shadow(color=gray,direction=135,Strength=5);
+}
+
+#arrowhead{
+z-index: 99;
+position:absolute;
+top: -500px;
+left: 0;
+visibility: hidden;
+}
+
+input.flatbtn {
+	border: 1px solid #000000;
+	font-size:8pt;
+}
+
+#scrollBox {
+	position: absolute;
+	width: 90%;
+	margin: 0 auto;
+	font-size: 0.7em;
+}
+#outerscrollBox{
+	position: relative;
+        width: 50%; /*marquee width */
+        height: 20em; /*marquee height */
+        overflow: hidden;
+        border: 1px solid #ccc;
+        padding: 1em;
+        margin-top: 1em;
+}
+#scrollBox h1 {
+        font-weight: bold;
+        margin-bottom: 1em;
+}
+#scrollBox h2 { margin: 2em 0 1em; }
+#scrollBox h2 em {
+        font-weight: normal;
+        font-size: 0.9em;
+}
+#scrollBox ul {
+        list-style-type: disc;
+        list-style-position: inside;
+}
+#scrollBox p { margin-bottom: 0.5em; }
+#scrollBox li { margin: 0.8em; }
+
+/* styles for dmytro's new wireless survey page. Used in Kamikaze as of 02/08/07. */
+TR.wifiscantitle
+{
+	background-color: #999999;
+	font-family: serif;
+	font-weight: bold;
+	color: #ffffff;
+	text-align: center;
+}
+TR.wifiscanrow1
+{
+	font-family: serif;
+	font-size:12pt;
+	color: #000000;
+}
+TR.wifiscanrow2
+{
+	background-color: #E6E6E6;
+	font-family: serif;
+	font-size:12pt;
+	color: #000000;
+}
+

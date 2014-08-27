@@ -1,0 +1,40 @@
+From 5b0530ff5fd14dac87f76077a083085dfe44a79f Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Mon, 3 Dec 2012 10:16:08 +0200
+Subject: [PATCH 434/609] xor map unit temp fix for A370, need to update for
+ q1
+
+Change-Id: Id0866262fc4fdb99c2c3662aa3f885a7f5521381
+Signed-off-by: Neta Zur <neta@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/xor/mvXor.c |    6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_hal/xor/mvXor.c b/arch/arm/plat-armada/mv_hal/xor/mvXor.c
+index fe81f51..313ab1b 100755
+--- a/arch/arm/plat-armada/mv_hal/xor/mvXor.c
++++ b/arch/arm/plat-armada/mv_hal/xor/mvXor.c
+@@ -62,7 +62,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #include "mvCommon.h"
+ #include "mvOs.h"
+ #include "ctrlEnv/mvCtrlEnvSpec.h"
+-#include "ctrlEnv/mvUnitMap.h"
++/*#include "ctrlEnv/mvUnitMap.h"*/
+ #include "mvSysXorConfig.h"
+ #include "mvXorRegs.h"
+ #include "mvXor.h"
+@@ -93,8 +93,8 @@ MV_VOID mvXorHalInit(MV_U32 xorChanNum)
+ 	/* Abort any XOR activity & set default configuration */
+ 	for (i = 0; i < xorChanNum; i++) {
+ 
+-		if(mvUnitMapIsMine(XOR0 + XOR_UNIT(i)) == MV_FALSE)
+-			continue;
++		/*if(mvUnitMapIsMine(XOR0 + XOR_UNIT(i)) == MV_FALSE)
++			continue;*/
+ 
+ 		mvXorCommandSet(i, MV_STOP);
+ 		mvXorCtrlSet(i, (1 << XEXCR_REG_ACC_PROTECT_OFFS) |
+-- 
+1.7.9.5
+

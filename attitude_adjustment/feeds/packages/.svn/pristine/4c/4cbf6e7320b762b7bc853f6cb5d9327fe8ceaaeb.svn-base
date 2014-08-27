@@ -1,0 +1,25 @@
+--- st2205tool/libst2205/Makefile.orig	2009-08-19 17:05:54.000000000 +0200
++++ st2205tool/libst2205/Makefile	2009-08-19 17:06:27.000000000 +0200
+@@ -7,15 +7,15 @@
+ all:	libst2205.so
+ 
+ libst2205.so:	$(OBJ) $(SRC) $(HEADERS) 
+-	ar -rv libst2205.a $(OBJ) 
+-	gcc -shared -Wl,-soname,libst2205.so.1 -o libst2205.so $(OBJ) $(LIBS)
++	$(AR) -rv libst2205.a $(OBJ) 
++	$(GCC) -shared -Wl,-soname,libst2205.so.1 -o libst2205.so $(OBJ) $(LIBS)
+ 
+ clean:	
+ 	rm -f $(OBJ) test *.a *.so
+ 
+ install: libst2205.so
+-	test -z "/usr/local/lib" || /bin/mkdir -p "/usr/local/lib"
+-	test -z "/usr/local/include" || /bin/mkdir -p "/usr/local/include"
+-	install libst2205.so /usr/local/lib
+-	install st2205.h /usr/local/include
+-	ldconfig
++#	test -z "/usr/local/lib" || /bin/mkdir -p "/usr/local/lib"
++#	test -z "/usr/local/include" || /bin/mkdir -p "/usr/local/include"
++#	install libst2205.so /usr/local/lib
++#	install st2205.h /usr/local/include
++#	ldconfig

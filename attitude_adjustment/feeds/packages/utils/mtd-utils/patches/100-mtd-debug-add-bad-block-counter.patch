@@ -1,0 +1,73 @@
+--- a/mtd_debug.c
++++ b/mtd_debug.c
+@@ -238,6 +238,7 @@ int showinfo (int fd)
+ 	int i,err,n;
+ 	struct mtd_info_user mtd;
+ 	static struct region_info_user region[1024];
++	int iNumOfBadBlocks = 0;
+ 
+ 	err = getmeminfo (fd,&mtd);
+ 	if (err < 0)
+@@ -330,6 +331,11 @@ int showinfo (int fd)
+ 	printf ("\nmtd.oobsize = ");
+ 	printsize (mtd.oobsize);
+ 
++	printf ("\nmtd.badblockscount = ");
++	iNumOfBadBlocks = get_bb_number(fd, &mtd);
++	if (iNumOfBadBlocks > -1)
++		printf ("%d", iNumOfBadBlocks);
++
+ 	printf ("\n"
+ 			"regions = %d\n"
+ 			"\n",
+@@ -349,6 +355,50 @@ int showinfo (int fd)
+ 	return (0);
+ }
+ 
++int get_bb_number(int fd, struct mtd_info_user *meminfo)
++{
++	int isNAND = (meminfo->type == MTD_NANDFLASH);
++	int ibbCounter = 0;
++	/* Last 4 blocks of any MTD device are protected and
++	   MTD reports them as badblocks. */
++	int usablesize = meminfo->size - (4 * meminfo->erasesize);
++	erase_info_t erase;
++	erase.length = meminfo->erasesize;
++
++	for (erase.start = 0;
++	     erase.start < usablesize;
++	     erase.start += meminfo->erasesize)
++	{
++		loff_t offset = erase.start;
++		int ret = ioctl(fd, MEMGETBADBLOCK, &offset);
++
++		if (ret > 0)
++		{
++			ibbCounter++;
++			continue;
++		}
++		else if (ret < 0)
++		{
++			if (errno == EOPNOTSUPP)
++			{
++				if (isNAND)
++				{
++					printf("Bad block check not available");
++					return -1;
++				}
++			}
++			else
++			{
++				printf("MTD get bad block failed: %s",
++					strerror(errno));
++				return -1;
++			}
++		}
++	}
++
++	return ibbCounter;
++}
++
+ void showusage(void)
+ {
+ 	fprintf (stderr,

@@ -1,0 +1,133 @@
+From e1b58115750ffe8f2b97a4c6c77477173b33bd6d Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Mon, 28 Jan 2013 11:30:20 +0200
+Subject: [PATCH 509/609] Revert Bug fix: Fixed AMP boot after change of regs
+
+Revert this patch after uboot update registers base address to 0xF1
+Change-Id: I322dd5fb3b192542b7f096575332cd993471d537
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/994
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-by: Star_Automation <star@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/boot/compressed/head.S                |    7 +-----
+ arch/arm/mach-armadaxp/core.c                  |   31 ------------------------
+ arch/arm/mach-armadaxp/include/mach/armadaxp.h |    7 ------
+ 3 files changed, 1 insertion(+), 44 deletions(-)
+
+diff --git a/arch/arm/boot/compressed/head.S b/arch/arm/boot/compressed/head.S
+index 2d2b096..ce9a3b6 100644
+--- a/arch/arm/boot/compressed/head.S
++++ b/arch/arm/boot/compressed/head.S
+@@ -139,12 +139,7 @@ start:
+ 		.word	_edata			@ zImage end address
+  THUMB(		.thumb			)
+ 1:
+-#if defined(CONFIG_ARCH_ARMADA_XP) && !defined(CONFIG_MV_AMP_ENABLE)
+-
+-/* Disable in AMP since in AMP mode the internal register base must match
+- * U-BOOTs base. Two operating systems cannot modify the base during boot
+- * as is done with a single image */
+-
++#ifdef CONFIG_ARCH_ARMADA_XP
+ 		/* Update Internal Regs offset in case UBoot is configured
+ 		** to use a different base address.
+ 		*/
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index 8ed93b0..d647211 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -1666,13 +1666,6 @@ static void __init axp_db_init(void)
+ 	return;
+ }
+ 
+-#ifdef CONFIG_MV_AMP_ENABLE
+-void __init axp_reserve_regs_space(void)
+-{
+-	memblock_reserve(INTER_REGS_PHYS_BASE, INTER_REGS_SIZE);
+-}
+-#endif
+-
+ #ifdef CONFIG_FB_DOVE
+ /*
+  * This fixup function is used to reserve memory for the LCD engine
+@@ -1757,9 +1750,6 @@ MACHINE_START(ARMADA_XP_DB, "Marvell Armada XP Development Board")
+ #ifdef CONFIG_SUSPEND
+ 	.reserve	= reserve_training_mem,
+ #endif /* CONFIG_SUSPEND */
+-#ifdef CONFIG_MV_AMP_ENABLE
+-	.reserve	= axp_reserve_regs_space,
+-#endif
+ MACHINE_END
+ 
+ /*****************************************************************************
+@@ -1899,9 +1889,6 @@ MACHINE_START(ARMADA_XP_GP, "Marvell Armada XP GP Board")
+ #ifdef CONFIG_SUSPEND
+ 	.reserve	= reserve_training_mem,
+ #endif /* CONFIG_SUSPEND */
+-#ifdef CONFIG_MV_AMP_ENABLE
+-	.reserve	= axp_reserve_regs_space,
+-#endif
+ MACHINE_END
+ 
+ /*****************************************************************************
+@@ -2035,12 +2022,6 @@ MACHINE_START(ARMADA_XP_RD_NAS, "Marvell Armada XP RD NAS Board")
+ 	/* reserve memory for LCD */
+ 	.fixup		= axp_tag_fixup_mem32,
+ #endif /* CONFIG_FB_DOVE */
+-#ifdef CONFIG_SUSPEND
+-	.reserve	= reserve_training_mem,
+-#endif /* CONFIG_SUSPEND */
+-#ifdef CONFIG_MV_AMP_ENABLE
+-	.reserve	= axp_reserve_regs_space,
+-#endif
+ MACHINE_END
+ 
+ 
+@@ -2147,12 +2128,6 @@ MACHINE_START(ARMADA_XP_RDSRV, "Marvell Armada XP Server Board")
+   	.init_irq	= axp_init_irq,
+   	.timer		= &axp_timer,
+   	.init_machine	= axp_rdsrv_init,
+-#ifdef CONFIG_SUSPEND
+-	.reserve	= reserve_training_mem,
+-#endif /* CONFIG_SUSPEND */
+-#ifdef CONFIG_MV_AMP_ENABLE
+-	.reserve	= axp_reserve_regs_space,
+-#endif
+   MACHINE_END
+ 
+ /*****************************************************************************
+@@ -2221,10 +2196,4 @@ MACHINE_START(ARMADA_XP_FPGA, "Marvell Armada XP FPGA Board")
+ 	.init_irq	= axp_init_irq,
+ 	.timer		= &axp_timer,
+ 	.init_machine	= axp_fpga_init,
+-#ifdef CONFIG_SUSPEND
+-	.reserve	= reserve_training_mem,
+-#endif /* CONFIG_SUSPEND */
+-#ifdef CONFIG_MV_AMP_ENABLE
+-	.reserve	= axp_reserve_regs_space,
+-#endif
+ MACHINE_END
+diff --git a/arch/arm/mach-armadaxp/include/mach/armadaxp.h b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
+index 32d7429..fdca7fd 100644
+--- a/arch/arm/mach-armadaxp/include/mach/armadaxp.h
++++ b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
+@@ -85,14 +85,7 @@
+  * INTER_REGS_VIRT_BASE Must be 2MB aligned in order to support CONFIG_DEBUG_LL.
+  * Before paging_init, the UART port is mapped by a section entry (2MB in LPAE).
+  */
+-#ifdef CONFIG_MV_AMP_ENABLE
+-/* In AMP mode the internal register base must match U-BOOTs base since
+- * Two operating systems cannot modify the base during boot as is done
+- * with a single image */
+-#define INTER_REGS_PHYS_BASE		0xD0000000
+-#else
+ #define INTER_REGS_PHYS_BASE		0xF1000000
+-#endif
+ #define INTER_REGS_VIRT_BASE		0xFBC00000
+ #define INTER_REGS_BASE			INTER_REGS_VIRT_BASE /* For compatibility */
+ 
+-- 
+1.7.9.5
+

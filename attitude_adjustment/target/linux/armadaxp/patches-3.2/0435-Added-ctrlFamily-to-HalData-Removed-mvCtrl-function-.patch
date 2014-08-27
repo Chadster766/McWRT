@@ -1,0 +1,110 @@
+From 3d0f3d609cc34695e0d2173ac6949b66dbed6209 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Mon, 3 Dec 2012 13:41:13 +0200
+Subject: [PATCH 435/609] Added ctrlFamily to HalData & Removed mvCtrl***
+ function calls from inside of hal layer
+
+Change-Id: Ia6322bd1751394f80e378a06b8012fcb6bfaefa8
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/pex/mvPex.c |    8 +++++---
+ arch/arm/plat-armada/mv_hal/pex/mvPex.h |    1 +
+ arch/arm/plat-armada/mv_hal/usb/mvUsb.c |    6 +++---
+ arch/arm/plat-armada/mv_hal/usb/mvUsb.h |    1 +
+ 4 files changed, 10 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPex.c b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
+index fb2e69f..24930e4 100755
+--- a/arch/arm/plat-armada/mv_hal/pex/mvPex.c
++++ b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
+@@ -87,9 +87,11 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+ 	MV_U32 regVal;
+ 	MV_U32 status;
+ 	MV_U16 ctrlModel;
++	MV_U32 ctrlFamily;
+ 
+ 	mvOsMemcpy(&pexHalData[pexIf], halData, sizeof(MV_PEX_HAL_DATA));
+ 	ctrlModel = pexHalData[pexIf].ctrlModel;
++	ctrlFamily=pexHalData[pexIf].ctrlFamily;
+ 
+ 	if (mvPexModeGet(pexIf, &pexMode) != MV_OK) {
+ 		mvOsPrintf("PEX init ERR. mvPexModeGet failed (pexType=%d)\n", pexMode.pexType);
+@@ -117,7 +119,7 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+ 		status = MV_REG_READ(PEX_CFG_DIRECT_ACCESS(pexIf, PEX_STATUS_AND_COMMAND));
+ 		status |= PXSAC_INT_DIS;
+ 		MV_REG_WRITE(PEX_CFG_DIRECT_ACCESS(pexIf, PEX_STATUS_AND_COMMAND), status);
+-		if (mvCtrlDevFamilyIdGet(ctrlModel)==MV_67XX) {
++		if (ctrlFamily==MV_67XX) {
+ 			/* PEX capability */
+ 			regVal = MV_REG_READ(PEX_CFG_DIRECT_ACCESS(pexIf, PEX_LINK_CAPABILITY_REG)) & 0xF;
+ 			if (regVal == 0x2) {
+@@ -128,7 +130,7 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+ 			}
+ 		}
+ 	} else { /* if (MV_PEX_ROOT_COMPLEX != pexType) */
+-		if (mvCtrlDevFamilyIdGet(ctrlModel)==MV_67XX) {
++		if (ctrlFamily==MV_67XX) {
+ 			/* TODO: 14/12/10 - requested by CV to support EP Compliance */
+ 			MV_REG_WRITE(PEX_DBG_CTRL_REG(pexIf), 0x0F62F0C0);
+ 
+@@ -146,7 +148,7 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+ 		}
+ 	}
+ 
+-	if (mvCtrlDevFamilyIdGet(ctrlModel)==MV_67XX) {
++	if (ctrlFamily==MV_67XX) {
+ 		 mvCpuIfEnablePex(pexIf);
+ 	}
+ 	/* now wait 1ms to be sure the link is valid */
+diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPex.h b/arch/arm/plat-armada/mv_hal/pex/mvPex.h
+index a403da5..fbc2051 100755
+--- a/arch/arm/plat-armada/mv_hal/pex/mvPex.h
++++ b/arch/arm/plat-armada/mv_hal/pex/mvPex.h
+@@ -149,6 +149,7 @@ extern "C" {
+ 	typedef struct {
+ 		MV_U16 ctrlModel;
+ 		MV_U16 maxPexIf;
++		MV_U32 ctrlFamily;
+ 	} MV_PEX_HAL_DATA;
+ 
+ 	/* Global Functions prototypes */
+diff --git a/arch/arm/plat-armada/mv_hal/usb/mvUsb.c b/arch/arm/plat-armada/mv_hal/usb/mvUsb.c
+index 13720e0..2ef07fb 100755
+--- a/arch/arm/plat-armada/mv_hal/usb/mvUsb.c
++++ b/arch/arm/plat-armada/mv_hal/usb/mvUsb.c
+@@ -207,7 +207,7 @@ static int mvUsbPhy40nmInit(int dev)
+ 	/*-------------------------------------------------*/
+ 
+ /* BTS #231 - for KW40 only */
+-	if (mvCtrlDevFamilyIdGet(usbHalData.ctrlModel)==MV_67XX) {
++	if (usbHalData.ctrlFamily==MV_67XX) {
+ 		MV_REG_WRITE(0x50850, 0x20000131);
+ 		MV_REG_WRITE(0x50890, 0x20000131);
+ 	}
+@@ -823,8 +823,8 @@ MV_STATUS mvUsbHalInit(int dev, MV_BOOL isHost, MV_USB_HAL_DATA *halData)
+ 		mvUsbPhy65nmNewInit(dev);
+ 
+ /* 	mvUsbPhyKW6500Init(dev); */
+-	} else if ((mvCtrlDevFamilyIdGet(usbHalData.ctrlModel)==MV_67XX) ||
+-		(mvCtrlDevFamilyIdGet(usbHalData.ctrlModel)==MV_78XX0)) {
++	} else if ((usbHalData.ctrlFamily==MV_67XX) ||
++		(usbHalData.ctrlFamily==MV_78XX0)) {
+ 
+ 		if (mvUsbPhy40nmInit(dev))
+ 			status = MV_NOT_READY;
+diff --git a/arch/arm/plat-armada/mv_hal/usb/mvUsb.h b/arch/arm/plat-armada/mv_hal/usb/mvUsb.h
+index 4b668f2..514084d 100644
+--- a/arch/arm/plat-armada/mv_hal/usb/mvUsb.h
++++ b/arch/arm/plat-armada/mv_hal/usb/mvUsb.h
+@@ -75,6 +75,7 @@ extern "C" {
+ typedef struct {
+ 	MV_U16		ctrlModel;
+ 	MV_U8		ctrlRev;
++	MV_U32		ctrlFamily;
+ } MV_USB_HAL_DATA;
+ 
+ /* Functions */
+-- 
+1.7.9.5
+

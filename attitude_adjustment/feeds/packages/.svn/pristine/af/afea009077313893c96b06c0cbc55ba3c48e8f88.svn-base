@@ -1,0 +1,66 @@
+--- a/contrib/test/Makefile
++++ b/contrib/test/Makefile
+@@ -28,7 +28,7 @@ pixfmt-test: pixfmt-test.o
+ 	$(CC) $(LDFLAGS) -o $@ $^ -lX11
+ 
+ v4l2grab: v4l2grab.o ../../lib/libv4l2/libv4l2.so
+-	$(CC) $(LDFLAGS) -o $@ $^ -L../../lib/libv4l2 -L../../lib/libv4lconvert -lv4l2 -lv4lconvert
++	$(CC) $(LDFLAGS) -o $@ $^ -L../../lib/libv4l2 -L../../lib/libv4lconvert -lv4l2 -lv4lconvert -largp
+ 
+ ioctl-test: ioctl-test.o
+ 	$(CC) $(LDFLAGS) -o $@ $^
+--- a/utils/decode_tm6000/Makefile
++++ b/utils/decode_tm6000/Makefile
+@@ -5,7 +5,7 @@ all: $(TARGETS)
+ -include *.d
+ 
+ decode_tm6000: decode_tm6000.o ../libv4l2util/libv4l2util.a
+-	$(CC) $(LDFLAGS) -o $@ $^
++	$(CC) $(LDFLAGS) -o $@ $^ -largp
+ 
+ install: $(TARGETS)
+ 	mkdir -p $(DESTDIR)$(PREFIX)/bin
+--- a/utils/keytable/Makefile
++++ b/utils/keytable/Makefile
+@@ -5,7 +5,7 @@ all: $(TARGETS)
+ -include *.d
+ 
+ ir-keytable: keytable.o
+-	$(CC) $(LDFLAGS) -o $@ $^
++	$(CC) $(LDFLAGS) -o $@ $^ -largp
+ 
+ keytable.o: keytable.c parse.h
+ 
+--- a/utils/v4l2-compliance/Makefile
++++ b/utils/v4l2-compliance/Makefile
+@@ -6,7 +6,7 @@ all: $(TARGETS)
+ 
+ v4l2-compliance: v4l2-compliance.o v4l2-test-debug.o v4l2-test-input-output.o \
+ 	v4l2-test-controls.o v4l2-test-io-config.o v4l2-test-formats.o
+-	$(CXX) $(LDFLAGS) -o $@ $^ -lv4l2 -lv4lconvert -lrt
++	$(CXX) $(LDFLAGS) -o $@ $^ -lv4l2 -lv4lconvert -lrt -lpthread
+ 
+ install: $(TARGETS)
+ 	mkdir -p $(DESTDIR)$(PREFIX)/bin
+--- a/utils/v4l2-ctl/Makefile
++++ b/utils/v4l2-ctl/Makefile
+@@ -13,7 +13,7 @@ ivtv-ctl: ivtv-ctl.o
+ 	$(CC) $(LDFLAGS) -o $@ $^ -lm
+ 
+ v4l2-ctl: v4l2-ctl.o
+-	$(CXX) $(LDFLAGS) -o $@ $^ -lv4l2 -lv4lconvert -lrt
++	$(CXX) $(LDFLAGS) -o $@ $^ -lv4l2 -lv4lconvert -lrt -lpthread
+ 
+ install: $(TARGETS)
+ 	mkdir -p $(DESTDIR)$(PREFIX)/bin
+--- a/utils/v4l2-sysfs-path/Makefile
++++ b/utils/v4l2-sysfs-path/Makefile
+@@ -5,7 +5,7 @@ all: $(TARGETS)
+ -include *.d
+ 
+ v4l2-sysfs-path: v4l2-sysfs-path.o ../libmedia_dev/libmedia_dev.a
+-	$(CC) $(LDFLAGS) -o $@ $^
++	$(CC) $(LDFLAGS) -o $@ $^ -largp
+ 
+ install: $(TARGETS)
+ 	mkdir -p $(DESTDIR)$(PREFIX)/bin

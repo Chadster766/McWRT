@@ -1,0 +1,341 @@
+From d3b493d2165564dcf650e19563aef03b33f8b0ec Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Sun, 4 Dec 2011 05:54:42 -0500
+Subject: [PATCH 030/609] NETA: PNC changes for setting/clearing RINFO bits
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c         |   29 ++++++++---------
+ arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c       |   34 ++++++++++----------
+ arch/arm/plat-armada/mv_hal/neta/pnc/mvPncAging.c  |    4 +--
+ arch/arm/plat-armada/mv_hal/neta/pnc/mvPncWol.c    |    2 +-
+ arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.c      |   11 ++++---
+ arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.h      |    2 +-
+ 6 files changed, 42 insertions(+), 40 deletions(-)
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/neta/pnc/mvPncAging.c
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/neta/pnc/mvPncWol.c
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.c
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.h
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c
+old mode 100644
+new mode 100755
+index efef7be..7800f47
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c
+@@ -48,10 +48,10 @@ static ssize_t tcam_help(char *buf)
+ 	int off = 0;
+ 
+ 	off += mvOsSPrintf(buf+off, "cat <file>\n");
+-	off += mvOsSPrintf(buf+off, " sw_dump - dump sw entry\n");
+-	off += mvOsSPrintf(buf+off, " hw_dump - dump valid entries\n");
+-	off += mvOsSPrintf(buf+off, " hw_regs - dump registers\n");
+-	off += mvOsSPrintf(buf+off, " hw_hits - decode hit sequences\n");
++	off += mvOsSPrintf(buf+off, " sw_dump         - dump sw entry\n");
++	off += mvOsSPrintf(buf+off, " hw_dump         - dump valid entries\n");
++	off += mvOsSPrintf(buf+off, " hw_regs         - dump registers\n");
++	off += mvOsSPrintf(buf+off, " hw_hits         - decode hit sequences\n");
+ #ifdef MV_ETH_PNC_AGING
+ 	off += mvOsSPrintf(buf+off, " age_dump        - dump non-zero aging counters\n");
+ 	off += mvOsSPrintf(buf+off, " age_dump_all    - dump all aging counters\n");
+@@ -60,17 +60,15 @@ static ssize_t tcam_help(char *buf)
+ #endif /* MV_ETH_PNC_AGING */
+ 
+ 	off += mvOsSPrintf(buf+off, "echo a > <file>\n");
+-	off += mvOsSPrintf(buf+off, " hw_write   - write sw entry into tcam entry <a>\n");
+-	off += mvOsSPrintf(buf+off, " hw_read    - read tcam entry <a> into sw entry\n");
+-	off += mvOsSPrintf(buf+off, " hw_inv     -  disable tcam entry <a>\n");
+-	off += mvOsSPrintf(buf+off, " hw_inv_all -  disable all tcam entries\n");
+-	off += mvOsSPrintf(buf+off, " hw_hits    -  start recording for port <a>\n");
+-
+-	off += mvOsSPrintf(buf+off, " s_rinfo    -  set result info bit <a>\n");
++	off += mvOsSPrintf(buf+off, " hw_write        - write sw entry into tcam entry <a>\n");
++	off += mvOsSPrintf(buf+off, " hw_read         - read tcam entry <a> into sw entry\n");
++	off += mvOsSPrintf(buf+off, " hw_inv          - disable tcam entry <a>\n");
++	off += mvOsSPrintf(buf+off, " hw_inv_all      - disable all tcam entries\n");
++	off += mvOsSPrintf(buf+off, " hw_hits         - start recording for port <a>\n");
+ 
+ #ifdef MV_ETH_PNC_AGING
+-	off += mvOsSPrintf(buf+off, " age_clear  - clear aging counter for tcam entry <a>\n");
+-	off += mvOsSPrintf(buf+off, " age_cntr   - show aging counter for tcam entry <a>\n");
++	off += mvOsSPrintf(buf+off, " age_clear       - clear aging counter for tcam entry <a>\n");
++	off += mvOsSPrintf(buf+off, " age_cntr        - show aging counter for tcam entry <a>\n");
+ #endif /* MV_ETH_PNC_AGING */
+ 
+ 	off += mvOsSPrintf(buf+off, "echo a b > <file>\n");
+@@ -79,6 +77,7 @@ static ssize_t tcam_help(char *buf)
+ 	off += mvOsSPrintf(buf+off, " t_port          - match port value <a> with mask <b>\n");
+ 	off += mvOsSPrintf(buf+off, " t_ainfo         - match ainfo value <a> with mask <b>\n");
+ 	off += mvOsSPrintf(buf+off, " s_shift_update  - fill sram shift index <a> with value <b>\n");
++	off += mvOsSPrintf(buf+off, " s_rinfo         - set rinfo value <a> with mask <b>\n");
+ 	off += mvOsSPrintf(buf+off, " s_ainfo         - set ainfo value <a> with mask <b>\n");
+ 	off += mvOsSPrintf(buf+off, " s_flowid        - fill sram flowid nibbles <b> from value <a>\n");
+ 	off += mvOsSPrintf(buf+off, " s_flowid_part   - fill sram flowid part <b> with value <a>\n");
+@@ -200,6 +199,8 @@ static ssize_t tcam_store(struct device *dev,
+ 		sram_sw_set_next_lookup(&te, a);
+ 	else if (!strcmp(name, "s_ainfo"))
+ 		sram_sw_set_ainfo(&te, a, b);
++	else if (!strcmp(name, "s_rinfo"))
++		sram_sw_set_rinfo(&te, a, b);
+ 	else if (!strcmp(name, "s_lookup_done"))
+ 		sram_sw_set_lookup_done(&te, a);
+ 	else if (!strcmp(name, "s_next_lookup_shift"))
+@@ -208,8 +209,6 @@ static ssize_t tcam_store(struct device *dev,
+ 		sram_sw_set_rxq(&te, a, b);
+ 	else if (!strcmp(name, "s_shift_update"))
+ 		sram_sw_set_shift_update(&te, a, b);
+-	else if (!strcmp(name, "s_rinfo"))
+-		sram_sw_set_rinfo(&te, 1 << a);
+ #ifdef MV_ETH_PNC_NEW
+ 	else if (!strcmp(name, "s_rinfo_extra"))
+ 		sram_sw_set_rinfo_extra(&te, a << (b & ~1));
+diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
+index e6a8e20..80b6ffd 100755
+--- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
++++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
+@@ -279,7 +279,7 @@ static void pnc_mac_fc_drop(void)
+ 	tcam_sw_set_port(te, 0, 0);	/* all ports */
+ 
+ 	/* result info bit */
+-	sram_sw_set_rinfo(te, RI_DROP);
++	sram_sw_set_rinfo(te, RI_DROP, RI_DROP);
+ 
+ 	tcam_sw_text(te, "flow control");
+ 	sram_sw_set_lookup_done(te, 1);
+@@ -317,7 +317,7 @@ static struct tcam_entry *pnc_mac_da(unsigned char *da, unsigned int len,
+ 	tcam_sw_set_port(te, 0, port_mask);
+ 
+ 	/* result info bit */
+-	sram_sw_set_rinfo(te, rinfo);
++	sram_sw_set_rinfo(te, rinfo, rinfo);
+ 
+ 	/* set rx queue */
+ 	sram_sw_set_rxq(te, rxq, 0);
+@@ -490,7 +490,7 @@ static int pnc_mac_init(void)
+ 	sram_sw_set_flowid(te, FLOWID_EOF_LU_MAC, FLOWID_CTRL_LOW_HALF_MASK);
+ 
+ 	/* Non-promiscous mode - DROP unknown packets */
+-	sram_sw_set_rinfo(te, RI_DROP);
++	sram_sw_set_rinfo(te, RI_DROP, RI_DROP);
+ 	sram_sw_set_lookup_done(te, 1);
+ 	tcam_sw_text(te, "mac_eof");
+ 
+@@ -546,7 +546,7 @@ int pnc_vlan_set(int prio, int rxq)
+ 
+ 	sram_sw_set_rxq(te, rxq, 0);
+ 
+-	sram_sw_set_rinfo(te, RI_VLAN);
++	sram_sw_set_rinfo(te, RI_VLAN, RI_VLAN);
+ 	sram_sw_set_next_lookup(te, TCAM_LU_L2);
+ 	sram_sw_set_shift_update(te, 0, MV_VLAN_HLEN);
+ 	tcam_sw_text(te, "vlan");
+@@ -635,7 +635,7 @@ static void pnc_etype_pppoe(void)
+ 
+ 	sram_sw_set_shift_update(te, 0, MV_ETH_TYPE_LEN + MV_PPPOE_HDR_SIZE);
+ 	sram_sw_set_next_lookup(te, TCAM_LU_IP4);
+-	sram_sw_set_rinfo(te, RI_PPPOE);
++	sram_sw_set_rinfo(te, RI_PPPOE, RI_PPPOE);
+ 	tcam_sw_text(te, "pppoe_ip4");
+ 
+ 	tcam_hw_write(te, TE_PPPOE_IP4);
+@@ -650,7 +650,7 @@ static void pnc_etype_pppoe(void)
+ 
+ 	sram_sw_set_shift_update(te, 0, MV_ETH_TYPE_LEN + MV_PPPOE_HDR_SIZE);
+ 	sram_sw_set_next_lookup(te, TCAM_LU_IP6);
+-	sram_sw_set_rinfo(te, RI_PPPOE);
++	sram_sw_set_rinfo(te, RI_PPPOE, RI_PPPOE);
+ 	tcam_sw_text(te, "pppoe_ip6");
+ 
+ 	tcam_hw_write(te, TE_PPPOE_IP6);
+@@ -790,7 +790,7 @@ void pnc_ip4_tcp(int rxq)
+ 	tcam_sw_set_byte(te, 7, 0x00);
+ 	tcam_sw_set_mask(te, 7, 0xFF);
+ 	sram_sw_set_shift_update(te, 1, SHIFT_IP4_HLEN);
+-	sram_sw_set_rinfo(te, RI_L3_IP4 | RI_L4_TCP);
++	sram_sw_set_rinfo(te, (RI_L3_IP4 | RI_L4_TCP), (RI_L3_IP4 | RI_L4_TCP));
+ 	sram_sw_set_rxq(te, rxq_ip4_tcp, 0);
+ 	sram_sw_set_ainfo(te, 0, AI_DONE_MASK);
+ 	pnc_ip4_flow_next_lookup_set(te);
+@@ -804,7 +804,7 @@ void pnc_ip4_tcp(int rxq)
+ 	te = tcam_sw_alloc(TCAM_LU_IP4);
+ 	tcam_sw_set_byte(te, 9, MV_IP_PROTO_TCP);
+ 	sram_sw_set_shift_update(te, 1, SHIFT_IP4_HLEN);
+-	sram_sw_set_rinfo(te, RI_L3_IP4_FRAG | RI_L4_TCP);
++	sram_sw_set_rinfo(te, (RI_L3_IP4_FRAG | RI_L4_TCP), (RI_L3_IP4_FRAG | RI_L4_TCP));
+ 	sram_sw_set_rxq(te, rxq_ip4_tcp, 0);
+ 	sram_sw_set_ainfo(te, 0, AI_DONE_MASK);
+ 	pnc_ip4_flow_next_lookup_set(te);
+@@ -830,7 +830,7 @@ void pnc_ip4_udp(int rxq)
+ 	tcam_sw_set_byte(te, 7, 0x00);
+ 	tcam_sw_set_mask(te, 7, 0xFF);
+ 	sram_sw_set_shift_update(te, 1, SHIFT_IP4_HLEN);
+-	sram_sw_set_rinfo(te, RI_L3_IP4 | RI_L4_UDP);
++	sram_sw_set_rinfo(te, (RI_L3_IP4 | RI_L4_UDP), (RI_L3_IP4 | RI_L4_UDP));
+ 	sram_sw_set_rxq(te, rxq_ip4_udp, 0);
+ 	sram_sw_set_ainfo(te, 0, AI_DONE_MASK);
+ 	pnc_ip4_flow_next_lookup_set(te);
+@@ -843,7 +843,7 @@ void pnc_ip4_udp(int rxq)
+ 	te = tcam_sw_alloc(TCAM_LU_IP4);
+ 	tcam_sw_set_byte(te, 9, MV_IP_PROTO_UDP);
+ 	sram_sw_set_shift_update(te, 1, SHIFT_IP4_HLEN);
+-	sram_sw_set_rinfo(te, RI_L3_IP4_FRAG | RI_L4_UDP);
++	sram_sw_set_rinfo(te, (RI_L3_IP4_FRAG | RI_L4_UDP), (RI_L3_IP4_FRAG | RI_L4_UDP));
+ 	sram_sw_set_rxq(te, rxq_ip4_udp, 0);
+ 	sram_sw_set_ainfo(te, 0, AI_DONE_MASK);
+ 	pnc_ip4_flow_next_lookup_set(te);
+@@ -861,7 +861,7 @@ static void pnc_ip4_end(void)
+ 	PNC_DBG("%s\n", __func__);
+ 
+ 	te = tcam_sw_alloc(TCAM_LU_IP4);
+-	sram_sw_set_rinfo(te, RI_L3_IP4 | RI_L4_UN);
++	sram_sw_set_rinfo(te, (RI_L3_IP4 | RI_L4_UN), (RI_L3_IP4 | RI_L4_UN));
+ 	sram_sw_set_rxq(te, rxq_ip4, 0);
+ 	sram_sw_set_lookup_done(te, 1);
+ 	sram_sw_set_flowid(te, FLOWID_EOF_LU_IP4, FLOWID_CTRL_LOW_HALF_MASK);
+@@ -911,7 +911,7 @@ static void pnc_ip6_tcp(void)
+ 	tcam_sw_set_byte(te, 6, MV_IP_PROTO_TCP);
+ 	sram_sw_set_shift_update(te, 1, sizeof(MV_IP6_HEADER));
+ 	pnc_ip6_flow_next_lookup_set(te);
+-	sram_sw_set_rinfo(te, RI_L3_IP6 | RI_L4_TCP);
++	sram_sw_set_rinfo(te, (RI_L3_IP6 | RI_L4_TCP), (RI_L3_IP6 | RI_L4_TCP));
+ 	sram_sw_set_rxq(te, rxq_ip6, 0);
+ 	tcam_sw_text(te, "ipv6_tcp");
+ 
+@@ -932,7 +932,7 @@ static void pnc_ip6_udp(void)
+ 	sram_sw_set_shift_update(te, 1, sizeof(MV_IP6_HEADER));
+ 	pnc_ip6_flow_next_lookup_set(te);
+ 
+-	sram_sw_set_rinfo(te, RI_L3_IP6 | RI_L4_UDP);
++	sram_sw_set_rinfo(te, (RI_L3_IP6 | RI_L4_UDP), (RI_L3_IP6 | RI_L4_UDP));
+ 	sram_sw_set_rxq(te, rxq_ip6, 0);
+ 	tcam_sw_text(te, "ipv6_udp");
+ 
+@@ -949,7 +949,7 @@ static void pnc_ip6_end(void)
+ 
+ 	te = tcam_sw_alloc(TCAM_LU_IP6);
+ 	sram_sw_set_shift_update(te, 1, sizeof(MV_IP6_HEADER));
+-	sram_sw_set_rinfo(te, RI_L3_IP6 | RI_L4_UN);
++	sram_sw_set_rinfo(te, (RI_L3_IP6 | RI_L4_UN), (RI_L3_IP6 | RI_L4_UN));
+ 	sram_sw_set_rxq(te, rxq_ip6, 0);
+ 	sram_sw_set_lookup_done(te, 1);
+ 	sram_sw_set_flowid(te, FLOWID_EOF_LU_IP6, FLOWID_CTRL_LOW_HALF_MASK);
+@@ -1057,7 +1057,7 @@ int pnc_ipv6_2_tuples_add(unsigned int tid1, unsigned int tid2, unsigned int flo
+ 		sram_sw_set_rxq(te, rxq, 0);
+ 	}
+ 
+-	sram_sw_set_rinfo(te, RI_L3_FLOW);
++	sram_sw_set_rinfo(te, RI_L3_FLOW, RI_L3_FLOW);
+ 
+ 	tcam_sw_set_ainfo(te, unique, AI_MASK);
+ 	tcam_sw_text(te, "ipv6_2t_B");
+@@ -1096,7 +1096,7 @@ int pnc_ipv4_2_tuples_add(unsigned int tid, unsigned int flow_id, unsigned int s
+ 	sram_sw_set_lookup_done(te, 1);
+ 	sram_sw_set_flowid(te, flow_id, FLOWID_CTRL_FULL_MASK);
+ 	sram_sw_set_rxq(te, rxq, 0);
+-	sram_sw_set_rinfo(te, RI_L3_FLOW);
++	sram_sw_set_rinfo(te, RI_L3_FLOW, RI_L3_FLOW);
+ 	tcam_sw_text(te, "ipv4_2t");
+ 
+ 	tcam_hw_write(te, tid);
+@@ -1147,7 +1147,7 @@ int pnc_ipv4_5_tuples_add(unsigned int tid, unsigned int flow_id,
+ 	sram_sw_set_lookup_done(te, 1);
+ 	sram_sw_set_flowid(te, flow_id, FLOWID_CTRL_FULL_MASK);
+ 	sram_sw_set_rxq(te, rxq, 0);
+-	sram_sw_set_rinfo(te, RI_L3_FLOW);
++	sram_sw_set_rinfo(te, RI_L3_FLOW, RI_L3_FLOW);
+ 	tcam_sw_text(te, "ipv4_5t");
+ 
+ 	tcam_hw_write(te, tid);
+diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncAging.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncAging.c
+old mode 100644
+new mode 100755
+index 2602828..232bb6f
+--- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncAging.c
++++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncAging.c
+@@ -26,8 +26,6 @@ DISCLAIMED.  The GPL License provides additional details about this warranty
+ disclaimer.
+ *******************************************************************************/
+ 
+-#ifdef MV_ETH_PNC_AGING
+-
+ #include "mvOs.h"
+ #include "mvCommon.h"
+ 
+@@ -36,6 +34,8 @@ disclaimer.
+ #include "mvPnc.h"
+ #include "mvTcam.h"
+ 
++#ifdef MV_ETH_PNC_AGING
++
+ #define PNC_AGING_CNTRS_ADDR_MASK       (0 << 12)
+ #define PNC_AGING_GROUPS_ADDR_MASK      (1 << 12)
+ #define PNC_AGING_SCANNER_ADDR_MASK     (2 << 12)
+diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncWol.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncWol.c
+old mode 100644
+new mode 100755
+index 61f7961..815533e
+--- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncWol.c
++++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncWol.c
+@@ -177,7 +177,7 @@ void mv_pnc_wol_init(void)
+ 	/* Set default entires for each one of LU used for WoL */
+ 	te = tcam_sw_alloc(TCAM_LU_WOL);
+ 	tcam_sw_set_lookup_all(te);
+-	sram_sw_set_rinfo(te, RI_DROP);
++	sram_sw_set_rinfo(te, RI_DROP, RI_DROP);
+ 	sram_sw_set_lookup_done(te, 1);
+ 	tcam_sw_text(te, "wol_eof");
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.c
+old mode 100644
+new mode 100755
+index 6b85121..3b96928
+--- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.c
++++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.c
+@@ -268,7 +268,7 @@ void sram_sw_set_flowid_partial(struct tcam_entry *te, unsigned int flowid,
+ 	te->sram.word[1] |= 1 << idx;
+ }
+ 
+-void sram_sw_set_rinfo(struct tcam_entry *te, unsigned int rinfo)
++void sram_sw_set_rinfo(struct tcam_entry *te, unsigned int rinfo, unsigned int mask)
+ {
+ 	unsigned int word;
+ 	unsigned int i;
+@@ -276,13 +276,16 @@ void sram_sw_set_rinfo(struct tcam_entry *te, unsigned int rinfo)
+ 	WARN_ON_OOR(rinfo > RI_MASK);
+ 
+ 	for (i = 0; i < RI_BITS; i++) {
+-		if (rinfo & (1 << i)) {
++		if (mask & (1 << i)) {
+ 
+ 			word = (RI_VALUE_OFFS + i) / DWORD_LEN;
+-			te->sram.word[word] |= 1 << ((i + RI_VALUE_OFFS) % DWORD_LEN);
++			if (rinfo & (1 << i))
++				te->sram.word[word] |= (1 << ((i + RI_VALUE_OFFS) % DWORD_LEN));
++			else
++				te->sram.word[word] &= ~(1 << ((i + RI_VALUE_OFFS) % DWORD_LEN));
+ 
+ 			word = (RI_MASK_OFFS + i) / DWORD_LEN;
+-			te->sram.word[word] |= 1 << ((i + RI_MASK_OFFS) % DWORD_LEN);
++			te->sram.word[word] |= (1 << ((i + RI_MASK_OFFS) % DWORD_LEN));
+ 		}
+ 	}
+ }
+diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.h b/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.h
+old mode 100644
+new mode 100755
+index 45bc29d..b668fca
+--- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.h
++++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.h
+@@ -322,7 +322,7 @@ int  tcam_sw_cmp_byte(struct tcam_entry *te, unsigned int offset, unsigned char
+ int  tcam_sw_cmp_bytes(struct tcam_entry *te, unsigned int offset, unsigned int size, unsigned char *data);
+ 
+ void tcam_sw_set_mask(struct tcam_entry *te, unsigned int offset, unsigned char mask);
+-void sram_sw_set_rinfo(struct tcam_entry *te, unsigned int bit);
++void sram_sw_set_rinfo(struct tcam_entry *te, unsigned int rinfo, unsigned int mask);
+ void sram_sw_set_shift_update(struct tcam_entry *te, unsigned int index, unsigned int value);
+ void sram_sw_set_rxq(struct tcam_entry *te, unsigned int rxq, unsigned int force);
+ 
+-- 
+1.7.9.5
+

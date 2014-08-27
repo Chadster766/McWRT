@@ -1,0 +1,149 @@
+From 731bb3955d92cc1995290cd2a129472643945dfd Mon Sep 17 00:00:00 2001
+From: Raymond Huang <rhuang@marvell.com>
+Date: Thu, 5 Jan 2012 18:11:03 +0800
+Subject: [PATCH 228/609] LPAE: add address map for LPAE mode
+
+Change-Id: I55ac1e1e37cd68ce9881dfae863d003be8ec613f
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/include/mach/armadaxp.h |  116 ++++++++++++++++++++++++
+ 1 file changed, 116 insertions(+)
+
+diff --git a/arch/arm/mach-armadaxp/include/mach/armadaxp.h b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
+index 7ccec30..a409e30 100644
+--- a/arch/arm/mach-armadaxp/include/mach/armadaxp.h
++++ b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
+@@ -88,6 +88,120 @@
+ #define PEX9_MEM_PHYS_BASE		0xEE000000
+ #define PEX9_MEM_SIZE			_32M
+ 
++#ifdef CONFIG_ARM_LPAE
++
++#define CONFIG_MV_ETH_PORTS_NUM		0
++
++#define SPI_CS0_PHYS_BASE		0xF0000000
++#define SPI_CS0_VIRT_BASE		0xFAA00000
++#define SPI_CS0_SIZE			_16M
++
++#ifdef CONFIG_MACH_ARMADA_XP_FPGA
++ #define INTER_REGS_PHYS_BASE		0xF1000000
++ /* Make sure that no other machines are compiled in */
++ #if defined (CONFIG_MACH_ARMADA_XP_DB) || defined (CONFIG_MACH_ARMADA_XP_RDSRV)
++ #error	"Conflicting Board Configuration!!"
++ #endif
++#else
++ #define INTER_REGS_PHYS_BASE		0xD0000000
++#endif
++
++/*
++ * Change INTER_REGS_BASE from 0xFBB00000 to 0xFBC00000 is mainly
++ * for CONFIG_DEBUG_LL. Before paging_init, the UART port is mapped
++ * by a section entry (2MB). In such case, the '1' in bit 20 is treated
++ * as 'offset' and make it fail to access the UART port.
++ */
++#define INTER_REGS_BASE			0xFBC00000
++
++#define PEX0_IO_PHYS_BASE		0xF1100000
++#define PEX0_IO_VIRT_BASE		0xFBE00000
++#define PEX0_IO_SIZE			_1M
++#define PEX1_IO_PHYS_BASE		0xF1200000
++#define PEX1_IO_VIRT_BASE		0xFBF00000
++#define PEX1_IO_SIZE			_1M
++#define PEX2_IO_PHYS_BASE		0xF1300000
++#define PEX2_IO_VIRT_BASE		0xFC000000
++#define PEX2_IO_SIZE			_1M
++#define PEX3_IO_PHYS_BASE		0xF1400000
++#define PEX3_IO_VIRT_BASE		0xFC100000
++#define PEX3_IO_SIZE			_1M
++#define PEX4_IO_PHYS_BASE		0xF1500000
++#define PEX4_IO_VIRT_BASE		0xFC200000
++#define PEX4_IO_SIZE			_1M
++#define PEX5_IO_PHYS_BASE		0xF1600000
++#define PEX5_IO_VIRT_BASE		0xFC300000
++#define PEX5_IO_SIZE			_1M
++#define PEX6_IO_PHYS_BASE		0xF1700000
++#define PEX6_IO_VIRT_BASE		0xFC400000
++#define PEX6_IO_SIZE			_1M
++#define PEX7_IO_PHYS_BASE		0xF1800000
++#define PEX7_IO_VIRT_BASE		0xFC500000
++#define PEX7_IO_SIZE			_1M
++#define PEX8_IO_PHYS_BASE		0xF1900000
++#define PEX8_IO_VIRT_BASE		0xFC600000
++#define PEX8_IO_SIZE			_1M
++#define PEX9_IO_PHYS_BASE		0xF1A00000
++#define PEX9_IO_VIRT_BASE		0xFC700000
++#define PEX9_IO_SIZE			_1M
++
++#define UART_REGS_BASE			0xF1B00000
++#define UART_VIRT_BASE			0xFC800000
++#define UART_SIZE			_1M
++
++#define DEVICE_BOOTCS_PHYS_BASE		0xF2000000
++#define DEVICE_BOOTCS_VIRT_BASE		0xFCA00000
++#define DEVICE_BOOTCS_SIZE		_32M
++#define DEVICE_CS0_PHYS_BASE		0xF4000000
++#define DEVICE_CS0_VIRT_BASE		0xFEA00000
++#define DEVICE_CS0_SIZE			_1M
++#define DEVICE_CS1_PHYS_BASE		0xF4100000
++#define DEVICE_CS1_VIRT_BASE		0xFEB00000
++#define DEVICE_CS1_SIZE			_1M
++#define DEVICE_CS2_PHYS_BASE		0xF4200000
++#define DEVICE_CS2_VIRT_BASE		0xFEC00000
++#define DEVICE_CS2_SIZE			_1M
++#define DEVICE_CS3_PHYS_BASE		0xF4300000
++#define DEVICE_CS3_VIRT_BASE		0xFED00000
++#define DEVICE_CS3_SIZE			_1M
++
++#define CRYPT_ENG_PHYS_BASE(chan)	((chan == 0) ? 0xC8010000 : 0xF4480000)
++#define CRYPT_ENG_VIRT_BASE(chan)	((chan == 0) ? 0xFEE00000 : 0xFEE10000)
++#define CRYPT_ENG_SIZE			_64K
++
++
++#ifdef CONFIG_ARMADA_XP_REV_Z1
++#define XOR0_PHYS_BASE                 (INTER_REGS_PHYS_BASE | 0x60800)
++#define XOR1_PHYS_BASE                 (INTER_REGS_PHYS_BASE | 0x60900)
++#else
++#define XOR0_PHYS_BASE			(INTER_REGS_PHYS_BASE | 0x60900)
++#define XOR1_PHYS_BASE			(INTER_REGS_PHYS_BASE | 0xF0900)
++#endif
++#define XOR0_HIGH_PHYS_BASE		(INTER_REGS_PHYS_BASE | 0x60B00)
++#define XOR1_HIGH_PHYS_BASE		(INTER_REGS_PHYS_BASE | 0xF0B00)
++
++#define PNC_BM_PHYS_BASE		0xF4500000
++#define PNC_BM_VIRT_BASE		0xFEF00000
++#define PNC_BM_SIZE			_1M
++
++#define BOOTROM_PHYS_BASE		0xFFF00000
++#define BOOTROM_VIRT_BASE		0xFF000000
++#define BOOTROM_SIZE			_1M
++
++#define PMU_SCRATCH_PHYS_BASE		0xF4700000
++#define PMU_SCRATCH_VIRT_BASE		0xFF100000
++#define PMU_SCRATCH_SIZE		_1M
++
++#define LEGACY_NAND_PHYS_BASE		0xF4800000
++#define LEGACY_NAND_VIRT_BASE		0xFF200000
++#define LEGACY_NAND_SIZE		_1M
++
++#define	LCD_PHYS_BASE			(INTER_REGS_PHYS_BASE | 0xE0000)
++
++#define AXP_NFC_PHYS_BASE	(INTER_REGS_PHYS_BASE | 0xD0000)
++
++#else /* !CONFIG_ARM_LPAE */
++
+ #define SPI_CS0_PHYS_BASE		0xF0000000
+ #define SPI_CS0_VIRT_BASE		0xFAB00000
+ #define SPI_CS0_SIZE			_16M
+@@ -190,6 +304,8 @@
+ 
+ #define AXP_NFC_PHYS_BASE	(INTER_REGS_PHYS_BASE | 0xD0000)
+ 
++#endif /* CONFIG_ARM_LPAE */
++
+ /*
+  * Linux native definitiotns
+  */
+-- 
+1.7.9.5
+

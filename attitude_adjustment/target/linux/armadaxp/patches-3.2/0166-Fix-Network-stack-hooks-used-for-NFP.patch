@@ -1,0 +1,98 @@
+From 88560b86419c3ef7a1ad126145858dd3b2f16706 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Mon, 9 Jul 2012 10:24:51 -0400
+Subject: [PATCH 166/609] Fix Network stack hooks used for NFP
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../netfilter/nf_conntrack_l3proto_ipv4_compat.c   |    4 ++--
+ net/netfilter/nf_conntrack_proto_tcp.c             |    8 ++++----
+ net/netfilter/nf_conntrack_standalone.c            |    4 ++--
+ 3 files changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/net/ipv4/netfilter/nf_conntrack_l3proto_ipv4_compat.c b/net/ipv4/netfilter/nf_conntrack_l3proto_ipv4_compat.c
+index 02a5ee8..94ae40b 100644
+--- a/net/ipv4/netfilter/nf_conntrack_l3proto_ipv4_compat.c
++++ b/net/ipv4/netfilter/nf_conntrack_l3proto_ipv4_compat.c
+@@ -179,7 +179,7 @@ static int ct_seq_show(struct seq_file *s, void *v)
+ 	if (ct_show_secctx(s, ct))
+ 		goto release;
+ 
+-#if defined(CONFIG_MV_ETH_NFP_CT_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 	if ((ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple.nfp) && (ct->tuplehash[IP_CT_DIR_REPLY].tuple.nfp)) {
+ 		if (seq_printf(s, "[NFP (both)] "))
+ 			goto release;
+@@ -190,7 +190,7 @@ static int ct_seq_show(struct seq_file *s, void *v)
+ 		if (seq_printf(s, "[NFP (reply)] "))
+ 			goto release;
+ 	}
+-#endif /* CONFIG_MV_ETH_NFP_CT_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 
+ 	if (seq_printf(s, "use=%u\n", atomic_read(&ct->ct_general.use)))
+ 		goto release;
+diff --git a/net/netfilter/nf_conntrack_proto_tcp.c b/net/netfilter/nf_conntrack_proto_tcp.c
+index aab0481..1f3ba7d 100644
+--- a/net/netfilter/nf_conntrack_proto_tcp.c
++++ b/net/netfilter/nf_conntrack_proto_tcp.c
+@@ -821,7 +821,7 @@ static int tcp_packet(struct nf_conn *ct,
+ {
+ 	struct net *net = nf_ct_net(ct);
+ 	struct nf_conntrack_tuple *tuple;
+-#if defined(CONFIG_MV_ETH_NFP_CT_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 	struct nf_conntrack_tuple *tupleInverseDir;
+ #endif
+ 	enum tcp_conntrack new_state, old_state;
+@@ -840,7 +840,7 @@ static int tcp_packet(struct nf_conn *ct,
+ 	index = get_conntrack_index(th);
+ 	new_state = tcp_conntracks[dir][index][old_state];
+ 	tuple = &ct->tuplehash[dir].tuple;
+-#if defined(CONFIG_MV_ETH_NFP_CT_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 	tupleInverseDir	= &ct->tuplehash[!dir].tuple;
+ #endif
+ 	switch (new_state) {
+@@ -994,14 +994,14 @@ static int tcp_packet(struct nf_conn *ct,
+ 		break;
+ 	}
+ 
+-#if defined(CONFIG_MV_ETH_NFP_CT_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 	/*
+ 	 * When connection is handled by NFP, we have to relax TCP tracking
+ 	 * rules as not all packets goes through Linux conntrack.
+ 	 */
+ 	if ((tuple->nfp) || (tupleInverseDir->nfp))
+ 		goto in_window;
+-#endif /* CONFIG_MV_ETH_NFP_CT_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 
+ 	if (!tcp_in_window(ct, &ct->proto.tcp, dir, index,
+ 			   skb, dataoff, th, pf)) {
+diff --git a/net/netfilter/nf_conntrack_standalone.c b/net/netfilter/nf_conntrack_standalone.c
+index 1107465..4f4c9d1 100644
+--- a/net/netfilter/nf_conntrack_standalone.c
++++ b/net/netfilter/nf_conntrack_standalone.c
+@@ -251,7 +251,7 @@ static int ct_seq_show(struct seq_file *s, void *v)
+ 		goto release;
+ #endif
+ 
+-#if defined(CONFIG_MV_ETH_NFP_CT_LEARN)
++#if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 	if ((ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple.nfp) && (ct->tuplehash[IP_CT_DIR_REPLY].tuple.nfp)) {
+ 		if (seq_printf(s, "[NFP (both)] "))
+ 			goto release;
+@@ -262,7 +262,7 @@ static int ct_seq_show(struct seq_file *s, void *v)
+ 		if (seq_printf(s, "[NFP (reply)] "))
+ 			goto release;
+ 	}
+-#endif /* CONFIG_MV_ETH_NFP_CT_LEARN */
++#endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 
+ 	if (seq_printf(s, "use=%u\n", atomic_read(&ct->ct_general.use)))
+ 		goto release;
+-- 
+1.7.9.5
+

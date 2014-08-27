@@ -1,0 +1,26 @@
+if PACKAGE_freecwmp-curl || PACKAGE_freecwmp-zstream
+
+config FREECWMP_SCRIPTS_FULL
+	bool "Install all freecwmp scripts"
+	default y
+
+choice
+	prompt "Select ACS sever"
+	default FREECWMP_ACS_MULTI
+
+config FREECWMP_ACS_MULTI
+	bool "No specific ACS, follow standard"
+
+config FREECWMP_ACS_HDM
+	bool "HDM"
+endchoice
+
+config FREECWMP_DEBUG
+	bool "Compile with debug options"
+	default n
+
+config FREECWMP_DEVEL_DEBUG
+	bool "Compile with development debug options"
+	default n
+
+endif

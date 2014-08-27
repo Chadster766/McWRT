@@ -1,0 +1,46 @@
+--- a/configure.in
++++ b/configure.in
+@@ -15,7 +15,7 @@ dnl Checks for libraries.
+ AC_CHECK_LIB(kstat, kstat_open)
+ AC_CHECK_LIB(socket, socket)
+ AC_CHECK_LIB(crypto, HMAC)
+-AC_CHECK_LIB(snmp, init_snmp, , AC_MSG_ERROR(Couldn't find libsnmp))
++AC_CHECK_LIB(netsnmp, init_snmp, , AC_MSG_ERROR(Couldn't find libsnmp))
+ 
+ dnl Checks for header files.
+ AC_HEADER_STDC
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -19,10 +19,10 @@ moduledir = $(SITEPACKAGE)
+ module_DATA = yapsnmp.py $(module).py
+ 
+ lib_LTLIBRARIES = netsnmpc.la
+-netsnmpc_la_SOURCES = $(prodname)_wrap.c
++netsnmpc_la_SOURCES = net-snmp_wrap.c
+ netsnmpc_la_LDFLAGS = -module -avoid-version
+ 
+-$(module).py $(prodname)_wrap.c: $(prodname).i $(includefiles)
++$(module).py net-snmp_wrap.c: $(prodname).i $(includefiles)
+ 	$(SWIG) -python -shadow -I$(snmpinclude) $(prodname).i
+ 
+ $(includefiles): $(patchfiles)
+--- a/src/Makefile.in
++++ b/src/Makefile.in
+@@ -101,7 +101,7 @@ patchfiles = snmp_api.h-patch snmp_clien
+ EXTRA_DIST = yapsnmp.py $(prodname).i $(module).py $(patchfiles)
+ 
+ CLEANFILES = $(includefiles)
+-MAINTAINERCLEANFILES = $(module).py $(prodname)_wrap.c $(prodname)_wrap.doc Makefile.in
++MAINTAINERCLEANFILES = $(module).py net-snmp_wrap.c $(prodname)_wrap.doc Makefile.in
+ 
+ INCLUDES = -I$(oldincludedir)/$(PYTHONINCPATH) -I$(includedir)/$(PYTHONINCPATH)
+ 
+@@ -109,7 +109,7 @@ moduledir = $(SITEPACKAGE)
+ module_DATA = yapsnmp.py $(module).py
+ 
+ lib_LTLIBRARIES = netsnmpc.la
+-netsnmpc_la_SOURCES = $(prodname)_wrap.c
++netsnmpc_la_SOURCES = net-snmp_wrap.c
+ netsnmpc_la_LDFLAGS = -module -avoid-version
+ subdir = src
+ mkinstalldirs = $(SHELL) $(top_srcdir)/config/mkinstalldirs

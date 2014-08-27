@@ -1,0 +1,12 @@
+diff -Naur linux-3.2.36_org/arch/arm/include/asm/checksum.h linux-3.2.36/arch/arm/include/asm/checksum.h
+--- linux-3.2.36_org/arch/arm/include/asm/checksum.h	2013-01-03 10:34:00.000000000 +0700
++++ linux-3.2.36/arch/arm/include/asm/checksum.h	2013-12-20 23:54:09.660741670 +0700
+@@ -98,7 +98,7 @@
+ 	"adcs	%0, %0, %5					\n\
+ 	adc	%0, %0, #0"
+ 	: "=&r"(sum)
+-	: "r" (sum), "r" (daddr), "r" (saddr), "r" (len), "Ir" (htons(proto))
++	: "r" (sum), "r" (daddr), "r" (saddr), "r" ((unsigned int) len), "Ir" (htons(proto))
+ 	: "cc");
+ 	return sum;
+ }	

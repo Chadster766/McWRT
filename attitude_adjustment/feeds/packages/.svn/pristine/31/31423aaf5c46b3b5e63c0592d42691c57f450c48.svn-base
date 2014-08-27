@@ -1,0 +1,32 @@
+diff -rU5 seeks-0.3.3/src/plugins/blocker/Makefile.am seeks-0.3.3-new/src/plugins/blocker/Makefile.am
+--- seeks-0.3.3/src/plugins/blocker/Makefile.am	2010-12-05 09:33:05.000000000 +0100
++++ seeks-0.3.3-new/src/plugins/blocker/Makefile.am	2011-05-24 01:13:09.994085964 +0200
+@@ -4,11 +4,11 @@
+ blockerplugindatadir = $(datadir)/seeks/plugins/blocker
+ 
+ AM_CXXFLAGS=-Wall -g -pipe
+ AM_CPPFLAGS= -I${srcdir} -I${srcdir}/../../utils -I${srcdir}/../../proxy -I${srcdir}/../../lsh \
+ 	    -DSEEKS_CONFIGDIR='"$(sysconfdir)/seeks/"' `pkg-config --cflags protobuf` `pkg-config --cflags tokyocabinet` \
+-	    -I../../proxy
++	    -I../../proxy @PCRE_CFLAGS@
+ ACLOCAL_AMFLAGS=-I m4
+ 
+ blockerpluginlib_LTLIBRARIES=libblockerplugin.la
+ libblockerplugin_la_SOURCES=blocker.cpp blocker.h
+ 
+diff -rU5 seeks-0.3.3/src/plugins/httpserv/Makefile.am seeks-0.3.3-new/src/plugins/httpserv/Makefile.am
+--- seeks-0.3.3/src/plugins/httpserv/Makefile.am	2011-02-18 15:44:02.000000000 +0100
++++ seeks-0.3.3-new/src/plugins/httpserv/Makefile.am	2011-05-24 01:27:13.413787987 +0200
+@@ -4,11 +4,11 @@
+ httpservplugindatadir = $(datadir)/seeks/plugins/httpserv
+ 
+ 
+ AM_CPPFLAGS=-Wno-deprecated -Wall -g -pipe \
+             -I${srcdir} -I${srcdir}/../websearch -I${srcdir}/../../utils -I${srcdir}/../../lsh -I${srcdir}/../../proxy \
+-	    -I${srcdir}/../../dht
++	    -I${srcdir}/../../dht @PCRE_CFLAGS@
+ 
+ 
+ if HAVE_TC
+ if HAVE_PROTOBUF
+ AM_CPPFLAGS+=-I${srcdir}/../query_capture -I${srcdir}/../cf `pkg-config --cflags protobuf` `pkg-config --cflags tokyocabinet`

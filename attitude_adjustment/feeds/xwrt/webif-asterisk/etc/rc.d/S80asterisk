@@ -1,0 +1,64 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006 OpenWrt.org
+
+START=50
+
+#DEST=/
+DEST=""
+DEFAULT=/etc/default/asterisk
+# DEFAULT=$DEST/etc/default/asterisk
+OPTIONS=""
+
+start() {
+	[ -f $DEFAULT ] && . $DEFAULT
+#	[ -d $DEST/var/run ] || mkdir -p $DEST/var/run
+#	[ -d $DEST/var/log/asterisk ] || mkdir -p $DEST/var/log/asterisk
+#	[ -d $DEST/var/spool/asterisk ] || mkdir -p $DEST/var/spool/asterisk
+
+	[ -d /var/run ] || mkdir -p /var/run
+	[ -d /var/log/asterisk ] || mkdir -p /var/log/asterisk
+	[ -d /var/spool/asterisk ] || mkdir -p /var/spool/asterisk
+
+        # NB required for CDR
+#        [ -d /var/log/asterisk/cdr-csv/ ] || mkdir -p /var/log/asterisk/cdr-csv
+#        [ -f /var/log/asterisk/cdr-csv/Master.csv ] || touch /var/log/asterisk/cdr-csv/Master.csv
+
+        [ -d /mnt/disc0_1/asterisk/cdr-csv/ ] || mkdir -p /mnt/disc0_1/asterisk/cdr-csv
+        [ -f /mnt/disc0_1/asterisk/cdr-csv/Master.csv ] || touch /mnt/disc0_1/asterisk/cdr-csv/Master.csv
+        [ -d /var/log/asterisk/cdr-csv ] || ln -s /mnt/disc0_1/asterisk/cdr-csv /var/log/asterisk/cdr-csv
+
+#      Create voicemail dir on USB drive
+        [ -d /mnt/disc0_1/asterisk/voicemail ] || mkdir -p /mnt/disc0_1/asterisk/voicemail
+#     Create symlink to USB voicemail dir 
+        [ -d /var/spool/asterisk/voicemail ] || ln -s /mnt/disc0_1/asterisk/voicemail /var/spool/asterisk/voicemail
+#     Create symlink to USB monitor (recordings) dir 
+        [ -d /var/spool/asterisk/monitor ] || ln -s /mnt/disc0_1/asterisk/monitor /var/spool/asterisk/monitor
+#     Create symlink to USB sounds dir 
+        [ -d /usr/lib/asterisk/sounds ] || ln -s /mnt/disc0_1/asterisk/sounds /usr/lib/asterisk/sounds
+#     Create symlink to USB MOH dir 
+        [ -d /usr/lib/asterisk/moh-native ] || ln -s /mnt/disc0_1/asterisk/moh-native/ /usr/lib/asterisk/moh-native
+#     Create dictate dir on USB drive
+        [ -d /mnt/disc0_1/asterisk/dictate ] || mkdir -p /mnt/disc0_1/asterisk/dictate
+#     Create symlink to USB dictate dir 
+        [ -d /var/spool/asterisk/dictate ] || ln -s /mnt/disc0_1/asterisk/dictate /var/spool/asterisk/dictate
+
+#NB Copy the MOH to the RAM 
+        mkdir -p /var/spool/asterisk/moh-native
+        cp /mnt/disc0_1/asterisk/moh-native/* /var/spool/asterisk/moh-native
+
+#	$DEST/usr/sbin/asterisk $OPTIONS
+#	/usr/sbin/asterisk $OPTIONS
+	/usr/sbin/asterisk
+         sleep 3
+
+        # This is used to run a Dialplan function at startup to load config. from NVRAM
+        #  Local/#15 to load vars from nvram (via /usr/lib/asterisk/agi-bin/getnvramvars.sh)
+        #  Local/#16 to load vars from uci config file /etc/config/mars (via /usr/lib/asterisk/agi-bin/get_config_file.sh)
+
+#        /usr/sbin/asterisk -rx 'originate Local/#15 extension'
+        /usr/sbin/asterisk -rx 'originate Local/#16 extension'
+}
+
+stop() {
+	[ -f $DEST/var/run/asterisk.pid ] && kill $(cat $DEST/var/run/asterisk.pid) >/dev/null 2>&1
+}

@@ -1,0 +1,765 @@
+From 2637001217e65c8118e40fc5079d93f98d4f0b93 Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Mon, 16 Jul 2012 17:53:18 +0300
+Subject: [PATCH 180/609] Neta: Fix NFP compiling as module and file reorg
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |   55 ++---
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h     |   13 +-
+ .../mv_drivers_lsp/mv_neta/nfp_mgr/mv_nfp_mgr_if.h |   40 ----
+ arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h   |  223 --------------------
+ include/linux/mv_nfp.h                             |   46 ++--
+ net/bridge/br_fdb.c                                |    2 +-
+ net/bridge/br_if.c                                 |   12 +-
+ net/core/dev.c                                     |   10 +-
+ net/core/mv_nfp.c                                  |   50 ++---
+ net/netfilter/nf_conntrack_core.c                  |   46 ++--
+ 10 files changed, 95 insertions(+), 402 deletions(-)
+ delete mode 100644 arch/arm/plat-armada/mv_drivers_lsp/mv_neta/nfp_mgr/mv_nfp_mgr_if.h
+ delete mode 100644 arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index 5ab45b1..1f5b604 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -166,25 +166,25 @@ int mv_eth_cmdline_port3_config(char *s);
+ __setup("mv_port3_config=", mv_eth_cmdline_port3_config);
+ 
+ #if defined(CONFIG_MV_ETH_NFP) || defined(CONFIG_MV_ETH_NFP_MODULE)
+-struct nfpHookMgr *nfpHookMgr = NULL;
+-int nfp_hook_mgr_register(mv_eth_nfp_func_t *func)
++struct mv_eth_nfp_ops *mv_eth_nfp_ops = NULL;
++int mv_eth_nfp_register(mv_eth_nfp_func_t *func)
+ {
+-	nfpHookMgr = kmalloc(sizeof(struct nfpHookMgr *), GFP_ATOMIC);
+-	if (nfpHookMgr == NULL) {
+-		printk(KERN_ERR "nfp_mgr_init: Error allocating memory for nfp Hook Mgr \n");
++	mv_eth_nfp_ops = kmalloc(sizeof(struct nfpHookMgr *), GFP_ATOMIC);
++	if (mv_eth_nfp_ops == NULL) {
++		printk(KERN_ERR "%s: Error allocating memory for mv_eth_nfp_ops\n", __func__);
+ 		return -ENOMEM;
+ 	}
+-	nfpHookMgr->mv_eth_nfp = func;
++	mv_eth_nfp_ops->mv_eth_nfp = func;
+ 	return 0;
+ }
+-EXPORT_SYMBOL(nfp_hook_mgr_register);
++EXPORT_SYMBOL(mv_eth_nfp_register);
+ 
+-void nfp_hook_mgr_unregister(void)
++void mv_eth_nfp_unregister(void)
+ {
+-	kfree(nfpHookMgr);
+-	nfpHookMgr = NULL;
++	kfree(mv_eth_nfp_ops);
++	mv_eth_nfp_ops = NULL;
+ }
+-EXPORT_SYMBOL(nfp_hook_mgr_unregister);
++EXPORT_SYMBOL(mv_eth_nfp_unregister);
+ #endif /* CONFIG_MV_ETH_NFP || CONFIG_MV_ETH_NFP_MODULE */
+ 
+ int mv_eth_cmdline_port0_config(char *s)
+@@ -1642,7 +1642,7 @@ static inline int mv_eth_rx(struct eth_port *pp, int rx_todo, int rxq)
+ 			pkt->bytes = rx_bytes + MV_ETH_MH_SIZE;
+ 			pkt->offset = NET_SKB_PAD;
+ 
+-			status = nfpHookMgr->mv_eth_nfp(pp, rxq, rx_desc, pkt, pool);
++			status = mv_eth_nfp_ops->mv_eth_nfp(pp, rxq, rx_desc, pkt, pool);
+ 			if (status == MV_OK)
+ 				continue;
+ 			if (status == MV_FAIL) {
+@@ -2833,7 +2833,7 @@ static void mv_eth_cpu_counters_init(void)
+ #endif /* CONFIG_MV_CPU_PERF_CNTRS */
+ }
+ 
+-static void mv_eth_port_promisc_set(int port, int queue)
++void mv_eth_port_promisc_set(int port, int queue)
+ {
+ #ifdef CONFIG_MV_ETH_PNC
+ 	/* Accept all */
+@@ -3548,34 +3548,9 @@ void mv_eth_config_show(void)
+ 	printk(KERN_ERR "  o Transmit checksum offload supported\n");
+ #endif
+ 
+-#ifdef CONFIG_MV_ETH_NFP
++#if defined(CONFIG_MV_ETH_NFP) || defined(CONFIG_MV_ETH_NFP_MODULE)
+ 	printk(KERN_ERR "  o Network Fast Processing (NFP) supported\n");
+-
+-#ifdef NFP_BRIDGE
+-	printk(KERN_ERR "     o NFP Bridging supported\n");
+-#endif /* NFP_BRIDGE */
+-
+-#ifdef NFP_VLAN
+-	printk(KERN_ERR "     o NFP VLAN Processing supported\n");
+-#endif /* NFP_VLAN */
+-
+-#ifdef NFP_FIB
+-	printk(KERN_ERR "     o NFP Routing (FIB) supported\n");
+-#endif /* NFP_FIB */
+-
+-#ifdef NFP_NAT
+-	printk(KERN_ERR "     o NFP NAT supported\n");
+-#endif /* NFP_NAT */
+-
+-#ifdef NFP_LIMIT
+-	printk(KERN_ERR "     o NFP Rate Limiting supported\n");
+-#endif /* NFP_LIMIT */
+-
+-#ifdef NFP_PPP
+-	printk(KERN_ERR "     o NFP PPPoE supported\n");
+-#endif /* NFP_PPP */
+-
+-#endif /* CONFIG_MV_ETH_NFP */
++#endif /* CONFIG_MV_ETH_NFP || CONFIG_MV_ETH_NFP_MODULE */
+ 
+ #ifdef CONFIG_MV_ETH_STAT_ERR
+ 	printk(KERN_ERR "  o Driver ERROR statistics enabled\n");
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+index 63383e3..c7fe35c 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+@@ -700,17 +700,14 @@ int         mv_eth_open(struct net_device *dev);
+ int	    mv_eth_cpu_txq_mask_set(int port, int cpu, int txqMask);
+ 
+ #if defined(CONFIG_MV_ETH_NFP) || defined(CONFIG_MV_ETH_NFP_MODULE)
+-struct nfpHookMgr {
++typedef MV_STATUS mv_eth_nfp_func_t(struct eth_port *pp, int rxq, struct neta_rx_desc *rx_desc,
++					struct eth_pbuf *pkt, struct bm_pool *pool);
++struct mv_eth_nfp_ops {
+ 	MV_STATUS (*mv_eth_nfp)(struct eth_port *pp, int rxq, struct neta_rx_desc *rx_desc,
+ 					struct eth_pbuf *pkt, struct bm_pool *pool);
+ };
+-typedef MV_STATUS mv_eth_nfp_func_t(struct eth_port *pp, int rxq, struct neta_rx_desc *rx_desc,
+-					struct eth_pbuf *pkt, struct bm_pool *pool);
+-int         nfp_hook_mgr_register(mv_eth_nfp_func_t *func);
+-void        nfp_hook_mgr_unregister(void);
+-int         mv_eth_ctrl_nfp(struct net_device *dev, int en);
+-MV_STATUS   mv_eth_nfp(struct eth_port *pp, int rxq, struct neta_rx_desc *rx_desc,
+-			struct eth_pbuf *pkt, struct bm_pool *pool);
++int         mv_eth_nfp_register(mv_eth_nfp_func_t *func);
++void        mv_eth_nfp_unregister(void);
+ #endif /* CONFIG_MV_ETH_NFP || CONFIG_MV_ETH_NFP_MODULE */
+ 
+ irqreturn_t mv_eth_isr(int irq, void *dev_id);
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/nfp_mgr/mv_nfp_mgr_if.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/nfp_mgr/mv_nfp_mgr_if.h
+deleted file mode 100644
+index 63e1305..0000000
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/nfp_mgr/mv_nfp_mgr_if.h
++++ /dev/null
+@@ -1,40 +0,0 @@
+-/* mv_nfp_mgr_if.h */
+-
+-#ifndef MV_NFP_MGR_IF_H
+-#define MV_NFP_MGR_IF_H
+-
+-/* Enable / disable NFP processing according to mode	*/
+-/* mode - NFP operation mode:				*/
+-/*        0 - NFP disabled				*/
+-/*        1 - NFP enabled in 2 tuple mode		*/
+-/*        2 - NFP enabled in 5 tuple mode		*/
+-int  nfp_mgr_enable(int mode);
+-
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN) || defined(CONFIG_MV_ETH_NFP_VLAN_LEARN) || defined(CONFIG_MV_ETH_NFP_FDB_LEARN)||\
+-		defined(CONFIG_MV_ETH_NFP_PPP_LEARN) || defined(CONFIG_MV_ETH_NFP_CT_LEARN)
+-void nfp_learn_enable(int en);
+-#endif
+-
+-#ifdef CONFIG_MV_ETH_NFP_FIB_LEARN
+-void nfp_fib_learn_enable(int en);
+-#endif
+-
+-#ifdef CONFIG_MV_ETH_NFP_CT_LEARN
+-void nfp_ct_learn_enable(int en);
+-#endif
+-
+-#ifdef CONFIG_MV_ETH_NFP_FDB_LEARN
+-void nfp_bridge_learn_enable(int en);
+-#endif
+-
+-#ifdef CONFIG_MV_ETH_NFP_VLAN_LEARN
+-void nfp_vlan_learn_enable(int en);
+-#endif
+-
+-#ifdef CONFIG_MV_ETH_NFP_PPP_LEARN
+-void nfp_ppp_learn_enable(int en);
+-#endif
+-
+-extern rwlock_t nfp_lock;
+-#endif
+-
+diff --git a/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
+deleted file mode 100644
+index a467f0d..0000000
+--- a/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
++++ /dev/null
+@@ -1,223 +0,0 @@
+-/*******************************************************************************
+-Copyright (C) Marvell International Ltd. and its affiliates
+-
+-This software file (the "File") is owned and distributed by Marvell
+-International Ltd. and/or its affiliates ("Marvell") under the following
+-alternative licensing terms.  Once you have made an election to distribute the
+-File under one of the following license alternatives, please (i) delete this
+-introductory statement regarding license alternatives, (ii) delete the two
+-license alternatives that you have not elected to use and (iii) preserve the
+-Marvell copyright notice above.
+-
+-********************************************************************************
+-Marvell Commercial License Option
+-
+-If you received this File from Marvell and you have entered into a commercial
+-license agreement (a "Commercial License") with Marvell, the File is licensed
+-to you under the terms of the applicable Commercial License.
+-
+-********************************************************************************
+-Marvell GPL License Option
+-
+-If you received this File from Marvell, you may opt to use, redistribute and/or
+-modify this File in accordance with the terms and conditions of the General
+-Public License Version 2, June 1991 (the "GPL License"), a copy of which is
+-available along with the File in the license.txt file or by writing to the Free
+-Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
+-on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
+-
+-THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+-WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
+-DISCLAIMED.  The GPL License provides additional details about this warranty
+-disclaimer.
+-********************************************************************************
+-Marvell BSD License Option
+-
+-If you received this File from Marvell, you may opt to use, redistribute and/or
+-modify this File under the following licensing terms.
+-Redistribution and use in source and binary forms, with or without modification,
+-are permitted provided that the following conditions are met:
+-
+-    *   Redistributions of source code must retain the above copyright notice,
+-	this list of conditions and the following disclaimer.
+-
+-    *   Redistributions in binary form must reproduce the above copyright
+-	notice, this list of conditions and the following disclaimer in the
+-	documentation and/or other materials provided with the distribution.
+-
+-    *   Neither the name of Marvell nor the names of its contributors may be
+-	used to endorse or promote products derived from this software without
+-	specific prior written permission.
+-
+-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-
+-*******************************************************************************/
+-
+-/*******************************************************************************
+-* mvNfpDefs.h - Header File for Marvell NFP Configuration definitions
+-*
+-* DESCRIPTION:
+-*
+-* DEPENDENCIES:
+-*       None.
+-*
+-*******************************************************************************/
+-
+-#ifndef __mvNfpDefs_h__
+-#define __mvNfpDefs_h__
+-
+-#include "mv802_3.h"
+-#include "gbe/mvNetaRegs.h"
+-#include "gbe/mvNeta.h"
+-
+-#ifdef CONFIG_MV_ETH_NFP_MODULE
+-#define CONFIG_MV_ETH_NFP
+-#endif
+-
+-#ifdef CONFIG_MV_ETH_NFP
+-
+-#define ETH_NFP
+-
+-#ifdef CONFIG_MV_ETH_NFP_EXT
+-# define NFP_EXT
+-# define NFP_EXT_NUM 	CONFIG_MV_ETH_NFP_EXT_NUM
+-#else
+-# define NFP_EXT_NUM 	0
+-#endif
+-
+-#define NFP_MAX_PORTS   (MV_ETH_MAX_PORTS + NFP_EXT_NUM)
+-
+-#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN) || defined(CONFIG_MV_ETH_NFP_VLAN_LEARN) || defined(CONFIG_MV_ETH_NFP_FDB_LEARN) || \
+-		defined(CONFIG_MV_ETH_NFP_PPP_LEARN) || defined(CONFIG_MV_ETH_NFP_CT_LEARN)
+-#define NFP_LEARN
+-#endif
+-
+-#ifdef CONFIG_MV_ETH_NFP_FIB
+-#define NFP_FIB
+-#endif
+-
+-#ifdef CONFIG_MV_ETH_NFP_FIB_LEARN
+-#define NFP_FIB_LEARN
+-#endif
+-
+-#ifdef CONFIG_MV_ETH_NFP_VLAN
+-#define NFP_VLAN
+-#endif
+-
+-#ifdef CONFIG_MV_ETH_NFP_VLAN_LEARN
+-#define NFP_VLAN_LEARN
+-#endif
+-
+-#ifdef CONFIG_MV_ETH_NFP_PPP
+-#define NFP_PPP
+-#endif
+-
+-#ifdef CONFIG_MV_ETH_NFP_PPP_LEARN
+-#define NFP_PPP_LEARN
+-#endif
+-
+-#ifdef CONFIG_MV_ETH_NFP_CT
+-#define NFP_CT
+-#endif
+-
+-#ifdef CONFIG_MV_ETH_NFP_CT_LEARN
+-#define NFP_CT_LEARN
+-#endif
+-
+-#ifdef CONFIG_MV_ETH_NFP_NAT
+-#define NFP_NAT
+-#endif
+-
+-#ifdef CONFIG_MV_ETH_NFP_LIMIT
+-#define NFP_LIMIT
+-#endif
+-
+-#ifdef CONFIG_MV_ETH_NFP_CLASSIFY
+-#define NFP_CLASSIFY
+-#endif
+-
+-#ifdef CONFIG_MV_ETH_NFP_STATS
+-#define NFP_STAT
+-#endif
+-
+-#ifdef CONFIG_MV_ETH_NFP_BRIDGE
+-#define NFP_BRIDGE
+-#endif
+-
+-#ifdef CONFIG_MV_ETH_NFP_FDB_MODE
+-#define NFP_FDB_MODE
+-#endif
+-
+-#ifdef CONFIG_MV_ETH_NFP_FDB_LEARN
+-#define NFP_FDB_LEARN
+-#endif
+-
+-#ifdef CONFIG_MV_ETH_SWITCH
+-# define NFP_MAX_SWITCH_GROUPS  CONFIG_MV_ETH_SWITCH_NETDEV_NUM
+-#else
+-# define NFP_MAX_SWITCH_GROUPS  1
+-#endif /* CONFIG_MV_ETH_SWITCH */
+-
+-typedef struct {
+-	MV_U16 flags;
+-
+-	MV_U8  txp;
+-	MV_U8  txq;
+-
+-	MV_U8 pkt_ecn;
+-	MV_U8 pkt_dscp;
+-	int   ct_dscp;
+-
+-	int pkt_vlan_prio;
+-	int bridge_vlan_prio;
+-	int ct_vlan_prio;
+-
+-	MV_U16 mh;
+-
+-	int iif_prio;
+-	int iif_vlan_prio;
+-	int iif_dscp_prio;
+-
+-	int prio_dscp;
+-	int prio_vprio;
+-	MV_U8 prio_txp;
+-	MV_U8 prio_txq;
+-	MV_U16 prio_mh;
+-
+-} NFP_CLASSIFY_INFO;
+-
+-typedef struct {
+-	void   *dev;
+-	MV_U32 tx_cmd;
+-	MV_U32 diffL4[2];
+-	MV_U8  *pWrite;
+-	MV_U16 flags;
+-	MV_U16 mtu;
+-	short  shift;
+-	MV_U8  txp;
+-	MV_U8  txq;
+-	MV_IP_HEADER_INFO ipInfo;
+-	void   *privateData;
+-} MV_NFP_RESULT;
+-
+-#define MV_NFP_RES_TXP_VALID       0x0001
+-#define MV_NFP_RES_TXQ_VALID       0x0002
+-#define MV_NFP_RES_IP_INFO_VALID   0x0004
+-#define MV_NFP_RES_NETDEV_EXT      0x0010
+-#define MV_NFP_RES_L4_CSUM_NEEDED  0x0020
+-
+-MV_STATUS mvNfpIfMapPortGet(int ifIdx, int *port);
+-MV_STATUS mvNfpRx(MV_U32 inPort, NETA_RX_DESC *pRxDesc, MV_ETH_PKT *pPkt, MV_NFP_RESULT* pRes);
+-
+-#endif /* CONFIG_MV_ETH_NFP */
+-
+-#endif /* __mvNfp_h__ */
+diff --git a/include/linux/mv_nfp.h b/include/linux/mv_nfp.h
+index 4602697..758bd3d 100644
+--- a/include/linux/mv_nfp.h
++++ b/include/linux/mv_nfp.h
+@@ -7,13 +7,19 @@
+ #include <net/netfilter/nf_nat.h>
+ 
+ #if defined(CONFIG_MV_ETH_NFP) || defined(CONFIG_MV_ETH_NFP_MODULE)
++
++struct nfp_core_ops {
++	int (*nfp_rx_ext)(struct net_device *dev, struct sk_buff *skb, MV_EXT_PKT_INFO *pktInfo);
++};
++extern struct nfp_core_ops *nfp_core_p;
++int nfp_core_ops_init(void);
++
+ struct nfp_hook_ops {
+-	int (*nfp_hook_fib_rule_add)(int family, u8 *src_l3, u8 *dst_l3, u8 *gw,
+-							 int iif, int oif);
+-	int (*nfp_hook_fib_rule_del)(int family, u8 *src_l3, u8 *dst_l3,
+-					int iif, int oif);
+-	int (*nfp_hook_fib_rule_age)(int family, u8 *src_l3, u8 *dst_l3,
+-					int iif, int oif);
++	int (*nfp_is_learning_enabled)(void);
++
++	int (*nfp_hook_fib_rule_add)(int family, u8 *src_l3, u8 *dst_l3, u8 *gw, int iif, int oif);
++	int (*nfp_hook_fib_rule_del)(int family, u8 *src_l3, u8 *dst_l3, int iif, int oif);
++	int (*nfp_hook_fib_rule_age)(int family, u8 *src_l3, u8 *dst_l3, int iif, int oif);
+ 	int (*nfp_hook_arp_add)(int family, u8 *ip, u8 *mac, int if_index);
+ 	int (*nfp_hook_arp_delete)(int family, u8 *ip);
+ 	int (*nfp_hook_arp_is_confirmed)(int family, u8 *ip);
+@@ -22,33 +28,27 @@ struct nfp_hook_ops {
+ 	int (*nfp_hook_fdb_rule_age)(int br_index, int if_index, u8 *mac);
+ 	int (*nfp_hook_fdb_rule_del)(int br_index, int if_index, u8 *mac);
+ 
+-	int (*nfp_hook_vlan_add)(int if_index, struct net_device *dev,
+-					int real_if_index, int vlan_id);
+-	int (*nfp_hook_vlan_del)(int if_index);
++	int (*nfp_hook_br_del)(int ifindex);
++	int (*nfp_hook_br_port_del)(int bridge_if, int port_if);
+ 
+-	void (*nfp_hook_ct_del)(int family, u8 *src_l3, u8 *dst_l3, u16 sport, u16 dport, u8 proto);
+-	int (*nfp_hook_ct_age)(int family, u8 *src_l3, u8 *dst_l3, u16 sport, u16 dport, u8 proto);
+-	void (*nfp_ct_sync)(int family);
+-
+-	int (*nfp_hook_del_br)(int ifindex);
+-	int (*nfp_hook_del_port_from_br)(int bridge_if, int port_if);
++	int (*nfp_hook_vlan_add)(int if_index, struct net_device *dev, int real_if_index, int vlan_id);
++	int (*nfp_hook_vlan_del)(int if_index);
+ 
+ 	int (*nfp_hook_ppp_info_del)(u32 channel);
+ 	int (*nfp_hook_ppp_half_set)(u16 sid, u32 chan, struct net_device *eth_dev, char *remoteMac);
+ 	int (*nfp_hook_ppp_complete)(u32 chan, struct net_device *ppp_dev);
+ 
+-	int (*nfp_hook_move_nat_to_nfp)(const struct nf_conntrack_tuple *tuple,
+-					const struct nf_conntrack_tuple *target,
+-					enum nf_nat_manip_type maniptype);
+-	int (*nfp_hook_move_fwd_to_nfp)(const struct nf_conntrack_tuple *tuple,
+-					int mode);
+-	int (*nfp_is_learning_enabled)(void);
+-	int (*nfp_ct_is_learning_enabled)(void);
++	int (*nfp_hook_ct_del)(int family, u8 *src_l3, u8 *dst_l3, u16 sport, u16 dport, u8 proto);
++	int (*nfp_hook_ct_age)(int family, u8 *src_l3, u8 *dst_l3, u16 sport, u16 dport, u8 proto);
++	int (*nfp_hook_ct_nat_add)(const struct nf_conntrack_tuple *tuple,
++				const struct nf_conntrack_tuple *target, enum nf_nat_manip_type maniptype);
++	int  (*nfp_hook_ct_fwd_add)(const struct nf_conntrack_tuple *tuple, int mode);
++	int  (*nfp_ct_is_learning_enabled)(void);
+ };
+ 
+ extern struct nfp_hook_ops *nfp_mgr_p;
+ 
+-int nfp_init_nfp_hook_ops(void);
++int nfp_hook_ops_init(void);
+ 
+ #endif /* CONFIG_MV_ETH_NFP */
+ #endif
+diff --git a/net/bridge/br_fdb.c b/net/bridge/br_fdb.c
+index 8c4a360..d00f65b 100644
+--- a/net/bridge/br_fdb.c
++++ b/net/bridge/br_fdb.c
+@@ -380,7 +380,7 @@ static struct net_bridge_fdb_entry *fdb_create(struct hlist_head *head,
+ #if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+ 		fdb->nfp = false;
+ 		if (nfp_mgr_p->nfp_hook_fdb_rule_add)
+-			if (!nfp_mgr_p->nfp_hook_fdb_rule_add(fdb->dst->br->dev->ifindex, fdb->dst->dev->ifindex, addr, is_local))
++			if (!nfp_mgr_p->nfp_hook_fdb_rule_add(fdb->dst->br->dev->ifindex, fdb->dst->dev->ifindex, (u8 *)addr, is_local))
+ 				fdb->nfp = true;
+ #endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 	}
+diff --git a/net/bridge/br_if.c b/net/bridge/br_if.c
+index 0b3fd87..425e7a4 100644
+--- a/net/bridge/br_if.c
++++ b/net/bridge/br_if.c
+@@ -170,8 +170,8 @@ void br_dev_delete(struct net_device *dev, struct list_head *head)
+ 	list_for_each_entry_safe(p, n, &br->port_list, list) {
+ 
+ #if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+-	if (nfp_mgr_p->nfp_hook_del_port_from_br)
+-		nfp_mgr_p->nfp_hook_del_port_from_br(br->dev->ifindex, p->dev->ifindex);
++	if (nfp_mgr_p->nfp_hook_br_port_del)
++		nfp_mgr_p->nfp_hook_br_port_del(br->dev->ifindex, p->dev->ifindex);
+ #endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 
+ 		del_nbp(p);
+@@ -180,8 +180,8 @@ void br_dev_delete(struct net_device *dev, struct list_head *head)
+ 	del_timer_sync(&br->gc_timer);
+ 
+ #if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+-	if (nfp_mgr_p->nfp_hook_del_br)
+-		nfp_mgr_p->nfp_hook_del_br(br->dev->ifindex);
++	if (nfp_mgr_p->nfp_hook_br_del)
++		nfp_mgr_p->nfp_hook_br_del(br->dev->ifindex);
+ #endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 
+ 	br_sysfs_delbr(br->dev);
+@@ -439,8 +439,8 @@ int br_del_if(struct net_bridge *br, struct net_device *dev)
+ 		return -EINVAL;
+ 
+ #if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
+-	if (nfp_mgr_p->nfp_hook_del_port_from_br)
+-		nfp_mgr_p->nfp_hook_del_port_from_br(br->dev->ifindex, p->dev->ifindex);
++	if (nfp_mgr_p->nfp_hook_br_port_del)
++		nfp_mgr_p->nfp_hook_br_port_del(br->dev->ifindex, p->dev->ifindex);
+ #endif /* CONFIG_MV_ETH_NFP_LEARN */
+ 
+ 	del_nbp(p);
+diff --git a/net/core/dev.c b/net/core/dev.c
+index 6ffd7b1..f37c15d 100644
+--- a/net/core/dev.c
++++ b/net/core/dev.c
+@@ -3226,8 +3226,9 @@ static struct sk_buff *handle_nfp_extrcv(struct sk_buff *skb, struct net_device
+ 	if (pktInfo->flags == 0)
+ 		pktInfo = NULL;
+ 
+-	if (!mv_eth_nfp_ext(skb->dev, skb, pktInfo))
+-		return NULL;
++	if (nfp_core_p->nfp_rx_ext)
++		if (!nfp_core_p->nfp_rx_ext(skb->dev, skb, pktInfo))
++			return NULL;
+ 
+ 	return skb;
+ }
+@@ -6675,8 +6676,9 @@ static int __init net_dev_init(void)
+ 	dev_mcast_init();
+ 	rc = 0;
+ #if defined(CONFIG_MV_ETH_NFP) || defined(CONFIG_MV_ETH_NFP_MODULE)
+-	nfp_init_nfp_hook_ops();
+-#endif
++	nfp_core_ops_init();
++	nfp_hook_ops_init();
++#endif /* CONFIG_MV_ETH_NFP || CONFIG_MV_ETH_NFP_MODULE */
+ out:
+ 	return rc;
+ }
+diff --git a/net/core/mv_nfp.c b/net/core/mv_nfp.c
+index 3e8f0cc..97cb202 100644
+--- a/net/core/mv_nfp.c
++++ b/net/core/mv_nfp.c
+@@ -1,40 +1,30 @@
+ /* mv_nfp.c */
+ #include "linux/mv_nfp.h"
+ 
+-struct nfp_hook_ops *nfp_mgr_p;
++struct nfp_core_ops *nfp_core_p = NULL;
++struct nfp_hook_ops *nfp_mgr_p = NULL;
+ 
+-int nfp_init_nfp_hook_ops(void)
++int nfp_core_ops_init(void)
+ {
+-	nfp_mgr_p = kzalloc(sizeof(struct nfp_hook_ops *), GFP_KERNEL);
++	nfp_core_p = kzalloc(sizeof(struct nfp_core_ops), GFP_KERNEL);
++	if (nfp_core_p == NULL) {
++		printk(KERN_INFO "%s: Could not allocate %d bytesi for nfp_core_p\n",
++			__func__, sizeof(struct nfp_core_ops));
++		return -ENOMEM;
++	}
++	return 0;
++}
++EXPORT_SYMBOL(nfp_core_p);
++
++int nfp_hook_ops_init(void)
++{
++	nfp_mgr_p = kzalloc(sizeof(struct nfp_hook_ops), GFP_KERNEL);
+ 	if (!nfp_mgr_p) {
+-			printk(KERN_INFO "%s: Could not allocate mem for nfp_mgr_p\n", __func__);
+-			return -ENOMEM;
+-		}
++		printk(KERN_INFO "%s: Could not allocate %d bytes for nfp_mgr_p\n",
++			__func__, sizeof(struct nfp_hook_ops));
++		return -ENOMEM;
++	}
+ 
+-	nfp_mgr_p->nfp_hook_fib_rule_add 	  = NULL;
+-	nfp_mgr_p->nfp_hook_fib_rule_del 	  = NULL;
+-	nfp_mgr_p->nfp_hook_fib_rule_age 	  = NULL;
+-	nfp_mgr_p->nfp_hook_arp_add      	  = NULL;
+-	nfp_mgr_p->nfp_hook_arp_delete   	  = NULL;
+-	nfp_mgr_p->nfp_hook_arp_is_confirmed  = NULL;
+-	nfp_mgr_p->nfp_hook_fdb_rule_add      = NULL;
+-	nfp_mgr_p->nfp_hook_fdb_rule_age      = NULL;
+-	nfp_mgr_p->nfp_hook_fdb_rule_del      = NULL;
+-	nfp_mgr_p->nfp_hook_vlan_add          = NULL;
+-	nfp_mgr_p->nfp_hook_vlan_del          = NULL;
+-	nfp_mgr_p->nfp_hook_ct_del			  = NULL;
+-	nfp_mgr_p->nfp_hook_ct_age			  = NULL;
+-	nfp_mgr_p->nfp_hook_del_br 			  = NULL;
+-	nfp_mgr_p->nfp_hook_del_port_from_br  = NULL;
+-	nfp_mgr_p->nfp_hook_ppp_info_del 	  = NULL;
+-	nfp_mgr_p->nfp_hook_ppp_half_set 	  = NULL;
+-	nfp_mgr_p->nfp_hook_ppp_complete      = NULL;
+-	nfp_mgr_p->nfp_hook_move_nat_to_nfp   = NULL;
+-	nfp_mgr_p->nfp_hook_move_fwd_to_nfp   = NULL;
+-	nfp_mgr_p->nfp_hook_ct_age            = NULL;
+-	nfp_mgr_p->nfp_ct_sync                = NULL;
+-	nfp_mgr_p->nfp_is_learning_enabled    = NULL;
+-	nfp_mgr_p->nfp_ct_is_learning_enabled = NULL;
+ 	return 0;
+ }
+ EXPORT_SYMBOL(nfp_mgr_p);
+diff --git a/net/netfilter/nf_conntrack_core.c b/net/netfilter/nf_conntrack_core.c
+index ad9ba4e..ce06147 100644
+--- a/net/netfilter/nf_conntrack_core.c
++++ b/net/netfilter/nf_conntrack_core.c
+@@ -313,16 +313,14 @@ static void death_by_timeout(unsigned long ul_conntrack)
+ 	int confirmed_org = 0, confirmed_reply = 0;
+ 
+ 	if (t0 && t0->nfp) {
+-		if (t0->src.l3num == AF_INET)
+-			{
++		if (t0->src.l3num == AF_INET) {
+ 			if (nfp_mgr_p->nfp_hook_ct_age)
+ 				confirmed_org = nfp_mgr_p->nfp_hook_ct_age(t0->src.l3num, (u8 *)&(t0->src.u3.ip),
+ 					(u8 *)&(t0->dst.u3.ip),
+ 					ntohs(t0->src.u.all),
+ 					ntohs(t0->dst.u.all),
+ 					t0->dst.protonum);
+-			}
+-		else
++		} else
+ 			if (nfp_mgr_p->nfp_hook_ct_age)
+ 				confirmed_org = nfp_mgr_p->nfp_hook_ct_age(t0->src.l3num, (u8 *)&(t0->src.u3.ip6),
+ 					(u8 *)&(t0->dst.u3.ip6),
+@@ -332,16 +330,14 @@ static void death_by_timeout(unsigned long ul_conntrack)
+ 	}
+ 
+ 	if (t1 && t1->nfp) {
+-		if (t1->src.l3num == AF_INET)
+-			{
++		if (t1->src.l3num == AF_INET) {
+ 			if (nfp_mgr_p->nfp_hook_ct_age)
+ 				confirmed_reply = nfp_mgr_p->nfp_hook_ct_age(t1->src.l3num, (u8 *)&(t1->src.u3.ip),
+ 					(u8 *)&(t1->dst.u3.ip),
+ 					ntohs(t1->src.u.all),
+ 					ntohs(t1->dst.u.all),
+ 					t1->dst.protonum);
+-			}
+-		else
++		} else
+ 			if (nfp_mgr_p->nfp_hook_ct_age)
+ 				confirmed_reply = nfp_mgr_p->nfp_hook_ct_age(t1->src.l3num, (u8 *)&(t1->src.u3.ip6),
+ 					(u8 *)&(t1->dst.u3.ip6),
+@@ -359,16 +355,14 @@ static void death_by_timeout(unsigned long ul_conntrack)
+ 	if (t0 && t0->nfp) {
+ 		t0->nfp = false;
+ 
+-		if (t0->src.l3num == AF_INET)
+-			{
++		if (t0->src.l3num == AF_INET) {
+ 			if (nfp_mgr_p->nfp_hook_ct_del)
+ 				nfp_mgr_p->nfp_hook_ct_del(t0->src.l3num, (u8 *)&(t0->src.u3.ip),
+ 					(u8 *)&(t0->dst.u3.ip),
+ 					ntohs(t0->src.u.all),
+ 					ntohs(t0->dst.u.all),
+ 					t0->dst.protonum);
+-			}
+-		else
++		} else
+ 			if (nfp_mgr_p->nfp_hook_ct_del)
+ 				nfp_mgr_p->nfp_hook_ct_del(t0->src.l3num, (u8 *)&(t0->src.u3.ip6),
+ 					(u8 *)&(t0->dst.u3.ip6),
+@@ -380,16 +374,14 @@ static void death_by_timeout(unsigned long ul_conntrack)
+ 	if (t1 && t1->nfp) {
+ 		t1->nfp = false;
+ 
+-		if (t1->src.l3num == AF_INET)
+-			{
++		if (t1->src.l3num == AF_INET) {
+ 			if (nfp_mgr_p->nfp_hook_ct_del)
+ 				nfp_mgr_p->nfp_hook_ct_del(t1->src.l3num, (u8 *)&(t1->src.u3.ip),
+ 					(u8 *)&(t1->dst.u3.ip),
+ 					ntohs(t1->src.u.all),
+ 					ntohs(t1->dst.u.all),
+ 					t1->dst.protonum);
+-			}
+-		else
++		} else
+ 			nfp_mgr_p->nfp_hook_ct_del(t1->src.l3num, (u8 *)&(t1->src.u3.ip6),
+ 					(u8 *)&(t1->dst.u3.ip6),
+ 					ntohs(t1->src.u.all),
+@@ -1586,8 +1578,8 @@ void nfp_ct_sync(int family)
+ 			tuple->nfp = true;
+ 
+ 			if (tuple->info->mode == IPT_NFP_DROP) {
+-				if (nfp_mgr_p->nfp_hook_move_fwd_to_nfp)
+-					nfp_mgr_p->nfp_hook_move_fwd_to_nfp(tuple, 0);
++				if (nfp_mgr_p->nfp_hook_ct_fwd_add)
++					nfp_mgr_p->nfp_hook_ct_fwd_add(tuple, 0);
+ 				continue;
+ 			}
+ 
+@@ -1606,15 +1598,15 @@ void nfp_ct_sync(int family)
+ 					nf_ct_invert_tuplepr(&target_tuple, &ct->tuplehash[!dir].tuple);
+ 
+ 					if ((status & IPS_NAT_MASK) == IPS_DST_NAT) {
+-						if (nfp_mgr_p->nfp_hook_move_nat_to_nfp)
+-							nfp_mgr_p->nfp_hook_move_nat_to_nfp(tuple, &target_tuple, IP_NAT_MANIP_DST);
++						if (nfp_mgr_p->nfp_hook_ct_nat_add)
++							nfp_mgr_p->nfp_hook_ct_nat_add(tuple, &target_tuple, IP_NAT_MANIP_DST);
+ 					} else if ((status & IPS_NAT_MASK) == IPS_SRC_NAT) {
+-						if (nfp_mgr_p->nfp_hook_move_nat_to_nfp)
+-							nfp_mgr_p->nfp_hook_move_nat_to_nfp(tuple, &target_tuple, IP_NAT_MANIP_SRC);
++						if (nfp_mgr_p->nfp_hook_ct_nat_add)
++							nfp_mgr_p->nfp_hook_ct_nat_add(tuple, &target_tuple, IP_NAT_MANIP_SRC);
+ 					} else {
+-						if (nfp_mgr_p->nfp_hook_move_nat_to_nfp)
+-							nfp_mgr_p->nfp_hook_move_nat_to_nfp(tuple, &target_tuple, IP_NAT_MANIP_DST);
+-							nfp_mgr_p->nfp_hook_move_nat_to_nfp(tuple, &target_tuple, IP_NAT_MANIP_SRC);
++						if (nfp_mgr_p->nfp_hook_ct_nat_add)
++							nfp_mgr_p->nfp_hook_ct_nat_add(tuple, &target_tuple, IP_NAT_MANIP_DST);
++							nfp_mgr_p->nfp_hook_ct_nat_add(tuple, &target_tuple, IP_NAT_MANIP_SRC);
+ 					}
+ 
+ 					continue;
+@@ -1626,8 +1618,8 @@ void nfp_ct_sync(int family)
+ 			}
+ #endif /* CONFIG_MV_ETH_NFP_NAT */
+ 			/* If we got till here, it must be IPT_NFP_FWD */
+-			if (nfp_mgr_p->nfp_hook_move_fwd_to_nfp)
+-				nfp_mgr_p->nfp_hook_move_fwd_to_nfp(tuple, 1);
++			if (nfp_mgr_p->nfp_hook_ct_fwd_add)
++				nfp_mgr_p->nfp_hook_ct_fwd_add(tuple, 1);
+ 		}
+ 	}
+ 
+-- 
+1.7.9.5
+

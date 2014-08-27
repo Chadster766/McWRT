@@ -1,0 +1,25 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2011 OpenWrt.org
+
+START=98
+
+SERVICE_USE_PID=1
+
+LIB_D=/var/lib/rrdcollect
+CGI_S=$LIB_D/rrd.cgi
+IMG_D=$LIB_D/img
+RRD_D=$LIB_D/rrd
+
+start() {
+	RRD_F=$(find $RRD_D -name "*.rrd" 2>/dev/null)
+	mkdir -m 0755 -p $IMG_D
+	mkdir -m 0755 -p $RRD_D
+	[ -n "$RRD_F" ] || /usr/bin/rrd.sh init
+	[ -x $CGI_S ] || /usr/bin/rrd.sh cgi
+	service_start /usr/sbin/rrdcollect
+}
+
+stop() {
+	service_stop /usr/sbin/rrdcollect
+}
+

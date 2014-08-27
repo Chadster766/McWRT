@@ -1,0 +1,31 @@
+From c55a420fef58e492732382c1cbd3d6255afec4ec Mon Sep 17 00:00:00 2001
+From: Eli Nidam <elini@marvell.com>
+Date: Thu, 14 Feb 2013 12:27:14 +0200
+Subject: [PATCH 516/609] update NOR CS board info for DB-GP
+
+Change-Id: Ifef7d9d01d8f30e4f9896f872f53367c9d9a1c5a
+Signed-off-by: Eli Nidam <elini@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/boardEnv/mvBoardEnvSpec.c     |    5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+index ddd8a45..a7867e7 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+@@ -1241,7 +1241,10 @@ MV_BOARD_GPP_INFO rd78460gpInfoBoardGppInfo[] = {
+ MV_DEV_CS_INFO rd78460gpInfoBoardDeCsInfo[] = {
+ 	/*{deviceCS, params, devType, devWidth, busWidth }*/
+ #if defined(MV_INCLUDE_SPI)
+-	{SPI_CS0, N_A, BOARD_DEV_SPI_FLASH, 8, 8} /* SPI DEV */
++	{SPI_CS0, N_A, BOARD_DEV_SPI_FLASH, 8, 8}, /* SPI DEV */
++#endif
++#if defined(MV_INCLUDE_NOR)
++	{DEV_BOOCS, N_A, BOARD_DEV_NOR_FLASH, 16, 16} /* NOR DEV */
+ #endif
+ };
+ 
+-- 
+1.7.9.5
+

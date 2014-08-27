@@ -1,0 +1,141 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2010-2011 OpenWrt.org
+
+# Partly taken the OpenVPN init script (Copyright (C) 2008 Jo-Philipp Wich)
+# This is free software, licensed under the GNU General Public License v2.
+# See /LICENSE for more information.
+
+START=95
+
+SERVICE_DAEMONIZE=1
+SERVICE_WRITE_PID=1
+
+EXTRA_COMMANDS="up down"
+
+LIST_SEP="
+"
+
+append_opt() {
+	local p="$1"; local v="$2"; local p_uc
+	
+	p_uc=$(echo "$p" | tr '[a-z]' '[A-Z]')
+	OPTS="$OPTS \"$p_uc=$v\""
+}
+
+append_opts() {
+	local p; local v; local s="$1"; shift
+	for p in $*; do
+		config_get v "$s" "$p"
+		[ -n "$v" ] && append_opt "$p" "$v"
+	done
+}
+
+section_enabled() {
+	config_get_bool enabled "$1" 'enabled' 0
+	[ $enabled -gt 0 ]
+}
+
+error() {
+	echo "${initscript}:" "$@" 1>&2
+}
+
+start_instance() {
+	local s="$1"
+
+	section_enabled "$s" || return 1
+
+	SERVICE_PID_FILE="/var/run/quicktun-$s.pid"
+	OPTS=""
+
+	config_get interface "$s" interface
+	if [ -z "$interface" ]; then
+		error "$s: interface '$interface' is not set"
+		return 1
+	fi
+
+	if ifconfig "$interface" &>/dev/null; then
+		error "$s: interface '$interface' is already in use"
+		return 1
+	fi
+
+	append_opts "$s" interface local_address local_port remote_address remote_port \
+		protocol private_key public_key time_window
+
+	config_get_bool tun_mode "$s" tun_mode 0
+	[ "$tun_mode" == 1 ] && append_opt tun_mode 1
+
+	config_get_bool remote_float "$s" remote_float 0
+	[ "$remote_float" == 1 ] && append_opt remote_float 1
+
+	eval env $OPTS service_start /usr/sbin/quicktun
+
+	while ! ifconfig "$interface" >/dev/null 2>&1; do
+		if ! service_check /usr/sbin/quicktun; then
+			error "$s: startup failed"
+			return 1
+		fi
+
+		sleep 1
+	done
+
+	config_get up "$s" up
+	[ -n "$up" ] && sh -c "$up" - "$interface"
+}
+
+stop_instance() {
+	local s="$1"
+
+	section_enabled "$s" || return 1
+
+	SERVICE_PID_FILE="/var/run/quicktun-$s.pid"
+
+	config_get interface "$s" interface
+	if [ -z "$interface" ]; then
+		error "$s: interface '$interface' is not set"
+		return 1
+	fi
+
+	if ! ifconfig "$interface" &>/dev/null; then
+		error "$s: interface '$interface' does not exist"
+		return 1
+	fi
+
+	config_get down "$s" down
+	[ -n "$down" ] && sh -c "$down" - "$interface"
+
+	service_stop /usr/sbin/quicktun
+}
+
+start() {
+	config_load 'quicktun'
+	config_foreach start_instance 'quicktun'
+}
+
+stop() {
+	config_load 'quicktun'
+	config_foreach stop_instance 'quicktun'
+}
+
+up() {
+	local exists
+	local instance
+	config_load 'quicktun'
+	for instance in "$@"; do
+		config_get exists "$instance" 'TYPE'
+		if [ "$exists" == "quicktun" ]; then
+			start_instance "$instance"
+		fi
+	done
+}
+
+down() {
+	local exists
+	local instance
+	config_load 'quicktun'
+	for instance in "$@"; do
+		config_get exists "$instance" 'TYPE'
+		if [ "$exists" == "quicktun" ]; then
+			stop_instance "$instance"
+		fi
+	done
+}

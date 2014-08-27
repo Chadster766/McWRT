@@ -1,0 +1,46 @@
+--- flow-tools-0.68.orig/Makefile.in	2007-02-08 07:21:42.000000000 -0500
++++ flow-tools-0.68/Makefile.in	2007-02-08 08:18:36.000000000 -0500
+@@ -70,7 +70,7 @@
+ DEPDIR = @DEPDIR@
+ INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
+ LEX = @LEX@
+-LEXLIB = @LEXLIB@
++LEXLIB =
+ LEX_OUTPUT_ROOT = @LEX_OUTPUT_ROOT@
+ MYSQLCFLAGS = @MYSQLCFLAGS@
+ MYSQLINCLUDE = @MYSQLINCLUDE@
+--- flow-tools-0.68.orig/src/Makefile.in	2007-02-08 07:21:42.000000000 -0500
++++ flow-tools-0.68/src/Makefile.in	2007-02-08 08:18:31.000000000 -0500
+@@ -70,7 +70,7 @@
+ DEPDIR = @DEPDIR@
+ INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
+ LEX = @LEX@
+-LEXLIB = @LEXLIB@
++LEXLIB =
+ LEX_OUTPUT_ROOT = @LEX_OUTPUT_ROOT@
+ MYSQLCFLAGS = @MYSQLCFLAGS@
+ MYSQLINCLUDE = @MYSQLINCLUDE@
+--- flow-tools-0.68.orig/src/acllex.c	2007-02-08 07:21:42.000000000 -0500
++++ flow-tools-0.68/src/acllex.c	2007-02-08 08:25:10.000000000 -0500
+@@ -503,7 +503,9 @@
+ #ifdef __cplusplus
+ extern "C" int yywrap YY_PROTO(( void ));
+ #else
+-extern int yywrap YY_PROTO(( void ));
++int yywrap (void ) {
++    return 1;
++}
+ #endif
+ #endif
+ 
+--- flow-tools-0.68.orig/configure	2007-02-08 07:21:42.000000000 -0500
++++ flow-tools-0.68/configure	2007-02-08 08:19:30.000000000 -0500
+@@ -2952,7 +2952,7 @@
+   echo $ECHO_N "(cached) $ECHO_C" >&6
+ else
+   ac_check_lib_save_LIBS=$LIBS
+-LIBS="-lfl  $LIBS"
++LIBS="$LIBS"
+ cat >conftest.$ac_ext <<_ACEOF
+ #line $LINENO "configure"
+ /* confdefs.h.  */

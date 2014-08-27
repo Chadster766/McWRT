@@ -1,0 +1,115 @@
+#!/bin/sh
+
+YADDNS_CONF=/tmp/yaddns.conf
+YADDNS_PID=/var/run/yaddns.pid
+
+prepare_yaddns_conf ()
+{
+	. /lib/functions.sh
+	. /lib/functions/network.sh
+
+	> $YADDNS_CONF
+
+	SECTIONS=""
+	config_cb()
+	{
+		SECTIONS="$SECTIONS $2"
+	}
+	config_load "ddns"
+
+	for section in $SECTIONS; do
+		config_get enabled $section enabled
+		if [ "$enabled" = "1" ]; then
+			if [ -z "$header_filled" ]; then
+				config_get ip_source $section ip_source
+				#if ip source is not defined, assume we want to get ip from wan 
+				if [ "$ip_source" != "interface" ] && [ "$ip_source" != "web" ]; then
+					ip_source="network"
+				fi
+				if [ "$ip_source" = "interface" ]; then
+					config_get ip_interface $section ip_interface
+				fi
+				if [ "$ip_source" = "network" ]; then
+					if [ -z "$ip_network" ]; then
+						ip_network="wan"
+					fi
+					network_get_device ip_interface $ip_network
+				fi
+				if [ "$ip_source" = "web" ]; then
+					config_get ip_url $section ip_url
+					config_get check_interval $section check_interval
+					config_get check_unit $section check_unit
+					if [ -z "$check_interval" ]; then
+						check_interval=600
+					fi
+					if [ -z "$check_unit" ]; then
+						check_unit="seconds"
+					fi
+					if [ -z "$ip_url" ]; then
+						ip_url="http://checkip.dyndns.org/"
+					fi
+					case "$check_unit" in
+						"days" )
+							check_interval_seconds=$(($check_interval*60*60*24))
+							;;
+						"hours" )
+							check_interval_seconds=$(($check_interval*60*60))
+							;;
+						"minutes" )
+							check_interval_seconds=$(($check_interval*60))
+							;;
+						"seconds" )
+							check_interval_seconds=$check_interval
+							;;
+						* )
+							#default is hours
+							check_interval_seconds=$(($check_interval*60*60))
+							;;
+					esac
+					myip_host="`echo $ip_url | sed 's%.*//\([^:/]*\).*%\1%'`"
+					myip_port="`echo $ip_url | sed -n 's%.*//[^:]*:\([0-9]\+\).*%\1%; t m; b; :m p'`"
+					if [ -z "$myip_port" ]; then
+						myip_port=80
+					fi
+					myip_path="`echo $ip_url | sed 's%.*//[^/]*\(.*\)%\1%'`"
+					if [ -z "$myip_path" ]; then
+						myip_path="/"
+					fi
+					echo mode = \"indirect\" >> $YADDNS_CONF
+					echo myip_host = \"$myip_host\" >> $YADDNS_CONF
+					echo myip_path = \"$myip_path\" >> $YADDNS_CONF
+					echo myip_port = \"$myip_port\" >> $YADDNS_CONF
+					echo myip_upint = \"$check_interval_seconds\" >> $YADDNS_CONF
+				else
+					echo mode = \"direct\" >> $YADDNS_CONF
+					echo wanifname = \"$ip_interface\" >> $YADDNS_CONF
+				fi
+				echo >> $YADDNS_CONF
+				header_filled=1
+			fi
+			config_get service_name $section service_name
+			config_get domain $section domain
+			config_get username $section username
+			config_get password $section password
+			echo account \{ >> $YADDNS_CONF
+			echo -e '\tname = '\"$section\" >> $YADDNS_CONF
+			echo -e '\tservice = '\"$service_name\" >> $YADDNS_CONF
+			echo -e '\tusername = '\"$username\" >> $YADDNS_CONF
+			echo -e '\tpassword = '\"$password\" >> $YADDNS_CONF
+			echo -e '\thostname = '\"$domain\" >> $YADDNS_CONF
+			echo \} >> $YADDNS_CONF
+		fi
+	done
+}
+
+if [ "$INTERFACE" = "wan" ] && [ "$ACTION" = "ifup" ]
+then
+	prepare_yaddns_conf
+	pid=`pidof yaddns`
+	if [ -z "$pid" ]; then
+		yaddns -f $YADDNS_CONF -p $YADDNS_PID -D
+	else
+		kill -HUP $pid
+	fi
+fi
+

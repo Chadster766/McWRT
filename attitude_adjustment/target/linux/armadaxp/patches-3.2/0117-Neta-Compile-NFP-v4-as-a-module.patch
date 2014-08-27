@@ -1,0 +1,499 @@
+From fc27a4571a109066fdf757dc1633ec674f5237b0 Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Sun, 15 Jul 2012 17:45:41 +0300
+Subject: [PATCH 117/609] Neta: Compile NFP v4 as a module
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/Makefile                    |   12 ++--
+ arch/arm/mach-armadaxp/export.c                    |    9 +++
+ arch/arm/plat-armada/common/mvList.c               |    1 +
+ .../arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig |   54 +++++------------
+ .../mv_drivers_lsp/mv_neta/net_dev/Makefile        |    1 +
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |   64 ++++++++++++--------
+ .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h     |   11 ++++
+ .../plat-armada/mv_drivers_lsp/mv_network/Kconfig  |    2 +-
+ 8 files changed, 84 insertions(+), 70 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
+index f758bf1..2085184 100644
+--- a/arch/arm/mach-armadaxp/Makefile
++++ b/arch/arm/mach-armadaxp/Makefile
+@@ -71,10 +71,11 @@ ifdef CONFIG_MV_ETH_NFP_FIB
+ 	NFPOBJS += $(HAL_ETH_NFP_DIR)/mvNfpFib.o
+ endif
+ 
+-ifdef NFPLIB
+-	armadaxp-y := $(NFPOBJS)
+-	obj-y   				+=  armadaxp.o
+-else
++ifeq ($(CONFIG_MV_ETH_NFP),m)
++nfp-objs = $(NFPOBJS)
++obj-m := nfp.o
++endif
++
+ # Objects list
+ COMMON_OBJS	= $(COMMON_DIR)/mvDebug.o $(COMMON_DIR)/mvCommon.o $(COMMON_DIR)/mvStack.o $(COMMON_DIR)/mvList.o $(COMMON_DIR)/mvIpc.o
+ 
+@@ -126,7 +127,7 @@ armadaxp-$(CONFIG_MV_INCLUDE_USB) 	+= $(HAL_USB_DIR)/mvUsb.o $(HAL_USB_DIR)/mvUs
+ 					   $(HAL_IF_DIR)/mvSysUsb.o
+ armadaxp-y				+= $(HAL_ETHPHY_DIR)/mvEthPhy.o $(HAL_IF_DIR)/mvSysEthPhy.o
+ 
+-ifndef CONFIG_MV_ETH_NFP_LIB
++ifneq ($(CONFIG_MV_ETH_NFP),m)
+ 	armadaxp-y += $(NFPOBJS)
+ endif
+ 
+@@ -219,5 +220,4 @@ armadaxp-$(CONFIG_PROC_FS)		+= dump_cp15_regs.o
+ obj-$(CONFIG_FB_DOVE_CLCD)		+= clcd.o
+ obj-$(CONFIG_PM)			+= pm.o
+ 
+-endif
+ 
+diff --git a/arch/arm/mach-armadaxp/export.c b/arch/arm/mach-armadaxp/export.c
+index 7706b1c..82cad4f 100644
+--- a/arch/arm/mach-armadaxp/export.c
++++ b/arch/arm/mach-armadaxp/export.c
+@@ -25,6 +25,8 @@
+ #include "cntmr/mvCntmr.h"
+ #include "ctrlEnv/mvCtrlEnvLib.h"
+ #include "mvOs.h"
++#include "mvList.h"
++#include "bm/mvBm.h"
+ 
+ 
+ /*************************************************************************************************************
+@@ -203,3 +205,10 @@ EXPORT_SYMBOL(TRC_OUTPUT);
+ EXPORT_SYMBOL(TRC_START);
+ EXPORT_SYMBOL(TRC_RELEASE);
+ #endif
++
++#ifdef CONFIG_MV_ETH_NFP_MODULE
++#ifdef CONFIG_MV_ETH_BM
++EXPORT_SYMBOL(mvBmVirtBase);
++#endif
++EXPORT_SYMBOL(mvListCreate);
++#endif
+diff --git a/arch/arm/plat-armada/common/mvList.c b/arch/arm/plat-armada/common/mvList.c
+index 5d7928f..965d23f 100644
+--- a/arch/arm/plat-armada/common/mvList.c
++++ b/arch/arm/plat-armada/common/mvList.c
+@@ -68,6 +68,7 @@ MV_STATUS mvListDestroy(MV_LIST_ELEMENT *head)
+ 
+ 	return MV_OK;
+ }
++EXPORT_SYMBOL(mvListDestroy);
+ 
+ /* Count the number of elements in the list (not including the head) */
+ MV_LONG mvListElementsCount(MV_LIST_ELEMENT *head)
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
+index aeb6e22..5882663 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
+@@ -670,50 +670,28 @@ endmenu
+ menu "NFP support"
+ 
+ config  MV_ETH_NFP
+-        bool "Use Network Fast Processing (NFP)"
+-	default y
+-        ---help---
+-        Choosing this option will enable Network Fast Processing.
+-
+-config MV_ETH_NFP_LIB
+-	depends on MV_ETH_NFP
+-        bool "Use a library (nfplib.a) for Network Fast Processing (NFP)"
+-	select MV_ETH_NFP_CT
+-	select MV_ETH_NFP_CT_LEARN
+-	select MV_ETH_NFP_BRIDGE
+-	select MV_ETH_NFP_FDB_MODE
+-	select MV_ETH_NFP_FDB_LEARN
+-	select MV_ETH_NFP_VLAN
+-	select MV_ETH_NFP_VLAN_LEARN
+-	select MV_ETH_NFP_FIB
+-	select MV_ETH_NFP_FIB_LEARN
+-	select MV_ETH_NFP_CLASSIFY
+-	select MV_ETH_NFP_PPP
+-	select MV_ETH_NFP_PPP_LEARN
+-	select MV_ETH_NFP_NAT
+-	select MV_ETH_NFP_STATS
+-	select MV_ETH_NFP_DEBUG
++        tristate "Use Network Fast Processing (NFP)"
+ 	default n
+         ---help---
+-        Choosing this option will enable using nfplib.a for NFP.
++        Choosing this option will enable Network Fast Processing.
+ 
+ config MV_ETH_NFP_DEF
+         depends on MV_ETH_NFP
+         int "Default value for NFP state:  0 - OFF, 1 - ON"
+         default 0
+-	range 0 0 if MV_ETH_NFP_LIB
++	range 0 1
+         ---help---
+ 
+ config MV_ETH_NFP_MODE_DEF
+         depends on MV_ETH_NFP
+         int "Default value for NFP mode:  1 - 2 tuple mode, 2 - 5 tuple mode"
+         default 1
+-	range 1 1 if MV_ETH_NFP_LIB
++	range 1 2
+         ---help---
+ 
+ config  MV_ETH_NFP_EXT
+         bool "Support NFP for External (non GBE) network interfaces"
+-        depends on MV_ETH_NFP && !MV_ETH_NFP_LIB
++        depends on MV_ETH_NFP
+         default n
+          ---help---
+         Choosing this option will enable NFP for non-GBE network interfaces.
+@@ -752,7 +730,7 @@ config  MV_ETH_NFP_BRIDGE_MODE
+ endchoice
+ 
+ config	MV_ETH_NFP_FDB_LEARN
+-	depends on MV_ETH_NFP_BRIDGE && MV_ETH_NFP_FDB_MODE && BRIDGE
++	depends on MV_ETH_NFP_BRIDGE && MV_ETH_NFP_FDB_MODE && BRIDGE && MV_ETH_NFP!=m
+ 	bool "Support NFP FDB Dynamic Learning"
+ 	default y
+ 	---help---
+@@ -762,7 +740,7 @@ config MV_ETH_NFP_FDB_LEARN_DEF
+         depends on MV_ETH_NFP_FDB_LEARN
+         int "Default value for NFP FDB Dynamic Learning:  0 - disable, 1 - enable"
+         default 1
+-	range 1 1 if MV_ETH_NFP_LIB
++	range 0 1
+         ---help---
+ 
+ config MV_ETH_NFP_VLAN
+@@ -773,7 +751,7 @@ config MV_ETH_NFP_VLAN
+         Choosing this option will enable NFP VLANs support.
+ 
+ config MV_ETH_NFP_VLAN_LEARN
+-        depends on MV_ETH_NFP_VLAN && VLAN_8021Q
++        depends on MV_ETH_NFP_VLAN && VLAN_8021Q && MV_ETH_NFP!=m
+         bool "Support NFP VLAN Dynamic Learning"
+         default y
+         ---help---
+@@ -784,7 +762,7 @@ config MV_ETH_NFP_VLAN_LEARN_DEF
+         depends on MV_ETH_NFP_VLAN_LEARN
+         int "Default value for NFP VLAN Dynamic Learning:  0 - disable, 1 - enable"
+         default 1
+-	range 1 1 if MV_ETH_NFP_LIB
++	range 0 1
+         ---help---
+ 
+ config MV_ETH_NFP_FIB
+@@ -795,7 +773,7 @@ config MV_ETH_NFP_FIB
+         Choosing this option will enable NFP routing support.
+ 
+ config MV_ETH_NFP_FIB_LEARN
+-        depends on MV_ETH_NFP_FIB
++        depends on MV_ETH_NFP_FIB && MV_ETH_NFP!=m
+         bool "Support NFP Routing Dynamic Learning"
+         default y
+         ---help---
+@@ -806,7 +784,7 @@ config MV_ETH_NFP_FIB_LEARN_DEF
+         depends on MV_ETH_NFP_FIB_LEARN
+         int "Default value for NFP Routing Dynamic Learning:  0 - disable, 1 - enable"
+         default 1
+-	range 1 1 if MV_ETH_NFP_LIB
++	range 0 1
+         ---help---
+ 
+ config MV_ETH_NFP_CT
+@@ -817,7 +795,7 @@ config MV_ETH_NFP_CT
+         Choosing this option will enable NFP 5 Tuple Rules support.
+ 
+ config MV_ETH_NFP_CT_LEARN
+-        depends on MV_ETH_NFP_CT && NF_CONNTRACK
++        depends on MV_ETH_NFP_CT && NF_CONNTRACK && MV_ETH_NFP!=m
+         bool "Support NFP 5 Tuple Dynamic Learning"
+         default y
+         ---help---
+@@ -828,7 +806,7 @@ config MV_ETH_NFP_CT_LEARN_DEF
+         depends on MV_ETH_NFP_CT_LEARN
+         int "Default value for NFP 5 Tuple Dynamic Learning:  0 - disable, 1 - enable"
+         default 1
+-	range 1 1 if MV_ETH_NFP_LIB
++	range 0 1
+         ---help---
+ 
+ config MV_ETH_NFP_NAT
+@@ -840,7 +818,7 @@ config MV_ETH_NFP_NAT
+ 
+ config MV_ETH_NFP_LIMIT
+         bool "Support NFP Ingress Rate Limiting"
+-        depends on MV_ETH_NFP_CT && !MV_ETH_NFP_LIB
++        depends on MV_ETH_NFP_CT
+ 	default n
+         ---help---
+         Choosing this option will enable NFP rate limitation support based on 5 tuple rule.
+@@ -860,7 +838,7 @@ config  MV_ETH_NFP_PPP
+ 	Choosing this option will enable NFP PPPoE protocol.
+ 
+ config MV_ETH_NFP_PPP_LEARN
+-        depends on MV_ETH_NFP_PPP && PPPOE
++        depends on MV_ETH_NFP_PPP && PPPOE && MV_ETH_NFP!=m
+         bool "Support NFP PPPoE Dynamic Learning"
+         default y
+         ---help---
+@@ -871,7 +849,7 @@ config MV_ETH_NFP_PPP_LEARN_DEF
+         depends on MV_ETH_NFP_PPP_LEARN
+         int "Default value for NFP PPPoE Dynamic Learning:  0 - disable, 1 - enable"
+         default 1
+-	range 1 1 if MV_ETH_NFP_LIB
++	range 0 1
+         ---help---
+ 
+ config  MV_ETH_NFP_STATS
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile
+index 600889f..866029a 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile
+@@ -1,6 +1,7 @@
+ #
+ # Makefile for the Marvell Gigabit Ethernet driver
+ #
++
+ ifeq ($(CONFIG_ARCH_FEROCEON),y)
+ 	include $(srctree)/$(MACHINE)/config/mvRules.mk
+ endif
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+index db7531e..cdd4cba 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
+@@ -60,6 +60,9 @@ disclaimer.
+ 
+ #include "cpu/mvCpuCntrs.h"
+ 
++struct nfpHookMgr *nfpHookMgr;
++EXPORT_SYMBOL(nfpHookMgr);
++
+ #ifdef CONFIG_MV_CPU_PERF_CNTRS
+ MV_CPU_CNTRS_EVENT	*event0 = NULL;
+ MV_CPU_CNTRS_EVENT	*event1 = NULL;
+@@ -88,12 +91,9 @@ int mv_eth_ctrl_pnc(int en)
+ }
+ #endif /* CONFIG_MV_ETH_PNC */
+ 
+-#ifdef CONFIG_MV_ETH_NFP
+-extern int nfp_sysfs_init(void);
+-#endif /* CONFIG_MV_ETH_NFP */
+-
+ #ifdef CONFIG_NET_SKB_RECYCLE
+ int mv_ctrl_recycle = CONFIG_NET_SKB_RECYCLE_DEF;
++EXPORT_SYMBOL(mv_ctrl_recycle);
+ 
+ int mv_eth_ctrl_recycle(int en)
+ {
+@@ -119,6 +119,8 @@ struct net_device **mv_net_devs;
+ 
+ int mv_net_devs_num = 0;
+ int mv_ctrl_txdone = CONFIG_MV_ETH_TXDONE_COAL_PKTS;
++EXPORT_SYMBOL(mv_ctrl_txdone);
++
+ /*
+  * Static declarations
+  */
+@@ -165,6 +167,20 @@ __setup("mv_port2_config=", mv_eth_cmdline_port2_config);
+ int mv_eth_cmdline_port3_config(char *s);
+ __setup("mv_port3_config=", mv_eth_cmdline_port3_config);
+ 
++#if defined(CONFIG_MV_ETH_NFP) || defined(CONFIG_MV_ETH_NFP_MODULE)
++int register_nfp_hook_mgr(mv_eth_nfp_func_t *func)
++{
++	nfpHookMgr = kmalloc(sizeof(struct nfpHookMgr *), GFP_ATOMIC);
++	if (nfpHookMgr == NULL) {
++		printk(KERN_ERR "nfp_mgr_init: Error allocating memory for nfp Hook Mgr \n");
++		return -ENOMEM;
++	}
++	nfpHookMgr->mv_eth_nfp = func;
++	return 0;
++}
++EXPORT_SYMBOL(register_nfp_hook_mgr);
++#endif
++
+ int mv_eth_cmdline_port0_config(char *s)
+ {
+ 	port0_config_str = s;
+@@ -1008,6 +1024,7 @@ void mv_eth_rx_desc_print(struct neta_rx_desc *desc)
+ 
+ 	printk(KERN_CONT "\n");
+ }
++EXPORT_SYMBOL(mv_eth_rx_desc_print);
+ 
+ void mv_eth_tx_desc_print(struct neta_tx_desc *desc)
+ {
+@@ -1019,6 +1036,7 @@ void mv_eth_tx_desc_print(struct neta_tx_desc *desc)
+ 		printk(KERN_CONT "%8.8x ", *words++);
+ 	printk(KERN_CONT "\n");
+ }
++EXPORT_SYMBOL(mv_eth_tx_desc_print);
+ 
+ void mv_eth_pkt_print(struct eth_pbuf *pkt)
+ {
+@@ -1030,6 +1048,7 @@ void mv_eth_pkt_print(struct eth_pbuf *pkt)
+ 	mvDebugMemDump(pkt->pBuf + pkt->offset, 64, 1);
+ 	mvOsCacheInvalidate(NULL, pkt->pBuf + pkt->offset, 64);
+ }
++EXPORT_SYMBOL(mv_eth_pkt_print);
+ 
+ static inline void mv_eth_rx_csum(struct eth_port *pp, struct neta_rx_desc *rx_desc, struct sk_buff *skb)
+ {
+@@ -1118,6 +1137,8 @@ int mv_eth_skb_recycle(struct sk_buff *skb)
+ 
+ 	return 1;
+ }
++EXPORT_SYMBOL(mv_eth_skb_recycle);
++
+ #endif /* CONFIG_NET_SKB_RECYCLE */
+ 
+ static struct sk_buff *mv_eth_skb_alloc(struct bm_pool *pool, struct eth_pbuf *pkt)
+@@ -1211,6 +1232,7 @@ inline u32 mv_eth_txq_done(struct eth_port *pp, struct tx_queue *txq_ctrl)
+ 
+ 	return tx_done;
+ }
++EXPORT_SYMBOL(mv_eth_txq_done);
+ 
+ inline struct eth_pbuf *mv_eth_pool_get(struct bm_pool *pool)
+ {
+@@ -1266,7 +1288,7 @@ inline int mv_eth_refill(struct eth_port *pp, int rxq,
+ 
+ 	return 0;
+ }
+-
++EXPORT_SYMBOL(mv_eth_refill);
+ 
+ static inline MV_U32 mv_eth_skb_tx_csum(struct eth_port *pp, struct sk_buff *skb)
+ {
+@@ -1447,14 +1469,14 @@ static inline int mv_eth_rx(struct eth_port *pp, int rx_todo, int rxq)
+ 		}
+ #endif /* CONFIG_MV_ETH_PNC && CONFIG_MV_ETH_RX_SPECIAL */
+ 
+-#ifdef CONFIG_MV_ETH_NFP
++#if defined(CONFIG_MV_ETH_NFP) || defined(CONFIG_MV_ETH_NFP_MODULE)
+ 		if (pp->flags & MV_ETH_F_NFP_EN) {
+ 			MV_STATUS status;
+ 
+ 			pkt->bytes = rx_bytes + MV_ETH_MH_SIZE;
+ 			pkt->offset = NET_SKB_PAD;
+ 
+-			status = mv_eth_nfp(pp, rxq, rx_desc, pkt, pool);
++			status = nfpHookMgr->mv_eth_nfp(pp, rxq, rx_desc, pkt, pool);
+ 			if (status == MV_OK)
+ 				continue;
+ 			if (status == MV_FAIL) {
+@@ -1502,7 +1524,7 @@ static inline int mv_eth_rx(struct eth_port *pp, int rx_todo, int rxq)
+ 		if (skb) {
+ 			STAT_DBG(pp->stats.rx_netif++);
+ 			rx_status = netif_receive_skb(skb);
+-			STAT_DBG(if (rx_status)	(pp->stats.rx_drop_sw++));
++			STAT_DBG((rx_status == 0) ? : pp->stats.rx_drop_sw++);
+ 		}
+ 
+ 		/* Refill processing: */
+@@ -1683,10 +1705,10 @@ out:
+ #ifndef CONFIG_MV_ETH_TXDONE_ISR
+ 	if (txq_ctrl) {
+ 		if (txq_ctrl->txq_count >= mv_ctrl_txdone) {
+-			STAT_DIST(u32 tx_done =) mv_eth_txq_done(pp, txq_ctrl);
++			STAT_DIST(u32 tx_done = )mv_eth_txq_done(pp, txq_ctrl);
++
++			STAT_DIST((tx_done < pp->dist_stats.tx_done_dist_size) ? pp->dist_stats.tx_done_dist[tx_done]++;);
+ 
+-			STAT_DIST(if (tx_done < pp->dist_stats.tx_done_dist_size)
+-					pp->dist_stats.tx_done_dist[tx_done]++);
+ 		}
+ 		/* If after calling mv_eth_txq_done, txq_ctrl->txq_count equals frags, we need to set the timer */
+ 		if ((txq_ctrl->txq_count == frags) && (frags > 0))
+@@ -2051,8 +2073,7 @@ inline u32 mv_eth_tx_done_pon(struct eth_port *pp, int *tx_todo)
+ 		}
+ 	}
+ 
+-	STAT_DIST(if (tx_done < pp->dist_stats.tx_done_dist_size)
+-			pp->dist_stats.tx_done_dist[tx_done]++);
++	STAT_DIST((tx_done < pp->dist_stats.tx_done_dist_size) ? pp->dist_stats.tx_done_dist[tx_done]++;);
+ 
+ 	return tx_done;
+ }
+@@ -2088,8 +2109,7 @@ inline u32 mv_eth_tx_done_gbe(struct eth_port *pp, u32 cause_tx_done, int *tx_to
+ 		}
+ 	}
+ 
+-	STAT_DIST(if (tx_done < pp->dist_stats.tx_done_dist_size)
+-			pp->dist_stats.tx_done_dist[tx_done]++);
++	STAT_DIST((tx_done < pp->dist_stats.tx_done_dist_size) ? pp->dist_stats.tx_done_dist[tx_done]++;);
+ 
+ 	return tx_done;
+ }
+@@ -2541,8 +2561,7 @@ int mv_eth_poll(struct napi_struct *napi, int budget)
+ 	budget -= rx_done;
+ #endif /* (CONFIG_MV_ETH_RXQ > 1) */
+ 
+-	STAT_DIST(if (rx_done < pp->dist_stats.rx_dist_size)
+-			pp->dist_stats.rx_dist[rx_done]++);
++	STAT_DIST((rx_done < pp->dist_stats.rx_dist_size) ? pp->dist_stats.rx_dist[rx_done]++;);
+ 
+ #ifdef CONFIG_MV_ETH_DEBUG_CODE
+ 	if (pp->flags & MV_ETH_F_DBG_POLL) {
+@@ -2913,15 +2932,9 @@ static int mv_eth_probe(struct platform_device *pdev)
+ 		}
+ 	}
+ 
+-	if (!mv_eth_initialized) {
+-#ifdef CONFIG_MV_ETH_NFP
+-#ifdef CONFIG_MV_ETH_NFP_LIB
+-	printk(KERN_INFO "Using NFP lib\n");
+-#endif /* CONFIG_MV_ETH_NFP_LIB */
+-	nfp_sysfs_init();
+-#endif /* CONFIG_MV_ETH_NFP */
++	if (!mv_eth_initialized)
+ 		mv_eth_cpu_counters_init();
+-	}
++
+ 
+ 	printk(KERN_ERR "\n");
+ 
+@@ -3140,6 +3153,7 @@ bool mv_eth_netdev_find(unsigned int dev_idx)
+ 	}
+ 	return false;
+ }
++EXPORT_SYMBOL(mv_eth_netdev_find);
+ 
+ void mv_eth_netdev_update(int dev_index, struct eth_port *pp)
+ {
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+index 5892247..d50a62b 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
+@@ -730,4 +730,15 @@ MV_STATUS mv_eth_hwf_bm_create(int port, int mtuPktSize);
+ void      mv_hwf_bm_dump(void);
+ #endif /* CONFIG_MV_ETH_HWF && !CONFIG_MV_ETH_BM_CPU */
+ 
++struct nfpHookMgr {
++	MV_STATUS (*mv_eth_nfp)(struct eth_port *pp, int rxq, struct neta_rx_desc *rx_desc,
++											    struct eth_pbuf *pkt, struct bm_pool *pool);
++};
++typedef MV_STATUS mv_eth_nfp_func_t(struct eth_port *pp, int rxq, struct neta_rx_desc *rx_desc,
++																		struct eth_pbuf *pkt, struct bm_pool *pool);
++int register_nfp_hook_mgr(mv_eth_nfp_func_t *func);
++
++extern struct nfpHookMgr *nfpHookMgr;
++
++
+ #endif /* __mv_netdev_h__ */
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_network/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_network/Kconfig
+index 102412b..a67f8c2 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_network/Kconfig
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_network/Kconfig
+@@ -196,7 +196,7 @@ config NET_SKB_RECYCLE_DEF
+         ---help---
+ 
+ config  MV_ETH_NFP
+-        bool "Use Network Fast Processing (NFP)"
++        tristate "Use Network Fast Processing (NFP)"
+ 	default y
+         ---help---
+         Choosing this option will include NFP support in the image.
+-- 
+1.7.9.5
+

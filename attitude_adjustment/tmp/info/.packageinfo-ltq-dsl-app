@@ -1,0 +1,23 @@
+Source-Makefile: package/ltq-dsl-app/Makefile
+Package: ltq-dsl-app
+Menu: 1
+Version: 3.24.4.4-1
+Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread @TARGET_lantiq&&!(TARGET_lantiq_falcon||TARGET_lantiq_falcon_stable) +libpthread
+Menu-Depends: 
+Provides: 
+Build-Depends: TARGET_lantiq_danube:kmod-ltq-dsl-danube TARGET_lantiq_ar9:kmod-ltq-dsl-ar9 TARGET_lantiq_vr9:kmod-ltq-dsl-vr9 TARGET_lantiq_ase:kmod-ltq-dsl-ase
+Section: net
+Category: Network
+Title: Lantiq DSL userland tool
+Maintainer: John Crispin <blogic@openwrt.org> 
+Source: dsl_cpe_control_danube-3.24.4.4.tar.gz
+Type: ipkg
+Description: 	Infineon DSL CPE API for Amazon SE, Danube and Vinax.
+http://www.lantiq.com/
+John Crispin <blogic@openwrt.org> 
+@@
+Config:
+	source "package/ltq-dsl-app/Config.in"
+@@
+
+

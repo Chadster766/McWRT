@@ -1,0 +1,32 @@
+From 87fcc0510eea442c2867645e474d911f88e85977 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Tue, 6 Nov 2012 18:04:42 +0200
+Subject: [PATCH 420/609] pex hal : added KW40 init sequence
+
+Change-Id: I1550e4273f43abc031c4e8a11a583e6400d2a2d9
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/pex/mvPex.c |    6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPex.c b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
+index 7fecd05..05bcbda 100755
+--- a/arch/arm/plat-armada/mv_hal/pex/mvPex.c
++++ b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
+@@ -148,6 +148,12 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+ 			MV_REG_WRITE(PEX_DBG_CTRL_REG(pexIf), regVal);
+ 		}
+ 	}
++
++	if ((ctrlModel == MV_6710_DEV_ID) ||
++		(ctrlModel == MV_6W11_DEV_ID) ||
++		(ctrlModel == MV_6707_DEV_ID)) {
++		 mvCpuIfEnablePex(pexIf);
++	}
+ 	/* now wait 1ms to be sure the link is valid */
+ 	mvOsDelay(1);
+ 	/* Check if we have link */
+-- 
+1.7.9.5
+

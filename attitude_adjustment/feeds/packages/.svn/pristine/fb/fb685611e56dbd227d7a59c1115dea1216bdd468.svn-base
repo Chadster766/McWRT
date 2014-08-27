@@ -1,0 +1,63 @@
+diff -Naur smap.supported/config.h smap/config.h
+--- smap.supported/config.h	2009-06-14 22:18:57.000000000 -0400
++++ smap/config.h	2009-06-24 16:36:50.000000000 -0400
+@@ -113,6 +113,7 @@
+ 
+ #define DEFAULT_SIP_PORT	5060
+ #define DEFAULT_TIMEOUT		500		/* in ms */
++#define DEFAULT_RATELIMIT       25
+ 
+ /* randomizer related ********************************************************/
+ enum { RAND_CALLID = 1, RAND_TAG, RAND_CSEQ, RAND_BRANCH };
+diff -Naur smap.supported/listener.c smap/listener.c
+--- smap.supported/listener.c	2009-06-14 22:18:57.000000000 -0400
++++ smap/listener.c	2009-06-15 04:36:40.000000000 -0400
+@@ -130,7 +130,7 @@
+ 			/* use Call-ID to match response to requests */
+ 			callid = response_getcallid(msg);
+ 			if (callid == 0) {
+-				error(ERR_NOTICE, "could not parse Call-ID");
++				error(ERR_DEBUG, "could not parse Call-ID");
+ 				goto nextmsg;
+ 			}
+ 			state = state_lookup_by_callid(callid);
+diff -Naur smap.supported/results.c smap/results.c
+--- smap.supported/results.c	2009-06-14 22:18:57.000000000 -0400
++++ smap/results.c	2009-06-24 16:38:00.000000000 -0400
+@@ -39,6 +39,7 @@
+ 			(task->results & RES_ICMP_REACH) ? "reachable" : "unreachable",
+ 			(task->results & RES_SIP_ENABLED) ? "enabled" : "disabled");
+ 		if (task->results & RES_SIP_ENABLED)
++		  error(ERR_DEBUG, "Looking up fingerprint");
+ 			fingerprint_lookup(*task->fp);
+ 		break;
+ 	default:
+diff -Naur smap.supported/smap.c smap/smap.c
+--- smap.supported/smap.c	2009-06-14 22:18:57.000000000 -0400
++++ smap/smap.c	2009-06-24 17:09:39.000000000 -0400
+@@ -197,7 +197,7 @@
+     config.sip_port = DEFAULT_SIP_PORT;
+     config.sip_domain = NULL;
+     config.timeout = DEFAULT_TIMEOUT;
+-	config.ratelimit = 0;
++    config.ratelimit = DEFAULT_RATELIMIT;
+ 
+ 	printf("\nsmap %s <hs@123.org> "
+         "http://www.wormulon.net/\n\n", SMAP_VERSION);
+@@ -338,12 +338,15 @@
+             break; /* make gcc happy */
+     }
+ error_while_scanning:
+-
+ 	pthread_join(pth_worker, NULL);
+ 	pthread_kill(pth_worker, SIGINT);
+ 	pthread_kill(pth_listener, SIGINT);
+ 	stats_dump();
+ 
++	signal(SIGINT, SIG_DFL);
++	signal(SIGTERM, SIG_DFL);
++	signal(SIGKILL, SIG_DFL);
++
+ 	/* clean up */
+ 	pthread_mutex_destroy(&scrlock);
+ 	pthread_mutex_destroy(&tasklock);

@@ -1,0 +1,102 @@
+From 10d7ce31adfedf3de7cbe163bbeafb2f1487272a Mon Sep 17 00:00:00 2001
+From: Piotr Nowak <pn@semihalf.com>
+Date: Mon, 24 Sep 2012 18:13:43 +0200
+Subject: [PATCH 310/609] PM, pex: Add support to PEX resume on ArmadaXP-B0.
+
+Call PCI-Express reinitialization routine on board wake-up
+scope.
+
+Signed-off-by: Piotr Nowak <pn@semihalf.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/core.c |    8 +++++++
+ arch/arm/mach-armadaxp/pex.c  |   47 +++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 55 insertions(+)
+
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index c9f8145..4d2174c 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -1445,6 +1445,10 @@ static int mvAmpInitCpuIf()
+ }
+ #endif
+ 
++#ifdef CONFIG_MV_INCLUDE_PEX
++extern void mv_pex_reinit(void);
++#endif
++
+ /*****************************************************************************
+  * DB BOARD: Restore from suspend to RAM
+  * ****************************************************************************/
+@@ -1467,6 +1471,10 @@ void axp_db_restore(void)
+ 	}
+ 
+ 	mvSysEthPhyInit();
++#ifdef CONFIG_MV_INCLUDE_PEX
++	/* Reinitialize PEX root complex */
++	mv_pex_reinit();
++#endif
+ 
+ 	/* TODO - timer should be restored by kernel hook */
+ 	axp_timer_resume();
+diff --git a/arch/arm/mach-armadaxp/pex.c b/arch/arm/mach-armadaxp/pex.c
+index ab2f3bd..f1ee02c 100644
+--- a/arch/arm/mach-armadaxp/pex.c
++++ b/arch/arm/mach-armadaxp/pex.c
+@@ -133,6 +133,53 @@ void __init mv_pex_preinit(void)
+ 	}
+ }
+ 
++void mv_pex_reinit(void)
++{
++	static MV_U32 pex0flg = 0;
++	unsigned int pciIf, temp;
++	MV_ADDR_WIN pciIoRemap;
++	MV_BOARD_PEX_INFO* boardPexInfo = mvBoardPexInfoGet();
++	MV_U32 pexHWInf = 0;
++
++	for (pciIf = 0; pciIf < boardPexInfo->boardPexIfNum; pciIf++)
++	{
++		/* Translate logical interface number to physical */
++		pexHWInf = boardPexInfo->pexMapping[pciIf];
++
++		if (MV_FALSE == mvUnitMapIsPexMine(pexHWInf))
++			continue;
++
++		if (MV_FALSE == mvCtrlPwrClckGet(PEX_UNIT_ID, pexHWInf))
++			continue;
++
++		/* init the PCI interface */
++		temp = mvSysPexInit(pexHWInf, MV_PEX_ROOT_COMPLEX);
++
++		if (MV_NO_SUCH == temp)
++		{
++			/* No Link - shutdown interface */
++			mvCtrlPwrClckSet(PEX_UNIT_ID, pexHWInf, MV_FALSE);;
++			continue;
++		}
++
++		/* Assign bus number 0 to first active/available bus */
++		if (pex0flg == 0) {
++			mvPexLocalBusNumSet(pexHWInf, 0x0);
++			pex0flg = 1;
++		}
++
++		MV_REG_BIT_SET(PEX_MASK_REG(pexHWInf), MV_PEX_MASK_ABCD);
++		if (mv_is_pci_io_mapped(pexHWInf))
++		{
++			pciIoRemap.baseLow = mv_pci_io_base_get(pexHWInf) - IO_SPACE_REMAP;
++			pciIoRemap.baseHigh = 0;
++			pciIoRemap.size = mv_pci_io_size_get(pexHWInf);
++			mvCpuIfPexRemap(mv_pci_io_target_get(pexHWInf), &pciIoRemap);
++		}
++	}
++}
++
++
+ /* Currentlly the PCI config read/write are implemented as read modify write
+    to 32 bit.
+    TBD: adjust it to realy use 1/2/4 byte(partial) read/write, after the pex
+-- 
+1.7.9.5
+

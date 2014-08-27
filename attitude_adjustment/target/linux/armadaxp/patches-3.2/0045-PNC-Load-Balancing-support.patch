@@ -1,0 +1,633 @@
+From 0ac83da6b82431ae1877d810b33de12e1ef6eb7b Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Thu, 22 Dec 2011 11:28:52 -0500
+Subject: [PATCH 045/609] PNC: Load Balancing support
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/Makefile                    |    2 +-
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h       |    2 +
+ .../mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c         |   61 +++++++-
+ arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c |    4 +
+ arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c       |   30 +++-
+ arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h       |   15 +-
+ arch/arm/plat-armada/mv_hal/neta/pnc/mvPncLb.c     |  161 ++++++++++++++++++++
+ arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.c      |   37 ++++-
+ arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.h      |   29 +++-
+ 9 files changed, 322 insertions(+), 19 deletions(-)
+ create mode 100755 arch/arm/plat-armada/mv_hal/neta/pnc/mvPncLb.c
+
+diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
+index 650de5d..c9da894 100644
+--- a/arch/arm/mach-armadaxp/Makefile
++++ b/arch/arm/mach-armadaxp/Makefile
+@@ -153,7 +153,7 @@ ifeq ($(CONFIG_MV_ETH_NETA),y)
+ armadaxp-$(CONFIG_MV_ETH_NETA)	        += $(HAL_ETH_GBE_DIR)/mvNeta.o $(HAL_ETH_GBE_DIR)/mvNetaDebug.o \
+ 					   $(HAL_ETH_GBE_DIR)/mvNetaAddrDec.o $(HAL_IF_DIR)/mvSysNeta.o
+ armadaxp-$(CONFIG_MV_ETH_PNC)    	+= $(HAL_ETH_PNC_DIR)/mvTcam.o  $(HAL_ETH_PNC_DIR)/mvPncAging.o \
+-					$(HAL_ETH_PNC_DIR)/mvPnc.o
++					$(HAL_ETH_PNC_DIR)/mvPnc.o $(HAL_ETH_PNC_DIR)/mvPncLb.o
+ armadaxp-$(CONFIG_MV_ETH_PNC_WOL)       += $(HAL_ETH_PNC_DIR)/mvPncWol.o
+ armadaxp-$(CONFIG_MV_ETH_BM) 	        += $(HAL_ETH_BM_DIR)/mvBm.o
+ armadaxp-$(CONFIG_MV_ETH_PMT)	        += $(HAL_ETH_PMT_DIR)/mvPmt.o
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
+index f5e3b51..58ddd89 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
+@@ -240,6 +240,8 @@ extern "C" {
+ #define MV_ETH_WRR_NEW
+ /* New PNC module - extra fields */
+ #define MV_ETH_PNC_NEW
++/* PNC Load Balancing support */
++#define MV_ETH_PNC_LB
+ #endif /* MV88F78X60_A0 */
+ #define MV_78130_ETH_MAX_PORT			3
+ #define MV_78460_ETH_MAX_PORT			4
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c
+index 7800f47..dd3fe7e 100755
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c
+@@ -52,6 +52,10 @@ static ssize_t tcam_help(char *buf)
+ 	off += mvOsSPrintf(buf+off, " hw_dump         - dump valid entries\n");
+ 	off += mvOsSPrintf(buf+off, " hw_regs         - dump registers\n");
+ 	off += mvOsSPrintf(buf+off, " hw_hits         - decode hit sequences\n");
++
++#ifdef MV_ETH_PNC_LB
++	off += mvOsSPrintf(buf+off, " lb_dump         - dump load balancing hash entries\n");
++#endif /* MV_ETH_PNC_LB */
+ #ifdef MV_ETH_PNC_AGING
+ 	off += mvOsSPrintf(buf+off, " age_dump        - dump non-zero aging counters\n");
+ 	off += mvOsSPrintf(buf+off, " age_dump_all    - dump all aging counters\n");
+@@ -66,6 +70,12 @@ static ssize_t tcam_help(char *buf)
+ 	off += mvOsSPrintf(buf+off, " hw_inv_all      - disable all tcam entries\n");
+ 	off += mvOsSPrintf(buf+off, " hw_hits         - start recording for port <a>\n");
+ 
++#ifdef MV_ETH_PNC_LB
++	off += mvOsSPrintf(buf+off, " lb_ip4          - set LB mode <a> for ipv4 traffic: 0-disable, 1-2tuple\n");
++	off += mvOsSPrintf(buf+off, " lb_ip6          - set LB mode <a> for ipv6 traffic: 0-disable, 1-2tuple\n");
++	off += mvOsSPrintf(buf+off, " lb_l4           - set LB mode <a> for TCP/UDP traffic: : 0-disable, 1-2tuple, 2-4tuple\n");
++#endif /* MV_ETH_PNC_LB */
++
+ #ifdef MV_ETH_PNC_AGING
+ 	off += mvOsSPrintf(buf+off, " age_clear       - clear aging counter for tcam entry <a>\n");
+ 	off += mvOsSPrintf(buf+off, " age_cntr        - show aging counter for tcam entry <a>\n");
+@@ -84,7 +94,11 @@ static ssize_t tcam_help(char *buf)
+ 
+ #ifdef MV_ETH_PNC_NEW
+ 	off += mvOsSPrintf(buf+off, " s_rinfo_extra   - set 2 bits value <a> to extra result info offset <b>\n");
+-#endif
++#endif /* MV_ETH_PNC_NEW */
++
++#ifdef MV_ETH_PNC_LB
++	off += mvOsSPrintf(buf+off, " lb_rxq          - set rxq <b> for hash value <a>\n");
++#endif /* MV_ETH_PNC_LB */
+ 
+ #ifdef MV_ETH_PNC_AGING
+ 	off += mvOsSPrintf(buf+off, " age_gr_set      - set group <b> of aging counter for tcam entry <a>\n");
+@@ -105,12 +119,10 @@ static ssize_t tcam_show(struct device *dev,
+ 	if (!strcmp(name, "t_port")) {
+ 		tcam_sw_get_port(&te, &v, &m);
+ 		return mvOsSPrintf(buf, "value:0x%x mask:0x%x\n", v, m);
+-	}
+-	else if (!strcmp(name, "t_lookup")) {
++	} else if (!strcmp(name, "t_lookup")) {
+ 		tcam_sw_get_lookup(&te, &v, &m);
+ 		return mvOsSPrintf(buf, "value:0x%x mask:0x%x\n", v, m);
+-	}
+-	else if (!strcmp(name, "sw_dump"))
++	} else if (!strcmp(name, "sw_dump"))
+ 		return tcam_sw_dump(&te, buf);
+ 	else if (!strcmp(name, "hw_dump"))
+ 		return tcam_hw_dump(0);
+@@ -130,6 +142,10 @@ static ssize_t tcam_show(struct device *dev,
+ 	else if (!strcmp(name, "age_reset"))
+ 		mvPncAgingReset();
+ #endif /* MV_ETH_PNC_AGING */
++#ifdef MV_ETH_PNC_LB
++	else if (!strcmp(name, "lb_dump"))
++		mvPncLbDump();
++#endif /* MV_ETH_PNC_LB */
+ 	else if (!strcmp(name, "help"))
+ 		return tcam_help(buf);
+ 
+@@ -161,6 +177,14 @@ static ssize_t tcam_store(struct device *dev,
+ 		tcam_hw_inv_all();
+ 	else if (!strcmp(name, "hw_hits"))
+ 		tcam_hw_record(a);
++#ifdef MV_ETH_PNC_LB
++	else if (!strcmp(name, "lb_ip4"))
++		mvPncLbModeIp4(a);
++	else if (!strcmp(name, "lb_ip6"))
++		mvPncLbModeIp6(a);
++	else if (!strcmp(name, "lb_l4"))
++		mvPncLbModeL4(a);
++#endif /* MV_ETH_PNC_LB */
+ #ifdef MV_ETH_PNC_AGING
+ 	else if (!strcmp(name, "age_clear"))
+ 		mvPncAgingCntrClear(a);
+@@ -180,8 +204,7 @@ static ssize_t tcam_store(struct device *dev,
+ 		temp[len-1] = 0;
+ 		tcam_sw_text(&te, temp);
+ 		mvOsFree(temp);
+-	}
+-	else if (!strcmp(name, "t_port"))
++	} else if (!strcmp(name, "t_port"))
+ 		tcam_sw_set_port(&te, a, b);
+ 	else if (!strcmp(name, "t_lookup"))
+ 		tcam_sw_set_lookup(&te, a);
+@@ -221,6 +244,10 @@ static ssize_t tcam_store(struct device *dev,
+ 	else if (!strcmp(name, "age_gr_set"))
+ 		mvPncAgingCntrGroupSet(a, b);
+ #endif /* MV_ETH_PNC_AGING */
++#ifdef MV_ETH_PNC_LB
++	else if (!strcmp(name, "lb_rxq"))
++		err = mvPncLbRxqSet(a, b);
++#endif /* MV_ETH_PNC_LB */
+ 	else {
+ 		err = 1;
+ 		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
+@@ -256,6 +283,15 @@ static DEVICE_ATTR(hw_dump,     S_IRUSR, tcam_show, tcam_store);
+ static DEVICE_ATTR(hw_dump_all, S_IRUSR, tcam_show, tcam_store);
+ static DEVICE_ATTR(hw_regs,     S_IRUSR, tcam_show, tcam_store);
+ static DEVICE_ATTR(hw_hits,     S_IRUSR | S_IWUSR, tcam_show, tcam_store);
++
++#ifdef MV_ETH_PNC_LB
++static DEVICE_ATTR(lb_dump,     S_IRUSR, tcam_show, tcam_store);
++static DEVICE_ATTR(lb_rxq,      S_IWUSR, tcam_show, tcam_store);
++static DEVICE_ATTR(lb_ip4,      S_IWUSR, tcam_show, tcam_store);
++static DEVICE_ATTR(lb_ip6,      S_IWUSR, tcam_show, tcam_store);
++static DEVICE_ATTR(lb_l4,       S_IWUSR, tcam_show, tcam_store);
++#endif /* MV_ETH_PNC_LB */
++
+ static DEVICE_ATTR(sw_dump,     S_IRUSR, tcam_show, tcam_store);
+ static DEVICE_ATTR(sw_clear,    S_IWUSR, tcam_show, tcam_store);
+ static DEVICE_ATTR(sw_text,     S_IWUSR, tcam_show, tcam_store);
+@@ -290,7 +326,7 @@ static struct attribute *pnc_attrs[] = {
+ 
+ #ifdef MV_ETH_PNC_NEW
+     &dev_attr_s_rinfo_extra.attr,
+-#endif
++#endif /* MV_ETH_PNC_NEW */
+ 
+     &dev_attr_hw_write.attr,
+     &dev_attr_hw_read.attr,
+@@ -301,6 +337,15 @@ static struct attribute *pnc_attrs[] = {
+     &dev_attr_hw_dump_all.attr,
+     &dev_attr_hw_regs.attr,
+     &dev_attr_hw_hits.attr,
++
++#ifdef MV_ETH_PNC_LB
++    &dev_attr_lb_dump.attr,
++	&dev_attr_lb_rxq.attr,
++	&dev_attr_lb_ip4.attr,
++	&dev_attr_lb_ip6.attr,
++	&dev_attr_lb_l4.attr,
++#endif /* MV_ETH_PNC_LB */
++
+     &dev_attr_sw_dump.attr,
+     &dev_attr_sw_clear.attr,
+     &dev_attr_sw_text.attr,
+diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c
+index 12e799c..f3a3280 100644
+--- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c
++++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c
+@@ -312,6 +312,10 @@ void mvNetaPncRegs(void)
+ 			mvEthRegPrint2(MV_PNC_AGING_LO_THRESH_REG(i), "PNC_AGING_LO_THRESH_REG", i);
+ 	}
+ #endif /* MV_ETH_PNC_AGING */
++
++#ifdef MV_ETH_PNC_LB
++	mvEthRegPrint(MV_PNC_LB_CRC_INIT_REG, "PNC_LB_CRC_INIT_REG");
++#endif /* MV_ETH_PNC_LB */
+ }
+ #endif /* CONFIG_MV_ETH_PNC */
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
+index 80b6ffd..8edf7c6 100755
+--- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
++++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
+@@ -99,7 +99,7 @@ static int rxq_ip4_udp = CONFIG_MV_ETH_RXQ_DEF;
+ static int rxq_arp 		= CONFIG_MV_ETH_RXQ_DEF;
+ 
+ 
+-#ifdef MV_ETH_PNC_NEW
++#ifdef CONFIG_ARCH_FEROCEON_KW2
+ int pnc_port_map(int pnc_port)
+ {
+ 	switch (pnc_port) {
+@@ -135,7 +135,7 @@ int pnc_eth_port_map(int eth_port)
+ 		return -1;
+ 	}
+ }
+-#else
++#else /* CONFIG_ARCH_ARMADA_XP */
+ int pnc_port_map(int pnc_port)
+ {
+ 	switch (pnc_port) {
+@@ -702,7 +702,7 @@ static void pnc_ip4_flow_next_lookup_set(struct tcam_entry *te)
+ #ifdef CONFIG_MV_ETH_PNC_L3_FLOW
+ 	sram_sw_set_next_lookup(te, TCAM_LU_FLOW_IP4);
+ #else
+-	sram_sw_set_lookup_done(te, 1);
++	sram_sw_set_next_lookup(te, TCAM_LU_L4);
+ #endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
+ }
+ 
+@@ -865,6 +865,7 @@ static void pnc_ip4_end(void)
+ 	sram_sw_set_rxq(te, rxq_ip4, 0);
+ 	sram_sw_set_lookup_done(te, 1);
+ 	sram_sw_set_flowid(te, FLOWID_EOF_LU_IP4, FLOWID_CTRL_LOW_HALF_MASK);
++
+ 	tcam_sw_text(te, "ipv4_eof");
+ 
+ 	tcam_hw_write(te, TE_IP4_EOF);
+@@ -895,7 +896,7 @@ static void pnc_ip6_flow_next_lookup_set(struct tcam_entry *te)
+ #ifdef CONFIG_MV_ETH_PNC_L3_FLOW
+ 	sram_sw_set_next_lookup(te, TCAM_LU_FLOW_IP6_A);
+ #else
+-	sram_sw_set_lookup_done(te, 1);
++	sram_sw_set_next_lookup(te, TCAM_LU_L4);
+ #endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
+ }
+ 
+@@ -1159,6 +1160,23 @@ int pnc_ipv4_5_tuples_add(unsigned int tid, unsigned int flow_id,
+ 
+ 	return 0;
+ }
++#else
++int pnc_l4_end(void)
++{
++	struct tcam_entry *te;
++
++	PNC_DBG("%s\n", __func__);
++
++	te = tcam_sw_alloc(TCAM_LU_L4);
++	sram_sw_set_lookup_done(te, 1);
++	sram_sw_set_flowid(te, FLOWID_EOF_LU_L4, FLOWID_CTRL_LOW_HALF_MASK);
++
++	tcam_sw_text(te, "l4_eof");
++
++	tcam_hw_write(te, TE_L4_EOF);
++	tcam_sw_free(te);
++	return 0;
++}
+ #endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
+ 
+ /******************************************************************************
+@@ -1214,6 +1232,10 @@ int pnc_default_init(void)
+ 	rc = pnc_flow_init();
+ 	if (rc)
+ 		goto out;
++#else
++	rc = pnc_l4_end();
++	if (rc)
++		goto out;
+ #endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
+ 
+ #ifdef CONFIG_MV_ETH_PNC_WOL
+diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
+index 26509d6..a03b2e4 100755
+--- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
++++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
+@@ -187,10 +187,12 @@ enum {
+ #ifdef CONFIG_MV_ETH_PNC_L3_FLOW
+ 	/* Session Lookup for IPv4 and IPv6 */
+ 	TE_FLOW_L3,
+-	TE_FLOW_L3_END = CONFIG_MV_PNC_TCAM_LINES - 4,
++	TE_FLOW_L3_END = TE_FLOW_L3 + CONFIG_MV_PNC_L3_FLOW_LINES - 1,
+ 	TE_FLOW_IP4_EOF,
+ 	TE_FLOW_IP6_A_EOF,
+ 	TE_FLOW_IP6_B_EOF,
++#else
++	TE_L4_EOF,
+ #endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
+ 
+ #ifdef CONFIG_MV_ETH_PNC_WOL
+@@ -209,6 +211,8 @@ enum {
+ 	TCAM_LU_FLOW_IP4,
+ 	TCAM_LU_FLOW_IP6_A,
+ 	TCAM_LU_FLOW_IP6_B,
++#else
++	TCAM_LU_L4,
+ #endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
+ 
+ #ifdef CONFIG_MV_ETH_PNC_WOL
+@@ -223,6 +227,7 @@ enum {
+ #define FLOWID_EOF_LU_L2			0xFFF2
+ #define FLOWID_EOF_LU_IP4			0xFFF4
+ #define FLOWID_EOF_LU_IP6			0xFFF6
++#define FLOWID_EOF_LU_L4			0xFFF7
+ #define FLOWID_EOF_LU_FLOW_IP4		0xFFF8
+ #define FLOWID_EOF_LU_FLOW_IP6_A	0xFFFA
+ #define FLOWID_EOF_LU_FLOW_IP6_B	0xFFFB
+@@ -343,6 +348,14 @@ void    mvPncAgingCntrGroupSet(int tid, int gr);
+ void    mvPncAgingCounterClear(int tid, int gr);
+ #endif /* MV_ETH_PNC_AGING */
+ 
++#ifdef MV_ETH_PNC_LB
++void    mvPncLbDump(void);
++int     mvPncLbRxqSet(int hash, int rxq);
++int		mvPncLbModeIp4(int mode);
++int		mvPncLbModeIp6(int mode);
++int		mvPncLbModeL4(int mode);
++#endif /* MV_ETH_PNC_LB */
++
+ #endif /* CONFIG_MV_ETH_PNC */
+ 
+ #endif /*__MV_PNC_H__ */
+diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncLb.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncLb.c
+new file mode 100755
+index 0000000..3c3745e
+--- /dev/null
++++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncLb.c
+@@ -0,0 +1,161 @@
++/*******************************************************************************
++Copyright (C) Marvell International Ltd. and its affiliates
++
++This software file (the "File") is owned and distributed by Marvell
++International Ltd. and/or its affiliates ("Marvell") under the following
++alternative licensing terms.  Once you have made an election to distribute the
++File under one of the following license alternatives, please (i) delete this
++introductory statement regarding license alternatives, (ii) delete the two
++license alternatives that you have not elected to use and (iii) preserve the
++Marvell copyright notice above.
++
++
++********************************************************************************
++Marvell GPL License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File in accordance with the terms and conditions of the General
++Public License Version 2, June 1991 (the "GPL License"), a copy of which is
++available along with the File in the license.txt file or by writing to the Free
++Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
++on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++
++THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
++DISCLAIMED.  The GPL License provides additional details about this warranty
++disclaimer.
++*******************************************************************************/
++
++#include "mvOs.h"
++#include "mvCommon.h"
++
++#include "gbe/mvNetaRegs.h"
++
++#include "mvPnc.h"
++#include "mvTcam.h"
++
++#ifdef MV_ETH_PNC_LB
++
++void    mvPncLbDump(void)
++{
++	MV_U32	regVal;
++	int i, j, rxq;
++
++	MV_REG_WRITE(MV_PNC_LB_TBL_ACCESS_REG, 0);
++	mvOsPrintf("Hash:    rxq    rxq    rxq    rxq\n");
++	for (i = 0; i <= MV_PNC_LB_TBL_ADDR_MASK; i++) {
++		/* Each read returns 4 hash entries */
++		regVal = MV_REG_READ(MV_PNC_LB_TBL_ACCESS_REG);
++		/* Extract data */
++		regVal = (regVal & MV_PNC_LB_TBL_DATA_MASK) >> MV_PNC_LB_TBL_DATA_OFFS;
++		mvOsPrintf("%4d:    ", (i * 4));
++		for (j = 0; j < 4; j++) {
++			rxq = regVal & 7;
++			mvOsPrintf("%3d   ", rxq);
++			regVal = regVal >> 3;
++		}
++		mvOsPrintf("\n");
++	}
++}
++
++int    mvPncLbRxqSet(int hash, int rxq)
++{
++	MV_U32 regVal, entry, index;
++
++	entry = (hash / 4) & MV_PNC_LB_TBL_ADDR_MASK;
++	index = (hash & 3);
++	mvOsPrintf("%s: hash=%d rxq=%d, entry=%d, index=%d\n", __func__, hash, rxq, entry, index);
++
++	MV_REG_WRITE(MV_PNC_LB_TBL_ACCESS_REG, entry);
++	regVal = MV_REG_READ(MV_PNC_LB_TBL_ACCESS_REG);
++
++	regVal &= ~MV_PNC_LB_TBL_ADDR_MASK;
++	regVal |= entry;
++	regVal &= ~((7 << (index * 3)) << MV_PNC_LB_TBL_DATA_OFFS);
++	regVal |= ((rxq << (index * 3)) << MV_PNC_LB_TBL_DATA_OFFS);
++	regVal |= MV_PNC_LB_TBL_WRITE_TRIG_MASK;
++	MV_REG_WRITE(MV_PNC_LB_TBL_ACCESS_REG, regVal);
++	mvOsPrintf("write regVal=0x%x\n", regVal);
++
++	return 0;
++}
++
++int		mvPncLbModeIp4(int mode)
++{
++	int lb;
++	struct tcam_entry te;
++
++	switch (mode) {
++	case 0:
++		lb = LB_DISABLE_VALUE;
++		break;
++	case 1:
++		lb = LB_2_TUPLE_VALUE;
++		break;
++	case 2:
++	default:
++		mvOsPrintf("%s: %d - unexpected mode value\n", __func__, mode);
++		return 1;
++	}
++	tcam_hw_read(&te, TE_IP4_EOF);
++	sram_sw_set_load_balance(&te, lb);
++	tcam_hw_write(&te, TE_IP4_EOF);
++
++	return 0;
++}
++
++int	mvPncLbModeIp6(int mode)
++{
++	int lb;
++	struct tcam_entry te;
++
++	switch (mode) {
++	case 0:
++		lb = LB_DISABLE_VALUE;
++		break;
++	case 1:
++		lb = LB_2_TUPLE_VALUE;
++		break;
++	case 2:
++	default:
++		mvOsPrintf("%s: %d - unexpected mode value\n", __func__, mode);
++		return 1;
++	}
++	tcam_hw_read(&te, TE_IP6_EOF);
++	sram_sw_set_load_balance(&te, lb);
++	tcam_hw_write(&te, TE_IP6_EOF);
++
++	return 0;
++}
++
++int	mvPncLbModeL4(int mode)
++{
++	int lb;
++	struct tcam_entry te;
++
++	switch (mode) {
++	case 0:
++		lb = LB_DISABLE_VALUE;
++		break;
++	case 1:
++		lb = LB_2_TUPLE_VALUE;
++		break;
++	case 2:
++		lb = LB_4_TUPLE_VALUE;
++		break;
++	default:
++		mvOsPrintf("%s: %d - unexpected mode value\n", __func__, mode);
++		return 1;
++	}
++
++#ifdef CONFIG_MV_ETH_PNC_L3_FLOW
++	mvOsPrintf("%s: Not supported\n", __func__);
++	return 1;
++#else
++	tcam_hw_read(&te, TE_L4_EOF);
++	sram_sw_set_load_balance(&te, lb);
++	tcam_hw_write(&te, TE_L4_EOF);
++	return 0;
++#endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
++}
++#endif /* MV_ETH_PNC_LB */
+diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.c
+index 3b96928..cd7dc1b 100755
+--- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.c
++++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.c
+@@ -291,6 +291,34 @@ void sram_sw_set_rinfo(struct tcam_entry *te, unsigned int rinfo, unsigned int m
+ }
+ 
+ #ifdef MV_ETH_PNC_NEW
++
++#ifdef MV_ETH_PNC_LB
++void sram_sw_set_load_balance(struct tcam_entry *te, unsigned int value)
++{
++	unsigned int word;
++
++	WARN_ON_OOR(value > LB_QUEUE_MASK);
++
++	word = LB_QUEUE_OFFS / DWORD_LEN;
++	te->sram.word[word] &= ~(LB_QUEUE_MASK << (LB_QUEUE_OFFS % DWORD_LEN));
++	te->sram.word[word] |= value << (LB_QUEUE_OFFS % DWORD_LEN);
++}
++
++static int sram_sw_dump_load_balance(struct tcam_entry *te, char *buf)
++{
++	unsigned int word, value;
++
++	word = LB_QUEUE_OFFS / DWORD_LEN;
++	value = te->sram.word[word] >> (LB_QUEUE_OFFS % DWORD_LEN);
++	value &= LB_QUEUE_MASK;
++
++	if (value)
++		return mvOsSPrintf(buf, " LB=%d", value);
++
++	return 0;
++}
++#endif /* MV_ETH_PNC_LB */
++
+ void sram_sw_set_rinfo_extra(struct tcam_entry *te, unsigned int ri_extra)
+ {
+ 	unsigned int word, value;
+@@ -411,7 +439,7 @@ static int sram_sw_dump_rxq(struct tcam_entry *te, char *buf)
+ 	return 0;
+ }
+ 
+-/* index:98..96 */
++/* index */
+ void sram_sw_set_next_lookup_shift(struct tcam_entry *te, unsigned int index)
+ {
+ 	unsigned int word;
+@@ -436,7 +464,7 @@ static int sram_sw_dump_next_lookup_shift(struct tcam_entry *te, char *buf)
+ 	return 0;
+ }
+ 
+-/* done:99 */
++/* done */
+ void sram_sw_set_lookup_done(struct tcam_entry *te, unsigned int value)
+ {
+ 	unsigned int word;
+@@ -582,6 +610,11 @@ int tcam_sw_dump(struct tcam_entry *te, char *buf)
+ 	off += sram_sw_dump_ainfo(te, buf + off);
+ 	off += sram_sw_dump_shift_update(te, buf + off);
+ 	off += sram_sw_dump_rxq(te, buf + off);
++
++#ifdef MV_ETH_PNC_LB
++	off += sram_sw_dump_load_balance(te, buf + off);
++#endif /* MV_ETH_PNC_LB */
++
+ 	off += (te->ctrl.flags & TCAM_F_INV) ? mvOsSPrintf(buf + off, " [inv]") : 0;
+ 	off += mvOsSPrintf(buf + off, "\n       ");
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.h b/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.h
+index b668fca..a6150f7 100755
+--- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.h
++++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.h
+@@ -137,10 +137,26 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+ #define MV_PNC_AGING_LO_THRESH_REG(gr)      (MV_PNC_REG_BASE + 0x2C + ((gr) << 2))
+ #define MV_PNC_AGING_HI_THRESH_REG          (MV_PNC_REG_BASE + 0x3C)
++/*-------------------------------------------------------------------------------*/
++#endif /* MV_ETH_PNC_AGING */
++
++#ifdef MV_ETH_PNC_LB
+ 
+ #define MV_PNC_LB_TBL_ACCESS_REG            (MV_PNC_REG_BASE + 0x40)
++
++#define MV_PNC_LB_TBL_ADDR_OFFS             0
++#define MV_PNC_LB_TBL_ADDR_MASK             (0x3F << MV_PNC_LB_TBL_ADDR_OFFS)
++
++#define MV_PNC_LB_TBL_DATA_OFFS             6
++#define MV_PNC_LB_TBL_DATA_MASK             (0xFFF << MV_PNC_LB_TBL_DATA_OFFS)
++
++#define MV_PNC_LB_TBL_WRITE_TRIG_BIT        18
++#define MV_PNC_LB_TBL_WRITE_TRIG_MASK       (1 << MV_PNC_LB_TBL_WRITE_TRIG_BIT)
+ /*-------------------------------------------------------------------------------*/
+-#endif /* MV_ETH_PNC_AGING */
++
++#define MV_PNC_LB_CRC_INIT_REG              (MV_PNC_REG_BASE + 0x44)
++#endif /* MV_ETH_PNC_LB */
++
+ 
+ #define MV_PNC_TCAM_ARRAY_SIZE		256
+ #define MV_PNC_TOTAL_DATA_SIZE		120
+@@ -206,8 +222,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define RXQ_BITS				3
+ #define RXQ_MASK				((1 << RXQ_BITS) - 1)
+ 
+-#define FLOW_VALUE_OFFS 	0   /* 32 bits */
+-#define FLOW_CTRL_OFFS		32  /* 8 bits */
++#define LB_QUEUE_BITS           2
++#define LB_QUEUE_MASK			((1 << LB_QUEUE_BITS) - 1)
++#define LB_DISABLE_VALUE		0
++#define LB_2_TUPLE_VALUE		1
++#define LB_4_TUPLE_VALUE		2
++
++#define FLOW_VALUE_OFFS 		0   /* 32 bits */
++#define FLOW_CTRL_OFFS			32  /* 8 bits */
+ 
+ /* PNC SRAM Layout */
+ #ifdef MV_ETH_PNC_NEW
+@@ -302,6 +324,7 @@ struct tcam_entry {
+  */
+ #ifdef MV_ETH_PNC_NEW
+ void sram_sw_set_rinfo_extra(struct tcam_entry *te, unsigned int ri_extra);
++void sram_sw_set_load_balance(struct tcam_entry *te, unsigned int value);
+ #endif /* MV_ETH_PNC_NEW */
+ 
+ struct tcam_entry *tcam_sw_alloc(unsigned int section);
+-- 
+1.7.9.5
+

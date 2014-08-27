@@ -1,0 +1,49 @@
+From 53eb254aba6a63b1af734b509316a0540adb810d Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Thu, 19 Jan 2012 13:21:55 +0200
+Subject: [PATCH 087/609] DSMP adding reset support to AXP-DB-REV2
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/Makefile.boot |   13 +++++++++----
+ arch/arm/mach-armadaxp/core.c        |    5 ++++-
+ 2 files changed, 13 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/Makefile.boot b/arch/arm/mach-armadaxp/Makefile.boot
+index ff0a4b5..0ef7d93 100644
+--- a/arch/arm/mach-armadaxp/Makefile.boot
++++ b/arch/arm/mach-armadaxp/Makefile.boot
+@@ -1,4 +1,9 @@
+-   zreladdr-y	+= 0x00008000
+-params_phys-y	:= 0x00000100
+-initrd_phys-y	:= 0x00800000
+-
++ifdef CONFIG_MV_AMP_ENABLE
++   zreladdr-y   := $(CONFIG_MV_ZREL_ADDR)
++params_phys-y   := $(CONFIG_MV_PARAM_PHYS)
++initrd_phys-y   := $(CONFIG_MV_INITRD_PHYS)
++else
++    zreladdr-y	:= 0x00008000
++ params_phys-y	:= 0x00000100
++ initrd_phys-y	:= 0x00800000
++endif
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index 422ce8d..ff8602d 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -1336,8 +1336,11 @@ static void __init axp_db_init(void)
+ 	cpu_fabric_common_init();
+ 
+ 	/* Select appropriate Board ID for Machine */
++#ifdef CONFIG_ARMADA_XP_REV_A0
++	gBoardId = DB_88F78XX0_BP_REV2_ID;
++#else
+ 	gBoardId = DB_88F78XX0_BP_ID;
+-
++#endif
+ 	/* Before initializing the HAL, select Z1A serdes cfg if needed */
+ 	if (support_Z1A_serdes_cfg)
+ 		mvBoardSerdesZ1ASupport();
+-- 
+1.7.9.5
+

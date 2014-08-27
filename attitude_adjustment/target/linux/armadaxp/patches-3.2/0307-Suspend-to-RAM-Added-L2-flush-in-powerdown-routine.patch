@@ -1,0 +1,28 @@
+From c08a4f78be30493ef5dd69960d853efea2f1bf95 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 27 Sep 2012 16:18:57 +0200
+Subject: [PATCH 307/609] Suspend to RAM: Added L2 flush in powerdown routine
+
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/armada_suspend.S |    3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/arch/arm/plat-armada/armada_suspend.S b/arch/arm/plat-armada/armada_suspend.S
+index de6c7a5..afe5e3c 100644
+--- a/arch/arm/plat-armada/armada_suspend.S
++++ b/arch/arm/plat-armada/armada_suspend.S
+@@ -61,6 +61,9 @@ ENTRY(armadaxp_powerdown)
+ 	*/
+ 	bl v7_flush_kern_cache_all
+ 
++	/* Flush L2 Cache */
++	bl auroraL2_flush_all
++
+ 	/*
+ 	* Issue a Data Synchronization Barrier instruction to ensure that all
+ 	* state saving has been	completed.
+-- 
+1.7.9.5
+

@@ -1,0 +1,156 @@
+From cea751c5ab2bd092c8ccdb3fe5f09a3e35be2d46 Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Wed, 11 Jan 2012 17:48:10 +0200
+Subject: [PATCH 055/609] Align git with cc changes from uboot and vxworks
+
+Signed-off-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../armada_xp_family/boardEnv/mvBoardEnvLib.h      |    2 ++
+ .../armada_xp_family/boardEnv/mvBoardEnvSpec.c     |    2 +-
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.h    |    1 +
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvLib.c        |   24 ++++++++++----------
+ .../armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h       |    4 ----
+ arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c      |    4 ++--
+ arch/arm/plat-armada/mv_hal/pci/mvPci.c            |    1 +
+ 7 files changed, 19 insertions(+), 19 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
+index 2428d49..566d283 100755
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
+@@ -431,6 +431,8 @@ MV_STATUS  mvBoardSerdesConfigurationEnableSet(MV_BOOL enableSerdesconfig);
+ MV_SERDES_CFG *mvBoardSerdesCfgGet(void);
+ MV_BOARD_PEX_INFO *mvBoardPexInfoGet(void);
+ MV_STATUS mvBoardConfIdSet(MV_U16 conf);
++MV_U16 mvBoardPexModeGet(MV_VOID);
++MV_STATUS mvBoardPexModeSet(MV_U16 conf);
+ 
+ 
+ #ifdef __cplusplus
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+index 4a9f4c0..f009371 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
+@@ -496,7 +496,7 @@ MV_BOARD_MPP_INFO rd78460nasInfoBoardMppConfigValue[] = {
+ 
+ MV_SERDES_CFG rd78460nasInfoBoardSerdesConfigValue[] = {
+ 	{0x00223001, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED, PEX_BUS_MODE_X4, 0x00000030},	/* Default */
+-	{0x33320201, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED, PEX_BUS_MODE_X4, 0x00000030},	/* Switch module */
++	{0x33320201, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED, PEX_BUS_MODE_X4, 0x00000030}	/* Switch module */
+ };
+ 
+ MV_BOARD_INFO rd78460nasInfo = {
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.h
+index 4174b04..dcecd06 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.h
+@@ -172,6 +172,7 @@ typedef struct _mvDecWinParams {
+ /* mvCtrlEnvAddrDec API list */
+ 
+ MV_STATUS mvCtrlAttribGet(MV_TARGET target, MV_TARGET_ATTRIB *targetAttrib);
++MV_STATUS mvCtrlAttribSet(MV_TARGET target, MV_TARGET_ATTRIB *targetAttrib);
+ 
+ MV_TARGET mvCtrlTargetGet(MV_TARGET_ATTRIB *targetAttrib);
+ MV_TARGET mvCtrlTargetByWinInfoGet(MV_UNIT_WIN_INFO *unitWinInfo);
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
+index 7ce4842..d7d1aef 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
+@@ -2193,17 +2193,17 @@ MV_STATUS mvCtrlSerdesPhyConfig(MV_VOID)
+ 
+ 
+ 			if (serdesLineCfg == serdesCfg[serdesLineNum][SERDES_UNIT_QSGMII]) {
+-				//pRegVal[1]  = 0x400;
+-				//pRegVal[3]  = 0x667;
+-				//pRegAddr[6] = QSGMII_GEN_1_SETTING_REG(sgmiiPort);
+-				//pRegVal[6]  = 0xCD5C;
+-
+-				pRegAddr[0] = 0x72e04; //SGMII_PWR_PLL_CTRL_REG(sgmiiPort);
+-				pRegAddr[1] = 0x72e8c; //SGMII_DIG_LP_ENA_REG(sgmiiPort);
+-				pRegAddr[2] = 0x72f18; //SGMII_REF_CLK_SEL_REG(sgmiiPort);
+-				pRegAddr[3] = 0x72f20; //SGMII_SERDES_CFG_REG(sgmiiPort);
+-				pRegAddr[4] = 0x724a4; //SGMII_SERDES_STAT_REG(sgmiiPort);
+-				pRegAddr[5] = 0x724a0; //SGMII_COMPHY_CTRL_REG(sgmiiPort);
++				/* pRegVal[1]  = 0x400;									*/
++				/* pRegVal[3]  = 0x667;									*/
++				/* pRegAddr[6] = QSGMII_GEN_1_SETTING_REG(sgmiiPort);	*/
++				/* pRegVal[6]  = 0xCD5C;								*/
++
++				pRegAddr[0] = 0x72e04; /* SGMII_PWR_PLL_CTRL_REG(sgmiiPort); */
++				pRegAddr[1] = 0x72e8c; /* SGMII_DIG_LP_ENA_REG(sgmiiPort);	*/
++				pRegAddr[2] = 0x72f18; /* SGMII_REF_CLK_SEL_REG(sgmiiPort);	*/
++				pRegAddr[3] = 0x72f20; /* SGMII_SERDES_CFG_REG(sgmiiPort);	*/
++				pRegAddr[4] = 0x724a4; /* SGMII_SERDES_STAT_REG(sgmiiPort);	*/
++				pRegAddr[5] = 0x724a0; /* SGMII_COMPHY_CTRL_REG(sgmiiPort);	*/
+ 				pRegAddr[6] = 0x72e34;
+ 				pRegAddr[7] = 0;
+ 				pRegAddr[8] = 0;
+@@ -2211,7 +2211,7 @@ MV_STATUS mvCtrlSerdesPhyConfig(MV_VOID)
+ 				pRegVal[0]  = 0xF881;
+ 				pRegVal[1]  = 0x400;
+ 				pRegVal[2]  = 0x400;
+-				pRegVal[3]  = 0x9080; //(pSerdesInfo->busSpeed & (1 << serdesLineNum)) != 0 ? 0x1547 : 0xCC7;
++				pRegVal[3]  = 0x9080; /*(pSerdesInfo->busSpeed & (1 << serdesLineNum)) != 0 ? 0x1547 : 0xCC7; */
+ 				pRegVal[4]  = 0x7;
+ 				pRegVal[5]  = 0x667;
+ 				pRegVal[6]  = 0xcd5c;
+diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
+index 6857a91..12338cb 100644
+--- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
++++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
+@@ -185,8 +185,6 @@ extern "C" {
+ #ifdef MV_INCLUDE_PCI
+  #define MV_PCI_MAX_IF				1
+  #define MV_PCI_START_IF			0
+- #define PCI_HOST_BUS_NUM(pciIf)		(pciIf)
+- #define PCI_HOST_DEV_NUM(pciIf)		0
+ #else
+  #define MV_PCI_MAX_IF				0
+  #define MV_PCI_START_IF			0
+@@ -200,8 +198,6 @@ extern "C" {
+ #define MV_DISABLE_PEX_DEVICE_BAR
+ 
+ #define MV_PEX_START_IF				MV_PCI_MAX_IF
+- #define PEX_HOST_BUS_NUM(pciIf)		(pciIf)
+- #define PEX_HOST_DEV_NUM(pciIf)		0
+ #else
+  #undef MV_INCLUDE_PEX0
+ #endif
+diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
+index 165a684..3999412 100644
+--- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
++++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
+@@ -2171,7 +2171,7 @@ MV_NETA_RXQ_CTRL *mvNetaRxqInit(int port, int queue, int descrNum)
+ 
+ 	/* Set Rx descriptors queue starting address */
+ 	MV_REG_WRITE(NETA_RXQ_BASE_ADDR_REG(pPortCtrl->portNo, queue),
+-		     netaDescVirtToPhys(pQueueCtrl, pQueueCtrl->pFirst));
++		     netaDescVirtToPhys(pQueueCtrl, (MV_U8 *)pQueueCtrl->pFirst));
+ 	MV_REG_WRITE(NETA_RXQ_SIZE_REG(pPortCtrl->portNo, queue), descrNum);
+ 
+ 	return pRxqCtrl;
+@@ -2232,7 +2232,7 @@ MV_NETA_TXQ_CTRL *mvNetaTxqInit(int port, int txp, int queue, int descrNum)
+ #endif /* MV_ETH_WRR_NEW */
+ 
+ 	/* Set Tx descriptors queue starting address */
+-	MV_REG_WRITE(NETA_TXQ_BASE_ADDR_REG(port, txp, queue), netaDescVirtToPhys(pQueueCtrl, pQueueCtrl->pFirst));
++	MV_REG_WRITE(NETA_TXQ_BASE_ADDR_REG(port, txp, queue), netaDescVirtToPhys(pQueueCtrl, (MV_U8 *)pQueueCtrl->pFirst));
+ 
+ 	MV_REG_WRITE(NETA_TXQ_SIZE_REG(port, txp, queue), NETA_TXQ_DESC_NUM_MASK(descrNum));
+ 
+diff --git a/arch/arm/plat-armada/mv_hal/pci/mvPci.c b/arch/arm/plat-armada/mv_hal/pci/mvPci.c
+index ed2f38c..7d826a2 100644
+--- a/arch/arm/plat-armada/mv_hal/pci/mvPci.c
++++ b/arch/arm/plat-armada/mv_hal/pci/mvPci.c
+@@ -63,6 +63,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *******************************************************************************/
+ #include "pci/mvPci.h"
+ #include "ctrlEnv/mvCtrlEnvLib.h"
++#include "ctrlEnv/mvCtrlEnvSpec.h"
+ 
+ /* defines  */       
+ #ifdef MV_DEBUG         
+-- 
+1.7.9.5
+

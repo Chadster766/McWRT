@@ -1,0 +1,142 @@
+From c1ae28683416910828846a6a835a14fbd69a73aa Mon Sep 17 00:00:00 2001
+From: Rami Rosen <rosenr@marvell.com>
+Date: Thu, 5 Jan 2012 17:29:14 +0200
+Subject: [PATCH 066/609] Neta: Fix for fib_sync() and neigh_sync()
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ net/core/neighbour.c |   21 ++++++++-----------
+ net/ipv4/route.c     |   55 +++++++++++++++-----------------------------------
+ 2 files changed, 24 insertions(+), 52 deletions(-)
+
+diff --git a/net/core/neighbour.c b/net/core/neighbour.c
+index c1d808c..bb356ed 100644
+--- a/net/core/neighbour.c
++++ b/net/core/neighbour.c
+@@ -2910,34 +2910,29 @@ void neigh_sync(int family)
+ 	rcu_read_lock_bh();
+ 
+ 	for (tbl = neigh_tables; tbl; tbl = tbl->next) {
+-	if (tbl->family != family)
+-		continue;
+-	nht = rcu_dereference_bh(tbl->nht);
++		if (tbl->family != family)
++			continue;
++		nht = rcu_dereference_bh(tbl->nht);
+ 
+-	for (h = 0; h <= nht->hash_mask; h++) {
+-		for (n = rcu_dereference_bh(nht->hash_buckets[h]); n != NULL;
+-		     n = rcu_dereference_bh(n->next)) {
+-				if (!(n->nfp)) {
+-					if (n->dev == NULL)
++		for (h = 0; h <= nht->hash_mask; h++) {
++			for (n = rcu_dereference_bh(nht->hash_buckets[h]); n != NULL;
++				 n = rcu_dereference_bh(n->next)) {
++					 if (n->dev == NULL)
+ 						continue;
+-
++					n->nfp = false;
+ 					if (!nfp_hook_arp_add(n->tbl->family,
+ 							n->primary_key,
+ 							n->ha,
+ 							n->dev->ifindex)) {
+ 						n->nfp = true;
+ 					}
+-				}
+ 			}
+ 		}
+ 	}
+ 	rcu_read_unlock_bh();
+ 	read_unlock(&neigh_tbl_lock);
+-
+ }
+ 
+-
+-
+ #endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
+ 
+ static int __init neigh_init(void)
+diff --git a/net/ipv4/route.c b/net/ipv4/route.c
+index 8c35e76..bc54471 100644
+--- a/net/ipv4/route.c
++++ b/net/ipv4/route.c
+@@ -700,7 +700,7 @@ static int rt_may_expire(struct rtable *rth, unsigned long tmo1, unsigned long t
+ {
+ 	unsigned long age;
+ 	int ret = 0;
+-
++	printk("%s:\n", __func__);
+ 	if (atomic_read(&rth->dst.__refcnt))
+ 		goto out;
+ 
+@@ -829,52 +829,29 @@ static void rt_do_flush(struct net *net, int process_context)
+ #if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
+ void nfp_fib_sync(void)
+ {
++	struct rtable *rt;
++	int h;
+ 
+-	unsigned int i;
+-	struct rtable *rth, *next;
+-	struct rtable *tail;
+-	struct rtable **prev, *p;
+-
+-	for (i = 0; i <= rt_hash_mask; i++) {
+-		rth = rt_hash_table[i].chain;
+-		if (!rth)
++	for (h = 0; h <= rt_hash_mask; h++) {
++		if (!rt_hash_table[h].chain)
+ 			continue;
+-		rth->nfp = false;
+-
+-		spin_lock_bh(rt_hash_lock_addr(i));
+-
+-		/* defer releasing the head of the list after spin_unlock */
+-		for (tail = rth; tail; tail = tail->dst.rt_next)
+-			if (rth != tail)
+-				rt_hash_table[i].chain = tail;
+-
+-		prev = &rt_hash_table[i].chain;
+-		for (p = *prev; p; p = next) {
+-			next = p->dst.rt_next;
+-			if (!(p->rt_flags & (RTCF_MULTICAST | RTCF_BROADCAST | RTCF_LOCAL | RTCF_REJECT))) {
+-				if (!nfp_hook_fib_rule_add(AF_INET, (u8*)(&p->rt_src), (u8*)(&p->rt_dst),
+-						  (u8*)(&p->rt_gateway), p->rt_iif, p->dst.dev->ifindex))
+-					rth->nfp = true;
+-			}
+-			prev = &p->dst.rt_next;
+-		}
+-
+-		spin_unlock_bh(rt_hash_lock_addr(i));
+-
+-		for (; rth != tail; rth = next) {
+-			rth->nfp = false;
+-			next = rth->dst.rt_next;
+-			if (!(rth->rt_flags & (RTCF_MULTICAST | RTCF_BROADCAST | RTCF_LOCAL | RTCF_REJECT))) {
+-				if (!nfp_hook_fib_rule_add(AF_INET, (u8*)(&rth->rt_src), (u8*)(&rth->rt_dst),
+-					  (u8*)(&rth->rt_gateway), rth->rt_iif, rth->dst.dev->ifindex))
+-					rth->nfp = true;
++		rcu_read_lock_bh();
++		for (rt = rcu_dereference_bh(rt_hash_table[h].chain) ; rt;
++		    rt = rcu_dereference_bh(rt->dst.rt_next)) {
++			if (rt_is_expired(rt))
++				continue;
++			rt->nfp = false;
++			if (!(rt->rt_flags & (RTCF_MULTICAST | RTCF_BROADCAST | RTCF_LOCAL | RTCF_REJECT))) {
++				if (!nfp_hook_fib_rule_add(AF_INET, (u8 *)(&rt->rt_src), (u8 *)(&rt->rt_dst),
++					  (u8 *)(&rt->rt_gateway), rt->rt_iif, rt->dst.dev->ifindex))
++					rt->nfp = true;
+ 			}
+ 		}
++		rcu_read_unlock_bh();
+ 	}
+ }
+ #endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
+ 
+-
+ /*
+  * While freeing expired entries, we compute average chain length
+  * and standard deviation, using fixed-point arithmetic.
+-- 
+1.7.9.5
+

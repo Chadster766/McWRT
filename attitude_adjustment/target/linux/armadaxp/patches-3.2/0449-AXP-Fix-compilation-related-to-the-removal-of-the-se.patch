@@ -1,0 +1,112 @@
+From 88c13f79dcc68e59a4cac3bd3046c45cff99008e Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Sun, 9 Dec 2012 12:47:57 +0200
+Subject: [PATCH 449/609] AXP: Fix compilation related to the removal of the
+ serdes init in HALs
+
+Change-Id: Iab3d6b758a8be8ae213b713ebba013b9f43a65de
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/core.c |   42 ++++++++---------------------------------
+ 1 file changed, 8 insertions(+), 34 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
+index a0e8f6b..d538dea 100755
+--- a/arch/arm/mach-armadaxp/core.c
++++ b/arch/arm/mach-armadaxp/core.c
+@@ -336,16 +336,6 @@ static int __init noWFI_setup(char *__unused)
+ 
+ __setup("noWFI", noWFI_setup);
+ 
+-MV_U32 support_Z1A_serdes_cfg = 0x0;
+-static int __init serdesZ1A_setup(char *__unused)
+-{
+-     printk("Supporting Z1A Serdes Configurations.\n");
+-     support_Z1A_serdes_cfg = 1;
+-     return 1;
+-}
+-
+-__setup("Z1A", serdesZ1A_setup);
+-
+ char *nfcConfig = NULL;
+ static int __init nfcConfig_setup(char *s)
+ {
+@@ -1559,18 +1549,12 @@ static void __init axp_db_init(void)
+ 	/* Call Aurora/cpu special configurations */
+ 	cpu_fabric_common_init();
+ 
+-
+ 	/* Select appropriate Board ID for Machine */
+ #if defined(CONFIG_ARMADA_XP_REV_A0) || defined(CONFIG_ARMADA_XP_REV_B0)
+ 	gBoardId = DB_88F78XX0_BP_REV2_ID;
+ #else
+ 	gBoardId = DB_88F78XX0_BP_ID;
+ #endif
+-	/* Before initializing the HAL, select Z1A serdes cfg if needed */
+-	if (support_Z1A_serdes_cfg)
+-		mvBoardSerdesZ1ASupport();
+-	/* Bypass serdes reconfiguration since already done at bootloader */
+-        mvBoardSerdesConfigurationEnableSet(MV_FALSE);
+ 
+ 	/* init the Board environment */
+ 	mvBoardEnvInit();
+@@ -1794,9 +1778,6 @@ static void __init axp_gp_init(void)
+ 	/* Select appropriate Board ID for Machine */
+ 	gBoardId = DB_784MP_GP_ID;
+ 
+-	/* Bypass serdes reconfiguration since already done at bootloader */
+-        mvBoardSerdesConfigurationEnableSet(MV_FALSE);
+-
+ 	/* init the Board environment */
+ 	mvBoardEnvInit();
+ 
+@@ -1933,9 +1914,6 @@ static void __init axp_rd_nas_init(void)
+ 	/* Select appropriate Board ID for Machine */
+ 	gBoardId = RD_78460_NAS_ID;
+ 
+-	/* Bypass serdes reconfiguration since already done at bootloader */
+-        mvBoardSerdesConfigurationEnableSet(MV_FALSE);
+-
+ 	/* init the Board environment */
+ 	mvBoardEnvInit();
+ 
+@@ -2076,8 +2054,6 @@ static void __init axp_rdsrv_init(void)
+ #else
+ 	gBoardId = RD_78460_SERVER_ID;
+ #endif
+-	/* Bypass serdes reconfiguration since already done at bootloader */
+-        mvBoardSerdesConfigurationEnableSet(MV_FALSE);
+ 
+ 	/* init the Board environment */
+ 	mvBoardEnvInit();
+@@ -2183,18 +2159,16 @@ static void __init axp_fpga_init(void)
+ 
+ 	/* Select appropriate Board ID for Machine */
+ 	gBoardId = FPGA_88F78XX0_ID;
+-	/* Bypass serdes reconfiguration since already done at bootloader */
+-        mvBoardSerdesConfigurationEnableSet(MV_FALSE);
+ 
+-        /* init the Board environment */
+-       	mvBoardEnvInit();
++	/* init the Board environment */
++	mvBoardEnvInit();
++
++	/* init the controller environment */
++	if( mvCtrlEnvInit() ) {
++		printk( "Controller env initialization failed.\n" );
++		return;
++	}
+ 
+-        /* init the controller environment */
+-        if( mvCtrlEnvInit() ) {
+-            printk( "Controller env initialization failed.\n" );
+-            return;
+-        }
+-	
+ 	/* Replace PCI-0 Attribute for FPGA 0xE => 0xD */
+ 	mvTargetDefaultsArray[PEX0_MEM].attrib = 0xD8;
+ 
+-- 
+1.7.9.5
+

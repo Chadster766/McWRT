@@ -1,0 +1,43 @@
+From daaa5746163718119721b0a5709dfe5803c9afb9 Mon Sep 17 00:00:00 2001
+From: Raymond Huang <rhuang@marvell.com>
+Date: Wed, 4 Jan 2012 18:15:20 +0800
+Subject: [PATCH 226/609] pj4b: fix for "ARM: mm: use TTBR1 instead of
+ reserved context ID"
+
+Change-Id: Ib90c37924173ea085d8a38e175b551e5a4f4740e
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mm/proc-sheeva_pj4bv7.S |   10 ++++------
+ 1 file changed, 4 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm/mm/proc-sheeva_pj4bv7.S b/arch/arm/mm/proc-sheeva_pj4bv7.S
+index 8c579cb..2f8b3fb 100644
+--- a/arch/arm/mm/proc-sheeva_pj4bv7.S
++++ b/arch/arm/mm/proc-sheeva_pj4bv7.S
+@@ -146,18 +146,16 @@ ENTRY(cpu_pj4bv7_switch_mm)
+ #ifdef CONFIG_ARM_ERRATA_430973
+ 	mcr	p15, 0, r2, c7, c5, 6		@ flush BTAC/BTB
+ #endif
+-#ifdef CONFIG_ARM_ERRATA_754322
+-	dsb
+-#endif
+-	mcr	p15, 0, r2, c13, c0, 1		@ set reserved context ID
+-	isb
+-1:	mcr	p15, 0, r0, c2, c0, 0		@ set TTB 0
++	mrc	p15, 0, r2, c2, c0, 1		@ load TTB 1
++	mcr	p15, 0, r2, c2, c0, 0		@ into TTB 0
+ 	isb
+ #ifdef CONFIG_ARM_ERRATA_754322
+ 	dsb
+ #endif
+ 	mcr	p15, 0, r1, c13, c0, 1		@ set context ID
+ 	isb
++	mcr	p15, 0, r0, c2, c0, 0		@ set TTB 0
++	isb
+ #endif
+ 	mov	pc, lr
+ ENDPROC(cpu_pj4bv7_switch_mm)
+-- 
+1.7.9.5
+

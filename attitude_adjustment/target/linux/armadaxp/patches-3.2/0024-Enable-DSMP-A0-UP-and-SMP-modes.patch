@@ -1,0 +1,194 @@
+From 0c219fe16f01fcbb12dd252fc02b6987873369e5 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Tue, 29 Nov 2011 16:10:31 +0200
+Subject: [PATCH 024/609] Enable DSMP-A0 UP and SMP modes
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/platsmp.c |   35 ++++++++++++++++++++++++++++++++---
+ arch/arm/mach-armadaxp/time.c    |   19 +++++++++++++++----
+ arch/arm/mm/proc-sheeva_pj4bv7.S |   31 +++++++++++++++++++++++++++++++
+ 3 files changed, 78 insertions(+), 7 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/platsmp.c b/arch/arm/mach-armadaxp/platsmp.c
+index d94d82c..4ae141d 100644
+--- a/arch/arm/mach-armadaxp/platsmp.c
++++ b/arch/arm/mach-armadaxp/platsmp.c
+@@ -138,10 +138,38 @@ static void __init wakeup_cpus(void)
+ 	MV_U32 val = 0;
+ 	MV_U32 ncores = get_core_count();
+ #ifndef CONFIG_MACH_ARMADA_XP_FPGA
++#ifndef CONFIG_ARMADA_XP_REV_Z1
+ 	/* Scale up CPU#1 clock to max */
++	MV_U32 divider = MV_REG_READ(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1);
++	divider = ( divider & 0x3F );
++	if (ncores > 1) {
++		val = MV_REG_READ(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1);
++		val &= ~(0x0000FF00); 	/* cpu1 clkdiv ratio; cpu0 based on SAR */
++		val |= divider << 8;
++		MV_REG_WRITE(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1, val);
++	}
++
++	/* Scale up CPU#2 clock to max */
++	if (ncores > 2) {
++		 val = MV_REG_READ(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1);
++                val &= ~(0x00FF0000);   /* cpu1 clkdiv ratio; cpu0 based on SAR */
++                val |= divider << 16;
++                MV_REG_WRITE(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1, val);
++	}
++
++
++	/* Scale up CPU#3 clock to max */
++	if (ncores > 3) {
++		val = MV_REG_READ(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1);
++		val &= ~0xFF000000;	/* cpus 3 clkdiv ratios */
++		val |= divider << 24;
++		MV_REG_WRITE(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1, val);
++	}
++#else
++       /* Scale up CPU#1 clock to max */
+ 	if (ncores > 1) {
+ 		val = MV_REG_READ(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL0);
+-		val &= ~(0xFF000000); 	/* cpu1 clkdiv ratio; cpu0 based on SAR */
++		val &= ~(0xFF000000);   /* cpu1 clkdiv ratio; cpu0 based on SAR */
+ 		val |= 0x1 << 24;
+ 		MV_REG_WRITE(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL0, val);
+ 	}
+@@ -149,7 +177,7 @@ static void __init wakeup_cpus(void)
+ 	/* Scale up CPU#2 clock to max */
+ 	if (ncores > 2) {
+ 		val = MV_REG_READ(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1);
+-		val &= ~0x00FF0000;	/* cpus 2 clkdiv ratios */
++		val &= ~0x00FF0000;     /* cpus 2 clkdiv ratios */
+ 		val |= 0x1 << 16;
+ 		MV_REG_WRITE(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1, val);
+ 	}
+@@ -157,10 +185,11 @@ static void __init wakeup_cpus(void)
+ 	/* Scale up CPU#3 clock to max */
+ 	if (ncores > 3) {
+ 		val = MV_REG_READ(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1);
+-		val &= ~0xFF000000;	/* cpus 3 clkdiv ratios */
++		val &= ~0xFF000000;     /* cpus 3 clkdiv ratios */
+ 		val |= 0x1 << 24;
+ 		MV_REG_WRITE(AXP_CPU_DIVCLK_CTRL2_RATIO_FULL1, val);
+ 	}
++#endif
+ 
+ 	/* Set clock devider reload smooth bit mask */
+ 	val = MV_REG_READ(AXP_CPU_DIVCLK_CTRL0);
+diff --git a/arch/arm/mach-armadaxp/time.c b/arch/arm/mach-armadaxp/time.c
+index c535a45..ff364ea 100644
+--- a/arch/arm/mach-armadaxp/time.c
++++ b/arch/arm/mach-armadaxp/time.c
+@@ -71,6 +71,7 @@ extern void axp_irq_unmask(struct irq_data *d);
+ #define   LCL_INT_TIMER0_CLR 	~(1 << 0)
+ #define   LCL_INT_TIMER1_CLR	~(1 << 8)
+ 
++#define LCL_TIMER_TURN_25MHZ	(1 << 11)
+ #define BRIDGE_CAUSE		(MV_MBUS_REGS_OFFSET | 0x0260)
+ #define BRIDGE_INT_TIMER0	(1 << 24)
+ #define BRIDGE_INT_TIMER1	(1 << 25)
+@@ -175,7 +176,11 @@ static void axp_clkevt_mode(enum clock_event_mode mode, struct clock_event_devic
+ 
+ 		/* Enable timer */
+ 		u = MV_REG_READ(LCL_TIMER_CTRL);
++#if !defined (CONFIG_ARMADA_XP_REV_Z1) && !defined (CONFIG_MACH_ARMADA_XP_FPGA)
++		u |= (LCL_TIMER0_EN | LCL_TIMER0_RELOAD_EN | LCL_TIMER_TURN_25MHZ);
++#else
+ 		u |= (LCL_TIMER0_EN | LCL_TIMER0_RELOAD_EN);
++#endif
+ 		MV_REG_WRITE(LCL_TIMER_CTRL, u);
+ 	} else {
+ 		/* Disable timer */
+@@ -248,7 +253,11 @@ void __init axp_time_init(unsigned int fabric_clk)
+ 	u &= ~BRIDGE_INT_TIMER0;
+ 	MV_REG_WRITE(BRIDGE_MASK, u);
+ 	u = MV_REG_READ(TIMER_CTRL);
++#if !defined (CONFIG_ARMADA_XP_REV_Z1) && !defined (CONFIG_MACH_ARMADA_XP_FPGA)
++	u |= (TIMER0_EN | TIMER0_RELOAD_EN | LCL_TIMER_TURN_25MHZ);
++#else
+ 	u |= (TIMER0_EN | TIMER0_RELOAD_EN);
++#endif
+ 	MV_REG_WRITE(TIMER_CTRL, u);
+ 	axp_clksrc.mult = clocksource_hz2mult(fabric_clk, axp_clksrc.shift);
+ 	clocksource_register(&axp_clksrc);
+@@ -269,10 +278,11 @@ void __init axp_time_init(unsigned int fabric_clk)
+ 
+ static void axp_timer_init(void)
+ {
+-#ifdef CONFIG_MACH_ARMADA_XP_FPGA
++#if !defined (CONFIG_ARMADA_XP_REV_Z1) || defined (CONFIG_MACH_ARMADA_XP_FPGA)
++	/* FPGA is hardcoded to 25Mhx and DSMP-A0 ref clock for the timers is 25MHz */
+ 	axp_time_init(25000000);
+ #else
+-	axp_time_init(mvCpuL2ClkGet());
++	axp_time_init(mvCpuL2ClkGet());  /* DSMP-Z1 clock is taken from Fabric */
+ #endif
+ }
+ 
+@@ -313,10 +323,11 @@ int local_timer_ack(void)
+  */
+ int __cpuinit local_timer_setup(struct clock_event_device *clk)
+ {
+-#ifdef CONFIG_MACH_ARMADA_XP_FPGA
++#if !defined (CONFIG_ARMADA_XP_REV_Z1) || defined (CONFIG_MACH_ARMADA_XP_FPGA)
++	/* FPGA hardcoded to 25Mhz and in DSMP-A0 the referance clock for the timers is 25MHz */
+ 	unsigned int fabric_clk = 25000000;
+ #else
+-	unsigned int fabric_clk = mvCpuL2ClkGet();
++	unsigned int fabric_clk = mvCpuL2ClkGet(); /* DSMP-Z1 clock is taken from Fabric */
+ #endif
+ 	static cpu0_flag=0;
+ 	int cpu = smp_processor_id();
+diff --git a/arch/arm/mm/proc-sheeva_pj4bv7.S b/arch/arm/mm/proc-sheeva_pj4bv7.S
+index 7e0e907..23ff635 100644
+--- a/arch/arm/mm/proc-sheeva_pj4bv7.S
++++ b/arch/arm/mm/proc-sheeva_pj4bv7.S
+@@ -366,6 +366,36 @@ defined(CONFIG_SMP)
+ #endif
+ #endif
+ 
++#ifdef CONFIG_ARMADA_XP_REV_A0
++/* DSMP A0 */
++/* Auxiliary Functional Modes Control Register 0 */
++	mrc        p15, 1, r1, c15, c2, 0                         /* Read */
++#ifdef CONFIG_SMP
++	orr          r1, r1, #0x00002                                /* BIT1 SMP/nAMP --> '1' taking part in coherency */
++#endif
++	/*orr     r1, r1, #0x00004                                /* BIT2 L1 parity --> '1' Enabled */
++	/*orr     r1, r1, #0x00100                                /* BIT8 FW --> '1' enable Cache and TLB maintenance broadcast */
++	mcr        p15, 1, r1, c15, c2, 0                         /* Write */
++
++	/* Auxiliary Debug Modes Control 0 Register */
++	mrc        p15, 1, r1, c15, c1, 0                         /* Read */
++	orr          r1, r1, #0x001000                              /* BIT12 ldstm_first Two_sgl --> '1' Force first issue to be single */
++	orr          r1, r1, #0x400000                              /* BIT22 dvm_wakeup_dis --> '1' WFI/WFE will serve the DVM and back to idle */
++	mcr        p15, 1, r1, c15, c1, 0                         /* Write */
++	/* Auxiliary Debug Modes Control 1 Register */
++	mrc        p15, 1, r1, c15, c1, 1                         /* Read */
++	orr          r1, r1, #0x00020                                /* BIT5 STREX backoff_disable--> '1' enable the back off of STREX instr */
++	bic          r1, r1, #0x00100                                /* BIT8 Internal Parity Handling Disable--> '0' Disable Internal Parity Handling */
++	mcr        p15, 1, r1, c15, c1, 1                         /* Write */
++	/* Auxiliary Debug Modes Control 2 Register */
++	mrc        p15, 1, r1, c15, c1, 2                         /* Read */
++	orr          r1, r1, #0x02000000                         /* BIT25 Intervention Interleave Disable--> '1'  Disable Interleaving with Intervention Data */
++	orr          r1, r1, #0x08000000                         /* BIT27 CWF Disable--> '1' Disable critical word first sequencing */
++	orr          r1, r1, #0x20000000                         /* BIT29 DEV Stream Disable--> '1' Disable MO device read / write */
++	orr          r1, r1, #0x40000000                         /* BIT30 L1 Replacement Policy Config--> '1' Strict Round-Robin Replacement Policy  */
++	mcr        p15, 1, r1, c15, c1, 2                         /* Write */
++
++#else
+ #ifdef CONFIG_SMP
+ 	ALT_SMP(mrc	p15, 0, r0, c1, c0, 1)
+ 	ALT_UP(mov	r0, #(1 << 6))		@ fake it for UP
+@@ -373,6 +403,7 @@ defined(CONFIG_SMP)
+ 	orreq	r0, r0, #(1 << 6) | (1 << 0)	@ Enable SMP/nAMP mode and
+ 	mcreq	p15, 0, r0, c1, c0, 1		@ TLB ops broadcasting
+ #endif
++#endif
+ #ifdef CONFIG_CPU_SHEEVA_PJ4B_PMC_ACCESS_IN_USERMODE
+ 	@ Enable performance counters user access
+ 	mrc     p15, 0, r0, c9, c14, 0
+-- 
+1.7.9.5
+

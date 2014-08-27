@@ -1,0 +1,175 @@
+                               2/28/2014
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+                                 CONTENTS
+Topic                            --------                       Section
+-----                                                           -------
+
+ o OVERVIEW....................................................... 1.0
+ o BUILDING OPENWRT............................................... 2.0
+ o HOW TO BOOT UP TO LINUX........................................ 3.0
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+1.0 OVERVIEW
+
+This document provides a quickstart guide on Mamba OpenWRT SDK V3.5
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+2.0 BUILDING OPENWRT
+
+How to build the openwrt:
+
+1. Setup the Linux server and install all packages for openwrt:
+   Refer: http://wiki.openwrt.org/doc/howto/buildroot.exigence
+
+2. Make sure the server is connected to the Internet.
+   
+3. Preparation:
+   Extract the release source from tarball
+   # tar xzfv mamba-openwrt-v3.5.tar.gz
+
+   Extract the opensource (dl_v3.5.tar.gz) the dl folder
+   
+   Update packages and luci for some advanced features ( such as 
+   Web Management).
+   # cd mamba-openwrt
+   # ./scripts/feeds update packages
+   # ./scripts/feeds update luci
+   # ./scripts/feeds update routing
+   # ./scripts/feeds update xwrt 
+   # ./scripts/feeds install -a -p packages
+   # ./scripts/feeds install -a -p luci
+   # ./scripts/feeds install -a -p routing
+
+4. Configuration the openwrt:
+   # cd mamba-openwrt
+
+   To enable/disable packages manually:
+   # make menuconfig 
+
+   You can also utilize the pre-config file (which enables Web Management):
+   # cp belkin/mamba_basic_config .config
+
+5. Building the openwrt:
+
+   # cd mamba-openwrt
+   # make dirclean
+   # make V=s
+   
+6. Binary files after finish compile (or extract from release binaries):
+   # tar xzvf mamba-openwrt-vX.Y.bin.tar.gz
+   # cd mamba-openwrt
+   # ls bin/armadaxp/
+   md5sums
+   openwrt-armadaxp--jffs2-128k.img
+   openwrt-armadaxp-rootfs.tar.gz
+   openwrt-armadaxp-uImage
+   packages/
+
+   Then put all the openwrt-armadaxp-*** to tftp server (/tftpboot folder)
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+3.0 HOW TO BOOT UP TO LINUX
+   
+1. Configure the ethernet:
+   Make sure the ethernet of board working, then we can get the files from tftp server for boot up Linux.
+   
+2. Set up environment variables required for Dual Boot (Primary Boot + Alternative Boot)
+	Mamba support Dual Boot with the following features:
+	+ Linksys and OpenWRT firmware use the same flash layout (mtdparts U-boot variable)
+	+ Linksys and OpenWRT firmware use the same kernel boot arguments (bootargs is the same and independent of the firmware)
+	+ Linksys and OpenWRT share the syscfg partition for storing configuration files.
+	+ Linksys and OpenWRT firmware can be flashed to Primary Boot partition or Alternative Boot partition (the ping-pong effect: when we upgrade firmware from Primary partition the new firmware is written to the Alternative partition, next bootcmd is set to Alternative partition. When we upgrade firmware from Alternative partition the new firmware is written to the Primary partition, next bootcmd is set to Primary partition)
+   The defaul U-boot environment variables are listed below 
+   u-boot> setenv alt_kern_addr '0x3200000'
+   u-boot> setenv alt_kern_size '0x400000'
+   u-boot> setenv pri_kern_addr '0xa00000'
+   u-boot> setenv pri_kern_size '0x400000'
+   u-boot> setenv openwrt_fw_size '0x2800000'
+   u-boot> setenv default_load_addr '0x2000000'
+   u-boot> setenv console 'console=ttyS0,115200'
+   u-boot> setenv firmware_name 'blk-mamba.128mb.img'
+   u-boot> setenv serverip '192.168.1.99'
+
+   u-boot> setenv auto_recovery 'yes'
+   u-boot> setenv boot_part '1'
+
+   u-boot> setenv default_mtdparts 'mtdparts=armada-nand:1024K(uboot)ro,256K(u_env),256K(s_env),1m@9m(devinfo),40m@10m(kernel),37m@13m(rootfs),40m@50m(alt_kernel),37m@53m(alt_rootfs),80m@10m(ubifs),-@90m(syscfg)'
+   u-boot> setenv jffs2_mtdparts 'mtdparts=armada-nand:1024K(uboot)ro,256K(u_env),256K(s_env),1m@9m(devinfo),40m@10m(kernel),37m@13m(rootfs),40m@50m(alt_kernel),37m@53m(alt_rootfs),80m@10m(ubifs),-@90m(syscfg)'
+   u-boot> setenv openwrt_mtdparts 'mtdparts=armada-nand:1024K(uboot)ro,256K(u_env),256K(s_env),1m@9m(devinfo),40m@10m(kernel),37m@13m(rootfs),40m@50m(alt_kernel),37m@53m(alt_rootfs),80m@10m(ubifs),-@90m(syscfg)'
+
+   u-boot> setenv linksys_altnandboot 'nand read $default_load_addr $alt_kern_addr $alt_kern_size; setenv bootargs $console $default_mtdparts root=/dev/mtdblock7 ro rootfstype=jffs2 init=/sbin/init; bootm $default_load_addr;'
+   u-boot> setenv linksys_nandboot 'nand read $default_load_addr $pri_kern_addr $pri_kern_size; setenv bootargs $console $default_mtdparts root=/dev/mtdblock5 ro rootfstype=jffs2 init=/sbin/init; bootm $default_load_addr;'
+   u-boot> setenv openwrt_altnandboot 'nand read $default_load_addr $alt_kern_addr $openwrt_fw_size; setenv bootargs $console $default_mtdparts root=/dev/mtdblock7 ro rootfstype=jffs2 init=/sbin/init; bootm $default_load_addr;'
+   u-boot> setenv openwrt_nandboot 'nand read $default_load_addr $pri_kern_addr $openwrt_fw_size; setenv bootargs $console $default_mtdparts root=/dev/mtdblock5 ro rootfstype=jffs2 init=/sbin/init; bootm $default_load_addr;'
+
+   u-boot> setenv flash_alt_image 'tftp $default_load_addr $firmware_name; nand erase $alt_kern_addr 0x2800000;nand write $default_load_addr $alt_kern_addr ${filesize};'
+   u-boot> setenv flash_pri_image 'tftp $default_load_addr $firmware_name; nand erase $pri_kern_addr 0x2800000;nand write $default_load_addr $pri_kern_addr ${filesize};'
+
+   u-boot> setenv update_both_images 'run flash_pri_image;run flash_alt_image' 
+
+   u-boot> setenv altnandboot 'run linksys_altnandboot'
+   u-boot> setenv nandboot 'run linksys_nandboot'
+
+   u-boot> setenv bootcmd 'run nandboot'
+
+   # save all environment variables	
+   u-boot> saveenv 
+
+3. Burn the Firmwares to NAND
+   # to burn firmware image to Primary Boot partition
+   u-boot> run flash_pri_image 
+   # to burn firmware image to Alternative Boot partition
+   u-boot> run flash_alt_image 
+  
+4. Boot up firmware 
+   # boot firmware image from Primary Boot partition
+   u-boot> run nandboot
+   # boot firmware image from Alternative Boot partition
+   u-boot> run altnandboot
+
+5. If you want to reset the OpenWRT configuration to default, there are several ways to do that 
+5.1 Erase the whole syscfg partition in U-boot
+   WARNING: this will also erase the configuration data of alternative boot 
+   u-boot> setenv mtdparts $default_mtdparts 
+   u-boot> nand erase.part syscfg 
+   Boot up OpenWrt again. The boot script will first show "ubifs sysfs not ready yet; using ramdisk", the boot script will automatically format and create a new empty syscfg partition to store configuration data.
+
+5.2 Factory reset in OpenWrt Failsafe Mode
+   If the ubifs syscfg partition is already properly formatted, this method is preferred. It only tries to remove the configuration files and leave the alternative boot configuration files intact.
+   Boot up OpenWrt. When you see the failsafe prompt as below
+   "Press the [f] key and hit [enter] to enter failsafe mode "
+   Enter "f" and then "enter" (You can also enter the failsafe mode via the HW button, then telnet to the board to have console command line)
+   When you reach the command line interface. Run one of the two command below:
+   firstboot
+   # or
+   firstboot jffs2reset
+   NOTE: If the syscfg partition is not formatted yet. The above command will try to reformat and create a new empty syscfg partition.
+   Reboot the system
+   reboot -f
+
+5.3 Factory reset in OpenWrt Normal Mode
+   If the ubifs syscfg partition is already properly formatted, this method is preferred. It only tries to remove the configuration files and leave the alternative boot configuration files intact.
+   Boot up OpenWrt normally. When you reach the command line interface. Run one of the two command below
+   firstboot
+   # or
+   firstboot jffs2reset
+   Reboot the system
+   reboot
+
+5.4 Factory reset via WebUI
+	Login OpenWRT WebUI, go to System > Backup/Flash Firmware > Reset to defaults, press the "Perform Reset" button and choose "Yes" when the confirmation prompt appears
+
+6. Overlay on syscfg partition sequence
+   If the syscfg partition is not found (it is defined in mtdparts variable at Uboot). OpenWRT will just mount read-only root filesystem. We cannot write to the read-only file system.
+   If the syscfg partition is found and is formatted as ubifs properly (it should have one syscfg volume inside the partition), OpenWRT will mount the syscfg partition and use the directory /openwrt_overlay for storing configuration files.
+   If the syscfg partition is found but it is not formatted properly (ubifs_mount failed), the system will first use ramfs (tmpfs) for overlay the root. Later in the init script (/etc/init.d/S95done), the system will try to recover from the ubifs_mount failed by formatting the syscfg partition. So on the second boot, we should not see this ubifs_mount issue again. 
+
+7. OpenWRT sysupgrade behavior 
+   Mamba support two partitions for booting Linux. When doing OpenWRT sysupgrade
+   + If current firmware boot is from Primary Boot partition (boot_part=1), the new firmware is written to Alternative Boot partition. Sysupgrade also sets two U-boot environment variables for next boot "bootcmd=run altnandboot" "boot_part=2". The system is rebooted and on next boot the system will boot from Alternative Boot partition. 
+   + If current firmware boot is from Alternative Boot partition (boot_part=2), the new firmware is written to Primary Boot partition. Sysupgrade also sets two U-boot environment variables for next boot "bootcmd=run nandboot" "boot_part=1". The system is rebooted and on next boot the system will boot from Primary Boot partition. 
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=

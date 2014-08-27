@@ -1,0 +1,62 @@
+diff -Naur smap.orig/icmpping.c smap/icmpping.c
+--- smap.orig/icmpping.c	2007-10-07 06:15:11.000000000 -0400
++++ smap/icmpping.c	2009-06-13 11:57:28.000000000 -0400
+@@ -182,6 +182,7 @@
+ 	struct sockaddr_in	sin;
+ #define ICMP_PKT_LEN	(sizeof(struct icmp) + ICMP_PAYLOAD_LEN)
+ 	char				icmpbuf[ICMP_PKT_LEN];
++	socklen_t socklen;
+ 
+ 	/* prepare ICMP packet */
+ 	memset(&icmpbuf, 'A', ICMP_PKT_LEN);
+@@ -207,6 +208,8 @@
+ 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &one, sizeof(one)) != 0)
+ 		perror("setsockopt");
+ #endif
++	if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &one, sizeof(one)) != 0)
++		perror("setsockopt");
+ 	icmp->icmp_cksum = icmp_in_cksum((unsigned short *) &icmpbuf, ICMP_PKT_LEN);
+ 
+ 	/* send data */
+diff -Naur smap.orig/smap.c smap/smap.c
+--- smap.orig/smap.c	2007-11-03 14:14:52.000000000 -0400
++++ smap/smap.c	2009-06-13 10:49:15.000000000 -0400
+@@ -244,11 +244,11 @@
+                 break;
+             case 't': /* TCP transport */
+                 /* UDP is default so TCP would override it */
+-                config.flags ^= FLAG_UDP_TRANSPORT;
++                config.flags &= ~FLAG_UDP_TRANSPORT;
+                 config.flags |= FLAG_TCP_TRANSPORT;
+                 break;
+             case 'u': /* UDP transport */
+-                config.flags ^= FLAG_TCP_TRANSPORT;
++                config.flags &= ~FLAG_TCP_TRANSPORT;
+                 config.flags |= FLAG_UDP_TRANSPORT;
+                 break;
+ 			case 'r': /* ratelimit messages/sec */
+diff -Naur smap.orig/transport_udp.c smap/transport_udp.c
+--- smap.orig/transport_udp.c	2008-08-20 09:02:57.000000000 -0400
++++ smap/transport_udp.c	2009-06-13 11:56:15.000000000 -0400
+@@ -52,6 +52,7 @@
+ 	extern int udp_sendsock;
+ 	extern struct sockaddr_in udp_sendsock_sockaddr;
+ 	int sockaddrlen;
++	int one;
+ 
+     /* is 5060 (DEFAULT_SIP_PORT) available?
+      * if yes, we'll use it since some clients send responses to
+@@ -116,6 +117,13 @@
+             error(ERR_DEBUG, "bind() successful");
+         }
+     }
++	one = 1;
++	if (setsockopt(udp_sendsock, SOL_SOCKET, SO_BROADCAST, &one, sizeof(one)) != 0) {
++		perror("setsockopt");
++		error(ERR_ERROR, "unable to set socket to broadcast");
++		return 0;
++	}
++    
+     if (getsockname(udp_sendsock, (struct sockaddr *) &udp_sendsock_sockaddr,
+                 (socklen_t *) &sockaddrlen) != 0)
+     if (DEBUG) perror("getsocknameudp_sendsock");

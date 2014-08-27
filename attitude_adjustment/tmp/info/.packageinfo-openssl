@@ -1,0 +1,49 @@
+Source-Makefile: package/openssl/Makefile
+Package: libopenssl
+Menu: 1
+Submenu: SSL
+Version: 1.0.1e-1
+Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +zlib
+Menu-Depends: 
+Provides: 
+Build-Depends: ocf-crypto-headers
+Section: libs
+Category: Libraries
+Title: Open source SSL toolkit (libraries)
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: openssl-1.0.1e.tar.gz
+Type: ipkg
+Description: The OpenSSL Project is a collaborative effort to develop a robust,
+commercial-grade, full-featured, and Open Source toolkit implementing the Secure
+Sockets Layer (SSL v2/v3) and Transport Layer Security (TLS v1) protocols as well
+as a full-strength general purpose cryptography library.
+This package contains the OpenSSL shared libraries, needed by other programs.
+http://www.openssl.org/
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+Config:
+source "package/openssl/Config.in"
+@@
+
+Package: openssl-util
+Version: 1.0.1e-1
+Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +libopenssl
+Menu-Depends: 
+Provides: 
+Build-Depends: ocf-crypto-headers
+Section: utils
+Category: Utilities
+Title: Open source SSL toolkit (utility)
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: openssl-1.0.1e.tar.gz
+Type: ipkg
+Description: The OpenSSL Project is a collaborative effort to develop a robust,
+commercial-grade, full-featured, and Open Source toolkit implementing the Secure
+Sockets Layer (SSL v2/v3) and Transport Layer Security (TLS v1) protocols as well
+as a full-strength general purpose cryptography library.
+This package contains the OpenSSL command-line utility.
+http://www.openssl.org/
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+
+

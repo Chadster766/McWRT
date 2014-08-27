@@ -1,0 +1,162 @@
+#!/bin/sh /etc/rc.common
+
+START=59
+
+EXTRA_COMMANDS="configuration"
+EXTRA_HELP="	config	write configuration file"
+
+RUN_D=/var/run
+PID_F=$RUN_D/chilli.pid
+CONF_FILE=/etc/chilli.conf
+STATE_DIR="./"
+DHCP_IF=
+
+uci_get() {
+	uci -P /var/state get "$1" 2>/dev/null
+}
+
+error_msg() {
+	echo
+	echo $1
+	echo "    Chilli don't start"
+	echo 
+	exit $2
+}
+
+LIST_SEP="
+"
+
+append_param() {
+	local v="$1"
+	case "$v" in
+		*_*_*_*) v=${v%%_*}-${v#*_}; v=${v%%_*}-${v#*_}; v=${v%%_*}-${v#*_} ;;
+		*_*_*)   v=${v%%_*}-${v#*_}; v=${v%%_*}-${v#*_} ;;
+		*_*)     v=${v%%_*}-${v#*_} ;;
+	esac
+	ARGS="$ARGS $v"
+	return 0
+}
+
+append_bools() {
+	local p; local v; local s="$1"; shift
+	for p in $*; do
+		config_get_bool v "$s" "$p"
+		[ "$v" == 1 ] && append_param "$p" && ARGS="$ARGS$LIST_SEP"
+	done
+}
+
+append_params() {
+	local p; local v; local s="$1"; shift
+	for p in $*; do
+		config_get v "$s" "$p"
+		IFS="$LIST_SEP"
+		for v in $v; do
+#			echo "$p - $v"
+			[ "$p" = "dhcpif" ] && DHCP_IF=$v
+			[ -n "$v" ] && append_param "$p" && ARGS="$ARGS $v$LIST_SEP"
+			
+		done
+		unset IFS
+	done
+}
+
+append_params_quoted() {
+	local p; local v; local s="$1"; shift
+	for p in $*; do
+		config_get v "$s" "$p"
+		IFS="$LIST_SEP"
+		for v in $v; do
+#			echo "$p - $v"
+			[ "$p" = "dhcpif" ] && DHCP_IF=$v
+			[ -n "$v" ] && append_param "$p" && ARGS="$ARGS \"$v\"$LIST_SEP"
+		done
+		unset IFS
+	done
+}
+
+
+get_net_name() {
+	config_get dev "$1" ifname
+	[ "$dev" = "$2" ] && {
+		DHCP_IF=$1
+		return
+	}
+}
+
+start_service () {
+	local s="$1"
+	local enable=0
+
+	# disabled?
+#	config_get_bool enable service enable 0
+#	[ "$enable" == 0 ] && return 0
+	ARGS=""
+
+	append_bools "$s" \
+		fg debug coanoipcheck eapolenable uamanydns macauth acctupdate
+
+	append_params "$s" \
+
+	# append multi-value params
+	append_params_quoted "$s" \
+		interval pidfile statedir net dynip statip dns1 dns2 \
+		domain ipup ipdown conup condown radiuslisten radiusserver1 radiusserver2 \
+		radiusauthport radiusacctport radiussecret radiusnasid radiusnasip \
+		radiuscalled radiuslocationid radiuslocationname radiusnasporttype \
+		coaport proxylisten proxyport proxyclient proxysecret confusername \
+		confpassword dhcpif dhcpmac lease uamserver uamhomepage uamsecret \
+		uamlisten uamport macpasswd macsuffix rmtlisten rmtport rmtpasswd \
+		uamallowed macallowed
+
+}
+
+check_setting() {
+#	echo check settings
+	config_load network
+	config_foreach "get_net_name" interface $DHCP_IF
+#	echo $DHCP_IF
+#	[ "$( uci_get "chillispot.service.enable" )" -ne "1" ] && {
+#		error_msg "ChilliSpot it's disabled" 0
+#	}
+
+	#[ "$( uci_get "network.$DHCP_IF.up" )" -ne "1" ] && {
+	#	error_msg "ERROR!!! Interface $DHCP_IF is not ready" 0
+	#}
+	[ -z !$(uci_get "network.$DHCP_IF.gateway") ] && {
+		error_msg "ERROR!!! $DHCP_IF is a WAN Interface" 0
+	}
+	[ -z $(uci_get "dhcp.$DHCP_IF") ] && {
+		error_msg "ERROR!!! should set DHCP to ingnore $DHCP_IF interface" 0
+	}
+	[ "$(uci_get "dhcp.$DHCP_IF")" != "" ] && {
+		[ "$(uci_get "dhcp.$DHCP_IF.ignore")" -ne "1" ] && {
+			error_msg "ERROR!!! DHCP must be disabled in $DHCP_IF interface" 0
+		}
+	}
+}
+
+start (){
+	[ "$(uci_get "chillispot.service.config")" = "uci" ] && {
+		config_load chillispot
+		config_foreach start_service chilli
+		check_setting
+		echo "$ARGS" > /var/chilli.conf
+		ARGS="--conf=/var/chilli.conf"
+	} || {
+		ARGS="--conf=$(uci_get "chillispot.service.config")"
+	}
+#	echo "$ARGS"
+	[ $ARGS != "" ] && {
+		/sbin/insmod tun >/dev/null 2>&1
+		[ -d $RUN_D ] || mkdir -p $RUN_D
+		/usr/sbin/chilli "$ARGS"
+	}
+}	
+
+stop () {
+  [ -f $PID_F ] && kill $(cat $PID_F) >/dev/null 2>&1
+}
+
+configuration () {
+	load_config
+}

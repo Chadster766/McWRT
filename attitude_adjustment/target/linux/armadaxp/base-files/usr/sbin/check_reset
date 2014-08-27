@@ -1,0 +1,16 @@
+#!/bin/sh
+
+GPIO_RESET=33
+
+echo $GPIO_RESET > /sys/class/gpio/export
+
+value=`cat /sys/class/gpio/gpio33/value`
+
+if [ $value -le 0 ]
+then
+	echo 40 > /sys/class/gpio/export
+    	/usr/sbin/ledctrl power 255 250 250
+	echo "export FAILSAFE=true" > /tmp/enter_failsafe
+else
+	echo "export FAILSAFE=" > /tmp/enter_failsafe
+fi

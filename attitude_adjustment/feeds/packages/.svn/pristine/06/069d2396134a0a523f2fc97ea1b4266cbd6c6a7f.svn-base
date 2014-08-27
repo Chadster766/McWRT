@@ -1,0 +1,39 @@
+--- a/ifconfig.old	2010-12-10 12:14:12.026329707 +0100
++++ b/ifconfig.c	2010-12-10 12:15:18.374672352 +0100
+@@ -64,20 +64,22 @@
+         sprintf(hwaddr, "%02x:%02x:%02x:%02x:%02x:%02x",
+ 	        *hw, *(hw + 1), *(hw + 2), *(hw + 3), *(hw + 4), *(hw + 5));
+ 
+-        /* address */
+-        ioctl(fd, SIOCGIFADDR, &ifreq);
+-        sin = (struct sockaddr_in *)&ifreq.ifr_broadaddr;
+-        sprintf(addr, "%s", inet_ntoa(sin->sin_addr));
+-
+-        /* broadcast */
+-        ioctl(fd, SIOCGIFBRDADDR, &ifreq);
+-        sin = (struct sockaddr_in *)&ifreq.ifr_broadaddr;
+-        sprintf(brdaddr, "%s", inet_ntoa(sin->sin_addr));
+-
+-        /* netmask */
+-        ioctl(fd, SIOCGIFNETMASK, &ifreq);
+-        sin = (struct sockaddr_in *)&ifreq.ifr_broadaddr;
+-        sprintf(netmask, "%s", inet_ntoa(sin->sin_addr));
++        if (flags & IFF_UP) {
++            /* address */
++            ioctl(fd, SIOCGIFADDR, &ifreq);
++            sin = (struct sockaddr_in *)&ifreq.ifr_broadaddr;
++            sprintf(addr, "%s", inet_ntoa(sin->sin_addr));
++
++            /* broadcast */
++            ioctl(fd, SIOCGIFBRDADDR, &ifreq);
++            sin = (struct sockaddr_in *)&ifreq.ifr_broadaddr;
++            sprintf(brdaddr, "%s", inet_ntoa(sin->sin_addr));
++
++            /* netmask */
++            ioctl(fd, SIOCGIFNETMASK, &ifreq);
++            sin = (struct sockaddr_in *)&ifreq.ifr_broadaddr;
++            sprintf(netmask, "%s", inet_ntoa(sin->sin_addr));
++        }
+     }
+ 
+     close(fd);

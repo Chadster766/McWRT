@@ -1,0 +1,752 @@
+diff --git a/arch/arm/mach-armadaxp/board_mamba.c b/arch/arm/mach-armadaxp/board_mamba.c
+index 510b903..d806612 100644
+--- a/arch/arm/mach-armadaxp/board_mamba.c
++++ b/arch/arm/mach-armadaxp/board_mamba.c
+@@ -22,6 +22,11 @@ disclaimer.
+ #include <linux/gpio_keys.h>
+ #include <linux/input.h>
+ #include <linux/gpio.h>
++#include <linux/leds.h>
++#include <linux/i2c.h>
++#include <linux/ata_platform.h>
++#include <asm/mach-types.h>
++#include <asm/mach/arch.h>
+ 
+ /*
+  * common debug for all
+@@ -34,6 +39,9 @@ disclaimer.
+ #define dprintk(a...)
+ #endif
+ 
++/*
++ * BUTTON
++ * */
+ #define	MAMBA_GPIO_WPS_BUTTON	32
+ #define MAMBA_GPIO_RST_BUTTON	33
+ 
+@@ -68,6 +76,108 @@ static struct platform_device mamba_ev_device = {
+ 	},
+ };
+ 
++/*
++ * LEDS
++ * */
++
++#include <linux/leds-tlc59116.h>
++
++static struct tlc59116_platform_data armadaxp_led_platdata  = {
++	.leds = {
++	{
++		.name                   = "tlc59116:wan_amber",
++		.gpio                   = 0,
++		.type 			= TLC59116_TYPE_LED,
++	},
++	{
++		.name                   = "tlc59116:wan_white",
++		.gpio                   = 1,
++		.type 			= TLC59116_TYPE_LED,
++	},
++	{
++		.name                   = "tlc59116:led_2g",
++		.gpio                   = 2,
++		.type 			= TLC59116_TYPE_LED,
++	},
++	{
++		.name                   = "tlc59116:led_5g",
++		.gpio                   = 3,
++		.type 			= TLC59116_TYPE_LED,
++	},
++	{
++		.name                   = "tlc59116:led_esata",
++		.gpio                   = 4,
++		.type 			= TLC59116_TYPE_LED,
++	},
++	{
++		.name                   = "tlc59116:led_usb2",
++		.gpio                   = 5,
++		.type 			= TLC59116_TYPE_LED,
++	},
++	{
++		.name                   = "tlc59116:led_usb31",
++		.gpio                   = 6,
++		.type 			= TLC59116_TYPE_LED,
++	},
++	{
++		.name                   = "tlc59116:led_usb32",
++		.gpio                   = 7,
++		.type 			= TLC59116_TYPE_LED,
++	},
++	{
++		.name                   = "tlc59116:wps_white",
++		.gpio                   = 8,
++		.type 			= TLC59116_TYPE_LED,
++	},
++	{
++		.name                   = "tlc59116:wps_amber",
++		.gpio                   = 9,
++		.type 			= TLC59116_TYPE_LED,
++	},
++	{
++		.name                   = "tlc59116:10",
++		.gpio                   = 10,
++		.type 			= TLC59116_TYPE_GPIO,
++	},
++	{
++		.name                   = "tlc59116:11",
++		.gpio                   = 11,
++		.type 			= TLC59116_TYPE_GPIO,
++	},
++	{
++		.name                   = "tlc59116:12",
++		.gpio                   = 12,
++		.type 			= TLC59116_TYPE_GPIO,
++	},
++	{
++		.name                   = "tlc59116:13",
++		.gpio                   = 13,
++		.type 			= TLC59116_TYPE_GPIO,
++	},
++	{
++		.name                   = "tlc59116:14",
++		.gpio			= 14,
++		.type 			= TLC59116_TYPE_GPIO,
++	},
++	{
++		.name                   = "tlc59116:15",
++		.gpio                   = 15,
++		.type 			= TLC59116_TYPE_GPIO,
++	},
++
++	},
++	.gpio_base = 0,
++};
++
++static struct i2c_board_info __initdata armadaxp_i2c_led = {
++	I2C_BOARD_INFO("tlc59116", 0x68),
++	.irq    = 10,
++	.platform_data = &armadaxp_led_platdata,
++};
++
++/*
++ * MAIN
++ * */
+ static int __init mamba_ev_init(void)
+ {
+ 	int status;
+@@ -86,6 +196,8 @@ static int __init mamba_ev_init(void)
+ 		return status;
+ 	}
+ 
++	i2c_register_board_info(0, &armadaxp_i2c_led, 1);
++
+ 	return 0;
+ }
+ 
+diff --git a/drivers/leds/Kconfig b/drivers/leds/Kconfig
+index 189d3bc..3400254 100644
+--- a/drivers/leds/Kconfig
++++ b/drivers/leds/Kconfig
+@@ -387,6 +387,15 @@ config LEDS_RENESAS_TPU
+ 	  pin function. The latter to support brightness control.
+ 	  Brightness control is supported but hardware blinking is not.
+ 
++config LEDS_TLC59116
++	tristate "LED driver for TLC59116F dimmer"
++	depends on LEDS_CLASS
++	depends on I2C && INPUT && EXPERIMENTAL
++	help
++	  This option enables support for Texas Instruments TLC59116F
++	  LED controller. It is generally only useful
++	  as a platform driver
++
+ config LEDS_TRIGGERS
+ 	bool "LED Trigger support"
+ 	depends on LEDS_CLASS
+diff --git a/drivers/leds/Makefile b/drivers/leds/Makefile
+index 1af6235..5650534 100644
+--- a/drivers/leds/Makefile
++++ b/drivers/leds/Makefile
+@@ -43,6 +43,7 @@ obj-$(CONFIG_LEDS_NS2)			+= leds-ns2.o
+ obj-$(CONFIG_LEDS_NETXBIG)		+= leds-netxbig.o
+ obj-$(CONFIG_LEDS_ASIC3)		+= leds-asic3.o
+ obj-$(CONFIG_LEDS_RENESAS_TPU)		+= leds-renesas-tpu.o
++obj-$(CONFIG_LEDS_TLC59116)		+= leds-tlc59116.o
+ 
+ # LED SPI Drivers
+ obj-$(CONFIG_LEDS_DAC124S085)		+= leds-dac124s085.o
+diff --git a/drivers/leds/leds-tlc59116.c b/drivers/leds/leds-tlc59116.c
+new file mode 100644
+index 0000000..a2d90ec
+--- /dev/null
++++ b/drivers/leds/leds-tlc59116.c
+@@ -0,0 +1,515 @@
++/*
++ * Copyright 2014 Belkin Inc.
++ *
++ * Author: Belkin Inc.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; version 2 of the License.
++ *
++ *
++ */
++
++#include <linux/module.h>
++#include <linux/i2c.h>
++#include <linux/slab.h>
++#include <linux/leds.h>
++#include <linux/input.h>
++#include <linux/mutex.h>
++#include <linux/workqueue.h>
++#include <linux/gpio.h>
++#include <linux/leds-tlc59116.h>
++#include <linux/delay.h>
++
++/* LED select registers determine the source that drives LED outputs */
++#define TLC59116_LED_OFF	0x0	/* Output LOW */
++#define TLC59116_LED_ON	0x1	/* Output HI-Z */
++#define TLC59116_DIM	0x2	/* Dimming */
++#define TLC59116_BLINK	0x3	/* Blinking */
++
++#define TLC59116_PINS		16
++
++#define TLC59116_REG_MODE1	0x00	/* Mode register 0 */
++#define MODE1_RESPON_ADDR_MASK	0xF0
++#define MODE1_NORMAL_MODE	(0 << 4)
++#define MODE1_SPEED_MODE	(1 << 4)
++
++#define TLC59116_REG_MODE2	0x01	/* Mode register 1 */
++#define MODE2_DIM		(0 << 5)
++#define MODE2_BLINK		(1 << 5)
++#define MODE2_OCH_STOP                  (0 << 3)
++#define MODE2_OCH_ACK                   (1 << 3)
++
++#define TLC59116_REG_PWM0	0x02
++#define TLC59116_REG_PWM1	0x03
++#define TLC59116_REG_PWM2	0x04
++#define TLC59116_REG_PWM3	0x05
++#define TLC59116_REG_PWM4	0x06
++#define TLC59116_REG_PWM5	0x07
++#define TLC59116_REG_PWM6	0x08
++#define TLC59116_REG_PWM7	0x09
++#define TLC59116_REG_PWM8	0x0a
++#define TLC59116_REG_PWM9	0x0b
++#define TLC59116_REG_PWM10	0x0c
++#define TLC59116_REG_PWM11	0x0d
++#define TLC59116_REG_PWM12	0x0e
++#define TLC59116_REG_PWM13	0x0f
++#define TLC59116_REG_PWM14	0x10
++#define TLC59116_REG_PWM15	0x11
++
++#define TLC59116_REG_GRPPWM	0x12
++#define TLC59116_REG_GRPFREQ	0x13
++
++#define TLC59116_PERIOD_MIN	41	/* 41ms */
++#define TLC59116_PERIOD_MAX	10730	/* 10.73s */
++
++#define TLC59116_REG_LEDOUT0         0x14    /* LED [3:0] driver output state registers */              
++#define TLC59116_REG_LEDOUT1         0x15    /* LED [7:4] driver output state registers */
++#define TLC59116_REG_LEDOUT2         0x16    /* LED [11:8] driver output state registers */
++#define TLC59116_REG_LEDOUT3         0x17    /* LED [15:12] driver output state registers */
++
++#define GPIO0_MASK        0x3
++#define ldev_to_led(c)       container_of(c, struct tlc59116_led, ldev)
++
++#define DEBUG 0
++
++#if DEBUG > 1
++//#define led_dbg(fmt, arg...) printk(KERN_DEBUG "tlc59116:%s " fmt "\n", __func__ , ## arg)
++#define led_dbg(fmt, arg...) printk("tlc59116:%s " fmt "\n", __func__ , ## arg)
++#else
++#define led_dbg(fmt, arg...)
++#endif
++
++
++#if DEBUG > 0
++#define led_info(fmt, arg...) printk("tlc59116:%s " fmt "\n", __func__ , ## arg)
++#else
++#define led_info(fmt, arg...)
++#endif
++
++struct tlc59116_chip_info {
++	u8	num_leds;
++};
++
++struct tlc59116_data {
++	struct i2c_client *client;
++	struct tlc59116_led leds[TLC59116_GPIO_MAX];
++	const struct tlc59116_chip_info *chip_info;
++};
++
++static int tlc59116_probe(struct i2c_client *client,
++	const struct i2c_device_id *id);
++static int tlc59116_remove(struct i2c_client *client);
++
++enum {
++	tlc59116,
++};
++
++static const struct i2c_device_id tlc59116_id[] = {
++	{ "tlc59116", tlc59116 },
++	{ }
++};
++
++MODULE_DEVICE_TABLE(i2c, tlc59116_id);
++
++static const struct tlc59116_chip_info tlc59116_chip_info_tbl[] = {
++	[tlc59116] = {
++		.num_leds = TLC59116_GPIO_MAX,
++	},
++};
++
++static struct i2c_driver tlc59116_driver = {
++	.driver = {
++		.name = "leds-tlc59116",
++	},
++	.probe = tlc59116_probe,
++	.remove = tlc59116_remove,
++	.id_table = tlc59116_id,
++};
++
++//#define DUMP_REGS
++
++void dump_regs(struct i2c_client *client)
++{
++#ifdef DUMP_REGS
++	int i, j = 0;
++	u8 data;
++	printk ("\n-------------------------------------\n");
++	for (i = 0; i< 0x20; i++)
++	{
++		data = i2c_smbus_read_byte_data(client, i);
++		printk ("[0x%02x] = 0x%02x ",i, data);
++		j++;
++		if (j == 5)
++		{
++			printk ("\n");
++			j = 0;
++		}
++	}
++	printk ("\n");
++
++	printk ("\n-------------------------------------\n");
++#endif
++}
++
++static int tlc59116_set_mode(struct i2c_client *client, uint8_t mode)
++{
++	uint8_t val = 0;
++	
++	led_dbg("mode = %d\n", mode);
++	if ((mode != MODE2_DIM) && (mode != MODE2_BLINK))
++		mode = MODE2_DIM;
++
++	/* Configure MODE1 register */
++	val &= 0x0;
++	val &= MODE1_RESPON_ADDR_MASK;
++	val |= MODE1_NORMAL_MODE;
++        i2c_smbus_write_byte_data(client, TLC59116_REG_MODE1, val);
++
++        /* Configure MODE2 Reg */
++        val &= 0x00;
++        val |= MODE2_OCH_STOP;
++
++        val |= mode;
++
++        i2c_smbus_write_byte_data(client, TLC59116_REG_MODE2, val);
++	mdelay(100);
++
++	dump_regs(client);
++	return 0;
++}
++
++static int tlc59116_set_gpio_act(struct i2c_client *client, u8 gpio_no, u8 act_mode)
++{
++        char data, addr = 0, i;
++
++        if ((gpio_no >= 0) && (gpio_no < 4))
++                addr = TLC59116_REG_LEDOUT0;
++        else if ((gpio_no >= 4) && (gpio_no < 8))
++                addr = TLC59116_REG_LEDOUT1;
++        else if ((gpio_no >= 8) && (gpio_no < 12))
++                addr = TLC59116_REG_LEDOUT2;
++        else if ((gpio_no >=12 ) && (gpio_no < 16))
++                addr = TLC59116_REG_LEDOUT3;
++
++        data = i2c_smbus_read_byte_data(client, addr);
++
++        i = (gpio_no % 4) * 2;
++
++        data &= ~(GPIO0_MASK << i);
++        act_mode = act_mode << i;
++        data |= act_mode;
++
++        if(i2c_smbus_write_byte_data(client, addr, data) != 0) {
++                return -1;
++        }
++
++        return 0;
++}
++
++static int tlc59116_set_gpio(struct i2c_client *client, uint8_t gpio_no, uint8_t val)
++{
++	val &= 0x03;
++        tlc59116_set_gpio_act(client, gpio_no, val);
++	dump_regs(client);
++
++        return 0;
++}
++
++static int tlc59116_get_gpio(struct i2c_client *client, uint8_t gpio_no)
++{
++	uint8_t val, reg, data;
++	
++	led_dbg("gpio = %d\n", gpio_no);
++	reg = TLC59116_REG_LEDOUT0;
++
++        if ((gpio_no >= 0) && (gpio_no < 4))
++                reg = TLC59116_REG_LEDOUT0;
++        else if ((gpio_no >= 4) && (gpio_no < 8)) {
++                reg = TLC59116_REG_LEDOUT1;
++		gpio_no = gpio_no - 4;
++	}
++        else if ((gpio_no >= 8) && (gpio_no < 12)) {
++                reg = TLC59116_REG_LEDOUT2;
++		gpio_no = gpio_no - 8;
++	}
++        else if ((gpio_no >=12 ) && (gpio_no < 16)) {
++                reg = TLC59116_REG_LEDOUT3;
++		gpio_no = gpio_no - 12;
++	}
++	
++	val = i2c_smbus_read_byte_data(client, reg);
++
++	data = (val >> (gpio_no * 2)) & 0x03;
++	return data;
++}
++
++/*
++ * gpio_no [0..7]
++ * duty_cycle [0..99]%
++ * 
++ * */
++static int tlc59116_individual_brighness_control(struct i2c_client *client, uint8_t gpio_no, uint8_t brightness)
++{
++	uint8_t pwm;
++
++	pwm = gpio_no + TLC59116_REG_PWM0;
++        i2c_smbus_write_byte_data(client, pwm, brightness);
++
++        return 0;
++}
++
++static void tlc59116_led_work(struct work_struct *work)
++{
++	struct tlc59116_led *tlc59116;
++
++	tlc59116 = container_of(work, struct tlc59116_led, work);
++
++	led_dbg("\nbrighness = %d \n", tlc59116->ldev.brightness);
++	switch (tlc59116->ldev.brightness) {
++	case LED_OFF:
++		led_info("\nLed off\n");
++		tlc59116_set_gpio(tlc59116->client, tlc59116->gpio, TLC59116_LED_OFF);
++		break;
++
++	case LED_FULL:
++		led_info("\nLed on\n");
++		tlc59116_set_gpio(tlc59116->client, tlc59116->gpio, TLC59116_LED_ON);
++		break;
++	default:
++		led_info("\nBrightness is %d\n", tlc59116->ldev.brightness);
++		if (TLC59116_BLINK != tlc59116_get_gpio(tlc59116->client, tlc59116->gpio))
++			tlc59116_set_gpio(tlc59116->client, tlc59116->gpio, TLC59116_DIM);
++
++		tlc59116_individual_brighness_control(tlc59116->client, tlc59116->gpio, tlc59116->ldev.brightness);
++		break;
++	}
++}
++
++static void tlc59116_led_set(struct led_classdev *led_cdev, enum led_brightness value)
++{
++	struct tlc59116_led *tlc59116 = ldev_to_led(led_cdev);
++
++	spin_lock(&tlc59116->lock);
++	tlc59116->ldev.brightness = value;
++
++	/*
++	 * Must use workqueue for the actual I/O since I2C operations
++	 * can sleep.
++	 */
++	schedule_work(&tlc59116->work);
++
++	spin_unlock(&tlc59116->lock);
++}
++
++/*
++ * delay_on, delay_off: units are in ms
++ *
++ */
++
++static int tlc59116_set_blink(struct led_classdev *led_cdev,
++				unsigned long *delay_on,
++				unsigned long *delay_off)
++{
++	struct tlc59116_led *tlc59116 = ldev_to_led(led_cdev);
++	uint16_t	period;
++	uint16_t	duty_cycle;
++	uint8_t		gdc;
++	uint8_t		gfrq;
++	
++	led_info ("Blinking [gpio = %d]: delay_on = %ldms, delay_off = %ldms, brightness = %d\n", 
++				tlc59116->gpio, *delay_on, *delay_off, tlc59116->ldev.brightness);
++
++	if ((*delay_on == 0) && (*delay_off ==0)) {
++		spin_lock(&tlc59116->lock);
++
++		/* MODE2[DMBLNK] = 1 */
++		tlc59116_set_mode(tlc59116->client, MODE2_BLINK);
++
++		/* Set LDRx = 11 */
++		tlc59116_set_gpio(tlc59116->client, tlc59116->gpio, TLC59116_BLINK);
++
++		tlc59116_individual_brighness_control(tlc59116->client, tlc59116->gpio, tlc59116->ldev.brightness);
++		spin_unlock(&tlc59116->lock);
++		return 0;
++	}
++
++
++	if ((*delay_on + *delay_off) > TLC59116_PERIOD_MAX)
++	{
++		led_dbg ("Max period is %dms\n", TLC59116_PERIOD_MAX);
++		return -EINVAL;
++	}
++
++	if ((*delay_on + *delay_off) < TLC59116_PERIOD_MIN)
++	{
++		*delay_on = TLC59116_PERIOD_MIN/2 + 1;
++		*delay_off = TLC59116_PERIOD_MIN/2 + 1;
++	}
++	period = (*delay_on) + (*delay_off);
++
++	duty_cycle = (100 * (*delay_on)) / period;
++
++	spin_lock(&tlc59116->lock);
++	
++	/* MODE2[DMBLNK] = 1 */
++	tlc59116_set_mode(tlc59116->client, MODE2_BLINK);
++
++	/* Set LDRx = 11 */
++	tlc59116_set_gpio(tlc59116->client, tlc59116->gpio, TLC59116_BLINK);
++
++	tlc59116_individual_brighness_control(tlc59116->client, tlc59116->gpio, tlc59116->ldev.brightness);
++
++	gdc = (duty_cycle * 256)/100;
++	i2c_smbus_write_byte_data(tlc59116->client, TLC59116_REG_GRPPWM, gdc);	
++
++	gfrq = (24 * period)/1000 - 1; /* unit is in second (convert from ms to second) */
++	i2c_smbus_write_byte_data(tlc59116->client, TLC59116_REG_GRPFREQ, gfrq);		
++	
++	dump_regs(tlc59116->client);
++
++	spin_unlock(&tlc59116->lock);
++	
++	return 0;
++}
++static int tlc59116_destroy_devices(struct tlc59116_data *data, int n_devs)
++{
++	int i = n_devs;
++
++	if (!data)
++		return -EINVAL;
++	printk ("[Tom] %s, n_devs = %d\n", __func__, n_devs);
++
++	while (--i >= 0) {
++		switch (data->leds[i].type) {
++		case TLC59116_TYPE_NONE:
++		case TLC59116_TYPE_GPIO:
++			break;
++		case TLC59116_TYPE_LED:
++			led_classdev_unregister(&data->leds[i].ldev);
++			cancel_work_sync(&data->leds[i].work);
++			break;
++		}
++	}
++
++	return 0;
++}
++
++static int tlc59116_configure(struct i2c_client *client,
++	struct tlc59116_data *data, struct tlc59116_platform_data *pdata)
++{
++	int i, err = 0;
++	int gpios = 0;
++
++	for (i = 0; i < data->chip_info->num_leds; i++) {
++		struct tlc59116_led *led = &data->leds[i];
++		struct tlc59116_led *pled = &pdata->leds[i];
++
++		led->client = client;
++		led->id = i;
++		led->type = pled->type;
++		led->gpio = pled->gpio;
++
++		switch (led->type) {
++		case TLC59116_TYPE_NONE:
++			break;
++		case TLC59116_TYPE_GPIO:
++			gpios++;
++			break;
++		case TLC59116_TYPE_LED:
++			led->state = pled->state;
++			led->name = pled->name;
++			led->ldev.name = led->name;
++			led->ldev.brightness = LED_OFF;
++			led->ldev.brightness_set = tlc59116_led_set;
++			led->ldev.blink_set = tlc59116_set_blink;
++			INIT_WORK(&led->work, tlc59116_led_work);
++			err = led_classdev_register(&client->dev, &led->ldev);
++			if (err < 0) {
++				dev_err(&client->dev,
++					"couldn't register LED %s\n",
++					led->name);
++				goto exit;
++			}
++			break;
++		}
++	}
++        tlc59116_set_mode(client, MODE2_DIM);
++
++	/* Turn off LEDs */
++	for (i = 0; i <  data->chip_info->num_leds; i++)
++		tlc59116_set_gpio(client, i, TLC59116_LED_OFF);
++
++	return 0;
++
++exit:
++	tlc59116_destroy_devices(data, i);
++	return err;
++}
++
++static int tlc59116_probe(struct i2c_client *client,
++	const struct i2c_device_id *id)
++{
++	struct tlc59116_data *data = i2c_get_clientdata(client);
++	struct tlc59116_platform_data *pdata = client->dev.platform_data;
++	int err = 0;
++
++	if (!pdata)
++		return -EIO;
++	
++	printk (KERN_INFO "leds-tlc59116: Using %s %d-bit LED driver at slave address 0x%02x\n",
++			id->name, TLC59116_GPIO_MAX, client->addr);
++
++	if (!i2c_check_functionality(client->adapter,
++		I2C_FUNC_SMBUS_BYTE_DATA))
++		return -EIO;
++
++	data = kzalloc(sizeof(*data), GFP_KERNEL);
++	if (!data)
++		return -ENOMEM;
++
++	data->chip_info = &tlc59116_chip_info_tbl[id->driver_data];
++	memcpy(data->leds, pdata->leds, sizeof(pdata->leds));
++
++	dev_info(&client->dev, "setting platform data\n");
++	i2c_set_clientdata(client, data);
++	data->client = client;
++
++	err = tlc59116_configure(client, data, pdata);
++	if (err)
++		kfree(data);
++
++	return err;
++}
++
++static int tlc59116_remove(struct i2c_client *client)
++{
++	struct tlc59116_data *data = i2c_get_clientdata(client);
++	int err;
++
++	err = tlc59116_destroy_devices(data, data->chip_info->num_leds);
++	if (err)
++		return err;
++
++	kfree(data);
++
++	return 0;
++}
++
++static int __init tlc59116_init(void)
++{
++	return i2c_add_driver(&tlc59116_driver);
++}
++
++static void __exit tlc59116_exit(void)
++{
++	i2c_del_driver(&tlc59116_driver);
++}
++
++MODULE_AUTHOR("Belkin Inc.");
++MODULE_LICENSE("GPL");
++MODULE_DESCRIPTION("TLC59116 LED driver");
++
++module_init(tlc59116_init);
++module_exit(tlc59116_exit);
++
+diff --git a/include/linux/leds-tlc59116.h b/include/linux/leds-tlc59116.h
+new file mode 100644
+index 0000000..6460ca0
+--- /dev/null
++++ b/include/linux/leds-tlc59116.h
+@@ -0,0 +1,48 @@
++/*
++ * tlc59116.h - platform data structure for tlc59116 led controller
++ *
++ * Copyright 2014 Belkin Inc.
++ * Author: Belkin Inc.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; version 2 of the License.
++ *
++ *
++ */
++
++#ifndef __LINUX_TLC59116_H
++#define __LINUX_TLC59116_H
++
++#include <linux/leds.h>
++#include <linux/workqueue.h>
++
++#define TLC59116_GPIO_MAX	16
++enum tlc59116_state {
++	TLC59116_OFF  = 0x0,
++	TLC59116_ON   = 0x1,
++	TLC59116_PWM0 = 0x2,
++	TLC59116_PWM1 = 0x3
++};
++
++enum tlc59116_type { TLC59116_TYPE_NONE, TLC59116_TYPE_LED,
++	TLC59116_TYPE_GPIO };
++
++struct tlc59116_led {
++	u8 id;
++	struct i2c_client *client;
++	char *name;
++	int gpio;
++	struct led_classdev ldev;
++	struct work_struct work;
++	spinlock_t		lock;
++	enum tlc59116_type type;
++	enum tlc59116_state state;
++};
++
++struct tlc59116_platform_data {
++	struct tlc59116_led leds[TLC59116_GPIO_MAX];
++	int gpio_base;
++};
++
++#endif /* __LINUX_TLC59116_H */
++

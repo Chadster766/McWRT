@@ -1,0 +1,162 @@
+From d90bf1071ffce100955f66db5bf18cb0afdaecf9 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Thu, 24 Nov 2011 08:30:32 -0500
+Subject: [PATCH 021/609] Fix PNC result info bits + cleanup
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c |   26 +++++++++++++-------------
+ arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h |   10 +++++-----
+ 2 files changed, 18 insertions(+), 18 deletions(-)
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
+ mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
+
+diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
+old mode 100644
+new mode 100755
+index c07bdcd..e6a8e20
+--- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
++++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
+@@ -699,11 +699,11 @@ static int pnc_etype_init(void)
+ 
+ static void pnc_ip4_flow_next_lookup_set(struct tcam_entry *te)
+ {
+-#ifdef CONFIG_MV_ETH_NFP_PNC
++#ifdef CONFIG_MV_ETH_PNC_L3_FLOW
+ 	sram_sw_set_next_lookup(te, TCAM_LU_FLOW_IP4);
+ #else
+ 	sram_sw_set_lookup_done(te, 1);
+-#endif /* CONFIG_MV_ETH_NFP_PNC */
++#endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
+ }
+ 
+ /*
+@@ -892,11 +892,11 @@ int pnc_ip4_init(void)
+ 
+ static void pnc_ip6_flow_next_lookup_set(struct tcam_entry *te)
+ {
+-#ifdef CONFIG_MV_ETH_NFP_PNC
++#ifdef CONFIG_MV_ETH_PNC_L3_FLOW
+ 	sram_sw_set_next_lookup(te, TCAM_LU_FLOW_IP6_A);
+ #else
+ 	sram_sw_set_lookup_done(te, 1);
+-#endif /* CONFIG_MV_ETH_NFP_PNC */
++#endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
+ }
+ 
+ /* IPv6 - detect TCP */
+@@ -1021,10 +1021,10 @@ int pnc_ipv6_2_tuples_add(unsigned int tid1, unsigned int tid2, unsigned int flo
+ 	struct tcam_entry   *te;
+ 	int                 i;
+ 
+-	if ((tid1 < TE_FLOW_NFP) || (tid1 > TE_FLOW_NFP_END))
++	if ((tid1 < TE_FLOW_L3) || (tid1 > TE_FLOW_L3_END))
+ 		ERR_ON_OOR(1);
+ 
+-	if ((tid2 < TE_FLOW_NFP) || (tid2 > TE_FLOW_NFP_END))
++	if ((tid2 < TE_FLOW_L3) || (tid2 > TE_FLOW_L3_END))
+ 		ERR_ON_OOR(2);
+ 
+ 	te = tcam_sw_alloc(TCAM_LU_FLOW_IP6_A);
+@@ -1057,7 +1057,7 @@ int pnc_ipv6_2_tuples_add(unsigned int tid1, unsigned int tid2, unsigned int flo
+ 		sram_sw_set_rxq(te, rxq, 0);
+ 	}
+ 
+-	sram_sw_set_rinfo(te, RI_NFP_FLOW);
++	sram_sw_set_rinfo(te, RI_L3_FLOW);
+ 
+ 	tcam_sw_set_ainfo(te, unique, AI_MASK);
+ 	tcam_sw_text(te, "ipv6_2t_B");
+@@ -1117,10 +1117,10 @@ int pnc_ipv4_5_tuples_add(unsigned int tid, unsigned int flow_id,
+ 	PNC_DBG("%s [%d] flow=%d " MV_IPQUAD_FMT "->" MV_IPQUAD_FMT ", ports=0x%x, proto=%d\n",
+ 		__func__, tid, flow_id, MV_IPQUAD(((MV_U8 *)&sip)), MV_IPQUAD(((MV_U8 *)&dip)), ports, proto);
+ 
+-	if (tid < TE_FLOW_NFP)
++	if (tid < TE_FLOW_L3)
+ 		ERR_ON_OOR(1);
+ 
+-	if (tid > TE_FLOW_NFP_END)
++	if (tid > TE_FLOW_L3_END)
+ 		ERR_ON_OOR(1);
+ 
+ 	/* sanity check */
+@@ -1147,7 +1147,7 @@ int pnc_ipv4_5_tuples_add(unsigned int tid, unsigned int flow_id,
+ 	sram_sw_set_lookup_done(te, 1);
+ 	sram_sw_set_flowid(te, flow_id, FLOWID_CTRL_FULL_MASK);
+ 	sram_sw_set_rxq(te, rxq, 0);
+-	sram_sw_set_rinfo(te, RI_NFP_FLOW);
++	sram_sw_set_rinfo(te, RI_L3_FLOW);
+ 	tcam_sw_text(te, "ipv4_5t");
+ 
+ 	tcam_hw_write(te, tid);
+@@ -1159,7 +1159,7 @@ int pnc_ipv4_5_tuples_add(unsigned int tid, unsigned int flow_id,
+ 
+ 	return 0;
+ }
+-#endif /* CONFIG_MV_ETH_NFP_PNC */
++#endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
+ 
+ /******************************************************************************
+  *
+@@ -1210,11 +1210,11 @@ int pnc_default_init(void)
+ 	if (rc)
+ 		goto out;
+ 
+-#ifdef CONFIG_MV_ETH_NFP_PNC
++#ifdef CONFIG_MV_ETH_PNC_L3_FLOW
+ 	rc = pnc_flow_init();
+ 	if (rc)
+ 		goto out;
+-#endif /* CONFIG_MV_ETH_NFP_PNC */
++#endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
+ 
+ #ifdef CONFIG_MV_ETH_PNC_WOL
+ 	mv_pnc_wol_init();
+diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
+old mode 100644
+new mode 100755
+index 7ad23f3..26509d6
+--- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
++++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
+@@ -106,13 +106,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define RI_MCAST_PNC_OTHER  (3 << RI_MCAST_OFFS)
+ #define RI_MCAST_PNC_ONLY   (4 << RI_MCAST_OFFS)
+ 
+-#define RI_VLAN             (BIT9)      /* VLAN */
+ #define RI_DA_MC            (BIT10)	/* multicast */
+ #define RI_DA_BC            (BIT11)	/* broadcast */
+ #define RI_DA_ME            (BIT12)	/* unicast */
+ #define RI_PPPOE            (BIT13)	/* PPPoE */
+ /* BITS 14-17 are reserved for setting MH field in HWF packets (TXz_MH_reg_1-15) */
+-#define RI_RX_SPECIAL       (BIT20) /* Packet for special RX processing */
++#define RI_L3_FLOW          (BIT18)     /* L3 flow is found */
++#define RI_VLAN             (BIT19)     /* VLAN */
++#define RI_RX_SPECIAL       (BIT20)     /* Packet for special RX processing */
+ 
+  /* Additional info bits assigment */
+ #define AI_DONE_BIT         0
+@@ -185,7 +186,6 @@ enum {
+ 
+ #ifdef CONFIG_MV_ETH_PNC_L3_FLOW
+ 	/* Session Lookup for IPv4 and IPv6 */
+-	/* NFP session use all rest entries */
+ 	TE_FLOW_L3,
+ 	TE_FLOW_L3_END = CONFIG_MV_PNC_TCAM_LINES - 4,
+ 	TE_FLOW_IP4_EOF,
+@@ -205,11 +205,11 @@ enum {
+ 	TCAM_LU_L2,
+ 	TCAM_LU_IP4,
+ 	TCAM_LU_IP6,
+-#ifdef CONFIG_MV_ETH_NFP_PNC
++#ifdef CONFIG_MV_ETH_PNC_L3_FLOW
+ 	TCAM_LU_FLOW_IP4,
+ 	TCAM_LU_FLOW_IP6_A,
+ 	TCAM_LU_FLOW_IP6_B,
+-#endif /* CONFIG_MV_ETH_NFP_PNC */
++#endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
+ 
+ #ifdef CONFIG_MV_ETH_PNC_WOL
+ 	TCAM_LU_WOL,
+-- 
+1.7.9.5
+

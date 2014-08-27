@@ -1,0 +1,18 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006 OpenWrt.org
+START=50
+
+start() {
+	[ -d /etc/maradns ] || mkdir -p /etc/maradns
+	[ -d /etc/maradns/logger ] || mkdir -p /etc/maradns/logger
+	duende /usr/sbin/maradns
+	duende /usr/sbin/zoneserver
+}
+
+stop() {
+	killall duende maradns zoneserver
+}
+
+reload() {
+	killall -HUP maradns
+}

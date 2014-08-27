@@ -1,0 +1,353 @@
+From 7542a67d9f06a5e7bfbb7bd137ee8d18644cd529 Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Sun, 15 Jul 2012 17:13:58 +0300
+Subject: [PATCH 067/609] Neta: L2FW fixes (includes NAPI)
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ .../mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c      |  159 +++++++++-----------
+ 1 file changed, 75 insertions(+), 84 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c
+index 69e5171..308fa1b 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c
+@@ -16,11 +16,9 @@
+ #include "cesa/mvCesa.h"
+ #include "eth/nfp/mvNfpSec.h"
+ 
++struct eth_pbuf *mv_eth_pool_get(struct bm_pool *pool);
+ 
+-
+-
+-
+-#define CESA_0    0 
++#define CESA_0    0
+ #define CESA_1    1
+ /* for future - handle by CPU */
+ #define CESA_NONE 2
+@@ -106,15 +104,6 @@ INLINE void  nfp_sec_pkt_info_free(struct eth_pbuf *pkt, int inPort)
+ 
+ }
+ 
+-void mv_eth_pkt_print_new(struct eth_pbuf *pkt)
+-{
+-	printk(KERN_ERR "pkt: pkt=%p len=%d off=%d cmd=0x%x pool=%d "
+-	       "tos=%d gpon=0x%x\n skb=%p pa=%lx buf=%p\n",
+-	       pkt, pkt->bytes, pkt->offset, pkt->tx_cmd, pkt->pool,
+-	       pkt->tos, pkt->hw_cmd, pkt->osInfo, pkt->physAddr, pkt->pBuf);
+-}
+-
+-
+ void printBufVirtPtr(MV_BUF_INFO *pBuf)
+ {
+ 	int i;
+@@ -273,9 +262,9 @@ static L2FW_RULE *l2fw_lookup(MV_U32 srcIP, MV_U32 dstIP)
+ int l2fw_set_cesa_chan(int port, int cesaChan)
+ {
+ 	struct eth_port *pp;
+-	printk("setting cesaChan to %d for port=%d \n", cesaChan, port);
+-	if ( (cesaChan != CESA_0) && (cesaChan !=CESA_1) )  {
+-		printk("non permitted value for CESA channel \n");
++	printk(KERN_INFO "setting cesaChan to %d for port=%d \n", cesaChan, port);
++	if ((cesaChan != CESA_0) && (cesaChan != CESA_1))  {
++		printk(KERN_INFO "non permitted value for CESA channel \n");
+ 		return -EINVAL;
+ 	}
+ 	pp = mv_eth_ports[port];
+@@ -292,7 +281,6 @@ void l2fw_stats(void)
+ 		mvOsPrintf("number of Cesa No Resources error is port[%d]=%d \n", i, counterNoResources[i]);
+ 		counterNoResources[i] = 0;
+ 	}
+-	
+ }
+ 
+ void l2fw_show_numHashEntries(void)
+@@ -317,15 +305,19 @@ void l2fw_dump(void)
+ {
+ 	MV_U32 i = 0;
+ 	L2FW_RULE *currRule;
++	MV_U8	  *srcIP, *dstIP;
+ 
+ 	mvOsPrintf("\nPrinting L2fw Rule Database: \n");
+ 	mvOsPrintf("*******************************\n");
+ 
+ 	for (i = 0; i < L2FW_HASH_SIZE; i++) {
+ 		currRule = l2fw_hash[i];
++		srcIP = (MV_U8 *)&(currRule->srcIP);
++		dstIP = (MV_U8 *)&(currRule->dstIP);
++
+ 		while (currRule != NULL) {
+ 			mvOsPrintf("%u.%u.%u.%u->%u.%u.%u.%u    out port=%d (hash=%x)\n",
+-				NIPQUAD(currRule->srcIP), NIPQUAD(currRule->dstIP),
++				MV_IPQUAD(srcIP), MV_IPQUAD(dstIP),
+ 				currRule->port, i);
+ 			currRule = currRule->next;
+ 		}
+@@ -337,6 +329,7 @@ void l2fw_dump(void)
+ MV_STATUS l2fw_add(MV_U32 srcIP, MV_U32 dstIP, int port)
+ {
+ 	L2FW_RULE *l2fw_rule;
++	MV_U8	  *srcIPchr, *dstIPchr;
+ 
+ 	MV_U32 hash = mv_jhash_3words(srcIP, dstIP, (MV_U32) 0, l2fw_jhash_iv);
+ 	hash &= L2FW_HASH_MASK;
+@@ -345,10 +338,13 @@ MV_STATUS l2fw_add(MV_U32 srcIP, MV_U32 dstIP, int port)
+ 		return MV_ERROR;
+ 	}
+ 
++	srcIPchr = (MV_U8 *)&(srcIP);
++	dstIPchr = (MV_U8 *)&(dstIP);
++
+ #ifdef CONFIG_MV_ETH_L2FW_DEBUG
+ 	mvOsPrintf("srcIP=%x dstIP=%x in %s\n", srcIP, dstIP, __func__);
+-	mvOsPrintf("srcIp = %u.%u.%u.%u in %s\n", NIPQUAD(srcIP), __func__);
+-	mvOsPrintf("dstIp = %u.%u.%u.%u in %s\n", NIPQUAD(dstIP), __func__);
++	mvOsPrintf("srcIp = %u.%u.%u.%u in %s\n", MV_IPQUAD(srcIPchr), __func__);
++	mvOsPrintf("dstIp = %u.%u.%u.%u in %s\n", MV_IPQUAD(dstIPchr), __func__);
+ #endif
+ 
+ 	l2fw_rule = l2fw_lookup(srcIP, dstIP);
+@@ -379,6 +375,7 @@ MV_STATUS l2fw_add_ip(const char *buf)
+ 	L2FW_RULE *l2fw_rule;
+ 	MV_U32 srcIP;
+ 	MV_U32 dstIP;
++	MV_U8	  *srcIPchr, *dstIPchr;
+ 	char dest1[15];
+ 	char dest2[15];
+ 	char *portStr;
+@@ -409,6 +406,8 @@ MV_STATUS l2fw_add_ip(const char *buf)
+ 	srcIP = in_aton(dest1);
+ 	strncpy(dest2, buf+offset1+1, addr2-addr1-1);
+ 	dstIP = in_aton(dest2);
++	srcIPchr = (MV_U8 *)&(srcIP);
++	dstIPchr = (MV_U8 *)&(dstIP);
+ 	portStr = addr2+1;
+ 	if (*portStr == 'D') {
+ 		L2FW_RULE *l2fw_rule_to_del, *prev;
+@@ -424,7 +423,7 @@ MV_STATUS l2fw_add_ip(const char *buf)
+ 				prev->next = l2fw_rule_to_del->next;
+ 			else
+ 				l2fw_hash[hash] = l2fw_rule_to_del->next;
+-			mvOsPrintf("%u.%u.%u.%u->%u.%u.%u.%u deleted\n", NIPQUAD(srcIP), NIPQUAD(dstIP));
++			mvOsPrintf("%u.%u.%u.%u->%u.%u.%u.%u deleted\n", MV_IPQUAD(srcIPchr), MV_IPQUAD(dstIPchr));
+ 			mvOsFree(l2fw_rule_to_del);
+ 			numHashEntries--;
+ 			return MV_OK;
+@@ -433,7 +432,7 @@ MV_STATUS l2fw_add_ip(const char *buf)
+ 		prev = l2fw_rule_to_del;
+ 		l2fw_rule_to_del = l2fw_rule_to_del->next;
+ 	}
+-		mvOsPrintf("%u.%u.%u.%u->%u.%u.%u.%u : entry not found\n", NIPQUAD(srcIP), NIPQUAD(dstIP));
++		mvOsPrintf("%u.%u.%u.%u->%u.%u.%u.%u : entry not found\n", MV_IPQUAD(srcIPchr), MV_IPQUAD(dstIPchr));
+ 		return MV_NOT_FOUND;
+ 	}
+ 
+@@ -444,7 +443,7 @@ MV_STATUS l2fw_add_ip(const char *buf)
+ 	l2fw_rule = l2fw_lookup(srcIP, dstIP);
+ 	if (l2fw_rule) {
+ 		mvOsPrintf("%u.%u.%u.%u->%u.%u.%u.%u : entry already exist\n",
+-				NIPQUAD(srcIP), NIPQUAD(dstIP));
++				MV_IPQUAD(srcIPchr), MV_IPQUAD(dstIPchr));
+ 		return MV_OK;
+ 	}
+ 
+@@ -486,25 +485,6 @@ void l2fw_esp_set(int enableEsp)
+ 	espEnabled = enableEsp;
+ }
+ 
+-
+-static inline
+-struct neta_tx_desc *mv_eth_tx_desc_get(struct tx_queue *txq_ctrl, int num)
+-{
+-	/* Is enough TX descriptors to send packet */
+-	if ((txq_ctrl->txq_count + num) >= txq_ctrl->txq_size) {
+-		/*
+-		printk("eth_tx: txq_ctrl->txq=%d - no_resource: txq_count=%d,
+-				txq_size=%d, num=%d\n",
+-				txq_ctrl->txq, txq_ctrl->txq_count,
+-				txq_ctrl->txq_size, num);
+-		*/
+-		STAT_DBG(txq_ctrl->stats.txq_err++);
+-		return NULL;
+-	}
+-	return mvNetaTxqNextDescGet(txq_ctrl->q);
+-}
+-
+-
+ static int mv_ctrl_txdone = CONFIG_MV_ETH_TXDONE_COAL_PKTS;
+ static void dump_xor(void)
+ {
+@@ -555,7 +535,7 @@ static int mv_eth_poll_l2fw(struct napi_struct *napi, int budget)
+ 	struct eth_port *pp = MV_ETH_PRIV(napi->dev);
+ 	read_lock(&pp->rwlock);
+ 
+-	STAT_INFO(pp->stats.poll++);
++	STAT_INFO(pp->stats.poll[smp_processor_id()]++);
+ 
+ 	/* Read cause register */
+ 	causeRxTx = MV_REG_READ(NETA_INTR_NEW_CAUSE_REG(pp->port)) &
+@@ -612,7 +592,7 @@ static int mv_eth_poll_l2fw(struct napi_struct *napi, int budget)
+ 		causeRxTx = 0;
+ 
+ 		napi_complete(napi);
+-		STAT_INFO(pp->stats.poll_exit++);
++		STAT_INFO(pp->stats.poll_exit[smp_processor_id()]++);
+ 
+ 		local_irq_save(flags);
+ 		MV_REG_WRITE(NETA_INTR_NEW_MASK_REG(pp->port),
+@@ -633,44 +613,47 @@ void mv_eth_set_l2fw(int cmd, int rx_port, int out_tx_port)
+ {
+ 	struct eth_port *pp;
+ 	struct net_device *dev;
+-	pp     = mv_eth_ports[rx_port];
++	int group;
+ 
+-	if (!pp) {
+-		mvOsPrintf("pp is NULL in setting L2FW (%s)\n", __func__);
+-		return;
+-	}
+-	clear_bit(MV_ETH_F_CONNECT_LINUX_BIT, &(pp->flags));
++	pp     = mv_eth_ports[rx_port];
+ 
+-	dev = pp->dev;
+-	if (dev == NULL) {
+-		mvOsPrintf("device is NULL in in setting L2FW (%s)\n", __func__);
+-		return;
+-	}
+-	if (!test_bit(MV_ETH_F_STARTED_BIT, &(pp->flags))) {
+-		mvOsPrintf("Device is down for port=%d ; MV_ETH_F_STARTED_BIT is not set in %s\n", rx_port, __func__);
+-		mvOsPrintf("Cannot set to L2FW mode in %s\n", __func__);
+-		return;
+-	}
++	for (group = 0; group < CONFIG_MV_ETH_NAPI_GROUPS; group++) {
++		if (!pp) {
++			mvOsPrintf("pp is NULL in setting L2FW (%s)\n", __func__);
++			return;
++		}
++		clear_bit(MV_ETH_F_CONNECT_LINUX_BIT, &(pp->flags));
+ 
+-	if (cmd == L2FW_DISABLE) {
+-		if (test_bit(MV_ETH_F_STARTED_BIT, &(pp->flags)))
+-			napi_disable(pp->napiGroup[CPU_GROUP_DEF]);
+-		netif_napi_del(pp->napiGroup[CPU_GROUP_DEF]);
+-		netif_napi_add(dev, pp->napiGroup[CPU_GROUP_DEF], mv_eth_poll,
+-			pp->weight);
+-		if (test_bit(MV_ETH_F_STARTED_BIT, &(pp->flags)))
+-			napi_enable(pp->napiGroup[CPU_GROUP_DEF]);
+-	} else {
+-		if (test_bit(MV_ETH_F_STARTED_BIT, &(pp->flags)))
+-			napi_disable(pp->napiGroup[CPU_GROUP_DEF]);
+-		netif_napi_del(pp->napiGroup[CPU_GROUP_DEF]);
+-		printk("pp->weight=%d in %s\n",pp->weight,__FUNCTION__);
+-		netif_napi_add(dev, pp->napiGroup[CPU_GROUP_DEF], mv_eth_poll_l2fw,
+-			pp->weight);
+-		if (test_bit(MV_ETH_F_STARTED_BIT, &(pp->flags)))
+-			napi_enable(pp->napiGroup[CPU_GROUP_DEF]);
++		dev = pp->dev;
++		if (dev == NULL) {
++			mvOsPrintf("device is NULL in in setting L2FW (%s)\n", __func__);
++			return;
++		}
++		if (!test_bit(MV_ETH_F_STARTED_BIT, &(pp->flags))) {
++			mvOsPrintf("Device is down for port=%d ; MV_ETH_F_STARTED_BIT is not set in %s\n", rx_port, __func__);
++			mvOsPrintf("Cannot set to L2FW mode in %s\n", __func__);
++			return;
+ 		}
+ 
++		if (cmd == L2FW_DISABLE) {
++			if (test_bit(MV_ETH_F_STARTED_BIT, &(pp->flags)))
++				napi_disable(pp->napiGroup[group]);
++			netif_napi_del(pp->napiGroup[group]);
++			netif_napi_add(dev, pp->napiGroup[group], mv_eth_poll,
++				pp->weight);
++			if (test_bit(MV_ETH_F_STARTED_BIT, &(pp->flags)))
++				napi_enable(pp->napiGroup[group]);
++		} else {
++			if (test_bit(MV_ETH_F_STARTED_BIT, &(pp->flags)))
++				napi_disable(pp->napiGroup[group]);
++			netif_napi_del(pp->napiGroup[group]);
++			printk(KERN_INFO "pp->weight=%d in %s\n", pp->weight, __func__);
++			netif_napi_add(dev, pp->napiGroup[group], mv_eth_poll_l2fw,
++				pp->weight);
++			if (test_bit(MV_ETH_F_STARTED_BIT, &(pp->flags)))
++				napi_enable(pp->napiGroup[group]);
++			}
++	}
+ }
+ 
+ 
+@@ -933,7 +916,11 @@ void printEspHdr(MV_ESP_HEADER *pEspHdr)
+ 
+ void printIpHdr(MV_IP_HEADER *pIpHdr)
+ {
+-	printk(KERN_INFO "%u.%u.%u.%u->%u.%u.%u.%u in %s\n", NIPQUAD(pIpHdr->srcIP), NIPQUAD(pIpHdr->dstIP), __func__);
++	MV_U8 *srcIP, *dstIP;
++	srcIP = (MV_U8 *)&(pIpHdr->srcIP);
++	dstIP = (MV_U8 *)&(pIpHdr->dstIP);
++
++	printk(KERN_INFO "%u.%u.%u.%u->%u.%u.%u.%u in %s\n", MV_IPQUAD(srcIP), MV_IPQUAD(dstIP), __func__);
+ 	printk(KERN_INFO "MV_16BIT_BE(pIpHdr->totalLength)=%d  in %s\n", MV_16BIT_BE(pIpHdr->totalLength), __func__);
+ 	printk(KERN_INFO "pIpHdr->protocol=%d \n", pIpHdr->protocol);
+ }
+@@ -1098,7 +1085,7 @@ inline MV_STATUS mvSecEspProcess_1(struct eth_pbuf *pPkt, MV_PKT_INFO *pPktInfo,
+ 	printCesaMbuf(pCesaMbuf);
+ #endif
+ 	disable_irq(CESA_IRQ(channel));
+-	
++
+ 	status = mvCesaAction(channel, pCesaCmd);
+ 	enable_irq(CESA_IRQ(channel));
+ 	if (status != MV_OK) {
+@@ -1337,6 +1324,7 @@ inline int mv_eth_rx_l2f(struct eth_port *pp, int rx_todo, int rxq)
+ 	MV_IP_HEADER *pIph = NULL;
+ 	MV_U8 *pData;
+ 	int	ipOffset;
++
+ 	rx_done = mvNetaRxqBusyDescNumGet(pp->port, rxq);
+ 	mvOsCacheIoSync();
+ 	if (rx_todo > rx_done)
+@@ -1392,7 +1380,10 @@ inline int mv_eth_rx_l2f(struct eth_port *pp, int rx_todo, int rxq)
+ 		}
+ #ifdef CONFIG_MV_ETH_L2FW_DEBUG
+ 		if (pIph) {
+-			printk(KERN_INFO "%u.%u.%u.%u->%u.%u.%u.%u in %s\n", NIPQUAD(pIph->srcIP), NIPQUAD(pIph->dstIP), __func__);
++			MV_U8 *srcIP, *dstIP;
++			srcIP = (MV_U8 *)&(pIph->srcIP);
++			dstIP = (MV_U8 *)&(pIph->dstIP);
++			printk(KERN_INFO "%u.%u.%u.%u->%u.%u.%u.%u in %s\n", MV_IPQUAD(srcIP), MV_IPQUAD(dstIP), __func__);
+ 		} else
+ 			printk(KERN_INFO "pIph is NULL in %s\n", __func__);
+ #endif
+@@ -1419,8 +1410,8 @@ inline int mv_eth_rx_l2f(struct eth_port *pp, int rx_todo, int rxq)
+ 		case TX_AS_IS:
+ 					if (espEnabled) {
+ 						spin_lock(&cesa_lock[pp->cesaChan]);
+-						status = handleEsp(pkt, rx_desc, new_pp, pp->port, pp->cesaChan);						
+-						spin_unlock(&cesa_lock[pp->cesaChan]);						
++						status = handleEsp(pkt, rx_desc, new_pp, pp->port, pp->cesaChan);
++						spin_unlock(&cesa_lock[pp->cesaChan]);
+ 					}
+ 				else
+ 					status = mv_eth_l2fw_tx(pkt, new_pp, 0, rx_desc);
+@@ -1488,7 +1479,7 @@ static irqreturn_t nfp_sec_interrupt_handler_0(int irq, void *arg)
+ 	status = mvCesaReadyGet(chan, &result);
+ 	if (status != MV_OK)
+ 		break;
+-	
++
+ 	nfp_sec_complete_out((unsigned long)((MV_NFP_SEC_CESA_PRIV_L2FW *)result.pReqPrv));
+ 	}
+ 	return IRQ_HANDLED;
+@@ -1505,7 +1496,7 @@ static irqreturn_t nfp_sec_interrupt_handler_1(int irq, void *arg)
+ 	status = mvCesaReadyGet(chan, &result);
+ 	if (status != MV_OK)
+ 		break;
+-	
++
+ 	nfp_sec_complete_out((unsigned long)((MV_NFP_SEC_CESA_PRIV_L2FW *)result.pReqPrv));
+ 	}
+ 
+-- 
+1.7.9.5
+

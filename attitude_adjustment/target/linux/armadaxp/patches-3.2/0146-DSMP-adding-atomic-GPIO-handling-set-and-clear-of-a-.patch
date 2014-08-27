@@ -1,0 +1,114 @@
+From 7753154a78709f833a1b23845a47495dfcbeaca9 Mon Sep 17 00:00:00 2001
+From: Seif Mazareeb <seif@marvell.com>
+Date: Tue, 10 Apr 2012 07:38:26 +0300
+Subject: [PATCH 146/609] DSMP - adding atomic GPIO handling ( set and clear
+ of a specific GPIO bit )
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/gpp/mvGpp.c     |   60 +++++++++++++++++++++++++++
+ arch/arm/plat-armada/mv_hal/gpp/mvGpp.h     |    3 ++
+ arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h |    5 ++-
+ 3 files changed, 67 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/plat-armada/mv_hal/gpp/mvGpp.c b/arch/arm/plat-armada/mv_hal/gpp/mvGpp.c
+index edd55c0..9c4f2fc 100644
+--- a/arch/arm/plat-armada/mv_hal/gpp/mvGpp.c
++++ b/arch/arm/plat-armada/mv_hal/gpp/mvGpp.c
+@@ -379,3 +379,63 @@ static MV_VOID gppRegSet(MV_U32 group, MV_U32 regOffs, MV_U32 mask, MV_U32 value
+ 
+ 	MV_REG_WRITE(regOffs, gppData);
+ }
++
++/*******************************************************************************
++* mvGppAtomicValueClear- Set a GPP Pin list value.
++*
++* DESCRIPTION:
++*       This function clear the pin matching bit in the Data output register using
++*       the clear register
++*       NOTE: the fucntion doesn't check if the pin is actually configured as
++*       output, it's the called responsibility.
++* INPUT:
++*       gpionumber - GPP number
++* OUTPUT:
++*       None.
++*
++* EXAMPLE:
++*       To clear the bit responsible for GPP8.
++*       mvGppAtomicValueClear(8);
++*
++* RETURN:
++*       None.
++*
++*******************************************************************************/
++MV_STATUS mvGppAtomicValueClear(MV_U32 gpionumber)
++{
++	if(gpionumber < 64)
++		MV_REG_WRITE(GPP_OUT_CLEAR_REG((int)(gpionumber >> 5)) , 1 << (gpionumber%32));
++	else
++		MV_REG_WRITE(GPP_64_66_DATA_OUT_CLEAR_REG , 1 << (gpionumber%32));
++	return MV_OK;
++}
++
++/*******************************************************************************
++* mvGppAtomicValueSet - Set a GPP Pin list value.
++*
++* DESCRIPTION:
++*       This function set the pin matching bit in the Data output register using
++*	the set register
++*       NOTE: the fucntion doesn't check if the pin is actually configured as
++*	output, it's the called responsibility.
++* INPUT:
++*       gpionumber - GPP number
++* OUTPUT:
++*       None.
++*
++* EXAMPLE:
++*       To set the bit responsible for GPP8.
++*       mvGppAtomicValueSet(8);
++*
++* RETURN:
++*       None.
++*
++*******************************************************************************/
++MV_STATUS mvGppAtomicValueSet(MV_U32 gpionumber)
++{
++	if(gpionumber < 64)
++                MV_REG_WRITE(GPP_OUT_SET_REG((int)(gpionumber >> 5)) , 1 << (gpionumber%32));
++        else
++                MV_REG_WRITE(GPP_64_66_DATA_OUT_SET_REG , 1 << (gpionumber%32));
++        return MV_OK;
++}
+diff --git a/arch/arm/plat-armada/mv_hal/gpp/mvGpp.h b/arch/arm/plat-armada/mv_hal/gpp/mvGpp.h
+index 92e57ad..c5c5e42 100644
+--- a/arch/arm/plat-armada/mv_hal/gpp/mvGpp.h
++++ b/arch/arm/plat-armada/mv_hal/gpp/mvGpp.h
+@@ -120,6 +120,9 @@ extern "C" {
+ 	/* mvGppValueSet - Set a GPP Pin list value. */
+ 	MV_STATUS mvGppValueSet(MV_U32 group, MV_U32 mask, MV_U32 value);
+ 
++	MV_STATUS mvGppAtomicValueSet(MV_U32 gpionumber);
++
++	MV_STATUS mvGppAtomicValueClear(MV_U32 gpionumber);
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h b/arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h
+index 4d7ab18..7b5d6c2 100755
+--- a/arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h
++++ b/arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h
+@@ -152,7 +152,10 @@ extern "C" {
+ #define GPP_INT_CAUSE_REG(grp)			(MV_GPP_REGS_BASE(grp) + 0x14)
+ #define GPP_INT_MASK_REG(grp)			(MV_GPP_REGS_BASE(grp) + 0x18)
+ #define GPP_INT_LVL_REG(grp)			(MV_GPP_REGS_BASE(grp) + 0x1C)
+-
++#define GPP_OUT_SET_REG(grp)			(0x18130 + ((grp) * 0x40))
++#define GPP_64_66_DATA_OUT_SET_REG		0x181A4
++#define GPP_OUT_CLEAR_REG(grp)			(0x18134 + ((grp) * 0x40))
++#define GPP_64_66_DATA_OUT_CLEAR_REG		0x181B0
+ #define GPP_FUNC_SELECT_REG			(MV_GPP_REGS_BASE(0) + 0x40)
+ 
+ /* Relevant for MV78XX0 */
+-- 
+1.7.9.5
+

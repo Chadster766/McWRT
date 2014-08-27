@@ -1,0 +1,40 @@
+From 8bddbe21ee3a9f8bee2c3fa95e83561df63bd7ef Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Mon, 15 Oct 2012 17:28:17 +0200
+Subject: [PATCH 405/609] - DDR size alignment fix (using Dram actual size,
+ instead of Dram end offset)
+
+Change-Id: I027c79828aca600a10cd7ad9e66215c666558dca
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.c |    6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.c b/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.c
+index 656a94b..ad8be88 100755
+--- a/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.c
++++ b/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.c
+@@ -138,7 +138,7 @@ MV_U32 mvDramIfSizeGet(MV_VOID)
+ MV_U32 mvDramIfHwSizeGet(MV_VOID)
+ {
+ 	MV_U32 base = 0;
+-	MV_U32 size, cs, totalSize = 0;
++	MV_U32 size, cs, totalSize = 0, sizeRegVal;
+ 
+ 	for (cs = 0; cs < SDRAM_MAX_CS; cs++) {
+ 		size = MV_REG_READ(SDRAM_SIZE_REG(cs)) & SDRAM_ADDR_MASK;
+@@ -153,6 +153,10 @@ MV_U32 mvDramIfHwSizeGet(MV_VOID)
+ 			totalSize += size;
+ 		}
+ 	}
++	/* Dram size alignment fix */
++	sizeRegVal = (totalSize & SDRAMWCR_SIZE_MASK) >> SDRAMWCR_SIZE_OFFS;   // sizeregVal = ( amount of 16mb chunks -1 )
++	totalSize = (sizeRegVal + 1) * SDRAMWCR_SIZE_ALLIGNMENT;    	     // size = alined size (num of 16mb chunks * 16mb)
++	/* Dram size alignment fix*/
+ 	return totalSize;
+ }
+ MV_U32 mvDramIfHwCsSizeGet(MV_U32 cs)
+-- 
+1.7.9.5
+

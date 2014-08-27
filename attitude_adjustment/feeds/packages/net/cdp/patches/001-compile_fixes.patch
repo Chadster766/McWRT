@@ -1,0 +1,13 @@
+--- a/Makefile.orig	2006-10-26 20:58:35.000000000 +0300
++++ b/Makefile	2009-05-22 18:20:44.000000000 +0300
+@@ -1,7 +1,6 @@
+-CFLAGS += $(shell libnet-config --cflags --defines)
+-all: cdp-listen cdp-send
++all: cdp-send cdp-listen
+ 
+-cdp-listen: cdp-listen.o -lpcap
+-cdp-send: cdp-send.o $(shell libnet-config --libs)
++cdp-listen: cdp-listen.o $(STAGING_DIR)/usr/lib/libpcap.so
++cdp-send: cdp-send.o $(STAGING_DIR)/usr/lib/libnet-1.1.x/lib/libnet.a
+ 
+ clean:; rm -f cdp-send.o cdp-send cdp-listen.o cdp-listen

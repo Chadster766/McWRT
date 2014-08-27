@@ -1,0 +1,84 @@
+--- a/src/updatedd.c
++++ b/src/updatedd.c
+@@ -36,7 +36,8 @@
+ #include <limits.h> /* PATH_MAX */
+ #include "updatedd.h"
+ 
+-#define PLUGIN_ENDING ".so"
++#define LIBPREFIX  "lib"
++#define LIBSUFFIX  ".so"
+ 
+ void
+ print_usage(char *pname, FILE *fp)
+@@ -92,23 +93,7 @@
+ void
+ get_plugin_path(char *service, char *buffer, size_t len)
+ {
+-        FILE *pipe;
+-        char la_path[PATH_MAX];
+-        char lib_name[256];
+-        char command[1024];
+-
+-        (void)snprintf(la_path, PATH_MAX-1, LIBPATH "/lib%s.la", service);
+-
+-        snprintf(command, 1023, ". %s; echo $dlname", la_path);
+-        if((pipe = popen(command, "r")) == NULL)
+-                err(PERR, "popen() failed");
+-        fscanf(pipe, "%255s", lib_name);
+-
+-        if(fclose(pipe) == EOF)
+-                err(PERR, "fclose() failed");
+-
+-	(void)memset(buffer, 0, len);
+-        snprintf(buffer, len-1, LIBPATH"/%s", lib_name);
++        snprintf(buffer, len-1, LIBPATH "/" LIBPREFIX "%s" LIBSUFFIX, service);
+ }
+ 
+ void *
+@@ -139,6 +124,7 @@
+ 
+ }
+ 
++#define SERVICE_MAXLEN  20
+ int
+ get_service(DIR *dir, char *buf, size_t size)
+ {
+@@ -146,26 +132,19 @@
+ 	struct dirent *dir_info;
+ 
+ 	while( (dir_info = readdir(dir)) ) {
++		char *p = dir_info->d_name;
+ 		int n;
+-		char *ptr = strstr(dir_info->d_name, ".la");
+-
+-                if(strlen(dir_info->d_name) < 6)
+-                        continue;
+-
+-		if(ptr != NULL) {
+-                        if(!dir_info->d_name[0] == 'l')
+-                                continue;
+-                        if(!dir_info->d_name[1] == 'i')
+-                                continue;
+-                        if(!dir_info->d_name[2] == 'b')
+-                                continue;
+-
+-			for(n = 0; dir_info->d_name+n+3 != ptr; n++) {
+-				buf[n] = dir_info->d_name[n+3];
+-			}
+-			buf[n] = '\0';
+-			return 1;
+-		}
++		if( strlen(p) <= strlen(LIBPREFIX LIBSUFFIX) )
++			continue;
++		if( strstr(p, LIBPREFIX) != p )
++			continue;
++		p += strlen(LIBPREFIX);
++		n = strlen(p) - strlen(LIBSUFFIX);
++		if( strstr(p + n, LIBSUFFIX) != p + n )
++			continue;
++		p[n] = 0;
++		strncpy(buf, p, size);
++		return 1;
+ 	}
+ 
+ 	return 0;

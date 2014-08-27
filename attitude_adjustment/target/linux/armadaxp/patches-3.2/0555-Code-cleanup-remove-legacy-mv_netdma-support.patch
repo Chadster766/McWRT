@@ -1,0 +1,43 @@
+From 186af78605dd62c574d1d864a4034a278b4b1abc Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Sun, 10 Mar 2013 14:08:16 +0200
+Subject: [PATCH 555/609] Code cleanup: remove legacy mv_netdma support
+
+This code is irrelevant for AXP and should be removed from AXP/A370 LSP compilation options
+
+This fixes BTS #266 and should be integrated to stable branch
+
+Change-Id: If96b4463c0938790a50b2e8d5ee42657fcc5dece
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1218
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/Kconfig |   11 -----------
+ 1 file changed, 11 deletions(-)
+
+diff --git a/arch/arm/plat-armada/Kconfig b/arch/arm/plat-armada/Kconfig
+index d394e9a..cf00f75 100644
+--- a/arch/arm/plat-armada/Kconfig
++++ b/arch/arm/plat-armada/Kconfig
+@@ -448,17 +448,6 @@ config	ERROR_HANDLING_DRAM_ECC
+         ---help---
+         Choosing this option will enable DRAM ECC error notification by netlink
+ 
+-
+-
+-menu "Soc DMA accelerations"
+-
+-source arch/arm/plat-armada/mv_drivers_lsp/mv_xor/Kconfig
+-
+-source arch/arm/plat-armada/mv_drivers_lsp/mv_dma/Kconfig
+-
+-endmenu
+-
+-
+ menu "SoC Networking support"
+ depends on MV_INCLUDE_GIG_ETH
+ 
+-- 
+1.7.9.5
+

@@ -1,0 +1,125 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2008-2011 OpenWrt.org
+
+SERVICE_USE_PID=1
+
+START=90
+STOP=10
+
+EXTRA_COMMANDS="list status exconf"
+EXTRA_HELP="	list	Lists available configurations
+	status	Prints status of the service
+	exconf	Shows an example config file
+
+The actions start, stop, restart, reload, status operate
+globally on all configurations unless the particular
+configuration has been provided as the next parameter.
+"
+
+check_section() {
+	echo "$1" | grep -vq '^cfg[[:xdigit:]]\{6\}$'
+}
+
+start_instance() {
+	local section="$1"
+	local instance="$2"
+
+	check_section "$section" || return 1
+	[ -n "$instance" -a "$section" != "$instance" ] && return 0
+
+	local args listen_ip banner_host username num_threads listen_port accept_queue_len
+
+	config_get listen_ip "$section" 'listen_ip'
+	[ -n "$listen_ip" ] && append args "-l $listen_ip"
+
+	config_get listen_port "$section" 'listen_port'
+	[ -n "$listen_port" ] && append args "-p $listen_port"
+
+	config_get username "$section" 'username'
+	[ -n "$username" ] && append args "-u $username"
+
+	config_get banner_host "$section" 'banner_host'
+	[ -n "$banner_host" ] && append args "-b '$banner_host'"
+
+	config_get num_threads "$section" 'num_threads'
+	[ -n "$num_threads" ] && append args "-t $num_threads"
+
+	config_get accept_queue_len "$section" 'accept_queue_len'
+	[ -n "$accept_queue_len" ] && append args "-m $accept_queue_len"
+
+	SERVICE_PID_FILE="/var/run/smtptrapd-${section}.pid
+	service_start /usr/sbin/smtptrapd -f $SERVICE_PID_FILE $args
+}
+
+stop_instance() {
+	local section="$1"
+	local instance="$2"
+
+	check_section "$section" || return 1
+	[ -n "$instance" -a "$section" != "$instance" ] && return 0
+
+	SERVICE_PID_FILE="/var/run/smtptrapd-${section}.pid"
+	service_stop /usr/sbin/smtptrapd
+}
+
+check_instance() {
+	local section="$1"
+	local instance="$2"
+
+	check_section "$section" || return 1
+	[ -n "$instance" -a "$section" != "$instance" ] && return 0
+
+	SERVICE_PID_FILE="/var/run/smtptrapd-${section}.pid"
+	service_check /usr/sbin/smtptrapd && {
+		echo "${initscript}: configuration instance '$section' is running"
+	} || {
+		echo "${initscript}: configuration instance '$section' is not running"
+	}
+}
+
+list_instance() {
+	local section="$1"
+	check_section "$section" || return 1
+	echo "	$section"
+}
+
+start() {
+	config_load 'smtptrapd'
+	config_foreach start_instance 'smtptrapd' "$@"
+}
+
+stop() {
+	config_load 'smtptrapd'
+	config_foreach stop_instance 'smtptrapd' "$@"
+}
+
+status() {
+	config_load 'smtptrapd'
+	config_foreach check_instance 'smtptrapd' "$@"
+}
+
+list() {
+	config_load 'smtptrapd'
+	echo "${initscript}: available configuration instances:"
+	config_foreach list_instance 'smtptrapd'
+}
+
+exconf() {
+	cat <<EOF
+# /etc/config/smtptrapd - example configuration
+
+package 'smtptrapd'
+
+config 'smtptrapd' 'myfailhost'
+	option 'num_threads' '1'
+
+# The init script operates only with named sections
+# All options (default values)
+#	option 'banner_host' '<hostname>'
+#	option 'username' 'nobody'
+#	option 'listen_ip' '<all addresses>'
+#	option 'listen_port' '25'
+#	option 'num_threads' '10'
+#	option 'accept_queue_len' '100'
+EOF
+}

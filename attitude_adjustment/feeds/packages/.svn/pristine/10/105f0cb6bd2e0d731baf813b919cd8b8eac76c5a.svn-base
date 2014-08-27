@@ -1,0 +1,28 @@
+Description: Verify value returned by getservbyname
+ getservbyname() can return a NULL pointer and dereferencing it
+ would lead to a segfault.
+ .
+ The patch is not forwarded upstream but there's no real maintainance
+ upstream any more.
+Origin: vendor, see changelog entry 3.1-1-2
+Author: Richard Braakman <dark@xs4all.nl>
+Last-Update: 2009-10-29
+Forwarded: no
+
+diff --git a/linux/ftplib.c b/linux/ftplib.c
+index 9089a5b..c4a5873 100644
+--- a/src/ftplib.c
++++ b/src/ftplib.c
+@@ -416,7 +416,11 @@ GLOBALDEF int FtpConnect(const char *host, netbuf **nControl)
+ 	    sin.sin_port = htons(atoi(pnum));
+ 	else
+ 	{
+-	    pse = getservbyname(pnum,"tcp");
++	    if ((pse = getservbyname(pnum,"tcp")) == NULL)
++            {
++                perror("getservbyname");
++                return 0;
++            }
+ 	    sin.sin_port = pse->s_port;
+ 	}
+     }

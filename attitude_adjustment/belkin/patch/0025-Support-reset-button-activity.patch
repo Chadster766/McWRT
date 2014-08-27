@@ -1,0 +1,142 @@
+From 2e534ec8e5bc1e18013ce51bddf37bdf900f09ff Mon Sep 17 00:00:00 2001
+From: Matthew Fatheree <Matthew.Fatheree@belkin.com>
+Date: Wed, 14 May 2014 21:42:05 +0700
+Subject: [PATCH 25/31] Support reset button activity
+
+ - Pressed button 1..10s -> reboot the board.
+ - Pressed button over 10s -> factory reset, then reboot the board.
+
+Signed-off-by: Matthew Fatheree <Matthew.Fatheree@belkin.com>
+---
+ target/linux/armadaxp/base-files/etc/config/system |   29 ++++++++++++++++++++
+ .../base-files/etc/hotplug.d/button/00-button      |   24 ++++++++++++++++
+ .../linux/armadaxp/base-files/etc/hotplug2.rules   |   10 +++++++
+ target/linux/armadaxp/base-files/etc/init.d/mamba  |    9 ++++++
+ .../armadaxp/base-files/usr/sbin/reset_handler     |   15 ++++++++++
+ 5 files changed, 87 insertions(+)
+ create mode 100644 target/linux/armadaxp/base-files/etc/config/system
+ create mode 100644 target/linux/armadaxp/base-files/etc/hotplug.d/button/00-button
+ create mode 100644 target/linux/armadaxp/base-files/etc/hotplug2.rules
+ create mode 100755 target/linux/armadaxp/base-files/etc/init.d/mamba
+ create mode 100755 target/linux/armadaxp/base-files/usr/sbin/reset_handler
+
+diff --git a/target/linux/armadaxp/base-files/etc/config/system b/target/linux/armadaxp/base-files/etc/config/system
+new file mode 100644
+index 0000000..0f4ba72
+--- /dev/null
++++ b/target/linux/armadaxp/base-files/etc/config/system
+@@ -0,0 +1,29 @@
++config system
++	option hostname	OpenWrt
++	option timezone	UTC
++
++config timeserver ntp
++	list server	0.openwrt.pool.ntp.org
++	list server	1.openwrt.pool.ntp.org
++	list server	2.openwrt.pool.ntp.org
++	list server	3.openwrt.pool.ntp.org
++	option enable_server 0
++
++config button
++        option button   wps
++        option action   pressed
++        option handler  "/lib/wifi/wps-hotplug.sh"
++
++config button
++        option button 'reset'
++        option action 'released'
++        option handler '/usr/sbin/reset_handler reboot'
++        option min '1'
++        option max '10'
++
++config button
++        option button 'reset'
++        option action 'released'
++        option handler '/usr/sbin/reset_handler factory'
++        option min '11'
++        option max '20'
+diff --git a/target/linux/armadaxp/base-files/etc/hotplug.d/button/00-button b/target/linux/armadaxp/base-files/etc/hotplug.d/button/00-button
+new file mode 100644
+index 0000000..63cc217
+--- /dev/null
++++ b/target/linux/armadaxp/base-files/etc/hotplug.d/button/00-button
+@@ -0,0 +1,24 @@
++. /lib/functions.sh
++do_button () {
++	local button
++	local action
++	local handler
++	local min
++	local max
++
++	config_get button $1 button
++	config_get action $1 action
++	config_get handler $1 handler
++	config_get min $1 min
++	config_get max $1 max
++	
++	[ "$ACTION" = "$action" -a "$BUTTON" = "$button" -a -n "$handler" ] && {
++		[ -z "$min" -o -z "$max" ] && eval $handler 
++		[ -n "$min" -a -n "$max" ] && {
++			[ $min -le $SEEN -a $max -ge $SEEN ] && eval $handler 
++		}
++	}
++}
++
++config_load system
++config_foreach do_button button
+diff --git a/target/linux/armadaxp/base-files/etc/hotplug2.rules b/target/linux/armadaxp/base-files/etc/hotplug2.rules
+new file mode 100644
+index 0000000..da12f7f
+--- /dev/null
++++ b/target/linux/armadaxp/base-files/etc/hotplug2.rules
+@@ -0,0 +1,10 @@
++$include /etc/hotplug2-common.rules
++
++SUBSYSTEM ~~ (^net$|^input$|button$|^usb$|^ieee1394$|^block$|^atm$|^zaptel$|^tty$) {
++	exec /sbin/hotplug-call %SUBSYSTEM%
++}
++
++DEVICENAME == watchdog {
++	exec /sbin/watchdog -t 5 /dev/watchdog
++	next-event
++}
+diff --git a/target/linux/armadaxp/base-files/etc/init.d/mamba b/target/linux/armadaxp/base-files/etc/init.d/mamba
+new file mode 100755
+index 0000000..f77616d
+--- /dev/null
++++ b/target/linux/armadaxp/base-files/etc/init.d/mamba
+@@ -0,0 +1,9 @@
++#!/bin/sh /etc/rc.common
++# Copyright (C) 2006 OpenWrt.org 
++
++START=09
++start() {
++	echo 33 > /sys/class/gpio/unexport
++	sleep 1
++	echo 40 > /sys/class/gpio/export
++}
+diff --git a/target/linux/armadaxp/base-files/usr/sbin/reset_handler b/target/linux/armadaxp/base-files/usr/sbin/reset_handler
+new file mode 100755
+index 0000000..027d3c4
+--- /dev/null
++++ b/target/linux/armadaxp/base-files/usr/sbin/reset_handler
+@@ -0,0 +1,15 @@
++#!/bin/sh
++
++mode=$1
++if [ $mode = "reboot" ]
++then
++	logger reboot
++	/sbin/reboot
++elif [ $mode = "factory" ]
++then
++	logger factory_reset
++	/sbin/firstboot jffs2reset
++	sleep 2
++	/sbin/reboot
++fi
++
+-- 
+1.7.9.5
+

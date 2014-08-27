@@ -1,0 +1,57 @@
+From c2295c5bb28f6e86e6a50398e1652d153a4d5d4e Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Mon, 29 Aug 2011 16:57:56 +0300
+Subject: [PATCH 002/609] NFC: Remove reset control flag and make device reset
+ in main flow
+
+Signed-off-by: Seif Mazareeb <seif@seif-desktop.(none)>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/mv_hal/nfc/mvNfc.c |   17 +++++++----------
+ 1 file changed, 7 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
+index c737c4b..269e0c6 100644
+--- a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
++++ b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
+@@ -97,9 +97,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+ /* NAND special features bitmask definition.	*/
+ #define NFC_FLAGS_NONE			0x0
+-#define NFC_FLAGS_RESET_NEEDED		0x1
+-#define NFC_FLAGS_ONFI_MODE_3_SET	0x2
+-#define NFC_CLOCK_UPSCALE_250M		0x4
++#define NFC_FLAGS_ONFI_MODE_3_SET	0x1
++#define NFC_CLOCK_UPSCALE_250M		0x2
+ 
+ /* End of NAND special features definitions.	*/
+ 
+@@ -460,7 +459,7 @@ MV_NFC_FLASH_INFO flashDeviceInfo[] = {
+         .id = 0x382C,		/* Device ID 0xDevice,Vendor */
+         .model = "Micron 8Gb 8bit",
+         .bb_page = 0,		/* Manufacturer Bad block marking page in block */
+-        .flags = (NFC_CLOCK_UPSCALE_250M | NFC_FLAGS_ONFI_MODE_3_SET | NFC_FLAGS_RESET_NEEDED)
++        .flags = (NFC_CLOCK_UPSCALE_250M | NFC_FLAGS_ONFI_MODE_3_SET)
+         }
+ };
+ 
+@@ -635,12 +634,10 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo, MV_NFC_CTRL *nfcCtrl)
+ 	/* Write registers before device detection */
+ 	MV_REG_WRITE(NFC_CONTROL_REG, ctrl_reg);
+ 
+-	if (flashDeviceInfo[i].flags &= NFC_FLAGS_RESET_NEEDED) {
+-		/* reset the device */
+-		ret = mvNfcReset();
+-		if (ret != MV_OK)
+-			return ret;
+-	}
++	/* reset the device */
++	ret = mvNfcReset();
++	if (ret != MV_OK)
++		return ret;
+ 
+ 	/* Read the device ID */
+ 	ret = mvNfcReadIdNative(nfcCtrl->currCs, &read_id);
+-- 
+1.7.9.5
+

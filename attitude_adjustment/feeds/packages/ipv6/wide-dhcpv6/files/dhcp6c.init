@@ -1,0 +1,172 @@
+#!/bin/sh /etc/rc.common
+
+DHCP6C_REQUEST_OPTIONS='domain_name_servers domain_name ntp_servers sip_server_address sip_domain_name nis_server_address nis_domain_name nisp_server_address nisp_domain_name bcmcs_server_address bcmcs_domain_name'
+
+dhcp6c_write_duid() {
+	local mac="${1:-$(ifconfig "$client_device" | sed -ne 's/[[:space:]]*$//; s/.*HWaddr //p')}"
+	local pat="[0-9A-F][0-9A-F]"
+
+	case "$mac" in
+		# exactly 6 octets -> assume type 3 (DUID-LL - RFC3315, 9.4)
+		$pat:$pat:$pat:$pat:$pat:$pat)
+			local oIFS="$IFS"; IFS=":"; set -- $mac; IFS="$oIFS"
+
+			# low endian
+			if [ "$(printf \\1 | hexdump -n1 -ve '8/2 "" "%04x" ""')" = "0001" ]; then
+				printf \\x0a\\x00
+
+			# big endian
+			else
+				printf \\x00\\x0a
+			fi
+
+			printf \\x00\\x03\\x00\\x06\\x$1\\x$2\\x$3\\x$4\\x$5\\x$6
+			logger -t dhcp6c "Using MAC address DUID 00:03:00:06:$1:$2:$3:$4:$5:$6"
+		;;
+		# at least 7 octets -> could be type 1 or type 2
+		$pat:$pat:$pat:$pat:$pat:$pat:*)
+			local len_id=":$(echo "$mac" | sed -e 's/[^:]//g')"
+			local len_hi=$(printf "%02x" $((${#len_id} / 0xFF)) )
+			local len_lo=$(printf "%02x" $((${#len_id} % 0xFF)) )
+
+			# low endian
+			if [ "$(printf \\1 | hexdump -n1 -ve '8/2 "" "%04x" ""')" = "0001" ]; then
+				printf \\x$len_lo\\x$len_hi
+
+			# big endian
+			else
+				printf \\x$len_hi\\x$len_lo
+			fi
+
+			printf $(echo "$mac" | sed -e 's/^/\\x/; s/:/\\x/g')
+			logger -t dhcp6c "Using user provided DUID $mac"
+		;;
+		*)
+			logger -t dhcp6c "Unable to derive DUID from interface '$client_device' and no valid user DUID given"
+		;;
+	esac
+}
+
+dhcp6c_write_interface() {
+	local cfg=$1
+	local sla_id
+	local sla_len
+	local enabled
+	local device
+
+	config_get_bool enabled "$cfg" enabled 0
+
+	if [ $enabled -ne 0 ]; then
+		config_get sla_id "$cfg" sla_id
+		config_get sla_len "$cfg" sla_len
+
+		network_get_device device "$cfg" && {
+			printf '\tprefix-interface %s {\n' "$device"
+			printf '\t\tsla-id %s;\n' "$sla_id"
+			printf '\t\tsla-len %s;\n' "$sla_len"
+			printf '\t};\n'
+		}
+	fi
+}
+
+dhcp6c_write_request() {
+	printf '\trequest %s;\n' $1 | sed -e s/_/-/g
+}
+
+dhcp6c_write_config() {
+	local pd
+	local na
+	config_get_bool pd basic pd 0
+	config_get_bool na basic na 0
+
+	printf 'interface %s {\n' "$client_ifname"
+
+	if [ $pd -ne 0 ]; then
+		printf '\tsend ia-pd 0;\n'
+	fi
+
+	if [ $na -ne 0 ]; then
+		printf '\tsend ia-na 0;\n'
+	fi
+
+	local rapid_commit
+	config_get_bool rapid_commit basic rapid_commit 0
+	[ $rapid_commit -ne 0 ] && printf '\tsend rapid-commit;\n'
+
+	local script
+	config_get script basic script
+	[ "$script" != "" ] && printf '\tscript "%s";\n' "$script"
+
+	local request
+	local value
+	for request in $DHCP6C_REQUEST_OPTIONS; do
+		config_get_bool value basic "$request" 0
+		[ $value -ne 0 ] && dhcp6c_write_request "$request"
+	done
+
+	printf '};\n\n'
+
+	if [ $pd -ne 0 ]; then
+		printf 'id-assoc pd 0 {\n'
+		config_foreach dhcp6c_write_interface interface
+		printf '};\n\n'
+	fi
+
+	if [ $na -ne 0 ]; then
+		printf 'id-assoc na 0 {\n'
+		printf '};\n\n'
+	fi
+
+	return 0
+}
+
+start() {
+	[ ! -e /etc/dhcp6cctlkey ] && `dd if=/dev/urandom count=1 2> /dev/null | md5sum | cut -d" " -f1 > /etc/dhcp6cctlkey`
+
+	[ -e /var/run/dhcp6c.pid ] && return 0
+
+	. /lib/functions/network.sh
+
+	config_load "dhcp6c"
+
+	local enabled
+	config_get_bool enabled basic enabled 0
+	[ $enabled -eq 0 ] && return 0
+
+	local user_duid
+	config_get user_duid basic duid
+
+	logger -t dhcp6c starting dhcp6c
+
+	local client_interface client_ifname client_device
+	config_get client_interface basic interface
+	network_get_device  client_ifname "$client_interface"
+	network_get_physdev client_device "$client_interface" || client_device="$client_ifname"
+
+	local config_file="/var/etc/dhcp6c.conf"
+	local duid_file="/var/dhcp6c_duid"
+	mkdir -m 755 -p /var/etc
+	dhcp6c_write_config > $config_file
+	dhcp6c_write_duid "$user_duid" > $duid_file
+
+	local debug
+	local debug_option
+	config_get_bool debug basic debug 0
+	[ $debug -eq 1 ] && debug_option="-D"
+	/usr/sbin/dhcp6c -c $config_file $debug_option $client_ifname
+
+	sleep 3
+	ACTION=start /sbin/hotplug-call dhcp6c
+
+	return 0
+}
+
+stop() {
+	logger -t dhcp6c stopping dhcp6c
+	service_kill dhcp6c /var/run/dhcp6c.pid
+	rm -f /var/etc/dhcp6c.conf /var/run/dhcp6c.pid
+	ACTION=stop /sbin/hotplug-call dhcp6c
+	return 0
+}
+
+

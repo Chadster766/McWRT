@@ -1,0 +1,35 @@
+From 1a4b4e444442f2af080d203271d12adb839d2e49 Mon Sep 17 00:00:00 2001
+From: Tawfik Bayouk <tawfik@marvell.com>
+Date: Mon, 26 Mar 2012 16:43:47 +0200
+Subject: [PATCH 128/609] Set default PM level to WFI to avoid Deep-idle stall
+
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/plat-armada/cpuidle.c |    4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/arch/arm/plat-armada/cpuidle.c b/arch/arm/plat-armada/cpuidle.c
+index de10253..c02bddd 100755
+--- a/arch/arm/plat-armada/cpuidle.c
++++ b/arch/arm/plat-armada/cpuidle.c
+@@ -87,7 +87,7 @@ static int build_identity_page_table(void)
+ }
+ 
+ int pm_mode = DISABLED;
+-int pm_support = SNOOZE;
++int pm_support = WFI;
+ 
+ static int __init pm_enable_setup(char *str)
+ {
+@@ -99,8 +99,6 @@ static int __init pm_enable_setup(char *str)
+ 		pm_support = SNOOZE;
+ 	else if (!strncmp(str, "off", 3))
+ 		pm_support = DISABLED;
+-	else
+-		pm_support = SNOOZE;
+ 
+ 	return 1;
+ }
+-- 
+1.7.9.5
+

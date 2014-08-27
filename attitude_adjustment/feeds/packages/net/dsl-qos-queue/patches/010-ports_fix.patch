@@ -1,0 +1,22 @@
+--- a/ipt_rules
++++ b/ipt_rules
+@@ -26,14 +26,14 @@ iptables -t mangle -A MYSHAPER-OUT -p tc
+ iptables -t mangle -A MYSHAPER-OUT -p icmp -j MARK --set-mark 20               # ICMP (ping) - high prio, impress friends
+ iptables -t mangle -A MYSHAPER-OUT -p udp --dport 123 -j MARK --set-mark 20    # NTP should be low-lag
+ iptables -t mangle -A MYSHAPER-OUT -p udp --dport 53 -j MARK --set-mark 21     # DNS name resolution (small packets)
+-iptables -t mangle -A MYSHAPER-OUT -p tcp --dport ssh -j MARK --set-mark 22    # secure shell
+-iptables -t mangle -A MYSHAPER-OUT -p tcp --sport ssh -j MARK --set-mark 22    # secure shell
+-iptables -t mangle -A MYSHAPER-OUT -p tcp --dport telnet -j MARK --set-mark 22 # telnet (ew...)
+-iptables -t mangle -A MYSHAPER-OUT -p tcp --sport telnet -j MARK --set-mark 22 # telnet (ew...)
++iptables -t mangle -A MYSHAPER-OUT -p tcp --dport 22 -j MARK --set-mark 22    # secure shell
++iptables -t mangle -A MYSHAPER-OUT -p tcp --sport 22 -j MARK --set-mark 22    # secure shell
++iptables -t mangle -A MYSHAPER-OUT -p tcp --dport 23 -j MARK --set-mark 22 # telnet (ew...)
++iptables -t mangle -A MYSHAPER-OUT -p tcp --sport 23 -j MARK --set-mark 22 # telnet (ew...)
+ iptables -t mangle -A MYSHAPER-OUT -p ipv6-crypt -j MARK --set-mark 24         # IPSec - we dont know what the payload is though...
+ iptables -t mangle -A MYSHAPER-OUT -p udp --dport 10000 -j MARK --set-mark 24  # IPSec (udp tunnel) - we dont know what the payload is though...
+ 
+-iptables -t mangle -A MYSHAPER-OUT -p tcp --sport http -j MARK --set-mark 25   # Local web server
++iptables -t mangle -A MYSHAPER-OUT -p tcp --sport 80 -j MARK --set-mark 25   # Local web server
+ iptables -t mangle -A MYSHAPER-OUT -p tcp -m length --length :64 -j MARK --set-mark 21 # small packets (probably just ACKs)
+ iptables -t mangle -A MYSHAPER-OUT -p tcp --sport 3389 -j MARK --set-mark 23   # windows remote computer connection
+ iptables -t mangle -A MYSHAPER-OUT -m mark --mark 0 -j MARK --set-mark 26      # redundant- mark any unmarked packets as 26 (low pri

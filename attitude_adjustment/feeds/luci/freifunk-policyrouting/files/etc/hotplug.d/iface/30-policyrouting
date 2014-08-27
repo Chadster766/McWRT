@@ -1,0 +1,109 @@
+[ "$INTERFACE" != "wan" ] && exit 0
+[ -f /proc/net/ipv6_route ] && has_ipv6=1
+
+olsrd_rmtables() {
+	# Remove custom routing tables from olsrd
+	if [ "`uci -q get olsrd.@olsrd[0].RtTable`" == "111" ] || [ "`uci -q get olsrd.@olsrd[0].RtTableDefault`" == "112" ]; then
+		uci delete olsrd.@olsrd[0].RtTable
+		uci delete olsrd.@olsrd[0].RtTableDefault
+		uci commit
+		/etc/init.d/olsrd restart
+	fi
+}
+
+case $ACTION in
+        ifup)
+		pr="`uci get freifunk-policyrouting.pr.enable`"
+		fallback="`uci get freifunk-policyrouting.pr.fallback`"
+		# check if ipv6 is enabled:
+
+		if [ $pr = "1" ]; then
+			logger -s -t policyrouting "Starting policy routing on $INTERFACE"
+
+			# Setup new tables
+			tables="/etc/iproute2/rt_tables"
+			if [ -z "`grep "111" $tables`" ]; then
+				echo "111 olsr" >> $tables
+			fi
+			if [ -z "`grep "112" $tables`" ]; then
+				echo "112 olsr-default" >> $tables
+			fi
+
+			# Make sure Rt_tables in olsrd are in place
+			if [ ! "`uci -q get olsrd.@olsrd[0].RtTable`" == "111" ] || [ ! "`uci -q get olsrd.@olsrd[0].RtTableDefault`" == "112" ]; then
+				uci set olsrd.@olsrd[0].RtTable='111'
+				uci set olsrd.@olsrd[0].RtTableDefault='112'
+				uci commit
+				/etc/init.d/olsrd restart
+			fi
+
+			# Disable dyn_gw and dyngw_plain
+			dyngwlib=`uci show olsrd |grep dyn_gw.so |awk {' FS="."; print $1"."$2 '}`
+			if [ -n "$dyngwlib" ]; then
+				uci set $dyngwlib.ignore=1
+				uci commit
+			fi
+
+			dyngwplainlib=`uci show olsrd |grep dyn_gw_plain |awk {' FS="."; print $1"."$2 '}`
+			if [ -n "$dyngwplainlib" ]; then
+				uci set $dyngwplainlib.ignore=1
+				uci commit
+			fi
+	
+			gw="$(ip r |grep default | cut -d " " -f 3)"
+			# if no gateway was found stop now
+			[ -z "$gw" ] && logger -s -t policyrouting "No gateway found" && exit 1
+			
+			device="`uci -q -p /var/state get network.wan.ifname`"
+			[ -z "$device" ] && device="`uci -q -p /var/state get network.wan.device`"
+			[ -z "$device" ] && logger -s -t policyrouting "No device found for wan." && exit 1
+
+			test -n "`ip r s t default`" && ip r d default t default
+			test -n "`ip r s |grep default`" && ip route del default
+			ip route add default via $gw dev $device table default
+
+			if [ "$has_ipv6" = 1 ]; then
+				local ip6gw=$(ip -6 r |grep default |cut -d " " -f 3)
+				test -n "`ip -6 r s t default`" && ip -6 r d default t default
+				if [ -n "`ip -6 r s |grep default`" ]; then
+					ip -6 route del default
+					ip -6 r a $ip6gw via $ip6gw dev $dev table default
+					ip -6 route add default via $ip6gw dev $device table default
+				fi
+			fi
+
+			ip rule del lookup main
+			ip rule add fwmark 1 lookup olsr-default
+			ip rule add lookup main
+			ip rule add lookup olsr
+                        # Fallback via mesh if no ipv4 gateway is found in default table
+			[ "$fallback" = 1 ] && ip rule add lookup olsr-default prio 32800
+
+			if [ "$has_ipv6" = 1 ]; then
+	                        ip -6 rule del lookup main
+	                        ip -6 rule add lookup olsr prio 16380
+	                        ip -6 rule add lookup main prio 16390
+	                        ip -6 rule add fwmark 1 lookup olsr-default prio 16400
+	                        ip -6 rule add lookup default prio 16410
+	                        [ "$fallback" = 1 ] && ip -6 rule add lookup olsr-default prio 16420
+			fi
+		else
+			olsrd_rmtables
+		fi
+	;;
+
+	ifdown)
+	logger -s -t policyrouting "Deleting ipv4 policy rules for $INTERFACE"
+	olsrd_rmtables
+	ip rule del fwmark 1 lookup olsr-default > /dev/null 2>&1
+	ip rule del lookup olsr-default > /dev/null 2>&1
+	ip rule del lookup olsr	> /dev/null 2>&1
+	if [ "$has_ipv6" = 1 ]; then
+		logger -s -t policyrouting "Deleting ipv4 policy rules for $INTERFACE"
+		ip -6 rule del fwmark 1 lookup olsr-default > /dev/null 2>&1
+		ip -6 rule del lookup olsr-default > /dev/null 2>&1
+		ip -6 rule del lookup olsr > /dev/null 2>&1
+                ip -6 rule del lookup default  > /dev/null 2>&1
+	fi
+	;;
+esac

@@ -1,0 +1,49 @@
+From 6e45a250f01c9f6d9788b3730276b35663ced088 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 17 Oct 2012 13:08:02 +0200
+Subject: [PATCH 318/609] PM: Fixed bug in pex suspend/resume routine
+
+	The loop that saved the status registers
+	didn't check if the pex IF is powered
+	this created reads from unpowered unit
+	that caused the CPU to hang
+
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/pex.c |   12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/arch/arm/mach-armadaxp/pex.c b/arch/arm/mach-armadaxp/pex.c
+index ff84320..70ebe9e 100644
+--- a/arch/arm/mach-armadaxp/pex.c
++++ b/arch/arm/mach-armadaxp/pex.c
+@@ -467,6 +467,12 @@ static int mv_pex_suspend(struct platform_device *dev, pm_message_t state)
+ 	/* Save PCI Express status Register */
+ 	for (pciIf = 0; pciIf < pex_ifnum; pciIf++) {
+ 		pexHWInf = boardPexInfo->pexMapping[pciIf];
++
++		if (MV_FALSE == mvUnitMapIsPexMine(pexHWInf))
++			continue;
++		if (MV_FALSE == mvCtrlPwrClckGet(PEX_UNIT_ID, pexHWInf))
++			continue;
++
+ 		pex_status[pexHWInf] = MV_REG_READ(PEX_STATUS_REG(pexHWInf));
+ 	}
+ 
+@@ -484,6 +490,12 @@ static int mv_pex_resume(struct platform_device *dev)
+ 	/* Restore PCI Express status Register */
+ 	for (pciIf = 0; pciIf < pex_ifnum; pciIf++) {
+ 		pexHWInf = boardPexInfo->pexMapping[pciIf];
++
++		if (MV_FALSE == mvUnitMapIsPexMine(pexHWInf))
++			continue;
++		if (MV_FALSE == mvCtrlPwrClckGet(PEX_UNIT_ID, pexHWInf))
++			continue;
++
+ 		MV_REG_WRITE(PEX_STATUS_REG(pexHWInf), pex_status[pexHWInf]);
+ 	}
+ 
+-- 
+1.7.9.5
+

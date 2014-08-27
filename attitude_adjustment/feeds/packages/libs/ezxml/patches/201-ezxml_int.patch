@@ -1,0 +1,123 @@
+--- a/ezxml.c
++++ b/ezxml.c
+@@ -25,6 +25,7 @@
+ #include <stdlib.h>
+ #include <stdio.h>
+ #include <stdarg.h>
++#include <errno.h>
+ #include <string.h>
+ #include <ctype.h>
+ #include <unistd.h>
+@@ -72,6 +73,19 @@ ezxml_t ezxml_idx(ezxml_t xml, int idx)
+     return xml;
+ }
+ 
++int ezxml_int(ezxml_t xml, int default_value)
++{
++	int ret;
++	
++	if(!xml)
++		return default_value;
++		
++	errno = 0;
++	ret = strtol(xml->txt, NULL, 10);
++
++	return (errno == 0 ? ret : default_value);
++}
++
+ // returns the value of the requested tag attribute or NULL if not found
+ const char *ezxml_attr(ezxml_t xml, const char *attr)
+ {
+@@ -89,6 +103,23 @@ const char *ezxml_attr(ezxml_t xml, cons
+     return (root->attr[i][j]) ? root->attr[i][j + 1] : NULL; // found default
+ }
+ 
++int ezxml_attr_int(ezxml_t xml, const char *attr, int default_value)
++{
++	int ret;
++	const char *val = NULL;
++	
++	if(!xml)
++		return default_value;
++		
++	if((val = ezxml_attr(xml, attr)) == NULL)
++		return default_value;
++	
++	errno = 0;
++	ret = strtol(val, NULL, 10);
++
++	return (errno == 0 ? ret : default_value);
++}
++
+ // same as ezxml_get but takes an already initialized va_list
+ ezxml_t ezxml_vget(ezxml_t xml, va_list ap)
+ {
+@@ -926,6 +957,16 @@ ezxml_t ezxml_set_txt(ezxml_t xml, const
+     return xml;
+ }
+ 
++ezxml_t ezxml_set_int(ezxml_t xml, int data)
++{
++	char *buf = NULL;
++	if (! xml) return NULL;
++	
++	asprintf(&buf, "%d", data);
++	
++	return ezxml_set_flag(ezxml_set_txt(xml, buf), EZXML_TXTM);
++}
++
+ // Sets the given tag attribute or adds a new attribute if not found. A value
+ // of NULL will remove the specified attribute. Returns the tag given.
+ ezxml_t ezxml_set_attr(ezxml_t xml, const char *name, const char *value)
+@@ -968,6 +1009,15 @@ ezxml_t ezxml_set_attr(ezxml_t xml, cons
+     return xml;
+ }
+ 
++ezxml_t ezxml_set_attr_int(ezxml_t xml, const char *name, int data)
++{
++	char *buf = NULL;
++	if (! xml) return NULL;
++	
++	asprintf(&buf, "%d", data);
++	return ezxml_set_attr(ezxml_set_flag(xml, EZXML_DUP), name, buf);
++}
++
+ // sets a flag for the given tag and returns the tag
+ ezxml_t ezxml_set_flag(ezxml_t xml, short flag)
+ {
+--- a/ezxml.h
++++ b/ezxml.h
+@@ -95,9 +95,13 @@ ezxml_t ezxml_idx(ezxml_t xml, int idx);
+ // returns the given tag's character content or empty string if none
+ #define ezxml_txt(xml) ((xml) ? xml->txt : "")
+ 
++int ezxml_int(ezxml_t xml, int default_value);
++
+ // returns the value of the requested tag attribute, or NULL if not found
+ const char *ezxml_attr(ezxml_t xml, const char *attr);
+ 
++int ezxml_attr_int(ezxml_t xml, const char *attr, int default_value);
++
+ // Traverses the ezxml sturcture to retrieve a specific subtag. Takes a
+ // variable length list of tag names and indexes. The argument list must be
+ // terminated by either an index of -1 or an empty string tag name. Example: 
+@@ -137,6 +141,9 @@ ezxml_t ezxml_add_child(ezxml_t xml, con
+ // sets the character content for the given tag and returns the tag
+ ezxml_t ezxml_set_txt(ezxml_t xml, const char *txt);
+ 
++// set int value
++ezxml_t ezxml_set_int(ezxml_t xml, int data);
++
+ // wrapper for ezxml_set_txt() that strdup()s txt
+ #define ezxml_set_txt_d(xml, txt) \
+     ezxml_set_flag(ezxml_set_txt(xml, strdup(txt)), EZXML_TXTM)
+@@ -144,6 +151,9 @@ ezxml_t ezxml_set_txt(ezxml_t xml, const
+ // Sets the given tag attribute or adds a new attribute if not found. A value
+ // of NULL will remove the specified attribute. Returns the tag given.
+ ezxml_t ezxml_set_attr(ezxml_t xml, const char *name, const char *value);
++	
++// set int value for an attr
++ezxml_t ezxml_set_attr_int(ezxml_t xml, const char *name, int data);
+ 
+ // Wrapper for ezxml_set_attr() that strdup()s name/value. Value cannot be NULL
+ #define ezxml_set_attr_d(xml, name, value) \

@@ -1,0 +1,509 @@
+From ba312fe55b0b8ce11a98f25df27981fe0c9c6629 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Mon, 11 Feb 2013 11:14:00 +0200
+Subject: [PATCH 527/609] IRQ: Re-design of the Armada interrupt driver
+
+Disable and removal of the "Direct IRQ handling mode" mode
+Update of the IRQ Mask, Unmask and Set Affinity functions
+Add special treatment for Network IRQs
+This patch fixes BTS #225 and #237 and should be merged to stable branch
+Code cleanup
+
+Change-Id: Ifc34e4b01b422d0d0282453dc7bf5c4efa66de6d
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/1120
+Reviewed-by: Tawfik Bayouk <tawfik@marvell.com>
+Tested-by: Tawfik Bayouk <tawfik@marvell.com>
+Signed-off-by: Seif Mazareeb <seif@marvell.com>
+---
+ arch/arm/mach-armadaxp/Kconfig                     |   14 -
+ arch/arm/mach-armadaxp/include/mach/irqs.h         |    2 +-
+ arch/arm/mach-armadaxp/irq.c                       |  287 ++++++--------------
+ arch/arm/mach-armadaxp/pm.c                        |    5 +-
+ arch/arm/plat-armada/Kconfig                       |    2 +-
+ .../plat-armada/mv_drivers_lsp/mv_error/mv_error.c |    3 +-
+ 7 files changed, 82 insertions(+), 232 deletions(-)
+
+diff --git a/arch/arm/mach-armadaxp/Kconfig b/arch/arm/mach-armadaxp/Kconfig
+index 2a8f51c..07b4121 100644
+--- a/arch/arm/mach-armadaxp/Kconfig
++++ b/arch/arm/mach-armadaxp/Kconfig
+@@ -97,20 +97,6 @@ config ARMADA_XP_SPARSEMEM
+ 	select ARCH_SPARSEMEM_ENABLE
+ 	default n
+ 
+-config ARMADAXP_USE_IRQ_INDIRECT_MODE
+-       bool "Use indirect mode for handling interrupt controller"
+-       default n
+-       help
+-         This mode enables using indirect mode for handling interrupts, in this
+-	 mode, the Interrupt Set Enable/Clear Enable registers are used for
+-	 unmasking/masking shared interrupts, and Interrupt Set Mask/Clear Mask
+-	 used for masking/unmasking per-cpu interrupts. Without this mode, the
+-	 Interrupt Source register is used directly. and this requires the
+-	 following:
+-	 - Locking mechanism to protect the access to the Interrupt Source Register
+-	 - Reads operation of those registers.
+-	 - Using the affinity variable for restoring the mask values
+-
+ config ARMADAXP_USE_IRQ_INTERRUPT_ACK
+        bool "Use Interrupt Ack register to detect pending interrupts"
+        default n
+diff --git a/arch/arm/mach-armadaxp/include/mach/irqs.h b/arch/arm/mach-armadaxp/include/mach/irqs.h
+index 3968cf9..71716ea 100644
+--- a/arch/arm/mach-armadaxp/include/mach/irqs.h
++++ b/arch/arm/mach-armadaxp/include/mach/irqs.h
+@@ -137,7 +137,7 @@
+ 
+ #define IRQ_MAIN_INTS_NUM	116
+ 
+-#define MAX_PER_CPU_IRQ_NUMBER  7
++#define MAX_PER_CPU_IRQ_NUMBER  28
+ /*
+  * AURORA General Purpose Pins
+  */
+diff --git a/arch/arm/mach-armadaxp/irq.c b/arch/arm/mach-armadaxp/irq.c
+index 13a1991..a3041dc 100644
+--- a/arch/arm/mach-armadaxp/irq.c
++++ b/arch/arm/mach-armadaxp/irq.c
+@@ -6,36 +6,15 @@
+ * warranty of any kind, whether express or implied.
+ */
+ 
+-#include <linux/kernel.h>
+-#include <linux/init.h>
+-#include <linux/irq.h>
+-#include <asm/mach/arch.h>
+-#include <asm/gpio.h>
+-#include <asm/io.h>
+ #include <linux/irq.h>
+ #include <linux/interrupt.h>
+ #include <plat/msi.h>
+-#include "ctrlEnv/mvCtrlEnvLib.h"
+-#include "ctrlEnv/mvSemaphore.h"
+-#include "boardEnv/mvBoardEnvLib.h"
+-#include "gpp/mvGpp.h"
+-#include "gpp/mvGppRegs.h"
+-#include "mvOs.h"
+ #include "include/mach/smp.h"
++#include "mvOs.h"
+ 
+ unsigned int  irq_int_type[NR_IRQS];
+-static DEFINE_SPINLOCK(irq_controller_lock);
+ #define ENABLED_DOORBELS 	(0xF0FF)
+ 
+-int max_per_cpu_irq = 28; // not enabled, default.
+-static int __init per_cpu_irq_setup(char *__unused)
+-{
+-max_per_cpu_irq=7;
+-return 1;
+-}
+-
+-__setup("per_cpu_irq_enable", per_cpu_irq_setup);
+-
+ #if (defined(CONFIG_PERF_EVENTS) && defined(CONFIG_HW_PERF_EVENTS)) || defined(CONFIG_ERROR_HANDLING)
+ static void axp_unmask_fabric_interrupt(int cpu)
+ {
+@@ -62,22 +41,38 @@ static void axp_mask_fabric_interrupt(int cpu)
+ 	MV_REG_WRITE(CPU_CF_LOCAL_MASK_REG(cpu), val);
+ 
+ #ifdef CONFIG_SMP
+-if (cpu > 0) { /*disabled for both cpu */
+-	val = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_MP));
+-	/* FIXME: assuming all 4 cpus */
+-	val &= ~0xf;
+-	MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_MP), val);
++	if (cpu > 0) { /*disabled for both cpu */
++		val = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_MP));
++		/* FIXME: assuming all 4 cpus */
++		val &= ~0xf;
++		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_MP), val);
+ }
+-#endif	
++#endif
+ }
+ #endif /* (CONFIG_PERF_EVENTS && CONFIG_HW_PERF_EVENTS) || CONFIG_ERROR_HANDLING */
+ 
+-#ifdef CONFIG_ARMADAXP_USE_IRQ_INDIRECT_MODE
+ void axp_irq_mask(struct irq_data *d)
+ {	
+-	MV_REG_WRITE(CPU_INT_SET_MASK_LOCAL_REG, d->irq);
+-#if (defined(CONFIG_PERF_EVENTS) && defined(CONFIG_HW_PERF_EVENTS)) || defined(CONFIG_ERROR_HANDLING)
+ 	int cpu;
++	/* In case of shared IRQ - Disable the IRQ and manually mask each of the CPUs */
++	/* In case of Network Per CPU IRQ and SMP - Mask all CPUs */
++	/* In case of Per CPU IRQ - Mask the only the requesting CPU */
++	if (d->irq > MAX_PER_CPU_IRQ_NUMBER)
++		MV_REG_WRITE(CPU_INT_CLEAR_ENABLE_REG, d->irq);
++#ifdef CONFIG_SMP
++	else if ((d->irq >= IRQ_AURORA_GBE0_FIC) &&
++			(d->irq <= IRQ_AURORA_GBE3_SIC)) {
++		for_each_possible_cpu(cpu) {
++			MV_REG_WRITE(CPU_INT_SET_MASK_REG(get_hw_cpu_id(cpu)), d->irq);
++		}
++	} else
++		MV_REG_WRITE(CPU_INT_SET_MASK_LOCAL_REG, d->irq);
++#else
++	MV_REG_WRITE(CPU_INT_SET_MASK_LOCAL_REG, d->irq);
++#endif
++
++#if (defined(CONFIG_PERF_EVENTS) && defined(CONFIG_HW_PERF_EVENTS))	\
++			|| defined(CONFIG_ERROR_HANDLING)
+ 	if(d->irq == IRQ_AURORA_MP){
+ 		for_each_online_cpu(cpu) {
+ 			axp_mask_fabric_interrupt(cpu);
+@@ -87,9 +82,24 @@ void axp_irq_mask(struct irq_data *d)
+ }
+ 
+ void axp_irq_unmask(struct irq_data *d)
+-{	
++{
++	int cpu;
++
++	/* In case of shared IRQ - Enable the IRQ */
++	/* In case of Network Per CPU IRQ and SMP - Set correct affinity to the IRQ */
++	/* In case of Per CPU IRQ - UnMask the only the requesting CPU */
++	if (d->irq > MAX_PER_CPU_IRQ_NUMBER)
++		MV_REG_WRITE(CPU_INT_SET_ENABLE_REG, d->irq);
++#ifdef CONFIG_SMP
++	else if ((d->irq >= IRQ_AURORA_GBE0_FIC) && (d->irq <= IRQ_AURORA_GBE3_SIC)) {
++		for_each_cpu(cpu, d->affinity)
++			MV_REG_WRITE(CPU_INT_CLEAR_MASK_REG(get_hw_cpu_id(cpu)), d->irq);
++	} else
++		MV_REG_WRITE(CPU_INT_CLEAR_MASK_LOCAL_REG, d->irq);
++#else
+ 	MV_REG_WRITE(CPU_INT_CLEAR_MASK_LOCAL_REG, d->irq);
+-	MV_REG_WRITE(CPU_INT_SET_ENABLE_REG, d->irq);
++#endif
++
+ #if (defined(CONFIG_PERF_EVENTS) && defined(CONFIG_HW_PERF_EVENTS)) || defined(CONFIG_ERROR_HANDLING)
+ 	int cpu;
+ 	if(d->irq == IRQ_AURORA_MP){
+@@ -103,147 +113,23 @@ void axp_irq_unmask(struct irq_data *d)
+ #ifdef CONFIG_SMP
+ int axp_set_affinity(struct irq_data *d, const struct cpumask *mask_val,bool force)
+ {
+-	MV_U32 addr, temp;
++	int cpu;
+ 	struct cpumask mask_temp;
+-	u32 irq=d->irq;
+-	addr = (CPU_INT_SOURCE_CONTROL_REG(irq));
+ 
+-	spin_lock(&irq_controller_lock);
+ 	cpumask_and(&mask_temp, mask_val, cpu_online_mask);
+ 	cpumask_copy(d->affinity, &mask_temp);
+ 	d->node = cpumask_first(&mask_temp);
+-	temp = MV_REG_READ(addr);
+-	temp &= ~0xf;
+-	temp |= *cpus_addr(mask_temp);
+-	MV_REG_WRITE(addr, temp);
+-	spin_unlock(&irq_controller_lock);
+ 
+-return 0;
+-}
+-#endif
+-#else /* CONFIG_ARMADAXP_USE_IRQ_INDIRECT_MODE */
+-
+-void axp_irq_mask(struct irq_data *d)
+-{	
+-	int i;
+-	u32 irq = d->irq;
+-	MV_U32 addr, temp, gpio_indx;
+-	if ((irq >= IRQ_AURORA_GPIO_START) && (irq < IRQ_AURORA_MSI_START)) {
+-		/* GPIO Interrupts */
+-		/* calculate index in main interrupt */
+-		gpio_indx = IRQ_AURORA_GPIO_0_7 + ((irq - IRQ_AURORA_GPIO_START) >> 3);
+-		/* add 1 because there is a gap between IRQ_AURORA_GPIO_24_31
+-		   and IRQ_AURORA_GPIO_32_39 */
+-		if (gpio_indx > IRQ_AURORA_GPIO_24_31)
+-			gpio_indx++;
+-		addr = (CPU_INT_SOURCE_CONTROL_REG(gpio_indx));
+-	} else if (irq >= IRQ_AURORA_MSI_START) {
+-		/* Per CPU MSI Interrupts */
+-		if ((irq - IRQ_AURORA_MSI_START) < NR_PRIVATE_MSI_GROUP)
+-			addr = CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_IN_DRBL_LOW);
++	for_each_possible_cpu(cpu) {
++		if (*cpus_addr(mask_temp) & (1 << cpu))
++			MV_REG_WRITE(CPU_INT_CLEAR_MASK_REG(get_hw_cpu_id(cpu)), d->irq);
+ 		else
+-			addr = CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_IN_DRBL_HIGH);
+-	} else
+-		addr = CPU_INT_SOURCE_CONTROL_REG(irq);
+-#ifdef CONFIG_MV_AMP_ENABLE
+-	 mvSemaLock(MV_SEMA_IRQ);
+-#else
+-	spin_lock(&irq_controller_lock);
+-#endif
+-	temp = MV_REG_READ(addr);
+-	if ((irq >= IRQ_AURORA_GPIO_START) && (irq < IRQ_AURORA_MSI_START)) {
+-		MV_U32 bitmask = 1 << (irq & (32-1));
+-		MV_U32 reg = (irq - IRQ_AURORA_GPIO_START) >> 5;
+-		MV_REG_BIT_RESET(GPP_INT_LVL_REG(reg), bitmask);
++			MV_REG_WRITE(CPU_INT_SET_MASK_REG(get_hw_cpu_id(cpu)), d->irq);
+ 	}
+ 
+-	if (irq <= max_per_cpu_irq) // per CPU
+-		temp &= ~(1 << hard_smp_processor_id());
+-	/* for GPIO IRQs , don't disable INTS , they will be disabled in the units mask */
+-	else if (irq < IRQ_MAIN_INTS_NUM)
+-		temp &= ~0xf;
+-
+-	MV_REG_WRITE(addr, temp);
+-#if (defined(CONFIG_PERF_EVENTS) && defined(CONFIG_HW_PERF_EVENTS)) || defined(CONFIG_ERROR_HANDLING)
+-	 if(irq==IRQ_AURORA_MP){
+-		for_each_online_cpu(i) {
+-			axp_unmask_fabric_interrupt(i);
+-		}
+-	}
+-#endif
+-#ifdef CONFIG_MV_AMP_ENABLE
+-	mvSemaUnlock(MV_SEMA_IRQ);
+-#else
+-	spin_unlock(&irq_controller_lock);
+-#endif
+-}
+-
+-void axp_irq_unmask(struct irq_data *d)
+-{	
+-	u32 irq=d->irq;
+-	MV_U32 addr, temp, gpio_indx;
+-	unsigned int map = 0x1;
+-	if ((irq >= IRQ_AURORA_GPIO_START) && (irq < IRQ_AURORA_MSI_START)) {
+-		/* GPIO Interrupts */
+-		/* calculate index in main interrupt */
+-		gpio_indx = IRQ_AURORA_GPIO_0_7 + ((irq - IRQ_AURORA_GPIO_START) >> 3);
+-		/* add 1 because there is a gap between IRQ_AURORA_GPIO_24_31
+-		   and IRQ_AURORA_GPIO_32_39 */
+-		if (gpio_indx > IRQ_AURORA_GPIO_24_31)
+-			gpio_indx++;
+-		addr = (CPU_INT_SOURCE_CONTROL_REG(gpio_indx));
+-	} else if (irq >= IRQ_AURORA_MSI_START) {
+-		/* Per CPU MSI Interrupts */
+-		if ((irq - IRQ_AURORA_MSI_START) < NR_PRIVATE_MSI_GROUP)
+-			addr = CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_IN_DRBL_LOW);
+-		else
+-			addr = CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_IN_DRBL_HIGH);
+-	} else
+-		addr = CPU_INT_SOURCE_CONTROL_REG(irq);
+-#ifdef CONFIG_MV_AMP_ENABLE
+-	mvSemaLock(MV_SEMA_IRQ);
+-#else
+-	spin_lock(&irq_controller_lock);
+-#endif
+-	temp = MV_REG_READ(addr);
+-
+-	if (irq >= IRQ_AURORA_GPIO_START) {
+-		MV_U32 bitmask = 1 << (irq & (32-1));
+-		MV_U32 reg = (irq - IRQ_AURORA_GPIO_START) >> 5;
+-		MV_REG_BIT_SET(GPP_INT_LVL_REG(reg), bitmask);
+-	}
+-#ifdef CONFIG_SMP
+-	else{
+-		map = get_hw_cpu_mask(*cpus_addr(*(d->affinity)));
+-       }
+-#endif
+-//temp &= ~0xf;
+-	temp |= map;
+-	temp |= (0x1 << 28); /* Set IntEn for this source */
+-	MV_REG_WRITE(addr, temp);
+-#ifdef CONFIG_MV_AMP_ENABLE
+-	mvSemaUnlock(MV_SEMA_IRQ);
+-#else
+-	spin_unlock(&irq_controller_lock);
+-#endif
+-}
+-
+-
+-#ifdef CONFIG_SMP
+-int axp_set_affinity(struct irq_data *d, const struct cpumask *mask_val,bool force)
+-{
+-	struct cpumask mask_temp;
+-
+-	cpumask_and(&mask_temp, mask_val, cpu_online_mask);
+-	cpumask_copy((*d).affinity, &mask_temp);
+-	spin_lock(&irq_controller_lock);
+-	(*d).node = cpumask_first(&mask_temp);
+-	spin_unlock(&irq_controller_lock);
+-	axp_irq_unmask(d);
+ 	return 0;
+ }
+ #endif
+-#endif /* CONFIG_ARMADAXP_USE_IRQ_INDIRECT_MODE */
+ 
+ #ifdef CONFIG_SMP
+ void axp_ipi_init(void)
+@@ -269,63 +155,40 @@ static struct irq_chip axp_irq_chip = {
+ #endif
+ };
+ 
+-
+ void __init axp_init_irq(void)
+ {
+ 	u32 irq;
+ 	/* MASK all interrupts */
+-	/* Enable IRQ in control register */
+-	for (irq = 0; irq < IRQ_MAIN_INTS_NUM; irq++) {
++	for (irq = 0; irq < IRQ_MAIN_INTS_NUM; irq++)
+ 		axp_irq_mask(irq_get_irq_data(irq));
+-#ifndef CONFIG_SMP
+-#ifdef CONFIG_ARMADAXP_USE_IRQ_INDIRECT_MODE
+-		MV_REG_WRITE(CPU_INT_CLEAR_MASK_LOCAL_REG, irq);
+-#endif
+-#endif
+-	}
+-/*
+- * Register IRQ sources
+- */
++
++	/* Register IRQ sources */
+ 	for (irq = 0; irq < IRQ_AURORA_MSI_START ; irq++) {
+ 		irq_set_chip(irq, &axp_irq_chip);
+ 		irq_set_chip_data(irq, 0);
+ 		irq_set_handler(irq, handle_level_irq);
+ 		irq_set_status_flags(irq,IRQ_LEVEL);
+ #ifdef CONFIG_SMP
+-		/*Warninig  - Seif Mazreeb, in Linux 3.2 you must declare that an
+-		interrupt is a percpu .....without doing this timer interrupt won't happen.
+-		If we declare network interrupt in the same way ( which I think we should),
+-		we crash duing boot, keep this for timers for now.
+-		This is a  TODO at a second stage, evalute perfrmance and fix as needed
+-		*/
+-		if( irq < MAX_PER_CPU_IRQ_NUMBER && irq != IRQ_AURORA_MP) {
+-				irq_set_chip_and_handler(irq, &axp_irq_chip,
+-							 handle_percpu_devid_irq);
+-				irq_set_percpu_devid(irq);
++	/* Network Per CPU IRQ are treated as shared IRQs */
++		if ((irq < MAX_PER_CPU_IRQ_NUMBER) && (irq != IRQ_AURORA_MP) &&
++			((irq < IRQ_AURORA_GBE0_FIC) || (irq > IRQ_AURORA_GBE3_SIC))) {
++			irq_set_chip_and_handler(irq, &axp_irq_chip,
++				handle_percpu_devid_irq);
++			irq_set_percpu_devid(irq);
+ 		}
+ #endif
+ 		set_irq_flags(irq, IRQF_VALID);
+ 	}
+ 
+ #ifdef CONFIG_SMP
+-	{
+-		u32/*void __iomem **/addr;
+-        	/* Set the default affinity to the boot cpu. */
+-        	cpumask_clear(irq_default_affinity);
+-        	cpumask_set_cpu(smp_processor_id(), irq_default_affinity);
++	/* Set the default affinity to the boot cpu. */
++	cpumask_clear(irq_default_affinity);
++	cpumask_set_cpu(smp_processor_id(), irq_default_affinity);
+ 
+-		/* open IPI mask */
+-		/* this  register write does the job of axp_irq_unmask(IRQ_AURORA_IN_DRBL_LOW)
+-		   i.e. enable / unmask the DRBL_LOW interrupt.
+-		*/
+-	        MV_REG_WRITE(CPU_INT_CLEAR_MASK_LOCAL_REG, 0);
+-		addr = /*(void __iomem *)*/(AXP_IN_DRBEL_MSK);
+-		MV_REG_WRITE(addr, ENABLED_DOORBELS);
+-	}
++	axp_ipi_init();
+ #endif
+ 
+ 	armada_msi_init();
+-
+ }
+ 
+ #if (defined(CONFIG_PERF_EVENTS) && defined(CONFIG_HW_PERF_EVENTS))
+@@ -334,25 +197,27 @@ void __init axp_init_irq(void)
+  */
+ int pmu_request_irq(int irq, irq_handler_t handler)
+ {
+-        int i;
+-        int ret = request_irq(irq, handler, IRQF_DISABLED | IRQF_NOBALANCING, "armpmu", NULL);
+-        if (!ret) {
+-                for_each_online_cpu(i) {
+-                        axp_unmask_fabric_interrupt(i);
+-                }
+-        }
+-        return ret;
++	int i;
++	int ret = request_irq(irq, handler, IRQF_DISABLED |
++			IRQF_NOBALANCING, "armpmu", NULL);
++	if (!ret) {
++		for_each_online_cpu(i) {
++			axp_unmask_fabric_interrupt(i);
++		}
++	}
++	return ret;
+ }
+ EXPORT_SYMBOL(pmu_request_irq);
+ 
+ void pmu_free_irq(int irq)
+ {
+-        int i;
+-        for_each_online_cpu(i) {
+-                axp_mask_fabric_interrupt(i);
+-        }
+-        free_irq(irq, NULL);
++	int i;
++	for_each_online_cpu(i) {
++		axp_mask_fabric_interrupt(i);
++	}
++	free_irq(irq, NULL);
+ }
++
+ EXPORT_SYMBOL(pmu_free_irq);
+ #endif
+ 
+diff --git a/arch/arm/mach-armadaxp/pm.c b/arch/arm/mach-armadaxp/pm.c
+index 88ce8d2..ea7936a 100644
+--- a/arch/arm/mach-armadaxp/pm.c
++++ b/arch/arm/mach-armadaxp/pm.c
+@@ -54,7 +54,8 @@ static int armadaxp_pm_enter(suspend_state_t state)
+ 		/* Reenable the Uart IRQ in order to wake from it */
+ 		/* Enable Uart IRQ */
+ 		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0));
+-		reg = (reg & ~0xF) | 0x1;	/* Mask all non-boot CPUs */
++		reg |= (1 << CPU_INT_SOURCE_CONTROL_IRQ_OFFS);	/* Enable the IRQ */
++		reg = (reg & ~0xF) | 0x1;			/* Mask all non-boot CPUs */
+ 		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0), reg);
+ 
+ 		/* Disable IPI IRQs */
+@@ -93,7 +94,7 @@ static int armadaxp_pm_enter(suspend_state_t state)
+ 
+ 		/* Disable it since it will be re-enabled by the stack */
+ 		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0));
+-		reg &= ~0x1;
++		reg &= ~(1 << CPU_INT_SOURCE_CONTROL_IRQ_OFFS);
+ 		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0), reg);
+ #ifdef CONFIG_MV_ETH_PNC_WOL
+ 		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE0_FIC));
+diff --git a/arch/arm/plat-armada/Kconfig b/arch/arm/plat-armada/Kconfig
+index 77f9c2e..59c5d37 100644
+--- a/arch/arm/plat-armada/Kconfig
++++ b/arch/arm/plat-armada/Kconfig
+@@ -197,7 +197,7 @@ menu "Armada AMP options"
+ 
+ config MV_AMP_ENABLE
+         bool "Enable AMP support"
+-	depends on   (ARMADA_XP || (MV78XX0)) && (!ARMADA_XP_REV_Z1) && (SMP) && (!MV_ETH_BM) && (!ARMADAXP_USE_IRQ_INDIRECT_MODE)
++	depends on   (ARMADA_XP || (MV78XX0)) && (!ARMADA_XP_REV_Z1) && (SMP) && (!MV_ETH_BM)
+ 	default n
+ 
+ config MV_DRAM_BASE_G0
+diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_error/mv_error.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_error/mv_error.c
+index cd3c5a1..a846ccb 100644
+--- a/arch/arm/plat-armada/mv_drivers_lsp/mv_error/mv_error.c
++++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_error/mv_error.c
+@@ -389,12 +389,11 @@ static int __init errorhandling_notification_setup(void)
+ 		     IRQ_AURORA_SOC_ERROR, err);
+ 		return err;
+ 	}
+-#ifdef CONFIG_ARMADAXP_USE_IRQ_INDIRECT_MODE
++
+ #ifdef CONFIG_ERROR_HANDLING_DRAM_ECC
+ /*Enable the main mask of the interrupt*/
+ 	writel(0x1100000F, INTER_REGS_BASE | 0x20b10);
+ #endif
+-#endif
+ 
+ 	/*setup the axp_error_info struct */
+ 	axp_error_info.head = 0;
+-- 
+1.7.9.5
+
