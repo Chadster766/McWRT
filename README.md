@@ -11,13 +11,13 @@ Base OpenWRT from fork of Belkin Mamba Tag v3.9
 
 https://github.com/jimmychungbelkin/Mamba
 
-You need to have installed gcc, binutils, patch, bzip2, flex, make, gettext, pkg-config, unzip, libz-dev and libc headers.
+You need to have installed gcc, binutils, patch, bzip2, flex, make, gettext, pkg-config, unzip, libz-dev, libc headers, Subversion 1.7.
 
 For the Feeds to update (update.sh) from packages_12.09 you will need to have Subversion 1.7 installed.
 
 http://sagar.se/svn-1.7-on-wheezy.html
 
-To build the image just run "make". If successful the image should be in the "bin" directory.
+To build the image just run "update.sh" and "make". If successful the image should be in the "bin" directory.
 
 
 /**********************************/
