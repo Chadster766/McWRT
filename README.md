@@ -11,7 +11,7 @@ Base OpenWRT from fork of Belkin Mamba Tag v3.9
 
 https://github.com/jimmychungbelkin/Mamba
 
-You need to have installed gcc, binutils, patch, bzip2, flex, make, gettext, pkg-config, unzip, libz-dev, libc headers, Subversion 1.7.
+You need to have installed gcc, binutils, patch, bzip2, flex, make, gettext, pkg-config, unzip, libz-dev, libc headers and Subversion 1.7.
 
 For the Feeds to update (update.sh) from packages_12.09 you will need to have Subversion 1.7 installed.
 
