@@ -17,7 +17,7 @@ For the Feeds to update (update.sh) from packages_12.09 you will need to have Su
 
 http://sagar.se/svn-1.7-on-wheezy.html
 
-To build the image run "update.sh", "make dirclean", "make clean" and then "make". If successful the image should be in the "bin" directory.
+To build the image run "update.sh" and then "make". If successful the image should be in the "bin" directory.
 
 
 /**********************************/
