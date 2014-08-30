@@ -1,38 +1,45 @@
 McWRT
 =====
 
-A OpenWRT project for the Linksys WRT1900AC router.
+###A OpenWRT project for the Linksys WRT1900AC router.
 
-Original source of Marvell 88W8864 Linux Driver/Firmware
+**Original source of Marvell 88W8864 Linux Driver/Firmware**
+https://github.com/TheDgtl/mrvl_wlan_v7drv
 
-https://github.com/TheDgtl/mrvl_wlan_v7drv 
-
-Base OpenWRT from fork of Belkin Mamba Tag v3.9
-
+**Base OpenWRT from fork of Belkin Mamba Tag v3.9**
 https://github.com/jimmychungbelkin/Mamba
+
+-
 
 You need to have installed gcc, binutils, patch, bzip2, flex, make, gettext, pkg-config, unzip, libz-dev, libc headers and Subversion 1.7.
 
 For the Feeds to update (update.sh) from packages_12.09 you will need to have Subversion 1.7 installed.
-
 http://sagar.se/svn-1.7-on-wheezy.html
 
-To build the image run "update.sh" and then "make". If successful the image should be in the "bin" directory.
+-
 
+**To build the image run "update.sh" and then "make". If successful the image should be in the "bin" directory.**
 
-/**********************************/
+-
 
-To get the wireless driver to run upon router boot follow the instructions below:
+**How to update from Belkin/Linksys UI**
 
-1. Login in to the router's Web Interface and change the password
-2. SSH (Linux SSH or Putty) into the router with username root and the password you entered
+1.Login to WRT1900AC local UI
+2.Navigate to the Connectivity tab
+3.Select Manual firmware update
+4.Select image to load (e.g., openwrt-armadaxp--jffs2-128k.img)
+5.Select Update firmware
 
-At the command prompt run the below commands:
+After the firmware is updated, the unit will reboot, and the default ip address will be 192.168.200.1
+The default SSID's will be MAMBA_2G4, and MAMBA_5G2.
+The default username for OpwnWrt is 'root', and there is no default password set.
 
-1. echo ap8x > /etc/modules.d/10-ap8x
-2. reboot
+The unit will ask you to set a default password after you login to the UI.
 
+-
 
-/**********************************/
-
-
+**How to update from OpenWrt to Belkin/Linksys**
+1.Login to the WRT1900AC web UI
+2.Select the 'System' Tab, and then 'Backup / Flash Firmware' tab
+3.In the 'Flash new firmware image' section click the 'choose file' button and select your firmware
+4.Click 'flash image'

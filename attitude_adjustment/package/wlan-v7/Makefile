@@ -17,7 +17,7 @@ define KernelPackage/wlan-v7
   SUBMENU:=Wireless Drivers
   TITLE:=Test driver for 88W8764 WiFi chipsets
   FILES:=$(WLAN_V7_FILES)
-  AUTOLOAD:=$(call AutoLoad,30,WLAN_V7_AUTOLOAD)
+  AUTOLOAD:=$(call AutoLoad,10,$(WLAN_V7_AUTOLOAD))
 endef
 
 define KernelPackage/wlan-v7/description
