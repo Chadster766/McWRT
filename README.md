@@ -23,7 +23,7 @@ http://sagar.se/svn-1.7-on-wheezy.html
 **To build the image run "update.sh" and then "make". If successful the image should be in the "bin" directory.**
 
 -
-Flashing firmware to routers must only be done connect to the router with an Ethernet cable.
+Flashing firmware to routers should only be done connect to the router with an Ethernet cable. This increases the odd of a successful upgrade.
 -
 
 **How to update from Belkin/Linksys UI**
