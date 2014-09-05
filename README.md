@@ -24,6 +24,8 @@ http://sagar.se/svn-1.7-on-wheezy.html
 
 **Flashing firmware should be done connect to the router with an Ethernet cable.**
 
+-
+
 **How to update from Belkin/Linksys UI**
 
 1. Login to WRT1900AC local UI
@@ -45,3 +47,12 @@ The unit will ask you to set a default password after you login to the UI.
 2. Select the 'System' Tab, and then 'Backup / Flash Firmware' tab
 3. In the 'Flash new firmware image' section click the 'choose file' button and select your firmware
 4. Click 'flash image'
+
+-
+
+Compile Notes
+-
+**Libtool 2.4 Version Version mismatch error:**
+
+1. Change line 20 of file attitude_adjustment/package/feeds/packages/cyrus-sasl/Makefile
+2. PKG_FIXUP:=autoreconf libtool
