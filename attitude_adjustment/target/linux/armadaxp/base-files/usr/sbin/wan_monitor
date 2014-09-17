@@ -1,6 +1,7 @@
 #!/bin/sh
 . /lib/functions.sh
 . /lib/functions/network.sh
+include /lib/network
 
 local scriptname wanhasip wanport
 scriptname="$(basename $0)"
@@ -38,14 +39,14 @@ wan_white() {
 
 obtain_wan_ip() {
 	local wanif wanipaddr
-	while ! network_find_wan wanif
+	while [ ! network_find_wan wanif ]
 	do
 		log_message "Waiting for netifd to register wan interface"
+		scan_interfaces
 		sleep 2
 	done
-	while ! network_get_ipaddr wanipaddr "$wanif"
+	while [ ! network_get_ipaddr wanipaddr "$wanif" ]
 	do
-		wan_amber on
 		log_message "Obtaining IP address on if: $wanif"
 		sleep 2	
 	done
@@ -57,8 +58,8 @@ conn_type_dynamic() {
 	#echo "conn_type_dynamic"
 
 	if [ $wanhasip -eq 0 ]; then 
-		wan_amber off
 		wan_white off
+		wan_amber on
 		obtain_wan_ip
 	fi
 
@@ -67,10 +68,12 @@ conn_type_dynamic() {
 		ping_status=$?
 		if [ $ping_status -ne 0 ]
 		then
+			wan_white off
 			wan_amber on
 			#echo "PING FAILED:" $LINKPING $ping_status
 			log_message "PING FAILED"
 		else
+			wan_amber off
 			wan_white on
 			#echo "PING OK:" $LINKPING $ping_status
 		fi
