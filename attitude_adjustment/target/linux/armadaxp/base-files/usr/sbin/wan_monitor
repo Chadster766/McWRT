@@ -2,20 +2,9 @@
 . /lib/functions.sh
 . /lib/functions/network.sh
 include /lib/network
-
-local scriptname wanhasip wanport
+#set -euf
+local scriptname
 scriptname="$(basename $0)"
-wanhasip=0
-wanport=/sys/class/neta-switch/port4/carrier
-DELAY=2
-
-CNT_CONN=0
-DELAY_CONN=16
-
-LINKPING=heartbeat.belkin.com
-PING_TIMEOUT=5000 #5s
-
-OUTLOG=/tmp/wan_log
 
 log_message() {
 	/usr/bin/logger "$scriptname: $1"
@@ -37,71 +26,70 @@ wan_white() {
 	/usr/sbin/ledctrl wan_white $1
 }
 
-obtain_wan_ip() {
+ping_host() {
+	local host count timeout error
+	host="heartbeat.belkin.com"
+	count=3
+	timeout=5
+	error="$(/bin/ping -q -c $count -w $timeout $host 2&>1 > /dev/null)"
+
+	if [ $? ]
+	then
+		wan_amber off
+		wan_white on
+	else
+		wan_white off
+		wan_amber on
+		log_message "Failed to ping $host -- $error"
+	fi
+}
+
+did_obtain_wan_ip() {
 	local wanif wanipaddr
+	wan_white off
+	wan_amber on
 	while [ ! network_find_wan wanif ]
 	do
 		log_message "Waiting for netifd to register wan interface"
 		scan_interfaces
-		sleep 2
+		sleep 1
 	done
 	while [ ! network_get_ipaddr wanipaddr "$wanif" ]
 	do
 		log_message "Obtaining IP address on if: $wanif"
-		sleep 2	
+		sleep 1	
 	done
-	wanhasip=1
-}
-
-conn_type_dynamic() {
-
-	#echo "conn_type_dynamic"
-
-	if [ $wanhasip -eq 0 ]; then 
-		wan_white off
-		wan_amber on
-		obtain_wan_ip
-	fi
-
-	if [ $wanhasip -eq 1 ]; then
-		/bin/ping $LINKPING -c 3 -w ${PING_TIMEOUT} > $OUTLOG
-		ping_status=$?
-		if [ $ping_status -ne 0 ]
-		then
-			wan_white off
-			wan_amber on
-			#echo "PING FAILED:" $LINKPING $ping_status
-			log_message "PING FAILED"
-		else
-			wan_amber off
-			wan_white on
-			#echo "PING OK:" $LINKPING $ping_status
-		fi
-	fi
+	return true
 }
 
 #FIXME: would hotplug better serve us here?
-echo "WAN LED MONITOR"
+local wanportstatus
+#echo "WAN LED MONITOR"
 while true
 do
-	x=`cat $wanport`
-	#echo "Wan physical status" $x
-
-	#echo $CNT_CONN
-	if [ $x = "Up" ]; then
-		if [ $wanhasip -eq 0 -o $CNT_CONN -gt $DELAY_CONN ]; then
-			conn_type_dynamic
-			CNT_CONN=0
-		fi
-	elif [ $x = "Down" ]; then
-		log_message "No physical WAN cable"
+	wanportstatus="$(cat /sys/class/neta-switch/port4/carrier)"
+	#echo "Wan physical status" $wanportstatus
+	if [ ! $? ]
+	then
+		log_message "Could not determine wan port status"
 		wan_amber off
 		wan_white off
-		blinking_amber 
-		wanhasip=0
-		CNT_CONN=0
+		blinking_amber
+	else
+		if [ $wanportstatus = "Up" ]
+		then
+			if [ did_obtain_wan_ip ]
+			then
+				ping_host
+			fi
+		#If the carrier has only 2 possible states...
+		#elif [ $wanportstatus = "Down" ]; then
+		else
+			log_message "No physical WAN cable"
+			wan_amber off
+			wan_white off
+			blinking_amber 
+		fi
 	fi
-	CNT_CONN=$((CNT_CONN+1))
-	sleep $DELAY
+	sleep 2
 done
-
