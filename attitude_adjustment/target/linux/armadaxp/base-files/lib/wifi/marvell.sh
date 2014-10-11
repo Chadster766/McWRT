@@ -106,6 +106,7 @@ enable_marvell() {
 	iwpriv "$device" wmm $wmm
 	iwpriv "$device" htbw $htbw
 	iwconfig "$device" channel $channel >/dev/null 2>/dev/null
+	iwpriv "$device" setcmd "loadtxpwrtable /etc/config/Mamba_FCC_v1.2_5G4TX.ini"
 	ifconfig "$device" up
 	sleep 1
 
