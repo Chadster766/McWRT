@@ -1,5 +1,7 @@
 McWRT
 =====
+OpenWRT McWRT Barrier Breaker is under development. It builds but the image isn't usable at this point.
+===
 
 ###An OpenWRT project for the Linksys WRT1900AC router.
 
