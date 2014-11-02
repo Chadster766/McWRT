@@ -1,0 +1,130 @@
+From bcb0e54d62804f1f986ad478a11235dadb1b61bb Mon Sep 17 00:00:00 2001
+From: Ezequiel Garcia <ezequiel.garcia@free-electrons.com>
+Date: Fri, 14 Jun 2013 10:44:57 -0300
+Subject: [PATCH 058/203] ARM: mvebu: Relocate Armada 370/XP DeviceBus device
+ tree nodes
+
+Now that mbus has been added to the device tree, it's possible to
+move the DeviceBus out of internal registers, placing it directly
+below the mbus. This is a more accurate representation of the hardware.
+
+Signed-off-by: Ezequiel Garcia <ezequiel.garcia@free-electrons.com>
+Tested-by: Andrew Lunn <andrew@lunn.ch>
+Tested-by: Sebastian Hesselbarth <sebastian.hesselbarth@gmail.com>
+---
+ arch/arm/boot/dts/armada-370-xp.dtsi             | 94 +++++++++++++-----------
+ arch/arm/boot/dts/armada-xp-db.dts               | 59 +++++++--------
+ arch/arm/boot/dts/armada-xp-gp.dts               | 60 +++++++--------
+ arch/arm/boot/dts/armada-xp-openblocks-ax3-4.dts | 60 +++++++--------
+ 4 files changed, 140 insertions(+), 133 deletions(-)
+
+--- a/arch/arm/boot/dts/armada-370-xp.dtsi
++++ b/arch/arm/boot/dts/armada-370-xp.dtsi
+@@ -36,6 +36,56 @@
+ 		controller = <&mbusc>;
+ 		interrupt-parent = <&mpic>;
+ 
++		devbus-bootcs {
++			compatible = "marvell,mvebu-devbus";
++			reg = <MBUS_ID(0xf0, 0x01) 0x10400 0x8>;
++			ranges = <0 MBUS_ID(0x01, 0x2f) 0 0xffffffff>;
++			#address-cells = <1>;
++			#size-cells = <1>;
++			clocks = <&coreclk 0>;
++			status = "disabled";
++		};
++
++		devbus-cs0 {
++			compatible = "marvell,mvebu-devbus";
++			reg = <MBUS_ID(0xf0, 0x01) 0x10408 0x8>;
++			ranges = <0 MBUS_ID(0x01, 0x3e) 0 0xffffffff>;
++			#address-cells = <1>;
++			#size-cells = <1>;
++			clocks = <&coreclk 0>;
++			status = "disabled";
++		};
++
++		devbus-cs1 {
++			compatible = "marvell,mvebu-devbus";
++			reg = <MBUS_ID(0xf0, 0x01) 0x10410 0x8>;
++			ranges = <0 MBUS_ID(0x01, 0x3d) 0 0xffffffff>;
++			#address-cells = <1>;
++			#size-cells = <1>;
++			clocks = <&coreclk 0>;
++			status = "disabled";
++		};
++
++		devbus-cs2 {
++			compatible = "marvell,mvebu-devbus";
++			reg = <MBUS_ID(0xf0, 0x01) 0x10418 0x8>;
++			ranges = <0 MBUS_ID(0x01, 0x3b) 0 0xffffffff>;
++			#address-cells = <1>;
++			#size-cells = <1>;
++			clocks = <&coreclk 0>;
++			status = "disabled";
++		};
++
++		devbus-cs3 {
++			compatible = "marvell,mvebu-devbus";
++			reg = <MBUS_ID(0xf0, 0x01) 0x10420 0x8>;
++			ranges = <0 MBUS_ID(0x01, 0x37) 0 0xffffffff>;
++			#address-cells = <1>;
++			#size-cells = <1>;
++			clocks = <&coreclk 0>;
++			status = "disabled";
++		};
++
+ 		internal-regs {
+ 			compatible = "simple-bus";
+ 			#address-cells = <1>;
+@@ -191,50 +241,6 @@
+ 				status = "disabled";
+ 			};
+ 
+-			devbus-bootcs@10400 {
+-				compatible = "marvell,mvebu-devbus";
+-				reg = <0x10400 0x8>;
+-				#address-cells = <1>;
+-				#size-cells = <1>;
+-				clocks = <&coreclk 0>;
+-				status = "disabled";
+-			};
+-
+-			devbus-cs0@10408 {
+-				compatible = "marvell,mvebu-devbus";
+-				reg = <0x10408 0x8>;
+-				#address-cells = <1>;
+-				#size-cells = <1>;
+-				clocks = <&coreclk 0>;
+-				status = "disabled";
+-			};
+-
+-			devbus-cs1@10410 {
+-				compatible = "marvell,mvebu-devbus";
+-				reg = <0x10410 0x8>;
+-				#address-cells = <1>;
+-				#size-cells = <1>;
+-				clocks = <&coreclk 0>;
+-				status = "disabled";
+-			};
+-
+-			devbus-cs2@10418 {
+-				compatible = "marvell,mvebu-devbus";
+-				reg = <0x10418 0x8>;
+-				#address-cells = <1>;
+-				#size-cells = <1>;
+-				clocks = <&coreclk 0>;
+-				status = "disabled";
+-			};
+-
+-			devbus-cs3@10420 {
+-				compatible = "marvell,mvebu-devbus";
+-				reg = <0x10420 0x8>;
+-				#address-cells = <1>;
+-				#size-cells = <1>;
+-				clocks = <&coreclk 0>;
+-				status = "disabled";
+-			};
+ 		};
+ 	};
+  };
