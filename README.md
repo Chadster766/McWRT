@@ -1,6 +1,6 @@
 McWRT
 =====
-OpenWRT McWRT Barrier Breaker is under development. It builds but the image isn't usable at this point.
+OpenWRT McWRT Chaos Calmer is under development. Unless you have a USB to TTL cable Attitude Adjustment Release v1.0.5 should be used.
 ===
 
 ###An OpenWRT project for the Linksys WRT1900AC router.
