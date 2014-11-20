@@ -19,11 +19,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  delete mode 100644 arch/arm/plat-armada/mv_drivers_lsp/mv_neta/nfp_mgr/mv_nfp_mgr_if.h
  delete mode 100644 arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
 
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-index 5ab45b1..1f5b604 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-@@ -166,25 +166,25 @@ int mv_eth_cmdline_port3_config(char *s);
+@@ -166,25 +166,25 @@ int mv_eth_cmdline_port3_config(char *s)
  __setup("mv_port3_config=", mv_eth_cmdline_port3_config);
  
  #if defined(CONFIG_MV_ETH_NFP) || defined(CONFIG_MV_ETH_NFP_MODULE)
@@ -60,7 +58,7 @@ index 5ab45b1..1f5b604 100755
  #endif /* CONFIG_MV_ETH_NFP || CONFIG_MV_ETH_NFP_MODULE */
  
  int mv_eth_cmdline_port0_config(char *s)
-@@ -1642,7 +1642,7 @@ static inline int mv_eth_rx(struct eth_port *pp, int rx_todo, int rxq)
+@@ -1642,7 +1642,7 @@ static inline int mv_eth_rx(struct eth_p
  			pkt->bytes = rx_bytes + MV_ETH_MH_SIZE;
  			pkt->offset = NET_SKB_PAD;
  
@@ -69,7 +67,7 @@ index 5ab45b1..1f5b604 100755
  			if (status == MV_OK)
  				continue;
  			if (status == MV_FAIL) {
-@@ -2833,7 +2833,7 @@ static void mv_eth_cpu_counters_init(void)
+@@ -2833,7 +2833,7 @@ static void mv_eth_cpu_counters_init(voi
  #endif /* CONFIG_MV_CPU_PERF_CNTRS */
  }
  
@@ -115,11 +113,9 @@ index 5ab45b1..1f5b604 100755
  
  #ifdef CONFIG_MV_ETH_STAT_ERR
  	printk(KERN_ERR "  o Driver ERROR statistics enabled\n");
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
-index 63383e3..c7fe35c 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
-@@ -700,17 +700,14 @@ int         mv_eth_open(struct net_device *dev);
+@@ -700,17 +700,14 @@ int         mv_eth_open(struct net_devic
  int	    mv_eth_cpu_txq_mask_set(int port, int cpu, int txqMask);
  
  #if defined(CONFIG_MV_ETH_NFP) || defined(CONFIG_MV_ETH_NFP_MODULE)
@@ -142,9 +138,6 @@ index 63383e3..c7fe35c 100755
  #endif /* CONFIG_MV_ETH_NFP || CONFIG_MV_ETH_NFP_MODULE */
  
  irqreturn_t mv_eth_isr(int irq, void *dev_id);
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/nfp_mgr/mv_nfp_mgr_if.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/nfp_mgr/mv_nfp_mgr_if.h
-deleted file mode 100644
-index 63e1305..0000000
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/nfp_mgr/mv_nfp_mgr_if.h
 +++ /dev/null
 @@ -1,40 +0,0 @@
@@ -188,9 +181,6 @@ index 63e1305..0000000
 -extern rwlock_t nfp_lock;
 -#endif
 -
-diff --git a/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
-deleted file mode 100644
-index a467f0d..0000000
 --- a/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
 +++ /dev/null
 @@ -1,223 +0,0 @@
@@ -417,8 +407,6 @@ index a467f0d..0000000
 -#endif /* CONFIG_MV_ETH_NFP */
 -
 -#endif /* __mvNfp_h__ */
-diff --git a/include/linux/mv_nfp.h b/include/linux/mv_nfp.h
-index 4602697..758bd3d 100644
 --- a/include/linux/mv_nfp.h
 +++ b/include/linux/mv_nfp.h
 @@ -7,13 +7,19 @@
@@ -492,11 +480,9 @@ index 4602697..758bd3d 100644
  
  #endif /* CONFIG_MV_ETH_NFP */
  #endif
-diff --git a/net/bridge/br_fdb.c b/net/bridge/br_fdb.c
-index 8c4a360..d00f65b 100644
 --- a/net/bridge/br_fdb.c
 +++ b/net/bridge/br_fdb.c
-@@ -380,7 +380,7 @@ static struct net_bridge_fdb_entry *fdb_create(struct hlist_head *head,
+@@ -380,7 +380,7 @@ static struct net_bridge_fdb_entry *fdb_
  #if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
  		fdb->nfp = false;
  		if (nfp_mgr_p->nfp_hook_fdb_rule_add)
@@ -505,11 +491,9 @@ index 8c4a360..d00f65b 100644
  				fdb->nfp = true;
  #endif /* CONFIG_MV_ETH_NFP_LEARN */
  	}
-diff --git a/net/bridge/br_if.c b/net/bridge/br_if.c
-index 0b3fd87..425e7a4 100644
 --- a/net/bridge/br_if.c
 +++ b/net/bridge/br_if.c
-@@ -170,8 +170,8 @@ void br_dev_delete(struct net_device *dev, struct list_head *head)
+@@ -170,8 +170,8 @@ void br_dev_delete(struct net_device *de
  	list_for_each_entry_safe(p, n, &br->port_list, list) {
  
  #if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
@@ -520,7 +504,7 @@ index 0b3fd87..425e7a4 100644
  #endif /* CONFIG_MV_ETH_NFP_LEARN */
  
  		del_nbp(p);
-@@ -180,8 +180,8 @@ void br_dev_delete(struct net_device *dev, struct list_head *head)
+@@ -180,8 +180,8 @@ void br_dev_delete(struct net_device *de
  	del_timer_sync(&br->gc_timer);
  
  #if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
@@ -531,7 +515,7 @@ index 0b3fd87..425e7a4 100644
  #endif /* CONFIG_MV_ETH_NFP_LEARN */
  
  	br_sysfs_delbr(br->dev);
-@@ -439,8 +439,8 @@ int br_del_if(struct net_bridge *br, struct net_device *dev)
+@@ -439,8 +439,8 @@ int br_del_if(struct net_bridge *br, str
  		return -EINVAL;
  
  #if defined(CONFIG_MV_ETH_NFP_LEARN) || defined(CONFIG_MV_ETH_NFP_LEARN_MODULE)
@@ -542,11 +526,9 @@ index 0b3fd87..425e7a4 100644
  #endif /* CONFIG_MV_ETH_NFP_LEARN */
  
  	del_nbp(p);
-diff --git a/net/core/dev.c b/net/core/dev.c
-index 6ffd7b1..f37c15d 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
-@@ -3226,8 +3226,9 @@ static struct sk_buff *handle_nfp_extrcv(struct sk_buff *skb, struct net_device
+@@ -3226,8 +3226,9 @@ static struct sk_buff *handle_nfp_extrcv
  	if (pktInfo->flags == 0)
  		pktInfo = NULL;
  
@@ -570,8 +552,6 @@ index 6ffd7b1..f37c15d 100644
  out:
  	return rc;
  }
-diff --git a/net/core/mv_nfp.c b/net/core/mv_nfp.c
-index 3e8f0cc..97cb202 100644
 --- a/net/core/mv_nfp.c
 +++ b/net/core/mv_nfp.c
 @@ -1,40 +1,30 @@
@@ -635,11 +615,9 @@ index 3e8f0cc..97cb202 100644
  	return 0;
  }
  EXPORT_SYMBOL(nfp_mgr_p);
-diff --git a/net/netfilter/nf_conntrack_core.c b/net/netfilter/nf_conntrack_core.c
-index ad9ba4e..ce06147 100644
 --- a/net/netfilter/nf_conntrack_core.c
 +++ b/net/netfilter/nf_conntrack_core.c
-@@ -313,16 +313,14 @@ static void death_by_timeout(unsigned long ul_conntrack)
+@@ -306,16 +306,14 @@ static void death_by_timeout(unsigned lo
  	int confirmed_org = 0, confirmed_reply = 0;
  
  	if (t0 && t0->nfp) {
@@ -658,7 +636,7 @@ index ad9ba4e..ce06147 100644
  			if (nfp_mgr_p->nfp_hook_ct_age)
  				confirmed_org = nfp_mgr_p->nfp_hook_ct_age(t0->src.l3num, (u8 *)&(t0->src.u3.ip6),
  					(u8 *)&(t0->dst.u3.ip6),
-@@ -332,16 +330,14 @@ static void death_by_timeout(unsigned long ul_conntrack)
+@@ -325,16 +323,14 @@ static void death_by_timeout(unsigned lo
  	}
  
  	if (t1 && t1->nfp) {
@@ -677,7 +655,7 @@ index ad9ba4e..ce06147 100644
  			if (nfp_mgr_p->nfp_hook_ct_age)
  				confirmed_reply = nfp_mgr_p->nfp_hook_ct_age(t1->src.l3num, (u8 *)&(t1->src.u3.ip6),
  					(u8 *)&(t1->dst.u3.ip6),
-@@ -359,16 +355,14 @@ static void death_by_timeout(unsigned long ul_conntrack)
+@@ -352,16 +348,14 @@ static void death_by_timeout(unsigned lo
  	if (t0 && t0->nfp) {
  		t0->nfp = false;
  
@@ -696,7 +674,7 @@ index ad9ba4e..ce06147 100644
  			if (nfp_mgr_p->nfp_hook_ct_del)
  				nfp_mgr_p->nfp_hook_ct_del(t0->src.l3num, (u8 *)&(t0->src.u3.ip6),
  					(u8 *)&(t0->dst.u3.ip6),
-@@ -380,16 +374,14 @@ static void death_by_timeout(unsigned long ul_conntrack)
+@@ -373,16 +367,14 @@ static void death_by_timeout(unsigned lo
  	if (t1 && t1->nfp) {
  		t1->nfp = false;
  
@@ -715,7 +693,7 @@ index ad9ba4e..ce06147 100644
  			nfp_mgr_p->nfp_hook_ct_del(t1->src.l3num, (u8 *)&(t1->src.u3.ip6),
  					(u8 *)&(t1->dst.u3.ip6),
  					ntohs(t1->src.u.all),
-@@ -1586,8 +1578,8 @@ void nfp_ct_sync(int family)
+@@ -1579,8 +1571,8 @@ void nfp_ct_sync(int family)
  			tuple->nfp = true;
  
  			if (tuple->info->mode == IPT_NFP_DROP) {
@@ -726,7 +704,7 @@ index ad9ba4e..ce06147 100644
  				continue;
  			}
  
-@@ -1606,15 +1598,15 @@ void nfp_ct_sync(int family)
+@@ -1599,15 +1591,15 @@ void nfp_ct_sync(int family)
  					nf_ct_invert_tuplepr(&target_tuple, &ct->tuplehash[!dir].tuple);
  
  					if ((status & IPS_NAT_MASK) == IPS_DST_NAT) {
@@ -749,7 +727,7 @@ index ad9ba4e..ce06147 100644
  					}
  
  					continue;
-@@ -1626,8 +1618,8 @@ void nfp_ct_sync(int family)
+@@ -1619,8 +1611,8 @@ void nfp_ct_sync(int family)
  			}
  #endif /* CONFIG_MV_ETH_NFP_NAT */
  			/* If we got till here, it must be IPT_NFP_FWD */
@@ -760,6 +738,3 @@ index ad9ba4e..ce06147 100644
  		}
  	}
  
--- 
-1.7.9.5
-

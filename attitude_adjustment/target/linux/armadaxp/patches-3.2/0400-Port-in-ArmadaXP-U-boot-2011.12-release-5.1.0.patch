@@ -119,11 +119,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  create mode 100644 arch/arm/plat-armada/mv_hal/pci-if/pci_util/mvPciUtils.c
  create mode 100644 arch/arm/plat-armada/mv_hal/pci-if/pci_util/mvPciUtils.h
 
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
-index 9f58ddd..cd40df2 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
-@@ -281,7 +281,7 @@ MV_BOOL mvBoardIsPortInSgmii(MV_U32 ethPortNum)
+@@ -281,7 +281,7 @@ MV_BOOL mvBoardIsPortInSgmii(MV_U32 ethP
  			return MV_TRUE;
  		break;
  	case DB_78X60_PCAC_ID:
@@ -154,7 +152,7 @@ index 9f58ddd..cd40df2 100644
  
  	sar1 = mvBoardTwsiSatRGet(3, 0);
  	if ((MV_8)MV_ERROR == (MV_8)sar1)
-@@ -1576,9 +1576,9 @@ MV_STATUS mvBoardFabFreqSet(MV_U8 freqVal)
+@@ -1576,9 +1576,9 @@ MV_STATUS mvBoardFabFreqSet(MV_U8 freqVa
  	sar0 = mvBoardTwsiSatRGet(2, 0);
  	if ((MV_8)MV_ERROR == (MV_8)sar0)
  		return MV_ERROR;
@@ -167,7 +165,7 @@ index 9f58ddd..cd40df2 100644
  		if (MV_OK != mvBoardTwsiSatRSet(2, 0, sar0)) {
  			DB1(mvOsPrintf("Board: Write FreqOpt S@R fail\n"));
  			return MV_ERROR;
-@@ -1608,68 +1608,6 @@ MV_STATUS mvBoardFabFreqSet(MV_U8 freqVal)
+@@ -1608,68 +1608,6 @@ MV_STATUS mvBoardFabFreqSet(MV_U8 freqVa
  	return MV_OK;
  }
  /*******************************************************************************/
@@ -245,7 +243,7 @@ index 9f58ddd..cd40df2 100644
  		return (sar & 0x0f);
  	}
  
-@@ -1700,7 +1638,7 @@ MV_STATUS mvBoardCpuFreqSet(MV_U8 freqVal)
+@@ -1700,7 +1638,7 @@ MV_STATUS mvBoardCpuFreqSet(MV_U8 freqVa
  	if ((MV_8)MV_ERROR == (MV_8)sar)
  		return MV_ERROR;
  
@@ -281,7 +279,7 @@ index 9f58ddd..cd40df2 100644
  		return (sar & 1);
  
  	return (sar & 0x18) >> 3;
-@@ -1803,7 +1741,7 @@ MV_STATUS mvBoardBootDevWidthSet(MV_U8 val)
+@@ -1803,7 +1741,7 @@ MV_STATUS mvBoardBootDevWidthSet(MV_U8 v
  	sar = mvBoardTwsiSatRGet(0, 0);
  	if ((MV_8)MV_ERROR == (MV_8)sar)
  		return MV_ERROR;
@@ -299,7 +297,7 @@ index 9f58ddd..cd40df2 100644
  
  	sar = mvBoardTwsiSatRGet(3, 0);
  	if ((MV_8)MV_ERROR == (MV_8)sar)
-@@ -1846,6 +1786,8 @@ MV_STATUS mvBoardCpu0EndianessSet(MV_U8 val)
+@@ -1846,6 +1786,8 @@ MV_STATUS mvBoardCpu0EndianessSet(MV_U8
  #endif
  {
  	MV_U8 sar;
@@ -504,7 +502,7 @@ index 9f58ddd..cd40df2 100644
  	if (MV_OK != mvBoardTwsiSatRSet(2, 1, freqVal)) {
  		DB1(mvOsPrintf("Board: Write Alt FreqOpt S@R fail\n"));
  		return MV_ERROR;
-@@ -2737,7 +2728,7 @@ MV_BOARD_PEX_INFO *mvBoardPexInfoGet(void)
+@@ -2737,7 +2728,7 @@ MV_BOARD_PEX_INFO *mvBoardPexInfoGet(voi
  	case FPGA_88F78XX0_ID:
  	case DB_88F78XX0_BP_REV2_ID:
  	case RD_78460_NAS_ID:
@@ -513,8 +511,6 @@ index 9f58ddd..cd40df2 100644
  	case RD_78460_CUSTOMER_ID:
  	case DB_78X60_AMC_ID:
  	case DB_78X60_PCAC_REV2_ID:
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
-index b4d457d..4bfb319 100755
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
 @@ -395,7 +395,6 @@ MV_U8 mvBoardCpuFreqGet(MV_VOID);
@@ -525,11 +521,9 @@ index b4d457d..4bfb319 100755
  MV_STATUS mvBoardFabFreqModeSet(MV_U8 freqVal);
  MV_U8 mvBoardBootDevGet(MV_VOID);
  MV_STATUS mvBoardBootDevSet(MV_U8 val);
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
-index c1030cc..706f127 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
-@@ -369,12 +369,12 @@ MV_BOARD_MPP_INFO db88f78XX0rev2InfoBoardMppConfigValue[] = {
+@@ -369,12 +369,12 @@ MV_BOARD_MPP_INFO db88f78XX0rev2InfoBoar
  
  MV_SERDES_CFG db88f78XX0rev2InfoBoardSerdesConfigValue[] = {
  	/* A0 */
@@ -548,7 +542,7 @@ index c1030cc..706f127 100644
  };
  
  MV_BOARD_TDM_INFO	db88f78XX0rev2Tdm880[]	= { {1}, {2} };
-@@ -1172,7 +1172,7 @@ MV_BOARD_MPP_INFO db78X60amcInfoBoardMppConfigValue[] = {
+@@ -1172,7 +1172,7 @@ MV_BOARD_MPP_INFO db78X60amcInfoBoardMpp
  };
  
  MV_SERDES_CFG db78X60amcInfoBoardSerdesConfigValue[] = {
@@ -557,11 +551,9 @@ index c1030cc..706f127 100644
  };
  
  
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
-index 6a0ec09..82b58a0 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
-@@ -98,8 +98,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -98,8 +98,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #define DB_78X60_AMC_ID				(RD_78460_NAS_ID + 1)
  #define DB_78X60_PCAC_REV2_ID		(DB_78X60_AMC_ID + 1)
  #define RD_78460_SERVER_REV2_ID		(DB_78X60_PCAC_REV2_ID + 1)
@@ -572,11 +564,9 @@ index 6a0ec09..82b58a0 100644
  #define MV_MAX_BOARD_ID				(RD_78460_CUSTOMER_ID + 1)
  #define INVALID_BAORD_ID			0xFFFFFFFF
  
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
-index 74546ef..260a2fc 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
-@@ -123,7 +123,7 @@ MV_BIOS_MODE bios_modes[BIOS_MODES_NUM] = {
+@@ -123,7 +123,7 @@ MV_BIOS_MODE bios_modes[BIOS_MODES_NUM]
  #else
  /*DBConf ConfID Code L2Size CPUFreq CpuFreqMode FabricFreq  Altfabricfreq     FabricFreqMode CPU1/2/3Enable cpuEndianess dramBusWidth BootSRC BootWidth */
  /*	                       0x4d/[1:0]  0x4d/[4:2]  0x4e[0]      0x4e/[4:1]  	0x4f[0]   0x4f/[2:1]      0x4f/[3]   	  */
@@ -585,7 +575,7 @@ index 74546ef..260a2fc 100644
  {"78160",0x12, 0x7816, 0x1,  0x3,      0x0,	 0x1a, 		0x5,		0x1,	     0x0,	    0x1, 	0x0, 	     0x3,	0x1},
  {"78230",0x13, 0x7823, 0x1,  0x3,      0x0,	 0x1a, 		0x5,		0x1,	     0x1,	    0x0,	0x1, 	     0x3,	0x1},
  {"78260",0x14, 0x7826, 0x1,  0x3,      0x0,	 0x1a,		0x5,		0x1,	     0x1,	    0x0,	0x0, 	     0x3,	0x1},
-@@ -133,21 +133,17 @@ MV_BIOS_MODE bios_modes[BIOS_MODES_NUM] = {
+@@ -133,21 +133,17 @@ MV_BIOS_MODE bios_modes[BIOS_MODES_NUM]
  /*	{"6710" ,0x11, 0x6710,	0x0,	   0x3,		0x0,	      0x5, 		0x0,		0x0,		0x1,		0x0},     */
  };
  #endif
@@ -782,7 +772,7 @@ index 74546ef..260a2fc 100644
  #ifndef MV88F78X60_Z1
  	MV_REG_BIT_SET(PUP_EN_REG,0x17); /* Enable GBE0, GBE1, LCD and NFC PUP */
  #endif
-@@ -999,7 +983,6 @@ MV_STATUS mvCtrlModelRevNameGet(char *pNameBuff)
+@@ -999,7 +983,6 @@ MV_STATUS mvCtrlModelRevNameGet(char *pN
  	 case MV_78130_A0_ID:
                 mvOsSPrintf(pNameBuff, "%s", MV_78130_A0_NAME);
                 break;
@@ -790,7 +780,7 @@ index 74546ef..260a2fc 100644
         case MV_78230_A0_ID:
                 mvOsSPrintf(pNameBuff, "%s", MV_78230_A0_NAME);
                 break;
-@@ -1012,6 +995,22 @@ MV_STATUS mvCtrlModelRevNameGet(char *pNameBuff)
+@@ -1012,6 +995,22 @@ MV_STATUS mvCtrlModelRevNameGet(char *pN
         case MV_78460_A0_ID:
                mvOsSPrintf(pNameBuff, "%s", MV_78460_A0_NAME);
                 break;
@@ -891,8 +881,6 @@ index 74546ef..260a2fc 100644
  	return status;
  err_cfg:
  	DB(mvOsPrintf("%s: Wrong CFG (%#x) for SERDES line %d.\n",
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
-index c8355ce..7a46199 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
 @@ -189,7 +189,9 @@ typedef struct {
@@ -919,8 +907,6 @@ index c8355ce..7a46199 100644
  
  MV_STATUS mvCtrlEnvInit(MV_VOID);
  MV_U32    mvCtrlMppRegGet(MV_U32 mppGroup);
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
-index eae4081..57ab3cf 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
 @@ -117,8 +117,8 @@ extern "C" {
@@ -978,8 +964,6 @@ index eae4081..57ab3cf 100644
  #define MV_78130_ETH_MAX_PORT			3
  #define MV_78460_ETH_MAX_PORT			4
  
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
-index d71df4e..eb846e4 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
 @@ -121,4 +121,4 @@ MV_32 mvReadAmpReg(int regId)
@@ -989,8 +973,6 @@ index d71df4e..eb846e4 100644
 -}
 +}
 \ No newline at end of file
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.c
-index a2436d1..f01aabb 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.c
 @@ -263,4 +263,4 @@ MV_VOID mvUnitMapPrint()
@@ -1000,11 +982,9 @@ index a2436d1..f01aabb 100644
 -}
 +}
 \ No newline at end of file
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
-index 738499d..6a8846e 100755
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
-@@ -87,17 +87,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -87,17 +87,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  static MV_BOOL cpuTargetWinOverlap(MV_TARGET target, MV_ADDR_WIN *pAddrWin);
  
  MV_TARGET sampleAtResetTargetArray[] = BOOT_TARGETS_NAME_ARRAY;
@@ -1022,7 +1002,7 @@ index 738499d..6a8846e 100755
  MV_STATUS mvCpuIfVerify(MV_CPU_DEC_WIN *cpuAddrWinMap)
  {
  	MV_CPU_DEC_WIN win;
-@@ -263,21 +252,13 @@ MV_STATUS mvCpuIfInitForCpu(MV_U32 cpu, MV_CPU_DEC_WIN *cpuAddrWinMap)
+@@ -263,21 +252,13 @@ MV_STATUS mvCpuIfInitForCpu(MV_U32 cpu,
  		if (MV_TARGET_IS_PEX(target))
  			continue;
  #endif
@@ -1047,7 +1027,7 @@ index 738499d..6a8846e 100755
  			addrWin.baseLow = cpuAddrWinMap[target].addrWin.baseLow;
  			addrWin.baseHigh = cpuAddrWinMap[target].addrWin.baseHigh;
  			if (0xffffffff == mvAhbToMbusWinRemap(cpuAddrWinMap[target].winNum, &addrWin)) {
-@@ -286,16 +267,6 @@ MV_STATUS mvCpuIfInitForCpu(MV_U32 cpu, MV_CPU_DEC_WIN *cpuAddrWinMap)
+@@ -286,16 +267,6 @@ MV_STATUS mvCpuIfInitForCpu(MV_U32 cpu,
  			}
  		}
  	}
@@ -1064,11 +1044,9 @@ index 738499d..6a8846e 100755
  	return MV_OK;
  }
  
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
-index 096b076..38c566d 100755
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
-@@ -104,6 +104,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -104,6 +104,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #define CPU1_PRIO_HIGH (CPU_PRIO_HIGH << 2)
  #define CPU2_PRIO_HIGH (CPU_PRIO_HIGH << 4)
  #define CPU3_PRIO_HIGH (CPU_PRIO_HIGH << 6)
@@ -1079,7 +1057,7 @@ index 096b076..38c566d 100755
  /* ARM Configuration register */
  /* CPU_CONFIG_REG (CCR) */
  
-@@ -265,7 +269,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -265,7 +269,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #define CL2ACR_REP_STRGY_LFSR_MASK              (0x1 << CL2ACR_REP_STRGY_OFFS)
  #define CL2ACR_REP_STRGY_semiPLRU_MASK		(0x2 << CL2ACR_REP_STRGY_OFFS)
  #define CL2ACR_REP_STRGY_semiPLRU_WA_MASK          (0x3 << CL2ACR_REP_STRGY_OFFS)
@@ -1090,11 +1068,9 @@ index 096b076..38c566d 100755
  
  /* SOC_CTRL_REG fields */
  #define SCR_PEX_ENA_OFFS(pex)			((pex) & 0x3)
-diff --git a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
-index 1f15920..bcaac2c 100644
 --- a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
 +++ b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
-@@ -88,7 +88,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -88,7 +88,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #if defined(MV88F78X60_Z1)
  #define CNTMR_EVENTS_STATUS_REG_PRIVATE(t)	(MV_CPUIF_REGS_OFFSET(TIMER_TO_CPU(t) + 0x68))
  #define TIMER_PRIVATE_BIT(timer)	(1 << ((CPU_TIMER(timer) * 8)))
@@ -1103,9 +1079,6 @@ index 1f15920..bcaac2c 100644
  #define CNTMR_EVENTS_STATUS_REG_PRIVATE		(MV_CPUIF_LOCAL_REGS_OFFSET + 0x68)
  #define TIMER_PRIVATE_BIT(timer)	(1 << ((timer - FIRST_PRIVATE_TIMER) * 8))
  #elif defined(CONFIG_ARCH_ARMADA370)
-diff --git a/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvDramCounters.h b/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvDramCounters.h
-deleted file mode 100644
-index aaf34e3..0000000
 --- a/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvDramCounters.h
 +++ /dev/null
 @@ -1,273 +0,0 @@
@@ -1382,9 +1355,6 @@ index aaf34e3..0000000
 -
 -#endif /* __INCmvDramCountersh */
 -
-diff --git a/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvDramIf.c b/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvDramIf.c
-deleted file mode 100644
-index fe5228d..0000000
 --- a/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvDramIf.c
 +++ /dev/null
 @@ -1,2145 +0,0 @@
@@ -3533,9 +3503,6 @@ index fe5228d..0000000
 -		reg = MV_REG_READ(SDRAM_PHY_REGISTER_FILE_ACCESS);
 -	} while ((reg & BIT31) != 0);
 -}
-diff --git a/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvDramIf.h b/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvDramIf.h
-deleted file mode 100644
-index 2f1e939..0000000
 --- a/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvDramIf.h
 +++ /dev/null
 @@ -1,186 +0,0 @@
@@ -3725,9 +3692,6 @@ index 2f1e939..0000000
 -#endif /* __cplusplus */
 -
 -#endif /* __INCmvDramIfh */
-diff --git a/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvDramIfBasicInit.S b/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvDramIfBasicInit.S
-deleted file mode 100644
-index 6895d8c..0000000
 --- a/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvDramIfBasicInit.S
 +++ /dev/null
 @@ -1,1027 +0,0 @@
@@ -4758,9 +4722,6 @@ index 6895d8c..0000000
 -endDimmSize:
 -        mov     PC, r13
 -#endif
-diff --git a/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvDramIfConfig.S b/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvDramIfConfig.S
-deleted file mode 100644
-index 4ea96f2..0000000
 --- a/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvDramIfConfig.S
 +++ /dev/null
 @@ -1,528 +0,0 @@
@@ -5292,9 +5253,6 @@ index 4ea96f2..0000000
 -	mov     pc, lr
 -#endif
 -
-diff --git a/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvDramIfConfig.h b/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvDramIfConfig.h
-deleted file mode 100644
-index 6141c46..0000000
 --- a/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvDramIfConfig.h
 +++ /dev/null
 @@ -1,157 +0,0 @@
@@ -5455,9 +5413,6 @@ index 6141c46..0000000
 -#endif /* __cplusplus */
 -
 -#endif /* __INCmvDramIfh */
-diff --git a/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvDramIfRegs.h b/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvDramIfRegs.h
-deleted file mode 100644
-index 1507b82..0000000
 --- a/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvDramIfRegs.h
 +++ /dev/null
 @@ -1,428 +0,0 @@
@@ -5889,9 +5844,6 @@ index 1507b82..0000000
 -#endif /* __cplusplus */
 -
 -#endif /* __INCmvDramIfRegsh */
-diff --git a/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvDramIfStaticInit.h b/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvDramIfStaticInit.h
-deleted file mode 100644
-index 58ff688..0000000
 --- a/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvDramIfStaticInit.h
 +++ /dev/null
 @@ -1,192 +0,0 @@
@@ -6087,9 +6039,6 @@ index 58ff688..0000000
 -
 -#endif /* __INCmvDramIfStaticInith */
 -
-diff --git a/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvSysDdr.h b/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvSysDdr.h
-deleted file mode 100644
-index 9d88c9c..0000000
 --- a/arch/arm/plat-armada/mv_hal/ddr2_3/bak/mvSysDdr.h
 +++ /dev/null
 @@ -1,118 +0,0 @@
@@ -6211,9 +6160,6 @@ index 9d88c9c..0000000
 -#endif
 -
 -#endif
-diff --git a/arch/arm/plat-armada/mv_hal/ddr2_3/bak/spd/mvSpd.c b/arch/arm/plat-armada/mv_hal/ddr2_3/bak/spd/mvSpd.c
-deleted file mode 100644
-index e4b17ac..0000000
 --- a/arch/arm/plat-armada/mv_hal/ddr2_3/bak/spd/mvSpd.c
 +++ /dev/null
 @@ -1,1460 +0,0 @@
@@ -7677,9 +7623,6 @@ index e4b17ac..0000000
 -    return (ns*1000 + ns10*10);
 -}
 -
-diff --git a/arch/arm/plat-armada/mv_hal/ddr2_3/bak/spd/mvSpd.h b/arch/arm/plat-armada/mv_hal/ddr2_3/bak/spd/mvSpd.h
-deleted file mode 100644
-index ec721a6..0000000
 --- a/arch/arm/plat-armada/mv_hal/ddr2_3/bak/spd/mvSpd.h
 +++ /dev/null
 @@ -1,199 +0,0 @@
@@ -7882,8 +7825,6 @@ index ec721a6..0000000
 -#endif
 -
 -#endif /* __INCmvDram */
-diff --git a/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.c b/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.c
-index 5b06370..656a94b 100755
 --- a/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.c
 +++ b/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.c
 @@ -135,6 +135,35 @@ MV_U32 mvDramIfSizeGet(MV_VOID)
@@ -7922,11 +7863,9 @@ index 5b06370..656a94b 100755
  
  /*******************************************************************************
  * sdramIfWinOverlap - Check if an address window overlap an SDRAM address window
-diff --git a/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.h b/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.h
-index a137c8f..ab916fc 100644
 --- a/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.h
 +++ b/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.h
-@@ -160,11 +160,14 @@ MV_STATUS mvDramIfWinGet(MV_TARGET target, MV_DRAM_DEC_WIN *pAddrDecWin);
+@@ -160,11 +160,14 @@ MV_STATUS mvDramIfWinGet(MV_TARGET targe
  MV_STATUS mvDramIfWinEnable(MV_TARGET target, MV_BOOL enable);
  MV_VOID   mvDramIfBasicAsmInit(MV_VOID);
  MV_STATUS mvDramIfDetect(MV_U32 forcedCl, MV_BOOL eccDisable, MV_U32 sysClk);
@@ -7942,11 +7881,9 @@ index a137c8f..ab916fc 100644
  MV_U32 mvDramIfCalGet(void);
  MV_STATUS mvDramIfSingleBitErrThresholdSet(MV_U32 threshold);
  MV_VOID mvDramIfSelfRefreshSet(void);
-diff --git a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
-index be8b158..3d1144a 100755
 --- a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
 +++ b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
-@@ -1117,45 +1117,8 @@ MV_VOID mvEth1145PhyBasicInit(MV_U32 port)
+@@ -1117,45 +1117,8 @@ MV_VOID mvEth1145PhyBasicInit(MV_U32 por
      mvEthPhyRegRead(ethphyHalData.phyAddr[port], 0x14, &value);
      mvEthPhyRegWrite(ethphyHalData.phyAddr[port], 0x14, (value | BIT1 | BIT7));
      mvOsDelay(10);
@@ -7993,7 +7930,7 @@ index be8b158..3d1144a 100755
      mvEthPhyRegWrite(ethphyHalData.phyAddr[port], 0x10, 0x60);
      mvOsDelay(10);
  
-@@ -1248,14 +1211,6 @@ MV_VOID mvEth1540Y0PhyBasicInit(MV_U32 ethPortNum, MV_BOOL eeeEnable)
+@@ -1248,14 +1211,6 @@ MV_VOID mvEth1540Y0PhyBasicInit(MV_U32 e
  	/* Set page to 1. */
  	mvEthPhyRegWrite(i, 0x16, 1);
  
@@ -8008,7 +7945,7 @@ index be8b158..3d1144a 100755
  	/* Enable SGMII AN */
  	mvEthPhyRegWrite(i, 0x0, 0x1140);
  
-@@ -1708,11 +1663,13 @@ MV_VOID mvEth1540A0PhyBasicInit(MV_U32 ethPortNum, MV_BOOL eeeEnable)
+@@ -1708,11 +1663,13 @@ MV_VOID mvEth1540A0PhyBasicInit(MV_U32 e
  	/* Set page to 0. */
  	mvEthPhyRegWrite(i, 0x16, 0);
  
@@ -8024,7 +7961,7 @@ index be8b158..3d1144a 100755
  
  	/* Disable Drop BadTag */
  	mvEthPhyRegWrite(i, 22, 0x0010);
-@@ -1806,6 +1763,37 @@ MV_VOID mvEth1540A0PhyBasicInit(MV_U32 ethPortNum, MV_BOOL eeeEnable)
+@@ -1806,6 +1763,37 @@ MV_VOID mvEth1540A0PhyBasicInit(MV_U32 e
  		mvEthPhyRegWrite(i, 3, 0x0000);
  		mvEthPhyRegWrite(i, 22, 0x0000);
  	}
@@ -8062,7 +7999,7 @@ index be8b158..3d1144a 100755
  	/* Configure LED */
  	mvEthPhyRegWrite(i, 22, 3);
  	mvEthPhyRegWrite(i, 16, 0x1111);
-@@ -1813,12 +1801,12 @@ MV_VOID mvEth1540A0PhyBasicInit(MV_U32 ethPortNum, MV_BOOL eeeEnable)
+@@ -1813,12 +1801,12 @@ MV_VOID mvEth1540A0PhyBasicInit(MV_U32 e
  	mvEthPhyRegWrite(i, 22, 0x0000);
  	mvEthPhyRegWrite(i, 0, 0x9140);
  
@@ -8087,8 +8024,6 @@ index be8b158..3d1144a 100755
  	}
  }
  /*******************************************************************************
-diff --git a/arch/arm/plat-armada/mv_hal/gpp/mvGpp.h b/arch/arm/plat-armada/mv_hal/gpp/mvGpp.h
-index c5c5e42..c0ecd0e 100644
 --- a/arch/arm/plat-armada/mv_hal/gpp/mvGpp.h
 +++ b/arch/arm/plat-armada/mv_hal/gpp/mvGpp.h
 @@ -121,7 +121,6 @@ extern "C" {
@@ -8099,11 +8034,9 @@ index c5c5e42..c0ecd0e 100644
  	MV_STATUS mvGppAtomicValueClear(MV_U32 gpionumber);
  #ifdef __cplusplus
  }
-diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c
-index 8e7bc04..ee41133 100755
 --- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c
 +++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c
-@@ -781,10 +781,10 @@ void mvNetaCpuDump(int port, int cpu, int rxTx)
+@@ -781,10 +781,10 @@ void mvNetaCpuDump(int port, int cpu, in
  		if (regVal & 1)
  			mvOsPrintf("%s-%d ", qType[rxTx], j);
  		else
@@ -8116,9 +8049,6 @@ index 8e7bc04..ee41133 100755
  }
  
  #ifdef CONFIG_MV_PON
-diff --git a/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfp.c b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfp.c
-new file mode 100644
-index 0000000..e76dfa6
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfp.c
 @@ -0,0 +1,2784 @@
@@ -10906,9 +10836,6 @@ index 0000000..e76dfa6
 +	mvOsMemset(&nfp_stats[port], 0, sizeof(NFP_STATS));
 +#endif /* NFP_STAT */
 +}
-diff --git a/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfp.h b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfp.h
-new file mode 100644
-index 0000000..7e5bf66
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfp.h
 @@ -0,0 +1,1143 @@
@@ -12055,9 +11982,6 @@ index 0000000..7e5bf66
 +void mvNfpFlushFib(int ifindex);
 +
 +#endif /* __mvNfp_h__ */
-diff --git a/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpBridge.c b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpBridge.c
-new file mode 100644
-index 0000000..97c8838
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpBridge.c
 @@ -0,0 +1,728 @@
@@ -12789,9 +12713,6 @@ index 0000000..97c8838
 +		}
 +	}
 +}
-diff --git a/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpCt.c b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpCt.c
-new file mode 100644
-index 0000000..a29bd64
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpCt.c
 @@ -0,0 +1,1514 @@
@@ -14309,9 +14230,6 @@ index 0000000..a29bd64
 +		curr = curr->next;
 +	}
 +}
-diff --git a/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
-new file mode 100644
-index 0000000..d28474d
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
 @@ -0,0 +1,223 @@
@@ -14538,9 +14456,6 @@ index 0000000..d28474d
 +#endif /* CONFIG_MV_ETH_NFP */
 +
 +#endif /* __mvNfp_h__ */
-diff --git a/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpFdb.c b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpFdb.c
-new file mode 100644
-index 0000000..e595d5e
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpFdb.c
 @@ -0,0 +1,309 @@
@@ -14853,9 +14768,6 @@ index 0000000..e595d5e
 +		}
 +	}
 +}
-diff --git a/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpFib.c b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpFib.c
-new file mode 100644
-index 0000000..2e5cd18
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpFib.c
 @@ -0,0 +1,718 @@
@@ -15577,9 +15489,6 @@ index 0000000..2e5cd18
 +		}
 +	}
 +}
-diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncRxq.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncRxq.c
-deleted file mode 100755
-index d9f0cdc..0000000
 --- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncRxq.c
 +++ /dev/null
 @@ -1,412 +0,0 @@
@@ -15995,8 +15904,6 @@ index d9f0cdc..0000000
 -	return -1;
 -#endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
 -}
-diff --git a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
-index cee49ac..9a982bb 100644
 --- a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
 +++ b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
 @@ -349,7 +349,7 @@ MV_NFC_FLASH_INFO flashDeviceInfo[] = {
@@ -16017,7 +15924,7 @@ index cee49ac..9a982bb 100644
  	.tADL = 70,		/* tADL, Address to write data delay */
  	.tCH = 5,		/* tCH, Enable signal hold time */
  	.tCS = 20,		/* tCS, Enable signal setup time */
-@@ -2328,7 +2328,7 @@ static MV_STATUS mvNfcDeviceFeatureSet(MV_NFC_CTRL *nfcCtrl, MV_U8 cmd, MV_U8 ad
+@@ -2328,7 +2328,7 @@ static MV_STATUS mvNfcDeviceFeatureSet(M
  	/* Wait for Command WRITE request */
  	errCode = mvDfcWait4Complete(NFC_SR_WRCMDREQ_MASK, 1);
  	if (errCode != MV_OK)
@@ -16026,7 +15933,7 @@ index cee49ac..9a982bb 100644
  
  	reg = MV_REG_READ(NFC_STATUS_REG);
  	MV_REG_WRITE(NFC_STATUS_REG, reg);
-@@ -2370,7 +2370,7 @@ static MV_STATUS mvNfcDeviceFeatureSet(MV_NFC_CTRL *nfcCtrl, MV_U8 cmd, MV_U8 ad
+@@ -2370,7 +2370,7 @@ static MV_STATUS mvNfcDeviceFeatureSet(M
  	if (timeout == 0)
  		return MV_BAD_STATE;
  
@@ -16035,7 +15942,7 @@ index cee49ac..9a982bb 100644
  	return errCode;
  }
  
-@@ -2411,7 +2411,7 @@ static MV_STATUS mvNfcDeviceFeatureGet(MV_NFC_CTRL *nfcCtrl, MV_U8 cmd, MV_U8 ad
+@@ -2411,7 +2411,7 @@ static MV_STATUS mvNfcDeviceFeatureGet(M
  	/* Wait for Command WRITE request */
  	errCode = mvDfcWait4Complete(NFC_SR_WRCMDREQ_MASK, 1);
  	if (errCode != MV_OK)
@@ -16044,7 +15951,7 @@ index cee49ac..9a982bb 100644
  
  	reg = MV_REG_READ(NFC_STATUS_REG);
  	MV_REG_WRITE(NFC_STATUS_REG, reg);
-@@ -2433,7 +2433,7 @@ static MV_STATUS mvNfcDeviceFeatureGet(MV_NFC_CTRL *nfcCtrl, MV_U8 cmd, MV_U8 ad
+@@ -2433,7 +2433,7 @@ static MV_STATUS mvNfcDeviceFeatureGet(M
  	if (errCode != MV_OK)
  		return errCode;
  
@@ -16053,7 +15960,7 @@ index cee49ac..9a982bb 100644
  	/* Send Last-Naked Read Command */
  	reg = 0x0;
  	reg |= NFC_CB0_CMD_XTYPE_LAST_NAKED;
-@@ -2463,7 +2463,7 @@ static MV_STATUS mvNfcDeviceFeatureGet(MV_NFC_CTRL *nfcCtrl, MV_U8 cmd, MV_U8 ad
+@@ -2463,7 +2463,7 @@ static MV_STATUS mvNfcDeviceFeatureGet(M
  	}
  	if (timeout == 0)
  		return MV_BAD_STATE;
@@ -16089,18 +15996,12 @@ index cee49ac..9a982bb 100644
  	return errCode;
  }
  #endif
-diff --git a/arch/arm/plat-armada/mv_hal/pci-if/mvCompVer.txt b/arch/arm/plat-armada/mv_hal/pci-if/mvCompVer.txt
-new file mode 100644
-index 0000000..ca36d3e
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_hal/pci-if/mvCompVer.txt
 @@ -0,0 +1,3 @@
 +Global HAL Version: FEROCEON_HAL_3_1_7
 +Unit HAL Version: 3.1.3
 +Description: This component includes an implementation of the unit HAL drivers
-diff --git a/arch/arm/plat-armada/mv_hal/pci-if/mvPciIf.c b/arch/arm/plat-armada/mv_hal/pci-if/mvPciIf.c
-new file mode 100644
-index 0000000..78e8d3e
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_hal/pci-if/mvPciIf.c
 @@ -0,0 +1,344 @@
@@ -16448,9 +16349,6 @@ index 0000000..78e8d3e
 +{
 +	return pciIf;
 +}
-diff --git a/arch/arm/plat-armada/mv_hal/pci-if/mvPciIf.h b/arch/arm/plat-armada/mv_hal/pci-if/mvPciIf.h
-new file mode 100644
-index 0000000..57358c0
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_hal/pci-if/mvPciIf.h
 @@ -0,0 +1,134 @@
@@ -16588,9 +16486,6 @@ index 0000000..57358c0
 +#endif /* __cplusplus */
 +
 +#endif /* #ifndef __INCPCIIFH */
-diff --git a/arch/arm/plat-armada/mv_hal/pci-if/mvPciIfRegs.h b/arch/arm/plat-armada/mv_hal/pci-if/mvPciIfRegs.h
-new file mode 100644
-index 0000000..668d75b
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_hal/pci-if/mvPciIfRegs.h
 @@ -0,0 +1,235 @@
@@ -16829,9 +16724,6 @@ index 0000000..668d75b
 +#define PIPLR_MAXLATEN_MASK	(0xff << PIPLR_MAXLATEN_OFFS)
 +
 +#endif /* #ifndef __INCPCIIFREGSH */
-diff --git a/arch/arm/plat-armada/mv_hal/pci-if/pci_util/mvPciUtils.c b/arch/arm/plat-armada/mv_hal/pci-if/pci_util/mvPciUtils.c
-new file mode 100644
-index 0000000..31463e7
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_hal/pci-if/pci_util/mvPciUtils.c
 @@ -0,0 +1,753 @@
@@ -17588,9 +17480,6 @@ index 0000000..31463e7
 +	return MV_OK;
 +
 +}
-diff --git a/arch/arm/plat-armada/mv_hal/pci-if/pci_util/mvPciUtils.h b/arch/arm/plat-armada/mv_hal/pci-if/pci_util/mvPciUtils.h
-new file mode 100644
-index 0000000..472c616
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_hal/pci-if/pci_util/mvPciUtils.h
 @@ -0,0 +1,303 @@
@@ -17897,11 +17786,9 @@ index 0000000..472c616
 +MV_STATUS mvPciScan(MV_U32 pciIf, MV_PCI_DEVICE *pPciAgents, MV_U32 *pPciAgentsNum);
 +
 +#endif /* #ifndef __INCmvPciUtilsh */
-diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPex.c b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
-index 544532c..05dd51a 100755
 --- a/arch/arm/plat-armada/mv_hal/pex/mvPex.c
 +++ b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
-@@ -229,18 +229,11 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+@@ -229,18 +229,11 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX
  	}
  	/* now wait 1ms to be sure the link is valid */
  	mvOsDelay(1);
@@ -17920,7 +17807,7 @@ index 544532c..05dd51a 100755
  #ifdef PCIE_VIRTUAL_BRIDGE_SUPPORT
  	mvPexVrtBrgInit(pexIf);
  #endif
-@@ -268,17 +261,7 @@ MV_U32 mvPexModeGet(MV_U32 pexIf, MV_PEX_MODE *pexMode)
+@@ -268,17 +261,7 @@ MV_U32 mvPexModeGet(MV_U32 pexIf, MV_PEX
  
  	if (pexIf >= MV_PEX_MAX_IF)
  		return MV_BAD_PARAM;
@@ -17939,7 +17826,7 @@ index 544532c..05dd51a 100755
  
  	pexData = MV_REG_READ(PEX_CTRL_REG(pexIf));
  
-@@ -300,13 +283,7 @@ MV_U32 mvPexModeGet(MV_U32 pexIf, MV_PEX_MODE *pexMode)
+@@ -300,13 +283,7 @@ MV_U32 mvPexModeGet(MV_U32 pexIf, MV_PEX
  		pexMode->pexWidth = MV_PEX_WITDH_INVALID;
  	}
  	else { /* We have Link negotiation started */
@@ -17953,7 +17840,7 @@ index 544532c..05dd51a 100755
  		/* We have link. The link width is now valid */
  		pexData = MV_REG_READ(PEX_CFG_DIRECT_ACCESS(pexIf, PEX_LINK_CTRL_STAT_REG));
  		pexMode->pexWidth = ((pexData & PXLCSR_NEG_LNK_WDTH_MASK) >> PXLCSR_NEG_LNK_WDTH_OFFS);
-@@ -412,7 +389,6 @@ MV_U32 mvPexHwConfigRead(MV_U32 pexIf, MV_U32 bus, MV_U32 dev, MV_U32 func, MV_U
+@@ -412,7 +389,6 @@ MV_U32 mvPexHwConfigRead(MV_U32 pexIf, M
  				return MV_ERROR;
  		}
  	}
@@ -17961,7 +17848,7 @@ index 544532c..05dd51a 100755
  	/* Creating PEX address to be passed */
  	pexData = (bus << PXCAR_BUS_NUM_OFFS);
  	pexData |= (dev << PXCAR_DEVICE_NUM_OFFS);
-@@ -426,7 +402,6 @@ MV_U32 mvPexHwConfigRead(MV_U32 pexIf, MV_U32 bus, MV_U32 dev, MV_U32 func, MV_U
+@@ -426,7 +402,6 @@ MV_U32 mvPexHwConfigRead(MV_U32 pexIf, M
  
  	/* Write the address to the PEX configuration address register */
  	MV_REG_WRITE(PEX_CFG_ADDR_REG(pexIf), pexData);
@@ -17969,7 +17856,7 @@ index 544532c..05dd51a 100755
  	DB(mvOsPrintf("mvPexConfigRead:address pexData=%x ", pexData));
  
  	/* In order to let the PEX controller absorbed the address of the read  */
-@@ -436,135 +411,9 @@ MV_U32 mvPexHwConfigRead(MV_U32 pexIf, MV_U32 bus, MV_U32 dev, MV_U32 func, MV_U
+@@ -436,135 +411,9 @@ MV_U32 mvPexHwConfigRead(MV_U32 pexIf, M
  
  	/* cleaning Master Abort */
  	MV_REG_BIT_SET(PEX_CFG_DIRECT_ACCESS(pexIf, PEX_STATUS_AND_COMMAND), PXSAC_MABORT);
@@ -18105,7 +17992,7 @@ index 544532c..05dd51a 100755
  	DB(mvOsPrintf("mvPexConfigRead: got : %x \n", pexData));
  
  	return pexData;
-@@ -724,8 +573,6 @@ MV_STATUS mvPexHwConfigWrite(MV_U32 pexIf, MV_U32 bus, MV_U32 dev, MV_U32 func,
+@@ -724,8 +573,6 @@ MV_STATUS mvPexHwConfigWrite(MV_U32 pexI
  MV_STATUS mvPexMasterEnable(MV_U32 pexIf, MV_BOOL enable)
  {
  	MV_U32 pexCommandStatus;
@@ -18114,7 +18001,7 @@ index 544532c..05dd51a 100755
  
  	/* Parameter checking   */
  	if (pexIf >= pexHalData[pexIf].maxPexIf) {
-@@ -733,9 +580,6 @@ MV_STATUS mvPexMasterEnable(MV_U32 pexIf, MV_BOOL enable)
+@@ -733,9 +580,6 @@ MV_STATUS mvPexMasterEnable(MV_U32 pexIf
  		return MV_ERROR;
  	}
  
@@ -18124,7 +18011,7 @@ index 544532c..05dd51a 100755
  	pexCommandStatus = MV_REG_READ(PEX_CFG_DIRECT_ACCESS(pexIf, PEX_STATUS_AND_COMMAND));
  
  	if (MV_TRUE == enable)
-@@ -823,8 +667,6 @@ MV_STATUS mvPexSlaveEnable(MV_U32 pexIf, MV_U32 bus, MV_U32 dev, MV_BOOL enable)
+@@ -823,8 +667,6 @@ MV_STATUS mvPexSlaveEnable(MV_U32 pexIf,
  MV_STATUS mvPexLocalBusNumSet(MV_U32 pexIf, MV_U32 busNum)
  {
  	MV_U32 pexStatus;
@@ -18133,7 +18020,7 @@ index 544532c..05dd51a 100755
  
  	/* Parameter checking   */
  	if (pexIf >= pexHalData[pexIf].maxPexIf) {
-@@ -836,9 +678,6 @@ MV_STATUS mvPexLocalBusNumSet(MV_U32 pexIf, MV_U32 busNum)
+@@ -836,9 +678,6 @@ MV_STATUS mvPexLocalBusNumSet(MV_U32 pex
  		return MV_ERROR;
  	}
  
@@ -18152,7 +18039,7 @@ index 544532c..05dd51a 100755
  
  	if (pexIf >= MV_PEX_MAX_IF)
  		return MV_BAD_PARAM;
-@@ -927,9 +764,6 @@ MV_STATUS mvPexLocalDevNumSet(MV_U32 pexIf, MV_U32 devNum)
+@@ -927,9 +764,6 @@ MV_STATUS mvPexLocalDevNumSet(MV_U32 pex
  		return MV_BAD_PARAM;
  	}
  
@@ -18162,7 +18049,7 @@ index 544532c..05dd51a 100755
  	pexStatus = MV_REG_READ(PEX_STATUS_REG(pexIf));
  
  	pexStatus &= ~PXSR_PEX_DEV_NUM_MASK;
-@@ -1000,7 +834,6 @@ MV_VOID mvPexPhyRegWrite(MV_U32 pexIf, MV_U32 regOffset, MV_U16 value)
+@@ -1000,7 +834,6 @@ MV_VOID mvPexPhyRegWrite(MV_U32 pexIf, M
  	}
  	regAddr = (((regOffset & 0x3fff) << 16) | value);
  	MV_REG_WRITE(PEX_PHY_ACCESS_REG(pexIf), regAddr);
@@ -18199,8 +18086,6 @@ index 544532c..05dd51a 100755
 -	}
 -}
 -#endif
-diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPexAddrDec.c b/arch/arm/plat-armada/mv_hal/pex/mvPexAddrDec.c
-index ef8b451..8f12bf6 100755
 --- a/arch/arm/plat-armada/mv_hal/pex/mvPexAddrDec.c
 +++ b/arch/arm/plat-armada/mv_hal/pex/mvPexAddrDec.c
 @@ -103,10 +103,6 @@ MV_U32 pexDevBarPrioTable[] = {
@@ -18214,7 +18099,7 @@ index ef8b451..8f12bf6 100755
  static MV_BOOL pexIsWinWithinBar(MV_U32 pexIf, MV_ADDR_WIN *pAddrWin);
  
  /*******************************************************************************
-@@ -249,15 +245,7 @@ MV_STATUS mvPexWinInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_UNIT_WIN_INFO *addr
+@@ -249,15 +245,7 @@ MV_STATUS mvPexWinInit(MV_U32 pexIf, MV_
  	}
  
  /* NOTE: PEX Overlap Detection is disabled to support Muli CS DRAM - Need to be fixed */
@@ -18231,7 +18116,7 @@ index ef8b451..8f12bf6 100755
  		pexBar.enable = MV_TRUE;
  
  		/* configure the bar */
-@@ -537,11 +525,6 @@ MV_STATUS mvPexTargetWinRead(MV_U32 pexIf, MV_U32 winNum, MV_PEX_DEC_WIN *pexWin
+@@ -537,11 +525,6 @@ MV_STATUS mvPexTargetWinRead(MV_U32 pexI
  	else
  		pAddrDecWin->enable = MV_FALSE;
  
@@ -18243,7 +18128,7 @@ index ef8b451..8f12bf6 100755
  	/* get target bar */
  	if ((sizeReg & PXWCR_WIN_BAR_MAP_MASK) == PXWCR_WIN_BAR_MAP_BAR1)
  		pexWin->targetBar = 1;
-@@ -605,14 +588,8 @@ MV_STATUS mvPexTargetWinEnable(MV_U32 pexIf, MV_U32 winNum, MV_BOOL enable)
+@@ -605,14 +588,8 @@ MV_STATUS mvPexTargetWinEnable(MV_U32 pe
  			mvOsPrintf("mvPexTargetWinEnable: mvPexTargetWinRead Failed\n");
  			return MV_ERROR;
  		}
@@ -18260,7 +18145,7 @@ index ef8b451..8f12bf6 100755
  		if (MV_FALSE == pexIsWinWithinBar(pexIf, &addrDecWin->addrWin)) {
  			mvOsPrintf("mvPexTargetWinEnable: Win %d should be in bar boundries\n", winNum);
  			return MV_BAD_PARAM;
-@@ -739,40 +716,12 @@ MV_STATUS mvPexBarSet(MV_U32 pexIf, MV_U32 barNum, MV_PEX_BAR *pAddrWin)
+@@ -739,40 +716,12 @@ MV_STATUS mvPexBarSet(MV_U32 pexIf, MV_U
  		return MV_BAD_PARAM;
  	}
  
@@ -18301,7 +18186,7 @@ index ef8b451..8f12bf6 100755
  		regSize &= ~PXBCR_BAR_SIZE_MASK;
  		regSize |= (sizeToReg << PXBCR_BAR_SIZE_OFFS);
  		MV_REG_WRITE(PEX_BAR_CTRL_REG(pexIf, barNum), regSize);
-@@ -1014,88 +963,6 @@ static MV_BOOL pexIsWinWithinBar(MV_U32 pexIf, MV_ADDR_WIN *pAddrWin)
+@@ -1014,88 +963,6 @@ static MV_BOOL pexIsWinWithinBar(MV_U32
  }
  
  /*******************************************************************************
@@ -18482,8 +18367,6 @@ index ef8b451..8f12bf6 100755
 -}
 -
 -#endif
-diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h b/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h
-index baa4ffd..869bdbd 100755
 --- a/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h
 +++ b/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h
 @@ -185,7 +185,6 @@ extern "C" {
@@ -18494,17 +18377,13 @@ index baa4ffd..869bdbd 100755
  
  #define PEX_LINK_CTRL_STATUS_REG(pexIf) 		((MV_PEX_IF_REGS_BASE(pexIf)) + 0x70)
  
-diff --git a/arch/arm/plat-armada/mv_hal/rtc/ext_rtc/mvDS1339.h b/arch/arm/plat-armada/mv_hal/rtc/ext_rtc/mvDS1339.h
-index 0800551..6cad37d 100644
 --- a/arch/arm/plat-armada/mv_hal/rtc/ext_rtc/mvDS1339.h
 +++ b/arch/arm/plat-armada/mv_hal/rtc/ext_rtc/mvDS1339.h
-@@ -100,4 +100,3 @@ MV_VOID mvRtcDS1339AlarmSet(MV_RTC_TIME *time);
+@@ -100,4 +100,3 @@ MV_VOID mvRtcDS1339AlarmSet(MV_RTC_TIME
  
  
  #endif  /* __INCmvDS1511h */
 -
-diff --git a/arch/arm/plat-armada/mv_hal/rtc/ext_rtc/mvDS1339Reg.h b/arch/arm/plat-armada/mv_hal/rtc/ext_rtc/mvDS1339Reg.h
-index 0e1931a..59690ad 100644
 --- a/arch/arm/plat-armada/mv_hal/rtc/ext_rtc/mvDS1339Reg.h
 +++ b/arch/arm/plat-armada/mv_hal/rtc/ext_rtc/mvDS1339Reg.h
 @@ -373,4 +373,3 @@ extern "C" {
@@ -18512,17 +18391,13 @@ index 0e1931a..59690ad 100644
  
  #endif /* __INCmvDS1339Regh */
 -
-diff --git a/arch/arm/plat-armada/mv_hal/rtc/ext_rtc/mvDS133x.h b/arch/arm/plat-armada/mv_hal/rtc/ext_rtc/mvDS133x.h
-index e618161..2acd63c 100644
 --- a/arch/arm/plat-armada/mv_hal/rtc/ext_rtc/mvDS133x.h
 +++ b/arch/arm/plat-armada/mv_hal/rtc/ext_rtc/mvDS133x.h
-@@ -104,4 +104,3 @@ MV_VOID mvRtcDS133xAlarmSet(MV_RTC_TIME *time);
+@@ -104,4 +104,3 @@ MV_VOID mvRtcDS133xAlarmSet(MV_RTC_TIME
  
  
  #endif  /* __INCmvDS133xh */
 -
-diff --git a/arch/arm/plat-armada/mv_hal/rtc/ext_rtc/mvDS133xReg.h b/arch/arm/plat-armada/mv_hal/rtc/ext_rtc/mvDS133xReg.h
-index 73a3a1c..14b8909 100644
 --- a/arch/arm/plat-armada/mv_hal/rtc/ext_rtc/mvDS133xReg.h
 +++ b/arch/arm/plat-armada/mv_hal/rtc/ext_rtc/mvDS133xReg.h
 @@ -374,4 +374,3 @@ extern "C" {
@@ -18530,8 +18405,6 @@ index 73a3a1c..14b8909 100644
  
  #endif /* __INCmvDS133xRegh */
 -
-diff --git a/arch/arm/plat-armada/mv_hal/rtc/mvCompVer.txt b/arch/arm/plat-armada/mv_hal/rtc/mvCompVer.txt
-index 3afa556..ca36d3e 100644
 --- a/arch/arm/plat-armada/mv_hal/rtc/mvCompVer.txt
 +++ b/arch/arm/plat-armada/mv_hal/rtc/mvCompVer.txt
 @@ -1,4 +1,3 @@
@@ -18539,11 +18412,9 @@ index 3afa556..ca36d3e 100644
  Unit HAL Version: 3.1.3
  Description: This component includes an implementation of the unit HAL drivers
 -
-diff --git a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c
-index aa8a91c..a4b131f 100644
 --- a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c
 +++ b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c
-@@ -1279,11 +1279,9 @@ static void handleEdmaInterrupt(MV_SATA_ADAPTER *pAdapter, MV_U8 sataUnit,
+@@ -1279,11 +1279,9 @@ static void handleEdmaInterrupt(MV_SATA_
  
  static void handleEdmaError(MV_SATA_ADAPTER *pAdapter, MV_U8 channelIndex)
  {
@@ -18555,7 +18426,7 @@ index aa8a91c..a4b131f 100644
  
  	eDmaErrorCause = MV_REG_READ_DWORD(ioBaseAddr,
  					   getEdmaRegOffset(channelIndex) + MV_EDMA_INTERRUPT_ERROR_CAUSE_REG_OFFSET);
-@@ -1897,10 +1895,7 @@ static void handleDeviceInterrupt(MV_SATA_ADAPTER *pAdapter, MV_U8 sataUnit, MV_
+@@ -1897,10 +1895,7 @@ static void handleDeviceInterrupt(MV_SAT
  
  	mvOsSemTake(&pSataChannel->semaphore);
  	if (pSataChannel->ErrorHandlingInfo.state == MV_ERROR_HANDLING_STATE_WAIT_FOR_BUSY) {
@@ -18566,7 +18437,7 @@ index aa8a91c..a4b131f 100644
  		/* clear DevInterrupt */
  		MV_REG_WRITE_DWORD(pAdapter->adapterIoBaseAddress,
  				   MV_SATAHC_REGS_BASE_OFFSET(sataUnit) +
-@@ -2148,17 +2143,6 @@ static void handlePIOInterrupt(MV_SATA_CHANNEL *pSataChannel, MV_QUEUED_COMMAND_
+@@ -2148,17 +2143,6 @@ static void handlePIOInterrupt(MV_SATA_C
  				pCommandEntry->pCommandInfo->commandParams.packetCommand.transfered_data =
  				    pCommandEntry->pCommandInfo->commandParams.packetCommand.buffer_len;
  
@@ -18584,7 +18455,7 @@ index aa8a91c..a4b131f 100644
  				/* if BMDMA finished, call _resetBmDma to clear the Done interrupt */
  				_resetBmDma(pSataChannel->mvSataAdapter, pSataChannel->channelNumber);
  				/* chech if the BMDMA completed with errors */
-@@ -4935,26 +4919,7 @@ MV_BOOLEAN mvSataInitAdapter(MV_SATA_ADAPTER *pAdapter)
+@@ -4935,26 +4919,7 @@ MV_BOOLEAN mvSataInitAdapter(MV_SATA_ADA
  			}
  		}
  	}
@@ -18611,7 +18482,7 @@ index aa8a91c..a4b131f 100644
  	if (pAdapter->hostInterface == MV_HOST_IF_PCI) {
  
  		MV_REG_WRITE_DWORD(pAdapter->adapterIoBaseAddress,
-@@ -5339,7 +5304,6 @@ static MV_BOOLEAN _checkSStatusAfterHReset(MV_SATA_ADAPTER *pAdapter, MV_U8 chan
+@@ -5339,7 +5304,6 @@ static MV_BOOLEAN _checkSStatusAfterHRes
  MV_BOOLEAN mvSataChannelHardReset(MV_SATA_ADAPTER *pAdapter, MV_U8 channelIndex)
  {
  	MV_SATA_CHANNEL *pSataChannel;
@@ -18619,7 +18490,7 @@ index aa8a91c..a4b131f 100644
  	MV_U32 count = 0;
  
  	if (pAdapter == NULL) {
-@@ -5348,7 +5312,6 @@ MV_BOOLEAN mvSataChannelHardReset(MV_SATA_ADAPTER *pAdapter, MV_U8 channelIndex)
+@@ -5348,7 +5312,6 @@ MV_BOOLEAN mvSataChannelHardReset(MV_SAT
  		return MV_FALSE;
  	}
  	pSataChannel = pAdapter->sataChannel[channelIndex];
@@ -18627,7 +18498,7 @@ index aa8a91c..a4b131f 100644
  	if (pSataChannel == NULL) {
  		mvLogMsg(MV_CORE_DRIVER_LOG_ID, MV_DEBUG_FATAL_ERROR, " %d %d: "
  			 "mvSataChannelHardReset Failed, channel data structure not "
-@@ -5661,14 +5624,12 @@ MV_BOOLEAN mvSataConfigEdmaMode(MV_SATA_ADAPTER *pAdapter, MV_U8 channelIndex,
+@@ -5661,14 +5624,12 @@ MV_BOOLEAN mvSataConfigEdmaMode(MV_SATA_
  MV_BOOLEAN mvSataEnableChannelDma(MV_SATA_ADAPTER *pAdapter, MV_U8 channelIndex)
  {
  	MV_SATA_CHANNEL *pSataChannel;
@@ -18642,7 +18513,7 @@ index aa8a91c..a4b131f 100644
  	pSataChannel = pAdapter->sataChannel[channelIndex];
  	if (pSataChannel == NULL) {
  		mvLogMsg(MV_CORE_DRIVER_LOG_ID, MV_DEBUG_FATAL_ERROR, " %d %d: mvSataEnableChannelD"
-@@ -5719,14 +5680,12 @@ MV_BOOLEAN mvSataEnableChannelDma(MV_SATA_ADAPTER *pAdapter, MV_U8 channelIndex)
+@@ -5719,14 +5680,12 @@ MV_BOOLEAN mvSataEnableChannelDma(MV_SAT
  *******************************************************************************/
  MV_BOOLEAN mvSataDisableChannelDma(MV_SATA_ADAPTER *pAdapter, MV_U8 channelIndex)
  {
@@ -18657,7 +18528,7 @@ index aa8a91c..a4b131f 100644
  	if (pAdapter->sataChannel[channelIndex] == NULL) {
  		mvLogMsg(MV_CORE_DRIVER_LOG_ID, MV_DEBUG_FATAL_ERROR, " %d %d: mvSataDisableChannel"
  			 "Dma Failed, channel data structure is not allocated\n", pAdapter->adapterId, channelIndex);
-@@ -6343,7 +6302,6 @@ MV_QUEUE_COMMAND_RESULT mvSataQueueCommand(MV_SATA_ADAPTER *pAdapter,
+@@ -6343,7 +6302,6 @@ MV_QUEUE_COMMAND_RESULT mvSataQueueComma
  {
  	MV_SATA_CHANNEL *pSataChannel = pAdapter->sataChannel[channelIndex];
  	MV_QUEUED_COMMAND_ENTRY *pCommandEntry;
@@ -18665,7 +18536,7 @@ index aa8a91c..a4b131f 100644
  	MV_U8 hostTag;
  	MV_U8 deviceTag;
  
-@@ -6372,7 +6330,6 @@ MV_QUEUE_COMMAND_RESULT mvSataQueueCommand(MV_SATA_ADAPTER *pAdapter,
+@@ -6372,7 +6330,6 @@ MV_QUEUE_COMMAND_RESULT mvSataQueueComma
  		return MV_QUEUE_COMMAND_RESULT_BAD_PARAMS;
  	}
  #endif
@@ -18673,7 +18544,7 @@ index aa8a91c..a4b131f 100644
  	if (pSataChannel->queueCommandsEnabled == MV_FALSE) {
  		mvLogMsg(MV_CORE_DRIVER_LOG_ID, MV_DEBUG_ERROR, " %d %d: queued commands mode"
  			 " is disabled\n", pAdapter->adapterId, channelIndex);
-@@ -6942,7 +6899,6 @@ MV_BOOLEAN mvSataDisableStaggeredSpinUp(MV_SATA_ADAPTER *pAdapter, MV_U8 channel
+@@ -6942,7 +6899,6 @@ MV_BOOLEAN mvSataDisableStaggeredSpinUp(
  
  MV_BOOLEAN mvSataSetInterfaceSpeed(MV_SATA_ADAPTER *pAdapter, MV_U8 channelIndex, MV_SATA_IF_SPEED ifSpeed)
  {
@@ -18681,7 +18552,7 @@ index aa8a91c..a4b131f 100644
  	if (pAdapter == NULL) {
  		mvLogMsg(MV_CORE_DRIVER_LOG_ID, MV_DEBUG_FATAL_ERROR, "    : "
  			 "mvSataSetInterfaceSpeed Failed, Bad adapter data structure" " pointer\n");
-@@ -6969,7 +6925,6 @@ MV_BOOLEAN mvSataSetInterfaceSpeed(MV_SATA_ADAPTER *pAdapter, MV_U8 channelIndex
+@@ -6969,7 +6925,6 @@ MV_BOOLEAN mvSataSetInterfaceSpeed(MV_SA
  			mvOsSemRelease(&pSataChannel->semaphore);
  		}
  
@@ -18689,11 +18560,9 @@ index aa8a91c..a4b131f 100644
  
  		if (ifSpeed == MV_SATA_IF_SPEED_1_5_GBPS) {
  			pAdapter->limitInterfaceSpeed[channelIndex] = MV_TRUE;
-diff --git a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataAddrDec.c b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataAddrDec.c
-index 20483fc..d94d9ee 100755
 --- a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataAddrDec.c
 +++ b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataAddrDec.c
-@@ -282,58 +282,6 @@ MV_STATUS mvSataWinRead(MV_U32 dev, MV_U32 winNum, MV_UNIT_WIN_INFO *pAddrDecWin
+@@ -282,58 +282,6 @@ MV_STATUS mvSataWinRead(MV_U32 dev, MV_U
  	return MV_OK;
  }
  
@@ -18752,11 +18621,9 @@ index 20483fc..d94d9ee 100755
  /*******************************************************************************
  * mvSataWinInit - Initialize the integrated SATA target address window.
  *
-diff --git a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvStorageDev.c b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvStorageDev.c
-index 0655b81..fd564eb 100644
 --- a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvStorageDev.c
 +++ b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvStorageDev.c
-@@ -518,8 +518,6 @@ MV_BOOLEAN mvStorageDevATASoftResetDevice(MV_SATA_ADAPTER *pAdapter,
+@@ -518,8 +518,6 @@ MV_BOOLEAN mvStorageDevATASoftResetDevic
  					  MV_U8 PMPort, MV_STORAGE_DEVICE_REGISTERS *registerStruct)
  {
  	MV_SATA_CHANNEL *pSataChannel;
@@ -18765,7 +18632,7 @@ index 0655b81..fd564eb 100644
  	MV_BOOLEAN result;
  
  	if (pAdapter == NULL) {
-@@ -528,7 +526,6 @@ MV_BOOLEAN mvStorageDevATASoftResetDevice(MV_SATA_ADAPTER *pAdapter,
+@@ -528,7 +526,6 @@ MV_BOOLEAN mvStorageDevATASoftResetDevic
  		return MV_FALSE;
  	}
  	pSataChannel = pAdapter->sataChannel[channelIndex];
@@ -18773,7 +18640,7 @@ index 0655b81..fd564eb 100644
  	if (pSataChannel == NULL) {
  		mvLogMsg(MV_CORE_DRIVER_LOG_ID, MV_DEBUG_FATAL_ERROR, " %d %d:  channel data structu"
  			 "re is not allocated\n", pAdapter->adapterId, channelIndex);
-@@ -536,7 +533,6 @@ MV_BOOLEAN mvStorageDevATASoftResetDevice(MV_SATA_ADAPTER *pAdapter,
+@@ -536,7 +533,6 @@ MV_BOOLEAN mvStorageDevATASoftResetDevic
  	}
  
  	mvOsSemTake(&pSataChannel->semaphore);
@@ -18781,7 +18648,7 @@ index 0655b81..fd564eb 100644
  
  	if (pSataChannel->queueCommandsEnabled == MV_TRUE) {
  		mvLogMsg(MV_CORE_DRIVER_LOG_ID, MV_DEBUG_ERROR, " %d %d:  mvStorageDevATASoft"
-@@ -622,7 +618,6 @@ MV_BOOLEAN _isDeviceBsyBitOff(MV_SATA_CHANNEL *pSataChannel)
+@@ -622,7 +618,6 @@ MV_BOOLEAN _isDeviceBsyBitOff(MV_SATA_CH
  MV_BOOLEAN mvStorageDevATAStartSoftResetDevice(MV_SATA_ADAPTER *pAdapter, MV_U8 channelIndex, MV_U8 PMPort)
  {
  	MV_SATA_CHANNEL *pSataChannel;
@@ -18789,7 +18656,7 @@ index 0655b81..fd564eb 100644
  
  	if (pAdapter == NULL) {
  		mvLogMsg(MV_CORE_DRIVER_LOG_ID, MV_DEBUG_FATAL_ERROR, "    :  mvStorageDevATASoftRes"
-@@ -630,7 +625,6 @@ MV_BOOLEAN mvStorageDevATAStartSoftResetDevice(MV_SATA_ADAPTER *pAdapter, MV_U8
+@@ -630,7 +625,6 @@ MV_BOOLEAN mvStorageDevATAStartSoftReset
  		return MV_FALSE;
  	}
  	pSataChannel = pAdapter->sataChannel[channelIndex];
@@ -18797,7 +18664,7 @@ index 0655b81..fd564eb 100644
  	if (pSataChannel == NULL) {
  		mvLogMsg(MV_CORE_DRIVER_LOG_ID, MV_DEBUG_FATAL_ERROR, " %d %d:  channel data structu"
  			 "re is not allocated\n", pAdapter->adapterId, channelIndex);
-@@ -677,7 +671,6 @@ MV_BOOLEAN mvStorageIsDeviceBsyBitOff(MV_SATA_ADAPTER *pAdapter,
+@@ -677,7 +671,6 @@ MV_BOOLEAN mvStorageIsDeviceBsyBitOff(MV
  				      MV_U8 channelIndex, MV_STORAGE_DEVICE_REGISTERS *registerStruct)
  {
  	MV_SATA_CHANNEL *pSataChannel;
@@ -18805,7 +18672,7 @@ index 0655b81..fd564eb 100644
  	MV_BOOLEAN result;
  
  	if (pAdapter == NULL) {
-@@ -686,7 +679,6 @@ MV_BOOLEAN mvStorageIsDeviceBsyBitOff(MV_SATA_ADAPTER *pAdapter,
+@@ -686,7 +679,6 @@ MV_BOOLEAN mvStorageIsDeviceBsyBitOff(MV
  		return MV_FALSE;
  	}
  	pSataChannel = pAdapter->sataChannel[channelIndex];
@@ -18813,7 +18680,7 @@ index 0655b81..fd564eb 100644
  	if (pSataChannel == NULL) {
  		mvLogMsg(MV_CORE_DRIVER_LOG_ID, MV_DEBUG_FATAL_ERROR, " %d %d:  channel data structu"
  			 "re is not allocated\n", pAdapter->adapterId, channelIndex);
-@@ -814,169 +806,6 @@ MV_BOOLEAN mvStorageDevATAExecuteNonUDMACommand(MV_SATA_ADAPTER *pAdapter,
+@@ -814,169 +806,6 @@ MV_BOOLEAN mvStorageDevATAExecuteNonUDMA
  	return result;
  }
  
@@ -18983,11 +18850,9 @@ index 0655b81..fd564eb 100644
  MV_BOOLEAN executeNonUDMACommand(MV_SATA_ADAPTER *pAdapter,
  				 MV_U8 channelIndex,
  				 MV_U8 PMPort,
-diff --git a/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c b/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c
-index 700d691..4226af2 100644
 --- a/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c
 +++ b/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c
-@@ -672,13 +672,7 @@ MV_STATUS mvSFlashSectorErase(MV_SFLASH_INFO *pFlinfo, MV_U32 secNumber)
+@@ -672,13 +672,7 @@ MV_STATUS mvSFlashSectorErase(MV_SFLASH_
      MV_STATUS ret;
      MV_U8 cmd[MV_SFLASH_SE_CMND_LENGTH];
      MV_U32 secAddr;
@@ -19002,7 +18867,7 @@ index 700d691..4226af2 100644
      /* check for NULL pointer */
      if (pFlinfo == NULL) {
  	mvOsPrintf("%s ERROR: Null pointer parameter!\n", __func__);
-@@ -700,19 +694,6 @@ MV_STATUS mvSFlashSectorErase(MV_SFLASH_INFO *pFlinfo, MV_U32 secNumber)
+@@ -700,19 +694,6 @@ MV_STATUS mvSFlashSectorErase(MV_SFLASH_
  
      /* we don't want to access SPI in direct mode from in-direct API,
  	becasue of timing issue between CS asserts. */
@@ -19022,22 +18887,18 @@ index 700d691..4226af2 100644
  
      cmd[0] = sflash[pFlinfo->index].opcdSE;
  	cmd[1] = ((secAddr >> 16) & 0xFF);
-@@ -1628,4 +1609,3 @@ const MV_8 *mvSFlashModelGet(MV_SFLASH_INFO *pFlinfo)
+@@ -1628,4 +1609,3 @@ const MV_8 *mvSFlashModelGet(MV_SFLASH_I
  
      return sflash[pFlinfo->index].deviceModel;
  }
 -
-diff --git a/arch/arm/plat-armada/mv_hal/spi/mvSpiCmnd.c b/arch/arm/plat-armada/mv_hal/spi/mvSpiCmnd.c
-index 9887478..2f1a0e0 100644
 --- a/arch/arm/plat-armada/mv_hal/spi/mvSpiCmnd.c
 +++ b/arch/arm/plat-armada/mv_hal/spi/mvSpiCmnd.c
-@@ -253,4 +253,3 @@ MV_STATUS mvSpiWriteThenRead(MV_U8 spiId, MV_U8 *pCmndBuff, MV_U32 cmndSize, MV_
+@@ -253,4 +253,3 @@ MV_STATUS mvSpiWriteThenRead(MV_U8 spiId
  
      return ret;
  }
 -
-diff --git a/arch/arm/plat-armada/mv_hal/spi/mvSpiSpec.h b/arch/arm/plat-armada/mv_hal/spi/mvSpiSpec.h
-index 6dca025..c1b5f8f 100644
 --- a/arch/arm/plat-armada/mv_hal/spi/mvSpiSpec.h
 +++ b/arch/arm/plat-armada/mv_hal/spi/mvSpiSpec.h
 @@ -136,4 +136,3 @@ extern "C" {
@@ -19045,8 +18906,6 @@ index 6dca025..c1b5f8f 100644
  
  #endif /* __INCmvSpiSpecH */
 -
-diff --git a/arch/arm/plat-armada/mv_hal/twsi/mvCompVer.txt b/arch/arm/plat-armada/mv_hal/twsi/mvCompVer.txt
-index 40fea93..40e5550 100644
 --- a/arch/arm/plat-armada/mv_hal/twsi/mvCompVer.txt
 +++ b/arch/arm/plat-armada/mv_hal/twsi/mvCompVer.txt
 @@ -1,4 +1,3 @@
@@ -19054,11 +18913,9 @@ index 40fea93..40e5550 100644
  Unit HAL Version: 3.1.5
  Description: This component includes an implementation of the unit HAL drivers
 -
-diff --git a/arch/arm/plat-armada/mv_hal/twsi/mvTwsi.c b/arch/arm/plat-armada/mv_hal/twsi/mvTwsi.c
-index 40c412b..80af82a 100755
 --- a/arch/arm/plat-armada/mv_hal/twsi/mvTwsi.c
 +++ b/arch/arm/plat-armada/mv_hal/twsi/mvTwsi.c
-@@ -71,7 +71,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -71,7 +71,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #include "mvTwsiSpec.h"
  #include "mvSysTwsiConfig.h"
  
@@ -19067,7 +18924,7 @@ index 40c412b..80af82a 100755
  #ifdef MV_DEBUG
  #define DB(x) x
  #define DB1(x) x
-@@ -223,7 +223,7 @@ MV_STATUS mvTwsiStopBitSet(MV_U8 chanNum)
+@@ -223,7 +223,7 @@ MV_STATUS mvTwsiStopBitSet(MV_U8 chanNum
  	/* check the status */
  	temp = twsiStsGet(chanNum);
  	if ((TWSI_M_LOST_ARB_DUR_AD_OR_DATA_TRA == temp) || (TWSI_M_LOST_ARB_DUR_AD_TRA_GNL_CALL_AD_REC_ACK_TRA == temp)) {
@@ -19076,17 +18933,13 @@ index 40c412b..80af82a 100755
  		return MV_RETRY;
  	} else if (temp != TWSI_NO_REL_STS_INT_FLAG_IS_KEPT_0) {
  		mvOsPrintf("TWSI: mvTwsiStopBitSet ERROR - status %x after Stop Bit. \n", temp);
-diff --git a/arch/arm/plat-armada/mv_hal/twsi/mvTwsi.h b/arch/arm/plat-armada/mv_hal/twsi/mvTwsi.h
-index 185eb58..34e1ff1 100644
 --- a/arch/arm/plat-armada/mv_hal/twsi/mvTwsi.h
 +++ b/arch/arm/plat-armada/mv_hal/twsi/mvTwsi.h
-@@ -113,4 +113,3 @@ MV_STATUS mvTwsiWrite(MV_U8 chanNum, MV_TWSI_SLAVE *twsiSlave, MV_U8 *pBlock, MV
+@@ -113,4 +113,3 @@ MV_STATUS mvTwsiWrite(MV_U8 chanNum, MV_
  #endif /* __cplusplus */
  
  #endif /* __INCmvTwsiH */
 -
-diff --git a/arch/arm/plat-armada/mv_hal/uart/mvCompVer.txt b/arch/arm/plat-armada/mv_hal/uart/mvCompVer.txt
-index 3afa556..ca36d3e 100644
 --- a/arch/arm/plat-armada/mv_hal/uart/mvCompVer.txt
 +++ b/arch/arm/plat-armada/mv_hal/uart/mvCompVer.txt
 @@ -1,4 +1,3 @@
@@ -19094,11 +18947,9 @@ index 3afa556..ca36d3e 100644
  Unit HAL Version: 3.1.3
  Description: This component includes an implementation of the unit HAL drivers
 -
-diff --git a/arch/arm/plat-armada/mv_hal/uart/mvUart.c b/arch/arm/plat-armada/mv_hal/uart/mvUart.c
-index 9f1f55d..0b02026 100644
 --- a/arch/arm/plat-armada/mv_hal/uart/mvUart.c
 +++ b/arch/arm/plat-armada/mv_hal/uart/mvUart.c
-@@ -65,7 +65,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -65,7 +65,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #include "mvUart.h"
  
  /* static variables */
@@ -19114,8 +18965,6 @@ index 9f1f55d..0b02026 100644
  
  /*******************************************************************************
  * mvUartInit - Init a uart port.
-diff --git a/arch/arm/plat-armada/mv_hal/usb/api/mvUsbCh9.h b/arch/arm/plat-armada/mv_hal/usb/api/mvUsbCh9.h
-index 5b6c881..cf57dac 100644
 --- a/arch/arm/plat-armada/mv_hal/usb/api/mvUsbCh9.h
 +++ b/arch/arm/plat-armada/mv_hal/usb/api/mvUsbCh9.h
 @@ -1,16 +1,16 @@
@@ -19144,8 +18993,6 @@ index 5b6c881..cf57dac 100644
  disclaimer.
  
  (C) Copyright 2004 - 2007 Marvell Semiconductor Israel Ltd. All Rights Reserved.
-diff --git a/arch/arm/plat-armada/mv_hal/usb/api/mvUsbDebug.h b/arch/arm/plat-armada/mv_hal/usb/api/mvUsbDebug.h
-index 837edd9..1243af7 100644
 --- a/arch/arm/plat-armada/mv_hal/usb/api/mvUsbDebug.h
 +++ b/arch/arm/plat-armada/mv_hal/usb/api/mvUsbDebug.h
 @@ -1,16 +1,16 @@
@@ -19174,7 +19021,7 @@ index 837edd9..1243af7 100644
  disclaimer.
  
  (C) Copyright 2004 - 2007 Marvell Semiconductor Israel Ltd. All Rights Reserved.
-@@ -85,7 +85,7 @@ extern char    DEBUG_TRACE_ARRAY[TRACE_ARRAY_SIZE][MAX_STRING_SIZE];
+@@ -85,7 +85,7 @@ extern char    DEBUG_TRACE_ARRAY[TRACE_A
              {DEBUG_TRACE_ARRAY_COUNTER = 0;}                                        \
      }                                                                               \
  }
@@ -19183,8 +19030,6 @@ index 837edd9..1243af7 100644
  #elif defined(MV_USB_TRACE_PRINT)
  
  #   define ARC_DEBUG_TRACE(flags, format, x...)           \
-diff --git a/arch/arm/plat-armada/mv_hal/usb/api/mvUsbDefs.h b/arch/arm/plat-armada/mv_hal/usb/api/mvUsbDefs.h
-index f108d03..6b4d16b 100644
 --- a/arch/arm/plat-armada/mv_hal/usb/api/mvUsbDefs.h
 +++ b/arch/arm/plat-armada/mv_hal/usb/api/mvUsbDefs.h
 @@ -1,16 +1,16 @@
@@ -19213,8 +19058,6 @@ index f108d03..6b4d16b 100644
  disclaimer.
  
  (C) Copyright 2004 - 2007 Marvell Semiconductor Israel Ltd. All Rights Reserved.
-diff --git a/arch/arm/plat-armada/mv_hal/usb/api/mvUsbDevApi.h b/arch/arm/plat-armada/mv_hal/usb/api/mvUsbDevApi.h
-index 1db2369..fe926f3 100644
 --- a/arch/arm/plat-armada/mv_hal/usb/api/mvUsbDevApi.h
 +++ b/arch/arm/plat-armada/mv_hal/usb/api/mvUsbDevApi.h
 @@ -1,16 +1,16 @@
@@ -19243,7 +19086,7 @@ index 1db2369..fe926f3 100644
  disclaimer.
  
  (C) Copyright 2004 - 2007 Marvell Semiconductor Israel Ltd. All Rights Reserved.
-@@ -78,7 +78,7 @@ if they are not you need to modify the tr_complete routine to handle that */
+@@ -78,7 +78,7 @@ if they are not you need to modify the t
  #define  ARC_USB_SERVICE_STALL                (0x17)
  
  typedef pointer _usb_device_handle;
@@ -19252,7 +19095,7 @@ index 1db2369..fe926f3 100644
                                                   uint_8_ptr, uint_32, uint_8);
  
  #ifdef __cplusplus
-@@ -100,7 +100,7 @@ void    _usb_device_shutdown(void* handle);
+@@ -100,7 +100,7 @@ void    _usb_device_shutdown(void* handl
  void    _usb_device_stop(void* handle);
  void    _usb_device_start(void* handle);
  
@@ -19261,7 +19104,7 @@ index 1db2369..fe926f3 100644
                                    uint_8 direction, uint_8 type, uint_8 flag);
  uint_8  _usb_device_deinit_endpoint(void* handle, uint_8 ep_num, uint_8 direction);
  
-@@ -123,24 +123,24 @@ uint_8  _usb_device_unregister_service(void* handle, uint_8 type);
+@@ -123,24 +123,24 @@ uint_8  _usb_device_unregister_service(v
  
  
  /* These functions that implement USB 2.0 standard Chapter 9 Setup requests */
@@ -19293,13 +19136,11 @@ index 1db2369..fe926f3 100644
  void    _usb_debug_init_trace_log(void);
  void    _usb_debug_print_trace_log(void);
  
-@@ -156,4 +156,3 @@ void    _usb_ep_status(void* usbHandle, int ep_num, int direction);
+@@ -156,4 +156,3 @@ void    _usb_ep_status(void* usbHandle,
  
  #endif /* __mvUsbDevApi_h__ */
  /* EOF */
 -
-diff --git a/arch/arm/plat-armada/mv_hal/usb/api/mvUsbTypes.h b/arch/arm/plat-armada/mv_hal/usb/api/mvUsbTypes.h
-index d5099cb..6482da1 100644
 --- a/arch/arm/plat-armada/mv_hal/usb/api/mvUsbTypes.h
 +++ b/arch/arm/plat-armada/mv_hal/usb/api/mvUsbTypes.h
 @@ -1,16 +1,16 @@
@@ -19328,7 +19169,7 @@ index d5099cb..6482da1 100644
  disclaimer.
  
  (C) Copyright 2004 - 2007 Marvell Semiconductor Israel Ltd. All Rights Reserved.
-@@ -49,11 +49,11 @@ typedef void _PTR_     pointer;  /* Machine representation of a pointer */
+@@ -49,11 +49,11 @@ typedef void _PTR_     pointer;  /* Mach
  */
  
  #ifndef  FALSE
@@ -19342,7 +19183,7 @@ index d5099cb..6482da1 100644
  #endif
  
  #ifndef  NULL
-@@ -71,7 +71,7 @@ typedef void _PTR_     pointer;  /* Machine representation of a pointer */
+@@ -71,7 +71,7 @@ typedef void _PTR_     pointer;  /* Mach
  #endif
  
  #ifndef  MIN
@@ -19351,7 +19192,7 @@ index d5099cb..6482da1 100644
  #endif
  
  #define USB_MEM_ALIGN(n, align)            ((n) + (-(n) & (align-1)))
-@@ -90,7 +90,7 @@ typedef void _PTR_     pointer;  /* Machine representation of a pointer */
+@@ -90,7 +90,7 @@ typedef void _PTR_     pointer;  /* Mach
  #define USB_uint_16_low(x)                  ((x) & 0xFF)
  #define USB_uint_16_high(x)                 (((x) >> 8) & 0xFF)
  
@@ -19360,7 +19201,7 @@ index d5099cb..6482da1 100644
  
  #ifndef INLINE
  #   if defined(MV_VXWORKS)
-@@ -103,42 +103,42 @@ typedef void _PTR_     pointer;  /* Machine representation of a pointer */
+@@ -103,42 +103,42 @@ typedef void _PTR_     pointer;  /* Mach
  /* 16bit byte swap. For example 0x1122 -> 0x2211                            */
  static INLINE uint_16 USB_BYTE_SWAP_16BIT(uint_16 value)
  {
@@ -19413,7 +19254,7 @@ index d5099cb..6482da1 100644
                                      void*  pVirtAddr);
      void*   (*bspMalloc)          (unsigned int size);
      void    (*bspFree)            (void* ptr);
-@@ -170,16 +170,16 @@ extern USB_IMPORT_FUNCS*            global_import_funcs;
+@@ -170,16 +170,16 @@ extern USB_IMPORT_FUNCS*            glob
  
  #define USB_get_cap_reg_addr(dev)   global_import_funcs->bspGetCapRegAddr(dev)
  
@@ -19434,7 +19275,7 @@ index d5099cb..6482da1 100644
  }
  
  #define USB_uncached_memfree(pVirt, size, physAddr)                                 \
-@@ -194,16 +194,16 @@ static INLINE void* USB_memalloc(uint_32 size)
+@@ -194,16 +194,16 @@ static INLINE void* USB_memalloc(uint_32
  #define USB_memcopy(src, dst, n)    global_import_funcs->bspMemcpy(dst, src, n)
  
  #define USB_dcache_inv(ptr, size)   if(global_import_funcs->bspCacheInv != NULL)  \
@@ -19454,7 +19295,7 @@ index d5099cb..6482da1 100644
  
  #define USB_reset_complete(dev)     if(global_import_funcs->bspResetComplete)       \
                                          global_import_funcs->bspResetComplete(dev)
-@@ -211,7 +211,7 @@ static INLINE void* USB_memalloc(uint_32 size)
+@@ -211,7 +211,7 @@ static INLINE void* USB_memalloc(uint_32
  
  #if defined(USB_UNDERRUN_WA)
  
@@ -19472,8 +19313,6 @@ index d5099cb..6482da1 100644
  
  #define USB_get_sram_addr(pSize)        global_wa_funcs->bspGetSramAddr(pSize)
  
-diff --git a/arch/arm/plat-armada/mv_hal/usb/common/mvUsbCore.h b/arch/arm/plat-armada/mv_hal/usb/common/mvUsbCore.h
-index 2786e54..aac34fe 100644
 --- a/arch/arm/plat-armada/mv_hal/usb/common/mvUsbCore.h
 +++ b/arch/arm/plat-armada/mv_hal/usb/common/mvUsbCore.h
 @@ -1,16 +1,16 @@
@@ -19869,14 +19708,12 @@ index 2786e54..aac34fe 100644
                                                  ** validity
                                                  */
     SCRATCH_STRUCT_PTR   SCRATCH_PTR;
-@@ -716,5 +711,3 @@ typedef uint_32   EHCI_FRAME_LIST_ELEMENT_POINTER;
+@@ -716,5 +711,3 @@ typedef uint_32   EHCI_FRAME_LIST_ELEMEN
  
  #endif /* __mvUsbCore_h__ */
  /* EOF */
 -
 -
-diff --git a/arch/arm/plat-armada/mv_hal/usb/common/mvUsbDesc.h b/arch/arm/plat-armada/mv_hal/usb/common/mvUsbDesc.h
-index 93d3cbf..7a04e93 100644
 --- a/arch/arm/plat-armada/mv_hal/usb/common/mvUsbDesc.h
 +++ b/arch/arm/plat-armada/mv_hal/usb/common/mvUsbDesc.h
 @@ -1,16 +1,16 @@
@@ -19916,7 +19753,7 @@ index 93d3cbf..7a04e93 100644
  
  typedef struct usb_configuration_descriptor
  {
-@@ -47,14 +47,14 @@ typedef struct usb_configuration_descriptor
+@@ -47,14 +47,14 @@ typedef struct usb_configuration_descrip
     uint_8   bDescriptorType;  /* CONFIGURATION type = 2 or 7 */
     uint_8   wTotalLength[2];  /* Length of concatenated descriptors */
     uint_8   bNumInterfaces;   /* Number of interfaces, this config. */
@@ -19997,8 +19834,6 @@ index 93d3cbf..7a04e93 100644
  
  #endif /* __mvUsbDesc_h__ */
  
-diff --git a/arch/arm/plat-armada/mv_hal/usb/device/mvUsbDevCh9.c b/arch/arm/plat-armada/mv_hal/usb/device/mvUsbDevCh9.c
-index 8c1de18..f3785fe 100644
 --- a/arch/arm/plat-armada/mv_hal/usb/device/mvUsbDevCh9.c
 +++ b/arch/arm/plat-armada/mv_hal/usb/device/mvUsbDevCh9.c
 @@ -1,16 +1,16 @@
@@ -20055,7 +19890,7 @@ index 8c1de18..f3785fe 100644
      {
         case (REQ_DIR_IN | REQ_RECIP_DEVICE):
            /* Device request */
-@@ -52,7 +52,7 @@ void    mvUsbCh9GetStatus(_usb_device_handle handle, boolean setup,
+@@ -52,7 +52,7 @@ void    mvUsbCh9GetStatus(_usb_device_ha
            /* Interface request */
            _usb_device_get_status(handle, ARC_USB_STATUS_INTERFACE, &usb_status);
            break;
@@ -20064,7 +19899,7 @@ index 8c1de18..f3785fe 100644
         case (REQ_DIR_IN | REQ_RECIP_ENDPOINT):
            /* Endpoint request */
            endpoint = ctrl_req->INDEX & ARC_USB_STATUS_ENDPOINT_NUMBER_MASK;
-@@ -63,7 +63,7 @@ void    mvUsbCh9GetStatus(_usb_device_handle handle, boolean setup,
+@@ -63,7 +63,7 @@ void    mvUsbCh9GetStatus(_usb_device_ha
  
            usb_status = _usb_device_is_endpoint_stalled(handle, endpoint, direction);
            break;
@@ -20073,7 +19908,7 @@ index 8c1de18..f3785fe 100644
         default:
            /* Unknown request */
             USB_printf("GetStatus: Unknown request type 0x%x\n", ctrl_req->REQUESTTYPE);
-@@ -74,23 +74,23 @@ void    mvUsbCh9GetStatus(_usb_device_handle handle, boolean setup,
+@@ -74,23 +74,23 @@ void    mvUsbCh9GetStatus(_usb_device_ha
      /* Send the requested data */
      *usb_dev_ptr->STATUS_PTR = USB_16BIT_LE(usb_status);
      _usb_device_send_data(handle, 0, (uint_8_ptr)usb_dev_ptr->STATUS_PTR, sizeof(uint_16));
@@ -20102,7 +19937,7 @@ index 8c1de18..f3785fe 100644
      {
          USB_printf("ClearFeature: Wrong USB state %d\n", usb_status);
          _usb_device_stall_endpoint(handle, 0, ARC_USB_RECV);
-@@ -100,13 +100,13 @@ void    mvUsbCh9ClearFeature(_usb_device_handle handle, boolean setup,
+@@ -100,13 +100,13 @@ void    mvUsbCh9ClearFeature(_usb_device
      if(!setup)
          return;
  
@@ -20118,7 +19953,7 @@ index 8c1de18..f3785fe 100644
                      /* clear remote wakeup */
                      _usb_device_get_status(handle, ARC_USB_STATUS_DEVICE, &usb_status);
                      usb_status &= ~ARC_USB_REMOTE_WAKEUP;
-@@ -120,18 +120,18 @@ void    mvUsbCh9ClearFeature(_usb_device_handle handle, boolean setup,
+@@ -120,18 +120,18 @@ void    mvUsbCh9ClearFeature(_usb_device
                      break;
  
                  default:
@@ -20141,7 +19976,7 @@ index 8c1de18..f3785fe 100644
                              setup_ptr->VALUE);
                  _usb_device_stall_endpoint(handle, 0, ARC_USB_RECV);
                  return;
-@@ -147,33 +147,33 @@ void    mvUsbCh9ClearFeature(_usb_device_handle handle, boolean setup,
+@@ -147,33 +147,33 @@ void    mvUsbCh9ClearFeature(_usb_device
              break;
  
          default:
@@ -20182,7 +20017,7 @@ index 8c1de18..f3785fe 100644
              {
                 case DEVICE_REMOTE_WAKEUP:
                    /* set remote wakeup */
-@@ -185,27 +185,27 @@ void    mvUsbCh9SetFeature(_usb_device_handle handle, boolean setup,
+@@ -185,27 +185,27 @@ void    mvUsbCh9SetFeature(_usb_device_h
  
                 case DEVICE_TEST_MODE:
                    /* Test Mode */
@@ -20218,7 +20053,7 @@ index 8c1de18..f3785fe 100644
                                  usb_status);
                       _usb_device_stall_endpoint(handle, 0, ARC_USB_RECV);
                       return;
-@@ -213,18 +213,18 @@ void    mvUsbCh9SetFeature(_usb_device_handle handle, boolean setup,
+@@ -213,18 +213,18 @@ void    mvUsbCh9SetFeature(_usb_device_h
                    break;
  
                 default:
@@ -20241,7 +20076,7 @@ index 8c1de18..f3785fe 100644
                              setup_ptr->VALUE);
                  _usb_device_stall_endpoint(handle, 0, ARC_USB_RECV);
                  return;
-@@ -240,19 +240,19 @@ void    mvUsbCh9SetFeature(_usb_device_handle handle, boolean setup,
+@@ -240,19 +240,19 @@ void    mvUsbCh9SetFeature(_usb_device_h
              break;
  
           default:
@@ -20266,7 +20101,7 @@ index 8c1de18..f3785fe 100644
        {
           /* Enter Test Mode */
            USB_printf("SetFeature: Activate Test mode 0x%x\n", test_mode_index);
-@@ -262,7 +262,7 @@ void    mvUsbCh9SetFeature(_usb_device_handle handle, boolean setup,
+@@ -262,7 +262,7 @@ void    mvUsbCh9SetFeature(_usb_device_h
  }
  
  /*FUNCTION*----------------------------------------------------------------
@@ -20275,7 +20110,7 @@ index 8c1de18..f3785fe 100644
  * Function Name  : ch9SetAddress
  * Returned Value : None
  * Comments       :
-@@ -270,17 +270,17 @@ void    mvUsbCh9SetFeature(_usb_device_handle handle, boolean setup,
+@@ -270,17 +270,17 @@ void    mvUsbCh9SetFeature(_usb_device_h
  *     We setup a TX packet of 0 length ready for the IN token
  *     Once we get the TOK_DNE interrupt for the IN token, then
  *     we change the ADDR register and go to the ADDRESS state.
@@ -20296,7 +20131,7 @@ index 8c1de18..f3785fe 100644
     {
        new_address = setup_ptr->VALUE;
        /*******************************************************
-@@ -288,17 +288,17 @@ void    mvUsbCh9SetAddress(_usb_device_handle handle,
+@@ -288,17 +288,17 @@ void    mvUsbCh9SetAddress(_usb_device_h
         * hardware rev for details) we need to do the set_address
         * before queuing the status phase.
         *******************************************************/
@@ -20318,8 +20153,6 @@ index 8c1de18..f3785fe 100644
 +      _usb_device_set_status(handle, ARC_USB_STATUS_DEVICE_STATE, ARC_USB_STATE_ADDRESS);
     }
  }
-diff --git a/arch/arm/plat-armada/mv_hal/usb/device/mvUsbDevMain.c b/arch/arm/plat-armada/mv_hal/usb/device/mvUsbDevMain.c
-index 795497f..6860ea0 100644
 --- a/arch/arm/plat-armada/mv_hal/usb/device/mvUsbDevMain.c
 +++ b/arch/arm/plat-armada/mv_hal/usb/device/mvUsbDevMain.c
 @@ -1,16 +1,16 @@
@@ -20348,7 +20181,7 @@ index 795497f..6860ea0 100644
  disclaimer.
  
  (C) Copyright 2004 - 2007 Marvell Semiconductor Israel Ltd. All Rights Reserved.
-@@ -48,7 +48,7 @@ static void    _usb_device_cleanup(USB_DEV_STATE_STRUCT_PTR usb_dev_ptr)
+@@ -48,7 +48,7 @@ static void    _usb_device_cleanup(USB_D
      {
          USB_memfree((pointer)usb_dev_ptr->XD_BASE);
      }
@@ -20375,7 +20208,7 @@ index 795497f..6860ea0 100644
      if(isFirst)
      {
          global_import_funcs = pBspFuncs;
-@@ -137,7 +137,7 @@ void _usb_device_set_bsp_funcs(USB_IMPORT_FUNCS* pBspFuncs)
+@@ -137,7 +137,7 @@ void _usb_device_set_bsp_funcs(USB_IMPOR
  *  Function Name  : _usb_device_get_max_endpoint
  *  Returned Value : handle or NULL
  *  Comments       :
@@ -20384,7 +20217,7 @@ index 795497f..6860ea0 100644
  *        (for DEBUG only)
  *
  *END*-----------------------------------------------------------------*/
-@@ -174,7 +174,7 @@ uint_8  _usb_device_get_dev_num(_usb_device_handle handle)
+@@ -174,7 +174,7 @@ uint_8  _usb_device_get_dev_num(_usb_dev
  *  Function Name  : _usb_device_init
  *  Returned Value : USB_OK or error code
  *  Comments       :
@@ -20515,7 +20348,7 @@ index 795497f..6860ea0 100644
  } /* EndBody */
  
  
-@@ -332,30 +332,30 @@ void _usb_device_shutdown(_usb_device_handle handle)
+@@ -332,30 +332,30 @@ void _usb_device_shutdown(_usb_device_ha
      int                          ep;
  
      ARC_DEBUG_TRACE(ARC_DEBUG_FLAG_CTRL, "shutdown\n");
@@ -20552,7 +20385,7 @@ index 795497f..6860ea0 100644
                              service_ptr);
          USB_memfree(service_ptr);
      }
-@@ -366,21 +366,21 @@ void _usb_device_shutdown(_usb_device_handle handle)
+@@ -366,21 +366,21 @@ void _usb_device_shutdown(_usb_device_ha
  
  
  /*FUNCTION*----------------------------------------------------------------
@@ -20909,8 +20742,6 @@ index 795497f..6860ea0 100644
     */
     error = _usb_dci_vusb20_cancel_transfer(handle, ep_num, direction);
  
-diff --git a/arch/arm/plat-armada/mv_hal/usb/device/mvUsbDevPrv.h b/arch/arm/plat-armada/mv_hal/usb/device/mvUsbDevPrv.h
-index 7feef4e..9cfb688 100644
 --- a/arch/arm/plat-armada/mv_hal/usb/device/mvUsbDevPrv.h
 +++ b/arch/arm/plat-armada/mv_hal/usb/device/mvUsbDevPrv.h
 @@ -1,16 +1,16 @@
@@ -21093,8 +20924,6 @@ index 7feef4e..9cfb688 100644
  #ifdef __cplusplus
  }
  #endif
-diff --git a/arch/arm/plat-armada/mv_hal/usb/device/mvUsbDevRecv.c b/arch/arm/plat-armada/mv_hal/usb/device/mvUsbDevRecv.c
-index 9b3d79c..0c4d1d9 100644
 --- a/arch/arm/plat-armada/mv_hal/usb/device/mvUsbDevRecv.c
 +++ b/arch/arm/plat-armada/mv_hal/usb/device/mvUsbDevRecv.c
 @@ -1,16 +1,16 @@
@@ -21198,8 +21027,6 @@ index 9b3d79c..0c4d1d9 100644
      {
          USB_printf("_usb_device_recv_data, receive failed\n");
          return USBERR_RX_FAILED;
-diff --git a/arch/arm/plat-armada/mv_hal/usb/device/mvUsbDevSend.c b/arch/arm/plat-armada/mv_hal/usb/device/mvUsbDevSend.c
-index 569a087..4371a46 100644
 --- a/arch/arm/plat-armada/mv_hal/usb/device/mvUsbDevSend.c
 +++ b/arch/arm/plat-armada/mv_hal/usb/device/mvUsbDevSend.c
 @@ -1,16 +1,16 @@
@@ -21237,7 +21064,7 @@ index 569a087..4371a46 100644
  	usbSramPartSize = usbSramSize/global_wa_sram_parts;
  
      for(i=0; i<global_wa_sram_parts; i++)
-@@ -99,14 +99,14 @@ uint_8 _usb_prepare_to_send(void*   handle)
+@@ -99,14 +99,14 @@ uint_8 _usb_prepare_to_send(void*   hand
  	    return 0;
  
  /*
@@ -21254,7 +21081,7 @@ index 569a087..4371a46 100644
  	    if(usbDmaSize >= usbSendQueue.size[tail_dma])
  	    {
  	        /* Remove from the usbSendQueues */
-@@ -124,7 +124,7 @@ uint_8 _usb_prepare_to_send(void*   handle)
+@@ -124,7 +124,7 @@ uint_8 _usb_prepare_to_send(void*   hand
          }
  
  	    buff_ptr = usbSendQueue.buff_ptr[tail_dma] + usbDmaSize;
@@ -21263,7 +21090,7 @@ index 569a087..4371a46 100644
  
  	    usbDmaSize += size;
  
-@@ -139,20 +139,20 @@ uint_8 _usb_prepare_to_send(void*   handle)
+@@ -139,20 +139,20 @@ uint_8 _usb_prepare_to_send(void*   hand
              if(dma_index == global_wa_sram_parts)
                  dma_index = 0;
  	    }
@@ -21288,7 +21115,7 @@ index 569a087..4371a46 100644
  	    xd_ptr->BSTATUS = ARC_USB_STATUS_TRANSFER_ACCEPTED;
  
  	    error = _usb_dci_vusb20_add_dTD(handle, xd_ptr);
-@@ -161,7 +161,7 @@ uint_8 _usb_prepare_to_send(void*   handle)
+@@ -161,7 +161,7 @@ uint_8 _usb_prepare_to_send(void*   hand
  	        break;
      }
  
@@ -21297,7 +21124,7 @@ index 569a087..4371a46 100644
  }
  
  
-@@ -173,7 +173,7 @@ uint_8 _usb_prepare_to_send(void*   handle)
+@@ -173,7 +173,7 @@ uint_8 _usb_prepare_to_send(void*   hand
  *        Callback for send transfer complete event.
  *
  *END*-----------------------------------------------------------------*/
@@ -21306,7 +21133,7 @@ index 569a087..4371a46 100644
                          uint_8_ptr buffer, uint_32 length, uint_8 error)
  {
      /* Check if this complete is one from the sendQueue */
-@@ -192,8 +192,8 @@ void    usbSendComplete(void* handle, uint_8 type, boolean setup, uint_8 dir,
+@@ -192,8 +192,8 @@ void    usbSendComplete(void* handle, ui
          buff_ptr = usbSendQueue.buff_ptr[tail];
          size = usbSendQueue.size[tail];
  /*
@@ -21317,7 +21144,7 @@ index 569a087..4371a46 100644
                  buffer, usbSendQueue.buff_ptr[tail]);
  */
          usbSentSize += length;
-@@ -221,24 +221,24 @@ void    usbSendComplete(void* handle, uint_8 type, boolean setup, uint_8 dir,
+@@ -221,24 +221,24 @@ void    usbSendComplete(void* handle, ui
              usbSentSize = 0;
  
              /* Call complete callback */
@@ -21430,8 +21257,6 @@ index 569a087..4371a46 100644
      {
          USB_printf("_usb_device_send_data, transfer failed\n");
          return USBERR_TX_FAILED;
-diff --git a/arch/arm/plat-armada/mv_hal/usb/device/mvUsbDevUtl.c b/arch/arm/plat-armada/mv_hal/usb/device/mvUsbDevUtl.c
-index 178f7c2..f6df969 100644
 --- a/arch/arm/plat-armada/mv_hal/usb/device/mvUsbDevUtl.c
 +++ b/arch/arm/plat-armada/mv_hal/usb/device/mvUsbDevUtl.c
 @@ -1,16 +1,16 @@
@@ -21857,7 +21682,7 @@ index 178f7c2..f6df969 100644
  void _usb_ep_status(void* usbHandle, int ep_num, int direction)
  {
      USB_DEV_STATE_STRUCT*               pUsbDev = (USB_DEV_STATE_STRUCT*)usbHandle;
-@@ -518,42 +518,42 @@ void _usb_ep_status(void* usbHandle, int ep_num, int direction)
+@@ -518,42 +518,42 @@ void _usb_ep_status(void* usbHandle, int
      head_dTD_ptr = pUsbDev->EP_DTD_HEADS[ep_idx];
      tail_dTD_ptr = pUsbDev->EP_DTD_TAILS[ep_idx];
  
@@ -21915,7 +21740,7 @@ index 178f7c2..f6df969 100644
              next_xd_ptr = next_dTD_ptr->SCRATCH_PTR->XD_FOR_THIS_DTD;
          else
              next_xd_ptr = NULL;
-@@ -561,7 +561,7 @@ void _usb_ep_status(void* usbHandle, int ep_num, int direction)
+@@ -561,7 +561,7 @@ void _usb_ep_status(void* usbHandle, int
          if(next_xd_ptr != xd_ptr)
          {
              USB_printf("\tXD=0x%08x, ADDR=0x%08x, SIZE=%u, STATUS=0x%02x\n",
@@ -21924,7 +21749,7 @@ index 178f7c2..f6df969 100644
                  (unsigned)xd_ptr->WTOTALLENGTH, xd_ptr->BSTATUS);
          }
          i++;
-@@ -572,20 +572,20 @@ void _usb_ep_status(void* usbHandle, int ep_num, int direction)
+@@ -572,20 +572,20 @@ void _usb_ep_status(void* usbHandle, int
  
  /* DEBUG */
  uint_32 usbDebugFlags = ARC_DEBUG_FLAG_STATS
@@ -21962,20 +21787,6 @@ index 178f7c2..f6df969 100644
      USB_memzero(DEBUG_TRACE_ARRAY, TRACE_ARRAY_SIZE*MAX_STRING_SIZE);
 -	DEBUG_TRACE_ARRAY_COUNTER =0;                  
 -}                               
--
--void    _usb_debug_print_trace_log(void)                     
--{                                                       
--    int     i;                                          
--                                                        
--    USB_printf("USB Trace log: start=0x%x, end=0x%x, idx=%d, flags=0x%x\n\n", 
--               &DEBUG_TRACE_ARRAY[0][0], &DEBUG_TRACE_ARRAY[TRACE_ARRAY_SIZE-1][0], 
--               DEBUG_TRACE_ARRAY_COUNTER, usbDebugFlags);      
--
--    for(i=DEBUG_TRACE_ARRAY_COUNTER; i<TRACE_ARRAY_SIZE; i++)                      
--    {                                                 
--        if(DEBUG_TRACE_ARRAY[i][0] == '\0')              
--            continue;                     
--        
 +	DEBUG_TRACE_ARRAY_COUNTER =0;
 +}
 +
@@ -21991,7 +21802,20 @@ index 178f7c2..f6df969 100644
 +    {
 +        if(DEBUG_TRACE_ARRAY[i][0] == '\0')
 +            continue;
-+
+ 
+-void    _usb_debug_print_trace_log(void)                     
+-{                                                       
+-    int     i;                                          
+-                                                        
+-    USB_printf("USB Trace log: start=0x%x, end=0x%x, idx=%d, flags=0x%x\n\n", 
+-               &DEBUG_TRACE_ARRAY[0][0], &DEBUG_TRACE_ARRAY[TRACE_ARRAY_SIZE-1][0], 
+-               DEBUG_TRACE_ARRAY_COUNTER, usbDebugFlags);      
+-
+-    for(i=DEBUG_TRACE_ARRAY_COUNTER; i<TRACE_ARRAY_SIZE; i++)                      
+-    {                                                 
+-        if(DEBUG_TRACE_ARRAY[i][0] == '\0')              
+-            continue;                     
+-        
          USB_printf("%3d. %s", i, DEBUG_TRACE_ARRAY[i]);
 -    }                                                 
 -    for(i=0; i<DEBUG_TRACE_ARRAY_COUNTER; i++)       
@@ -22014,8 +21838,6 @@ index 178f7c2..f6df969 100644
  {
  }
  
-diff --git a/arch/arm/plat-armada/mv_hal/usb/device/mvUsbHsDevCncl.c b/arch/arm/plat-armada/mv_hal/usb/device/mvUsbHsDevCncl.c
-index a9ba833..98dbb71 100644
 --- a/arch/arm/plat-armada/mv_hal/usb/device/mvUsbHsDevCncl.c
 +++ b/arch/arm/plat-armada/mv_hal/usb/device/mvUsbHsDevCncl.c
 @@ -1,16 +1,16 @@
@@ -22279,8 +22101,6 @@ index a9ba833..98dbb71 100644
     return USB_OK;
  } /* EndBody */
  
-diff --git a/arch/arm/plat-armada/mv_hal/usb/device/mvUsbHsDevMain.c b/arch/arm/plat-armada/mv_hal/usb/device/mvUsbHsDevMain.c
-index 9e77e07..759ff15 100644
 --- a/arch/arm/plat-armada/mv_hal/usb/device/mvUsbHsDevMain.c
 +++ b/arch/arm/plat-armada/mv_hal/usb/device/mvUsbHsDevMain.c
 @@ -1,16 +1,16 @@
@@ -23749,7 +23569,7 @@ index 9e77e07..759ff15 100644
  } /* EndBody */
  
  /*FUNCTION*-------------------------------------------------------------
-@@ -1558,10 +1558,10 @@ uint_8 _usb_dci_vusb20_get_transfer_status
+@@ -1558,10 +1558,10 @@ uint_8 _usb_dci_vusb20_get_transfer_stat
     (
        /* [IN] the USB_dev_initialize state structure */
        _usb_device_handle         handle,
@@ -23762,7 +23582,7 @@ index 9e77e07..759ff15 100644
        /* [IN] direction */
        uint_8                     direction
     )
-@@ -1570,23 +1570,23 @@ uint_8 _usb_dci_vusb20_get_transfer_status
+@@ -1570,23 +1570,23 @@ uint_8 _usb_dci_vusb20_get_transfer_stat
     VUSB20_EP_TR_STRUCT_PTR                      dTD_ptr;
     XD_STRUCT_PTR                                xd_ptr;
     uint_8                                       status;
@@ -23792,7 +23612,7 @@ index 9e77e07..759ff15 100644
     return (status);
  
  } /* EndBody */
-@@ -1602,10 +1602,10 @@ XD_STRUCT_PTR  _usb_dci_vusb20_get_transfer_details
+@@ -1602,10 +1602,10 @@ XD_STRUCT_PTR  _usb_dci_vusb20_get_trans
     (
        /* [IN] the USB_dev_initialize state structure */
        _usb_device_handle         handle,
@@ -23805,7 +23625,7 @@ index 9e77e07..759ff15 100644
        /* [IN] direction */
        uint_8                     direction
     )
-@@ -1617,29 +1617,29 @@ XD_STRUCT_PTR  _usb_dci_vusb20_get_transfer_details
+@@ -1617,29 +1617,29 @@ XD_STRUCT_PTR  _usb_dci_vusb20_get_trans
     uint_32                                      temp, remaining_bytes;
     VUSB20_EP_QUEUE_HEAD_STRUCT_PTR              ep_queue_head_ptr;
  
@@ -23842,7 +23662,7 @@ index 9e77e07..759ff15 100644
        /*if length of this transfer is greater than 20K
        we have multiple DTDs to count */
        if(xd_ptr->WTOTALLENGTH > VUSB_EP_MAX_LENGTH_TRANSFER)
-@@ -1647,34 +1647,34 @@ XD_STRUCT_PTR  _usb_dci_vusb20_get_transfer_details
+@@ -1647,34 +1647,34 @@ XD_STRUCT_PTR  _usb_dci_vusb20_get_trans
           /* it is a valid DTD. We should parse all DTDs for this XD
           and find the total bytes used so far */
           temp_dTD_ptr = dTD_ptr;
@@ -23886,7 +23706,7 @@ index 9e77e07..759ff15 100644
                                  (uint_32)(USB_32BIT_LE(temp_dTD_ptr->NEXT_TR_ELEM_PTR) & VUSBHS_TD_ADDR_MASK) );
           }
           xd_ptr->WSOFAR = xd_ptr->WTOTALLENGTH - remaining_bytes;
-@@ -1682,15 +1682,15 @@ XD_STRUCT_PTR  _usb_dci_vusb20_get_transfer_details
+@@ -1682,15 +1682,15 @@ XD_STRUCT_PTR  _usb_dci_vusb20_get_trans
        else
        {
           /*look at actual length from QH*/
@@ -24023,7 +23843,7 @@ index 9e77e07..759ff15 100644
  } /* EndBody */
  /*FUNCTION*-------------------------------------------------------------
  *
-@@ -1819,12 +1819,12 @@ void _usb_dci_vusb20_stop(_usb_device_handle handle)
+@@ -1819,12 +1819,12 @@ void _usb_dci_vusb20_stop(_usb_device_ha
  {
     USB_DEV_STATE_STRUCT_PTR     usb_dev_ptr;
     VUSB20_REG_STRUCT_PTR        dev_ptr;
@@ -24038,7 +23858,7 @@ index 9e77e07..759ff15 100644
              ~(USB_32BIT_LE(EHCI_INTR_INT_EN | EHCI_INTR_ERR_INT_EN |
                             EHCI_INTR_PORT_CHANGE_DETECT_EN | EHCI_INTR_RESET_EN));
  
-@@ -1845,24 +1845,24 @@ void _usb_dci_vusb20_start(_usb_device_handle handle)
+@@ -1845,24 +1845,24 @@ void _usb_dci_vusb20_start(_usb_device_h
  {
     USB_DEV_STATE_STRUCT_PTR     usb_dev_ptr;
     VUSB20_REG_STRUCT_PTR        dev_ptr;
@@ -24071,8 +23891,6 @@ index 9e77e07..759ff15 100644
     /* Set the Run bit in the command register */
     dev_ptr->REGISTERS.OPERATIONAL_DEVICE_REGISTERS.USB_CMD = USB_32BIT_LE(EHCI_CMD_RUN_STOP);
  }
-diff --git a/arch/arm/plat-armada/mv_hal/usb/device/mvUsbHsDevUtl.c b/arch/arm/plat-armada/mv_hal/usb/device/mvUsbHsDevUtl.c
-index f075731..deefe81 100644
 --- a/arch/arm/plat-armada/mv_hal/usb/device/mvUsbHsDevUtl.c
 +++ b/arch/arm/plat-armada/mv_hal/usb/device/mvUsbHsDevUtl.c
 @@ -1,16 +1,16 @@
@@ -24290,7 +24108,7 @@ index f075731..deefe81 100644
        /* [IN] Endpoint number */
        uint_8               ep,
  
-@@ -209,36 +209,36 @@ uint_8 _usb_dci_vusb20_is_endpoint_stalled
+@@ -209,36 +209,36 @@ uint_8 _usb_dci_vusb20_is_endpoint_stall
     uint_32                      value;
  
     ARC_DEBUG_TRACE(ARC_DEBUG_FLAG_TRACE, "is_endpoint_stalled\n");
@@ -24372,8 +24190,6 @@ index f075731..deefe81 100644
 +
  } /* EndBody */
  
-diff --git a/arch/arm/plat-armada/mv_hal/usb/examples/disk.c b/arch/arm/plat-armada/mv_hal/usb/examples/disk.c
-index 78cc298..892fbbd 100644
 --- a/arch/arm/plat-armada/mv_hal/usb/examples/disk.c
 +++ b/arch/arm/plat-armada/mv_hal/usb/examples/disk.c
 @@ -1,16 +1,16 @@
@@ -24402,7 +24218,7 @@ index 78cc298..892fbbd 100644
  disclaimer.
  
  (C) Copyright 2004 - 2007 Marvell Semiconductor Israel Ltd. All Rights Reserved.
-@@ -42,9 +42,9 @@ Include the USB stack and local header files.
+@@ -42,9 +42,9 @@ Include the USB stack and local header f
  
  /**************************************************************************
  Include the OS and BSP dependent files that define IO functions and
@@ -24423,7 +24239,7 @@ index 78cc298..892fbbd 100644
      volatile uint_16    test_mode_index;
      volatile uint_8     speed;
      uint_16             logicalBlocks;
-@@ -191,7 +191,7 @@ static const uint_8 ConfigDescData[CONFIG_DESC_SIZE] =
+@@ -191,7 +191,7 @@ static const uint_8 ConfigDescData[CONFI
     /* "Configuration" type of descriptor */
     2,
     /* Total length of the Configuration descriptor */
@@ -24432,7 +24248,7 @@ index 78cc298..892fbbd 100644
     USB_uint_16_high(CONFIG_DESC_SIZE),
     /* NumInterfaces */
     1,
-@@ -233,7 +233,7 @@ static const uint_8 ConfigDescData[CONFIG_DESC_SIZE] =
+@@ -233,7 +233,7 @@ static const uint_8 ConfigDescData[CONFI
     /* Attributes.  0=Control 1=Isochronous 2=Bulk 3=Interrupt */
     DISK_IN_EP_TYPE,
     /* Max Packet Size for this endpoint */
@@ -24441,7 +24257,7 @@ index 78cc298..892fbbd 100644
     USB_uint_16_high(DISK_FS_MAX_PACKET_SIZE),
     /* Polling Interval (ms) */
     0,
-@@ -249,7 +249,7 @@ static const uint_8 ConfigDescData[CONFIG_DESC_SIZE] =
+@@ -249,7 +249,7 @@ static const uint_8 ConfigDescData[CONFI
     /* Attributes.  0=Control 1=Isochronous 2=Bulk 3=Interrupt */
     DISK_OUT_EP_TYPE,
     /* Max Packet Size for this endpoint */
@@ -24450,7 +24266,7 @@ index 78cc298..892fbbd 100644
     USB_uint_16_high(DISK_FS_MAX_PACKET_SIZE),
     /* Polling Interval (ms) */
     0
-@@ -260,7 +260,7 @@ static const uint_8  other_speed_config_data[CONFIG_DESC_SIZE] =
+@@ -260,7 +260,7 @@ static const uint_8  other_speed_config_
  {
     9,                         /* bLength Length of this descriptor */
     7,                         /* bDescType This is a Other speed config descr */
@@ -24459,7 +24275,7 @@ index 78cc298..892fbbd 100644
     USB_uint_16_high(OTHER_SPEED_CONFIG_DESC_SIZE),
     1,
     1,
-@@ -297,7 +297,7 @@ static const uint_8  other_speed_config_data[CONFIG_DESC_SIZE] =
+@@ -297,7 +297,7 @@ static const uint_8  other_speed_config_
     /* Attributes.  0=Control 1=Isochronous 2=Bulk 3=Interrupt */
     DISK_IN_EP_TYPE,
     /* Max Packet Size for this endpoint */
@@ -24468,7 +24284,7 @@ index 78cc298..892fbbd 100644
     USB_uint_16_high(DISK_HS_MAX_PACKET_SIZE),
     /* Polling Interval (ms) */
     0,
-@@ -314,7 +314,7 @@ static const uint_8  other_speed_config_data[CONFIG_DESC_SIZE] =
+@@ -314,7 +314,7 @@ static const uint_8  other_speed_config_
     /* Attributes.  0=Control 1=Isochronous 2=Bulk 3=Interrupt */
     DISK_OUT_EP_TYPE,
     /* Max Packet Size for this endpoint */
@@ -24477,7 +24293,7 @@ index 78cc298..892fbbd 100644
     USB_uint_16_high(DISK_HS_MAX_PACKET_SIZE),
     /* Polling Interval (ms) */
     0
-@@ -326,13 +326,13 @@ static uint_8 USB_IF_ALT[4] = { 0, 0, 0, 0};
+@@ -326,13 +326,13 @@ static uint_8 USB_IF_ALT[4] = { 0, 0, 0,
  static const uint_8 USB_STR_NUM = 7;
  
  /*
@@ -24493,7 +24309,7 @@ index 78cc298..892fbbd 100644
  static uint_16 USB_STR_2[28] = {(0x300 + sizeof(USB_STR_2)),
        'M','A','R','V','E','L','L',' ','M','a','s','s',' ','S','t','o','r','a','g','e',' ',\
        'D','e','v','i','c','e'};
-@@ -344,7 +344,7 @@ static uint_16 USB_STR_5[ 4] = {(0x300 + sizeof(USB_STR_5)),
+@@ -344,7 +344,7 @@ static uint_16 USB_STR_5[ 4] = {(0x300 +
        '_','A','1'};
        /* Serial number has to be at least 12 bytes */
  static uint_16 USB_STR_6[ 13] = {(0x300 + sizeof(USB_STR_6)),
@@ -24502,7 +24318,7 @@ index 78cc298..892fbbd 100644
  static uint_16 USB_STR_7[15] = {(0x300 + sizeof(USB_STR_7)),
        'Y','o','u','r',' ','n','a','m','e',' ','h','e','r','e'};
  static uint_16 USB_STR_n[17] = {(0x300 + sizeof(USB_STR_n)),
-@@ -368,129 +368,129 @@ static uint_8_ptr USB_STRING_DESC[USB_STRING_ARRAY_SIZE] =
+@@ -368,129 +368,129 @@ static uint_8_ptr USB_STRING_DESC[USB_ST
  MASS STORAGE SPECIFIC GLOBALS
  *****************************************************************/
  
@@ -24624,6 +24440,27 @@ index 78cc298..892fbbd 100644
 -    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
 -    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
 -    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
 +    0x6D, 0x20, 0x64, 0x69, 0x73, 0x6B, 0x0D, 0x0A, 0x50, 0x72, 0x65,
 +    0x73, 0x73, 0x20, 0x61, 0x6E, 0x79, 0x20, 0x6B, 0x65, 0x79, 0x20,
 +    0x74, 0x6F, 0x20, 0x72, 0x65, 0x62, 0x6F, 0x6F, 0x74, 0x0D, 0x0A,
@@ -24653,27 +24490,8 @@ index 78cc298..892fbbd 100644
 +    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 +    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 +    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
--    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
--    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
--    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
--    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
--    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
--    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
--    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
--    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
--    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
--    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
--    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
--    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
--    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
--    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
--    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
--    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
--    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
--    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
--    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
++    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
++    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 +    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 +    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
      /* Partition descriptors */
@@ -24696,7 +24514,7 @@ index 78cc298..892fbbd 100644
  {
     /* FAT ID: Same as Media descriptor */
     0xF8, 0xFF, 0xFF
-@@ -498,7 +498,7 @@ static const uint_8 FAT16_SPECIAL_BYTES[3] =
+@@ -498,7 +498,7 @@ static const uint_8 FAT16_SPECIAL_BYTES[
  
  
  /*FUNCTION*----------------------------------------------------------------
@@ -24705,7 +24523,7 @@ index 78cc298..892fbbd 100644
  * Function Name  : ch9GetDescription
  * Returned Value : None
  * Comments       :
-@@ -507,16 +507,16 @@ static const uint_8 FAT16_SPECIAL_BYTES[3] =
+@@ -507,16 +507,16 @@ static const uint_8 FAT16_SPECIAL_BYTES[
  *     descriptors (via wValue). We then post an IN response to return the
  *     requested descriptor.
  *     And then wait for the OUT which terminates the control transfer.
@@ -25964,7 +25782,7 @@ index 78cc298..892fbbd 100644
        /* [IN] Pointer to the data buffer */
        CBW_STRUCT_PTR       cbw_ptr
     )
-@@ -1642,41 +1642,41 @@ void _process_prevent_allow_medium_removal
+@@ -1642,41 +1642,41 @@ void _process_prevent_allow_medium_remov
      /* The actual length will never exceed the DCBWDATALENGTH */
      pDiskCtrl->pCSW->DCSWDATARESIDUE = 0;
      pDiskCtrl->pCSW->BCSWSTATUS = 0;
@@ -26340,7 +26158,7 @@ index 78cc298..892fbbd 100644
  *END*--------------------------------------------------------------------*/
  _usb_device_handle  usbDiskLoad(int devNo, int diskSize)
  { /* Body */
-@@ -1994,7 +1994,7 @@ _usb_device_handle  usbDiskLoad(int devNo, int diskSize)
+@@ -1994,7 +1994,7 @@ _usb_device_handle  usbDiskLoad(int devN
      int                 lockKey, i, j;
      static boolean      isFirst = TRUE;
  
@@ -26349,7 +26167,7 @@ index 78cc298..892fbbd 100644
                          __FUNCTION__, devNo, diskSize);
  
      if(devNo >= MAX_USB_DEVICES)
-@@ -2037,7 +2037,7 @@ _usb_device_handle  usbDiskLoad(int devNo, int diskSize)
+@@ -2037,7 +2037,7 @@ _usb_device_handle  usbDiskLoad(int devN
      pDiskCtrl = USB_memalloc(sizeof(USB_DISK_STRUCT));
      if(pDiskCtrl == NULL)
      {
@@ -26358,7 +26176,7 @@ index 78cc298..892fbbd 100644
                      devNo, sizeof(USB_DISK_STRUCT));
          USB_unlock(lockKey);
          return NULL;
-@@ -2056,7 +2056,7 @@ _usb_device_handle  usbDiskLoad(int devNo, int diskSize)
+@@ -2056,7 +2056,7 @@ _usb_device_handle  usbDiskLoad(int devN
          USB_unlock(lockKey);
          return NULL;
      }
@@ -26367,7 +26185,7 @@ index 78cc298..892fbbd 100644
      pDiskCtrl->devNo = devNo;
      pDiskCtrl->hsMaxPktSize = diskHsMaxPktSize;
      pDiskCtrl->fsMaxPktSize = diskFsMaxPktSize;
-@@ -2069,7 +2069,7 @@ _usb_device_handle  usbDiskLoad(int devNo, int diskSize)
+@@ -2069,7 +2069,7 @@ _usb_device_handle  usbDiskLoad(int devN
  
      /* Initialize the USB interface */
      error = _usb_device_init(devNo, &handle);
@@ -26376,7 +26194,7 @@ index 78cc298..892fbbd 100644
      {
          USB_unlock(lockKey);
          USB_printf("\nUSB Initialization failed. Error: %x", error);
-@@ -2077,35 +2077,35 @@ _usb_device_handle  usbDiskLoad(int devNo, int diskSize)
+@@ -2077,35 +2077,35 @@ _usb_device_handle  usbDiskLoad(int devN
      } /* Endif */
  
      /* Self Power, Remote wakeup disable */
@@ -26424,7 +26242,7 @@ index 78cc298..892fbbd 100644
      {
          USB_unlock(lockKey);
          USB_printf("\nUSB Service Registration failed. Error: %x", error);
-@@ -2114,8 +2114,8 @@ _usb_device_handle  usbDiskLoad(int devNo, int diskSize)
+@@ -2114,8 +2114,8 @@ _usb_device_handle  usbDiskLoad(int devN
  
      if(pDiskCtrl->outEpNo != pDiskCtrl->inEpNo)
      {
@@ -26435,7 +26253,7 @@ index 78cc298..892fbbd 100644
          {
              USB_unlock(lockKey);
              USB_printf("\nUSB Service Registration failed. Error: %x", error);
-@@ -2126,98 +2126,98 @@ _usb_device_handle  usbDiskLoad(int devNo, int diskSize)
+@@ -2126,98 +2126,98 @@ _usb_device_handle  usbDiskLoad(int devN
      /**************************************************************************
      Best way to handle the Data cache is to allocate a large buffer that is
      cache aligned and keep all data inside it. Flush the line of the cache
@@ -26561,7 +26379,7 @@ index 78cc298..892fbbd 100644
      USB_memcopy(BOOT_SECTOR_AREA, pDiskCtrl->MASS_STORAGE_DISK, 512);
  
      /* Update BOOT Sector "Total Small sectors" field */
-@@ -2226,7 +2226,7 @@ _usb_device_handle  usbDiskLoad(int devNo, int diskSize)
+@@ -2226,7 +2226,7 @@ _usb_device_handle  usbDiskLoad(int devN
  
      USB_memcopy((void *)FAT16_SPECIAL_BYTES, pDiskCtrl->MASS_STORAGE_DISK + 512, 3);
      USB_memcopy((void *)FAT16_SPECIAL_BYTES, pDiskCtrl->MASS_STORAGE_DISK + 512*4, 3);
@@ -26570,7 +26388,7 @@ index 78cc298..892fbbd 100644
      /**************************************************************************
      Flush the cache to ensure main memory is updated.
      ***************************************************************************/
-@@ -2256,7 +2256,7 @@ void    usbDiskUnload(_usb_device_handle handle)
+@@ -2256,7 +2256,7 @@ void    usbDiskUnload(_usb_device_handle
      }
      /*lock interrupts */
      lockKey = USB_lock();
@@ -26579,7 +26397,7 @@ index 78cc298..892fbbd 100644
      /* ensure all transfers are cancelled */
      _usb_device_cancel_transfer(handle, pDiskCtrl->outEpNo, ARC_USB_RECV);
      _usb_device_cancel_transfer(handle, pDiskCtrl->inEpNo,  ARC_USB_SEND);
-@@ -2271,13 +2271,13 @@ void    usbDiskUnload(_usb_device_handle handle)
+@@ -2271,13 +2271,13 @@ void    usbDiskUnload(_usb_device_handle
      _usb_device_stop(handle);
  
      /* Deregister all services */
@@ -26597,8 +26415,6 @@ index 78cc298..892fbbd 100644
      }
  
      _usb_device_shutdown(handle);
-diff --git a/arch/arm/plat-armada/mv_hal/usb/examples/disk.h b/arch/arm/plat-armada/mv_hal/usb/examples/disk.h
-index d382af7..de44780 100644
 --- a/arch/arm/plat-armada/mv_hal/usb/examples/disk.h
 +++ b/arch/arm/plat-armada/mv_hal/usb/examples/disk.h
 @@ -1,16 +1,16 @@
@@ -26627,7 +26443,7 @@ index d382af7..de44780 100644
  disclaimer.
  
  (C) Copyright 2004 - 2007 Marvell Semiconductor Israel Ltd. All Rights Reserved.
-@@ -66,8 +66,8 @@ typedef struct mass_storage_read_capacity {
+@@ -66,8 +66,8 @@ typedef struct mass_storage_read_capacit
  typedef struct mass_storage_device_info {
     uint_8   PERIPHERAL_DEVICE_TYPE;    /* Bits 0-4. All other bits reserved */
     uint_8   RMB;                       /* Bit 7. All other bits reserved */
@@ -26638,8 +26454,6 @@ index d382af7..de44780 100644
                                         */
     uint_8   RESPONSE_DATA_FORMAT;      /* bits 0-3. All other bits reserved */
     uint_8   ADDITIONAL_LENGTH;         /* For UFI device: always set to 0x1F */
-diff --git a/arch/arm/plat-armada/mv_hal/usb/examples/mouse.c b/arch/arm/plat-armada/mv_hal/usb/examples/mouse.c
-index 7c1566b..e1f81f6 100644
 --- a/arch/arm/plat-armada/mv_hal/usb/examples/mouse.c
 +++ b/arch/arm/plat-armada/mv_hal/usb/examples/mouse.c
 @@ -1,16 +1,16 @@
@@ -26668,7 +26482,7 @@ index 7c1566b..e1f81f6 100644
  disclaimer.
  
  (C) Copyright 2004 - 2007 Marvell Semiconductor Israel Ltd. All Rights Reserved.
-@@ -43,7 +43,7 @@ global variables and some defines for device.
+@@ -43,7 +43,7 @@ global variables and some defines for de
  
  /**************************************************************************
  Include the OS and BSP dependent files that define IO functions and
@@ -26677,7 +26491,7 @@ index 7c1566b..e1f81f6 100644
  **************************************************************************/
  
  int frame_interval = FRAME_INTERVAL;
-@@ -70,55 +70,55 @@ static SETUP_STRUCT   local_setup_packet;
+@@ -70,55 +70,55 @@ static SETUP_STRUCT   local_setup_packet
  
  
  /*************************************************************************
@@ -26757,7 +26571,7 @@ index 7c1566b..e1f81f6 100644
  ------|--------------------|-------|--------------------
  *************************************************************************/
  #define DEVICE_DESCRIPTOR_SIZE 18
-@@ -128,7 +128,7 @@ static uint_8  DevDescData[DEVICE_DESCRIPTOR_SIZE] =
+@@ -128,7 +128,7 @@ static uint_8  DevDescData[DEVICE_DESCRI
     DEVICE_DESCRIPTOR_SIZE,
     0x01,
     0x0,2,
@@ -26766,7 +26580,7 @@ index 7c1566b..e1f81f6 100644
     0x00,
     0x00,
     0x00,
-@@ -144,7 +144,7 @@ static uint_8  DevDescData[DEVICE_DESCRIPTOR_SIZE] =
+@@ -144,7 +144,7 @@ static uint_8  DevDescData[DEVICE_DESCRI
     0x02,                      /* iProduct */
     0x00,                      /* iSerialNumber */
     0x01                       /* bNumConfigurations */
@@ -26966,7 +26780,7 @@ index 7c1566b..e1f81f6 100644
        |                  |       |or 2**(bInterval-1)
  ------|------------------|-------|--------------------
  
-@@ -325,7 +325,7 @@ static uint_8 ConfigDescData[CONFIG_DESC_SIZE] =
+@@ -325,7 +325,7 @@ static uint_8 ConfigDescData[CONFIG_DESC
     0x00,
     0xE0, /* 0x80, */
     0x0,
@@ -26975,7 +26789,7 @@ index 7c1566b..e1f81f6 100644
     0x09,
     0x04,
     0x00,
-@@ -346,13 +346,13 @@ static uint_8 ConfigDescData[CONFIG_DESC_SIZE] =
+@@ -346,13 +346,13 @@ static uint_8 ConfigDescData[CONFIG_DESC
     0x22,
     USB_uint_16_low(0x0034),
     USB_uint_16_high(0x0034),
@@ -26991,7 +26805,7 @@ index 7c1566b..e1f81f6 100644
     USB_uint_16_high(INTERRUPT_MAX_PACKET_SIZE),
     FRAME_INTERVAL
  };
-@@ -371,7 +371,7 @@ static uint_8  other_speed_config_data[CONFIG_DESC_SIZE] =
+@@ -371,7 +371,7 @@ static uint_8  other_speed_config_data[C
     0x00,
     0xE0, /* 0x80, */
     0x0,
@@ -27000,7 +26814,7 @@ index 7c1566b..e1f81f6 100644
     0x09,
     0x04,
     0x00,
-@@ -392,13 +392,13 @@ static uint_8  other_speed_config_data[CONFIG_DESC_SIZE] =
+@@ -392,13 +392,13 @@ static uint_8  other_speed_config_data[C
     0x22,
     USB_uint_16_low(0x0034),
     USB_uint_16_high(0x0034),
@@ -27077,7 +26891,7 @@ index 7c1566b..e1f81f6 100644
  
  
  ************************************************************************/
-@@ -453,7 +453,7 @@ static uint_8 ReportDescData[REPORT_DESC_SIZE] =
+@@ -453,7 +453,7 @@ static uint_8 ReportDescData[REPORT_DESC
     0x01,
     0x09,
     0x01,
@@ -27086,7 +26900,7 @@ index 7c1566b..e1f81f6 100644
     0xA1,
     0x00,
     0x05,
-@@ -462,7 +462,7 @@ static uint_8 ReportDescData[REPORT_DESC_SIZE] =
+@@ -462,7 +462,7 @@ static uint_8 ReportDescData[REPORT_DESC
     0x01,
     0x29,
     0x03,
@@ -27095,7 +26909,7 @@ index 7c1566b..e1f81f6 100644
     0x15,
     0x00,
     0x25,
-@@ -471,7 +471,7 @@ static uint_8 ReportDescData[REPORT_DESC_SIZE] =
+@@ -471,7 +471,7 @@ static uint_8 ReportDescData[REPORT_DESC
     0x03,
     0x75,
     0x01,
@@ -27104,7 +26918,7 @@ index 7c1566b..e1f81f6 100644
     0x81,
     0x02,
     0x95,
-@@ -480,7 +480,7 @@ static uint_8 ReportDescData[REPORT_DESC_SIZE] =
+@@ -480,7 +480,7 @@ static uint_8 ReportDescData[REPORT_DESC
     0x05,
     0x81,
     0x01,
@@ -27113,7 +26927,7 @@ index 7c1566b..e1f81f6 100644
     0x05,
     0x01,
     0x09,
-@@ -489,7 +489,7 @@ static uint_8 ReportDescData[REPORT_DESC_SIZE] =
+@@ -489,7 +489,7 @@ static uint_8 ReportDescData[REPORT_DESC
     0x31,
     0x09,
     0x38,
@@ -27122,7 +26936,7 @@ index 7c1566b..e1f81f6 100644
     0x15,
     0x81,
     0x25,
-@@ -498,11 +498,11 @@ static uint_8 ReportDescData[REPORT_DESC_SIZE] =
+@@ -498,11 +498,11 @@ static uint_8 ReportDescData[REPORT_DESC
     0x08,
     0x95,
     0x03,
@@ -27203,7 +27017,7 @@ index 7c1566b..e1f81f6 100644
  };
  ***************************************************************/
  
-@@ -573,13 +573,13 @@ static uint_8 USB_IF_ALT[4] = { 0, 0, 0, 0};
+@@ -573,13 +573,13 @@ static uint_8 USB_IF_ALT[4] = { 0, 0, 0,
  static const uint_8 USB_STR_NUM  = 6;
  
  /*
@@ -27219,7 +27033,7 @@ index 7c1566b..e1f81f6 100644
  static const uint_16 USB_STR_2[28] = {0x0300 + sizeof(USB_STR_2),
        'M','A','R','V','E','L','L',' ','U','S','B',' ','h','i','d','m','o','u','s','e',' ',\
        'D','e','v','i','c','e'};
-@@ -609,7 +609,7 @@ static const uint_8_ptr USB_STRING_DESC[USB_STRING_ARRAY_SIZE] =
+@@ -609,7 +609,7 @@ static const uint_8_ptr USB_STRING_DESC[
  
  
  /*FUNCTION*----------------------------------------------------------------
@@ -27228,7 +27042,7 @@ index 7c1566b..e1f81f6 100644
  * Function Name  : ch9GetDescription
  * Returned Value : None
  * Comments       :
-@@ -619,16 +619,16 @@ static const uint_8_ptr USB_STRING_DESC[USB_STRING_ARRAY_SIZE] =
+@@ -619,16 +619,16 @@ static const uint_8_ptr USB_STRING_DESC[
  *     requested descriptor.
  *     And then wait for the OUT which terminates the control transfer.
  *     See section 9.4.3 (page 189) of the USB 1.1 Specification.
@@ -28178,7 +27992,7 @@ index 7c1566b..e1f81f6 100644
  *END*--------------------------------------------------------------------*/
  _usb_device_handle  usbMouseLoad(int devNo)
  { /* Body */
-@@ -1513,48 +1513,48 @@ _usb_device_handle  usbMouseLoad(int devNo)
+@@ -1513,48 +1513,48 @@ _usb_device_handle  usbMouseLoad(int dev
      }
  
     lockKey = USB_lock();
@@ -28240,7 +28054,7 @@ index 7c1566b..e1f81f6 100644
      {
          USB_printf("\nUSB SUSPEND Service Registration failed. Error: %x\n", error);
          return NULL;
-@@ -1567,17 +1567,17 @@ _usb_device_handle  usbMouseLoad(int devNo)
+@@ -1567,17 +1567,17 @@ _usb_device_handle  usbMouseLoad(int dev
      hid_test_rep_data_unaligned   = (uint_8_ptr) USB_memalloc((EP1_RECV_BUFFER_SIZE + PSP_CACHE_LINE_SIZE));
      if(hid_test_rep_data_unaligned == NULL)
      {
@@ -28261,7 +28075,7 @@ index 7c1566b..e1f81f6 100644
      descriptors which never changes. Such data can be kept in this buffer
      and flushed only once. Note that you can reduce the size of this buffer
      by aligning the addresses in a different way.
-@@ -1587,36 +1587,36 @@ _usb_device_handle  usbMouseLoad(int devNo)
+@@ -1587,36 +1587,36 @@ _usb_device_handle  usbMouseLoad(int dev
                               (REPORT_DESC_SIZE + PSP_CACHE_LINE_SIZE) +
                               (DEVICE_QUALIFIER_DESCRIPTOR_SIZE + PSP_CACHE_LINE_SIZE) +
                               (OTHER_SPEED_CONFIG_DESC_SIZE + PSP_CACHE_LINE_SIZE);
@@ -28307,7 +28121,7 @@ index 7c1566b..e1f81f6 100644
      DevQualifierDesc =  (uint_8_ptr) Send_Buffer_aligned;
      USB_memcopy(DevQualifierDescData, DevQualifierDesc, DEVICE_QUALIFIER_DESCRIPTOR_SIZE);
      Send_Buffer_aligned += ((DEVICE_QUALIFIER_DESCRIPTOR_SIZE/PSP_CACHE_LINE_SIZE) + \
-@@ -1624,8 +1624,8 @@ _usb_device_handle  usbMouseLoad(int devNo)
+@@ -1624,8 +1624,8 @@ _usb_device_handle  usbMouseLoad(int dev
  
      other_speed_config =  (uint_8_ptr) Send_Buffer_aligned;
      USB_memcopy(other_speed_config_data, other_speed_config, OTHER_SPEED_CONFIG_DESC_SIZE);
@@ -28318,7 +28132,7 @@ index 7c1566b..e1f81f6 100644
      /**************************************************************************
      Flush the cache to ensure main memory is updated.
      ***************************************************************************/
-@@ -1640,8 +1640,8 @@ _usb_device_handle  usbMouseLoad(int devNo)
+@@ -1640,8 +1640,8 @@ _usb_device_handle  usbMouseLoad(int dev
      USB_unlock(lockKey);
  
      USB_printf("USB Mouse example is READY\n");
@@ -28329,7 +28143,7 @@ index 7c1566b..e1f81f6 100644
  } /* Endbody */
  
  void    usbMouseUnload(_usb_device_handle handle)
-@@ -1653,7 +1653,7 @@ void    usbMouseUnload(_usb_device_handle handle)
+@@ -1653,7 +1653,7 @@ void    usbMouseUnload(_usb_device_handl
  
      /*lock interrupts */
      lockKey = USB_lock();
@@ -28338,7 +28152,7 @@ index 7c1566b..e1f81f6 100644
      /* ensure all transfers are cancelled */
      _usb_device_cancel_transfer(handle, INTERRUPT_EP,  ARC_USB_SEND);
  
-@@ -1666,11 +1666,11 @@ void    usbMouseUnload(_usb_device_handle handle)
+@@ -1666,11 +1666,11 @@ void    usbMouseUnload(_usb_device_handl
      _usb_device_stop(handle);
  
      /* Deregister all services */
@@ -28353,7 +28167,7 @@ index 7c1566b..e1f81f6 100644
  
      _usb_device_shutdown(handle);
  
-@@ -1689,14 +1689,14 @@ void    usbMouseUnload(_usb_device_handle handle)
+@@ -1689,14 +1689,14 @@ void    usbMouseUnload(_usb_device_handl
  
      /* Clear gloabal variables */
      TEST_ENABLED = FALSE;
@@ -28371,7 +28185,7 @@ index 7c1566b..e1f81f6 100644
      {
         /*
          * Send RESUME signal whenever host suspends the USB port. In real case, we should
-@@ -1705,7 +1705,7 @@ void    usbMousePeriodicResume(_usb_device_handle handle)
+@@ -1705,7 +1705,7 @@ void    usbMousePeriodicResume(_usb_devi
          USB_printf("Mouse Resumed\n");
  
          _usb_device_assert_resume(handle);
@@ -28380,8 +28194,6 @@ index 7c1566b..e1f81f6 100644
      } /* Endbody */
  }
  /* EOF */
-diff --git a/arch/arm/plat-armada/mv_hal/usb/examples/mouse.h b/arch/arm/plat-armada/mv_hal/usb/examples/mouse.h
-index 3ca980c..54fb4be 100644
 --- a/arch/arm/plat-armada/mv_hal/usb/examples/mouse.h
 +++ b/arch/arm/plat-armada/mv_hal/usb/examples/mouse.h
 @@ -1,16 +1,16 @@
@@ -28410,8 +28222,6 @@ index 3ca980c..54fb4be 100644
  disclaimer.
  
  (C) Copyright 2004 - 2007 Marvell Semiconductor Israel Ltd. All Rights Reserved.
-diff --git a/arch/arm/plat-armada/mv_hal/usb/mvCompVer.txt b/arch/arm/plat-armada/mv_hal/usb/mvCompVer.txt
-index 5f39390..ed7b07a 100644
 --- a/arch/arm/plat-armada/mv_hal/usb/mvCompVer.txt
 +++ b/arch/arm/plat-armada/mv_hal/usb/mvCompVer.txt
 @@ -1,4 +1,3 @@
@@ -28419,8 +28229,6 @@ index 5f39390..ed7b07a 100644
  Unit HAL Version: 3.1.4
  Description: This component includes an implementation of the unit HAL drivers
 -
-diff --git a/arch/arm/plat-armada/mv_hal/usb/mvUsb.c b/arch/arm/plat-armada/mv_hal/usb/mvUsb.c
-index 8140f15..5c9b516 100644
 --- a/arch/arm/plat-armada/mv_hal/usb/mvUsb.c
 +++ b/arch/arm/plat-armada/mv_hal/usb/mvUsb.c
 @@ -193,12 +193,6 @@ static int mvUsbPhy40nmInit(int dev)
@@ -28556,7 +28364,7 @@ index 8140f15..5c9b516 100644
  /* USB Phy init (change from defaults) specific for 65nm (78XX0 and 6281) */
  static void mvUsbPhy65nmInit(int dev)
  {
-@@ -873,10 +763,7 @@ MV_STATUS mvUsbHalInit(int dev, MV_BOOL isHost, MV_USB_HAL_DATA *halData)
+@@ -873,10 +763,7 @@ MV_STATUS mvUsbHalInit(int dev, MV_BOOL
  		(usbHalData.ctrlModel == MV_6560_DEV_ID)) {
  		/* Change value of new register 0x360 */
  		regVal = MV_REG_READ(MV_USB_BRIDGE_IPG_REG(dev));
@@ -28568,11 +28376,9 @@ index 8140f15..5c9b516 100644
  		/*  Change bits[14:8] - IPG for non Start of Frame Packets
  		 *  from 0x9(default) to 0xD
  		 */
-diff --git a/arch/arm/plat-armada/mv_hal/xor/mvXor.c b/arch/arm/plat-armada/mv_hal/xor/mvXor.c
-index d1e6cf2..42eb51f 100644
 --- a/arch/arm/plat-armada/mv_hal/xor/mvXor.c
 +++ b/arch/arm/plat-armada/mv_hal/xor/mvXor.c
-@@ -278,13 +278,6 @@ MV_STATUS mvXorMemInit(MV_U32 chan, MV_U32 startPtr, MV_U32 blockSize, MV_U32 in
+@@ -278,13 +278,6 @@ MV_STATUS mvXorMemInit(MV_U32 chan, MV_U
  			   __func__, XEXBSR_BLOCK_SIZE_MIN_VALUE, XEXBSR_BLOCK_SIZE_MAX_VALUE);
  		return MV_BAD_PARAM;
  	}
@@ -28586,7 +28392,7 @@ index d1e6cf2..42eb51f 100644
  
  	/* set the operation mode to Memory Init */
  	temp = MV_REG_READ(XOR_CONFIG_REG(XOR_UNIT(chan), XOR_CHAN(chan)));
-@@ -508,7 +501,7 @@ MV_STATUS mvXorCommandSet(MV_U32 chan, MV_COMMAND command)
+@@ -508,7 +501,7 @@ MV_STATUS mvXorCommandSet(MV_U32 chan, M
  		return MV_OK;
  	}
  	/* command is paused and current state is active */
@@ -28595,6 +28401,3 @@ index d1e6cf2..42eb51f 100644
  		MV_REG_BIT_SET(XOR_ACTIVATION_REG(XOR_UNIT(chan), XOR_CHAN(chan)), XEXACTR_XEPAUSE_MASK);
  		return MV_OK;
  	}
--- 
-1.7.9.5
-

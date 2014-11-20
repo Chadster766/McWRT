@@ -15,8 +15,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  drivers/usb/host/ehci_marvell.c                    |    4 +-
  8 files changed, 305 insertions(+), 4 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/Kconfig b/arch/arm/mach-armadaxp/Kconfig
-index 7ea7904..3360315 100644
 --- a/arch/arm/mach-armadaxp/Kconfig
 +++ b/arch/arm/mach-armadaxp/Kconfig
 @@ -81,6 +81,11 @@ config MACH_ARMADA_XP_RD_NAS
@@ -31,8 +29,6 @@ index 7ea7904..3360315 100644
  config MACH_ARMADA_XP_FPGA
  	bool "Marvell Armada XP FPGA Board"	
  	depends on !MACH_ARMADA_XP_DB && !MACH_ARMADA_XP_RDSRV
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
-index ce09691..166ffbe 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
 @@ -1468,6 +1468,8 @@ MV_VOID mvBoardIdSet(MV_VOID)
@@ -52,7 +48,7 @@ index ce09691..166ffbe 100644
  		sar = 0x1; /* Gen2 */
  		break;
  	case DB_784MP_GP_ID:
-@@ -2662,10 +2665,11 @@ MV_BOARD_PEX_INFO *mvBoardPexInfoGet(void)
+@@ -2662,10 +2665,11 @@ MV_BOARD_PEX_INFO *mvBoardPexInfoGet(voi
  	case RD_78460_CUSTOMER_ID:
  	case DB_78X60_AMC_ID:
  	case DB_78X60_PCAC_REV2_ID:
@@ -65,8 +61,6 @@ index ce09691..166ffbe 100644
  		return NULL;
  	}
  }
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
-index 6d0e70a..68408ab 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
 @@ -1303,6 +1303,122 @@ MV_BOARD_INFO rd78460gpInfo = {
@@ -199,11 +193,9 @@ index 6d0e70a..68408ab 100644
 +	&rd78460wifiInfo,
  	&rd78460customerInfo
  };
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
-index 82b58a0..7fd8152 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
-@@ -99,7 +99,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -99,7 +99,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #define DB_78X60_PCAC_REV2_ID		(DB_78X60_AMC_ID + 1)
  #define RD_78460_SERVER_REV2_ID		(DB_78X60_PCAC_REV2_ID + 1)
  #define DB_784MP_GP_ID				(RD_78460_SERVER_REV2_ID + 1)
@@ -213,7 +205,7 @@ index 82b58a0..7fd8152 100644
  #define MV_MAX_BOARD_ID				(RD_78460_CUSTOMER_ID + 1)
  #define INVALID_BAORD_ID			0xFFFFFFFF
  
-@@ -529,7 +530,39 @@ MPP#	NAME			IN/OUT
+@@ -529,8 +530,40 @@ MPP#	NAME			IN/OUT
  #define RD_78460_GP_GPP_POL_HIGH	0x0
  
  
@@ -231,8 +223,8 @@ index 82b58a0..7fd8152 100644
 +#define RD_78460_WIFI_MPP48_55            0x00000003
 +#define RD_78460_WIFI_MPP56_63            0x00000000
 +#define RD_78460_WIFI_MPP64_67            0x00000000
-+
-+
+ 
+ 
 +/* GPPs
 +MPP#    NAME                    IN/OUT
 +----------------------------------------------
@@ -246,15 +238,14 @@ index 82b58a0..7fd8152 100644
 +#define RD_78460_WIFI_GPP_OUT_VAL_LOW	(0x0)
 +#define RD_78460_WIFI_GPP_OUT_VAL_MID	(BIT11 | BIT10)
 +#define RD_78460_WIFI_GPP_OUT_VAL_HIGH    0x0
- 
++
 +#define RD_78460_WIFI_GPP_POL_LOW         0x0
 +#define RD_78460_WIFI_GPP_POL_MID         0x0
 +#define RD_78460_WIFI_GPP_POL_HIGH        0x0
- 
++
  /**********************/
  /* DB-AXP-CUSTOMER         */
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
-index 424c151..54159b9 100644
+ /**********************/
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
 @@ -321,6 +321,7 @@ MV_U32 mvCtrlPexMaxIfGet(MV_VOID)
@@ -265,11 +256,9 @@ index 424c151..54159b9 100644
  	case MV_78460_DEV_ID:
  	case MV_78000_DEV_ID:
  		return MV_PEX_MAX_IF;
-diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
-index 76d9336..4235e94 100755
 --- a/arch/arm/mach-armadaxp/core.c
 +++ b/arch/arm/mach-armadaxp/core.c
-@@ -2172,6 +2172,146 @@ MACHINE_START(ARMADA_XP_RD_NAS, "Marvell Armada XP RD NAS Board")
+@@ -2172,6 +2172,146 @@ MACHINE_START(ARMADA_XP_RD_NAS, "Marvell
  MACHINE_END
  
  
@@ -416,11 +405,9 @@ index 76d9336..4235e94 100755
  /*****************************************************************************
  * RDSRV BOARD: Main Initialization
   ****************************************************************************/
-diff --git a/arch/arm/tools/mach-types b/arch/arm/tools/mach-types
-index 5b2de82..60b7b0d 100755
 --- a/arch/arm/tools/mach-types
 +++ b/arch/arm/tools/mach-types
-@@ -3005,6 +3005,7 @@ at91cap7stk		MACH_AT91CAP7STK	AT91CAP7STK		3033
+@@ -3005,6 +3005,7 @@ at91cap7stk		MACH_AT91CAP7STK	AT91CAP7ST
  kt_sbc_sam9_1		MACH_KT_SBC_SAM9_1	KT_SBC_SAM9_1		3034
  armada_xp_gp		MACH_ARMADA_XP_GP	ARMADA_XP_GP		3035
  armada_xp_db		MACH_ARMADA_XP_DB	ARMADA_XP_DB		3036
@@ -428,11 +415,9 @@ index 5b2de82..60b7b0d 100755
  armada_xp_rd_nas	MACH_ARMADA_XP_RD_NAS	ARMADA_XP_RD_NAS	3500
  armada_xp_rdsrv         MACH_ARMADA_XP_RDSRV    ARMADA_XP_RDSRV         3037
  armada_370              MACH_ARMADA_370         ARMADA_370              3038
-diff --git a/drivers/usb/host/ehci_marvell.c b/drivers/usb/host/ehci_marvell.c
-index 889d488..d6a551c 100644
 --- a/drivers/usb/host/ehci_marvell.c
 +++ b/drivers/usb/host/ehci_marvell.c
-@@ -201,7 +201,7 @@ static int ehci_marvell_remove(struct platform_device *pdev)
+@@ -201,7 +201,7 @@ static int ehci_marvell_remove(struct pl
     return 0;
  } 
   
@@ -441,7 +426,7 @@ index 889d488..d6a551c 100644
  extern int mv_usb_resume(int dev);
  
  static int ehci_marvell_resume(struct platform_device *pdev)
-@@ -218,7 +218,7 @@ static struct platform_driver ehci_marvell_driver =
+@@ -218,7 +218,7 @@ static struct platform_driver ehci_marve
      .driver.name = "ehci_marvell", 
      .probe = ehci_marvell_probe, 
      .remove = ehci_marvell_remove,
@@ -450,6 +435,3 @@ index 889d488..d6a551c 100644
      .resume = ehci_marvell_resume,
  #endif
      .shutdown = usb_hcd_platform_shutdown, 
--- 
-1.7.9.5
-

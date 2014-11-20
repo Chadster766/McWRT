@@ -10,8 +10,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/mm/proc-sheeva_pj4bv7.S |   31 +++++++++++++++++++++++++++++++
  3 files changed, 78 insertions(+), 7 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/platsmp.c b/arch/arm/mach-armadaxp/platsmp.c
-index d94d82c..4ae141d 100644
 --- a/arch/arm/mach-armadaxp/platsmp.c
 +++ b/arch/arm/mach-armadaxp/platsmp.c
 @@ -138,10 +138,38 @@ static void __init wakeup_cpus(void)
@@ -76,11 +74,9 @@ index d94d82c..4ae141d 100644
  
  	/* Set clock devider reload smooth bit mask */
  	val = MV_REG_READ(AXP_CPU_DIVCLK_CTRL0);
-diff --git a/arch/arm/mach-armadaxp/time.c b/arch/arm/mach-armadaxp/time.c
-index c535a45..ff364ea 100644
 --- a/arch/arm/mach-armadaxp/time.c
 +++ b/arch/arm/mach-armadaxp/time.c
-@@ -71,6 +71,7 @@ extern void axp_irq_unmask(struct irq_data *d);
+@@ -71,6 +71,7 @@ extern void axp_irq_unmask(struct irq_da
  #define   LCL_INT_TIMER0_CLR 	~(1 << 0)
  #define   LCL_INT_TIMER1_CLR	~(1 << 8)
  
@@ -88,7 +84,7 @@ index c535a45..ff364ea 100644
  #define BRIDGE_CAUSE		(MV_MBUS_REGS_OFFSET | 0x0260)
  #define BRIDGE_INT_TIMER0	(1 << 24)
  #define BRIDGE_INT_TIMER1	(1 << 25)
-@@ -175,7 +176,11 @@ static void axp_clkevt_mode(enum clock_event_mode mode, struct clock_event_devic
+@@ -175,7 +176,11 @@ static void axp_clkevt_mode(enum clock_e
  
  		/* Enable timer */
  		u = MV_REG_READ(LCL_TIMER_CTRL);
@@ -100,7 +96,7 @@ index c535a45..ff364ea 100644
  		MV_REG_WRITE(LCL_TIMER_CTRL, u);
  	} else {
  		/* Disable timer */
-@@ -248,7 +253,11 @@ void __init axp_time_init(unsigned int fabric_clk)
+@@ -248,7 +253,11 @@ void __init axp_time_init(unsigned int f
  	u &= ~BRIDGE_INT_TIMER0;
  	MV_REG_WRITE(BRIDGE_MASK, u);
  	u = MV_REG_READ(TIMER_CTRL);
@@ -112,7 +108,7 @@ index c535a45..ff364ea 100644
  	MV_REG_WRITE(TIMER_CTRL, u);
  	axp_clksrc.mult = clocksource_hz2mult(fabric_clk, axp_clksrc.shift);
  	clocksource_register(&axp_clksrc);
-@@ -269,10 +278,11 @@ void __init axp_time_init(unsigned int fabric_clk)
+@@ -269,10 +278,11 @@ void __init axp_time_init(unsigned int f
  
  static void axp_timer_init(void)
  {
@@ -140,8 +136,6 @@ index c535a45..ff364ea 100644
  #endif
  	static cpu0_flag=0;
  	int cpu = smp_processor_id();
-diff --git a/arch/arm/mm/proc-sheeva_pj4bv7.S b/arch/arm/mm/proc-sheeva_pj4bv7.S
-index 7e0e907..23ff635 100644
 --- a/arch/arm/mm/proc-sheeva_pj4bv7.S
 +++ b/arch/arm/mm/proc-sheeva_pj4bv7.S
 @@ -366,6 +366,36 @@ defined(CONFIG_SMP)
@@ -189,6 +183,3 @@ index 7e0e907..23ff635 100644
  #ifdef CONFIG_CPU_SHEEVA_PJ4B_PMC_ACCESS_IN_USERMODE
  	@ Enable performance counters user access
  	mrc     p15, 0, r0, c9, c14, 0
--- 
-1.7.9.5
-

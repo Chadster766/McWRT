@@ -19,11 +19,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  create mode 100755 arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.c
  create mode 100755 arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.h
 
-diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
-index 6903a4a..1118481 100644
 --- a/arch/arm/mach-armadaxp/Makefile
 +++ b/arch/arm/mach-armadaxp/Makefile
-@@ -198,8 +198,9 @@ obj-$(CONFIG_MV_USE_XOR_ENGINE) 	+= $(PLAT_DRIVERS)/mv_xor/
+@@ -198,8 +198,9 @@ obj-$(CONFIG_MV_USE_XOR_ENGINE) 	+= $(PL
  obj-$(CONFIG_MV_CESA) 			+= $(PLAT_DRIVERS)/mv_cesa/
  #obj-y					+= $(PLAT_DRIVERS)/mv_btns/
  obj-y					+= $(PLAT_DRIVERS)/mv_gpio/
@@ -34,7 +32,7 @@ index 6903a4a..1118481 100644
  # The rest of the drivers are compiled through the driver dir directly.
  
  
-@@ -208,7 +209,6 @@ armadaxp-$(CONFIG_MV_INCLUDE_USB)    	+= usb.o
+@@ -208,7 +209,6 @@ armadaxp-$(CONFIG_MV_INCLUDE_USB)    	+=
  armadaxp-$(CONFIG_MV_INCLUDE_PCI)	+= pci.o
  armadaxp-$(CONFIG_MV_INCLUDE_PEX)	+= pex.o
  armadaxp-$(CONFIG_FEROCEON_PROC) 	+= $(PLAT_DRIVERS)/mv_proc/proc.o
@@ -42,8 +40,6 @@ index 6903a4a..1118481 100644
  armadaxp-$(CONFIG_SMP)			+= platsmp.o headsmp.o
  armadaxp-$(CONFIG_MV_AMP_ENABLE)	+= $(SOC_ENV_DIR)/mvUnitMap.o
  armadaxp-$(CONFIG_MV_AMP_ENABLE)	+= $(SOC_ENV_DIR)/mvSemaphore.o
-diff --git a/arch/arm/mach-armadaxp/config/mvRules.mk b/arch/arm/mach-armadaxp/config/mvRules.mk
-index 7d0d6ed..16852a3 100644
 --- a/arch/arm/mach-armadaxp/config/mvRules.mk
 +++ b/arch/arm/mach-armadaxp/config/mvRules.mk
 @@ -98,6 +98,8 @@ ifeq ($(CONFIG_MV_INCLUDE_NFC),y)
@@ -55,7 +51,7 @@ index 7d0d6ed..16852a3 100644
  # Environment components
  AXP_FAM_DIR	= armada_xp_family
  SOC_DEVICE_DIR	= $(AXP_FAM_DIR)/device
-@@ -125,7 +127,8 @@ OSSERV_PATH     = -I$(PLAT_PATH_I)/$(OSSERV_DIR)
+@@ -125,7 +127,8 @@ OSSERV_PATH     = -I$(PLAT_PATH_I)/$(OSS
  LSP_PATH        = -I$(LSP_PATH_I)
  CONFIG_PATH     = -I$(LSP_PATH_I)/$(CONFIG_DIR)
  HAL_IF_PATH	= -I$(LSP_PATH_I)/$(HAL_IF)
@@ -65,9 +61,6 @@ index 7d0d6ed..16852a3 100644
  
  EXTRA_INCLUDE  	= $(OSSERV_PATH) $(COMMON_PATH) $(HAL_PATH)  $(AXP_FAM_PATH) \
                    $(LSP_PATH) $(CONFIG_PATH) $(DRIVERS_LSP_PATH) $(HAL_IF_PATH)
-diff --git a/arch/arm/mach-armadaxp/dbg-trace.c b/arch/arm/mach-armadaxp/dbg-trace.c
-deleted file mode 100644
-index 43cabbd..0000000
 --- a/arch/arm/mach-armadaxp/dbg-trace.c
 +++ /dev/null
 @@ -1,112 +0,0 @@
@@ -183,9 +176,6 @@ index 43cabbd..0000000
 -	trc_index = 0;
 -}
 -
-diff --git a/arch/arm/mach-armadaxp/dbg-trace.h b/arch/arm/mach-armadaxp/dbg-trace.h
-deleted file mode 100644
-index c1ad60b..0000000
 --- a/arch/arm/mach-armadaxp/dbg-trace.h
 +++ /dev/null
 @@ -1,24 +0,0 @@
@@ -213,9 +203,6 @@ index c1ad60b..0000000
 -
 -
 -#endif
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/Makefile b/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/Makefile
-new file mode 100755
-index 0000000..0264247
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/Makefile
 @@ -0,0 +1,12 @@
@@ -231,9 +218,6 @@ index 0000000..0264247
 +endif
 +
 +obj-$(CONFIG_MV_DBG_TRACE) += dbg-trace.o
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.c
-new file mode 100755
-index 0000000..c70121a
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.c
 @@ -0,0 +1,336 @@
@@ -573,9 +557,6 @@ index 0000000..c70121a
 +MODULE_AUTHOR("Dima Epshtein");
 +MODULE_DESCRIPTION("Trace message support");
 +MODULE_LICENSE("GPL");
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.h
-new file mode 100755
-index 0000000..a411195
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.h
 @@ -0,0 +1,53 @@
@@ -632,6 +613,3 @@ index 0000000..a411195
 +#endif /* CONFIG_MV_DBG_TRACE */
 +
 +#endif /* _MV_DBG_TRCE_H_ */
--- 
-1.7.9.5
-

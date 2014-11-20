@@ -17,8 +17,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/plat-armada/mv_hal/neta/bm/mvBm.h         |    1 +
  5 files changed, 433 insertions(+), 316 deletions(-)
 
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
-index 147e484..5584bb0 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
 @@ -97,7 +97,9 @@ static ssize_t mv_eth_help(char *buf)
@@ -32,7 +30,7 @@ index 147e484..5584bb0 100644
  	return off;
  }
  
-@@ -234,8 +236,6 @@ static ssize_t mv_eth_port_store(struct device *dev,
+@@ -234,8 +236,6 @@ static ssize_t mv_eth_port_store(struct
  		printk(KERN_INFO "\n");
  		mvEthPortRegs(p);
  		mvNetaPortRegs(p);
@@ -41,7 +39,7 @@ index 147e484..5584bb0 100644
  #ifdef MV_ETH_GMAC_NEW
  	} else if (!strcmp(name, "gmac_regs")) {
  		mvNetaGmacRegs(p);
-@@ -244,6 +244,10 @@ static ssize_t mv_eth_port_store(struct device *dev,
+@@ -244,6 +244,10 @@ static ssize_t mv_eth_port_store(struct
  	} else if (!strcmp(name, "pnc")) {
  		mv_eth_ctrl_pnc(p);
  #endif /* CONFIG_MV_ETH_PNC */
@@ -52,7 +50,7 @@ index 147e484..5584bb0 100644
  	} else if (!strcmp(name, "napi")) {
  		mv_eth_napi_group_show(p);
  	} else {
-@@ -485,12 +489,14 @@ static DEVICE_ATTR(tx_done,     S_IWUSR, mv_eth_show, mv_eth_3_store);
+@@ -485,12 +489,14 @@ static DEVICE_ATTR(tx_done,     S_IWUSR,
  #ifdef CONFIG_MV_ETH_PNC
  static DEVICE_ATTR(pnc,         S_IWUSR, NULL, mv_eth_port_store);
  #endif /* CONFIG_MV_ETH_PNC */
@@ -68,7 +66,7 @@ index 147e484..5584bb0 100644
  
  static struct attribute *mv_eth_attrs[] = {
  
-@@ -541,12 +547,14 @@ static struct attribute *mv_eth_attrs[] = {
+@@ -541,12 +547,14 @@ static struct attribute *mv_eth_attrs[]
  #ifdef CONFIG_MV_ETH_PNC
      &dev_attr_pnc.attr,
  #endif /* CONFIG_MV_ETH_PNC */
@@ -84,11 +82,9 @@ index 147e484..5584bb0 100644
  	NULL
  };
  
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-index 994a35e..579bc12 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-@@ -78,14 +78,16 @@ static inline int mv_eth_tx_policy(struct eth_port *pp, struct sk_buff *skb);
+@@ -78,14 +78,16 @@ static inline int mv_eth_tx_policy(struc
  /* uncomment if you want to debug the SKB recycle feature */
  /* #define ETH_SKB_DEBUG */
  
@@ -116,7 +112,7 @@ index 994a35e..579bc12 100755
  }
  #else
  int mv_eth_ctrl_recycle(int en)
-@@ -134,6 +136,7 @@ static void mv_eth_txq_delete(struct eth_port *pp, struct tx_queue *txq_ctrl);
+@@ -134,6 +136,7 @@ static void mv_eth_txq_delete(struct eth
  static void mv_eth_tx_timeout(struct net_device *dev);
  static int  mv_eth_tx(struct sk_buff *skb, struct net_device *dev);
  static void mv_eth_tx_frag_process(struct eth_port *pp, struct sk_buff *skb, struct tx_queue *txq_ctrl, u16 flags);
@@ -124,7 +120,7 @@ index 994a35e..579bc12 100755
  
  static void mv_eth_config_show(void);
  static int  mv_eth_priv_init(struct eth_port *pp, int port);
-@@ -246,7 +249,7 @@ int group_has_cpus(struct eth_port *pp, int group)
+@@ -246,7 +249,7 @@ int group_has_cpus(struct eth_port *pp,
  	}
  
  	/* the group contains no CPU */
@@ -133,7 +129,7 @@ index 994a35e..579bc12 100755
  }
  
  void set_rxq_affinity(struct eth_port *pp, MV_U32 rxqAffinity, int group)
-@@ -308,7 +311,7 @@ static int mv_eth_port_config_parse(struct eth_port *pp)
+@@ -308,7 +311,7 @@ static int mv_eth_port_config_parse(stru
  	printk(KERN_ERR "\n");
  	if (pp == NULL) {
  		printk(KERN_ERR "  o mv_eth_port_config_parse: got NULL pp\n");
@@ -142,7 +138,7 @@ index 994a35e..579bc12 100755
  	}
  
  	switch (pp->port) {
-@@ -326,20 +329,20 @@ static int mv_eth_port_config_parse(struct eth_port *pp)
+@@ -326,20 +329,20 @@ static int mv_eth_port_config_parse(stru
  		break;
  	default:
  		printk(KERN_ERR "  o mv_eth_port_config_parse: got unknown port %d\n", pp->port);
@@ -166,7 +162,7 @@ index 994a35e..579bc12 100755
  }
  
  #ifdef ETH_SKB_DEBUG
-@@ -431,7 +434,7 @@ static inline int mv_eth_skb_mh_add(struct sk_buff *skb, u16 mh)
+@@ -431,7 +434,7 @@ static inline int mv_eth_skb_mh_add(stru
  	skb->data -= MV_ETH_MH_SIZE;
  	*((u16 *) skb->data) = mh;
  
@@ -175,7 +171,7 @@ index 994a35e..579bc12 100755
  }
  
  void mv_eth_ctrl_txdone(int num)
-@@ -460,7 +463,7 @@ int mv_eth_ctrl_flag(int port, u32 flag, u32 val)
+@@ -460,7 +463,7 @@ int mv_eth_ctrl_flag(int port, u32 flag,
  	if (flag == MV_ETH_F_MH)
  		mvNetaMhSet(pp->port, val ? MV_NETA_MH : MV_NETA_MH_NONE);
  
@@ -184,7 +180,7 @@ index 994a35e..579bc12 100755
  }
  
  int mv_eth_ctrl_port_buf_num_set(int port, int long_num, int short_num)
-@@ -496,7 +499,7 @@ int mv_eth_ctrl_port_buf_num_set(int port, int long_num, int short_num)
+@@ -496,7 +499,7 @@ int mv_eth_ctrl_port_buf_num_set(int por
  	pp->pool_short_num = short_num;
  #endif /* CONFIG_MV_ETH_BM_CPU */
  
@@ -193,7 +189,7 @@ index 994a35e..579bc12 100755
  }
  
  #ifdef CONFIG_MV_ETH_BM
-@@ -553,7 +556,7 @@ int mv_eth_ctrl_pool_size_set(int pool, int pkt_size)
+@@ -553,7 +556,7 @@ int mv_eth_ctrl_pool_size_set(int pool,
  	else
  		mvBmPoolBufSizeSet(pool, RX_BUF_SIZE(pkt_size));
  
@@ -202,7 +198,7 @@ index 994a35e..579bc12 100755
  }
  #endif /* CONFIG_MV_ETH_BM */
  
-@@ -583,7 +586,7 @@ int mv_eth_ctrl_set_poll_rx_weight(int port, u32 weight)
+@@ -583,7 +586,7 @@ int mv_eth_ctrl_set_poll_rx_weight(int p
  			cpuCtrl->napi->weight = pp->weight;
  	}
  
@@ -211,7 +207,7 @@ index 994a35e..579bc12 100755
  }
  
  int mv_eth_ctrl_rxq_size_set(int port, int rxq, int value)
-@@ -611,7 +614,7 @@ int mv_eth_ctrl_rxq_size_set(int port, int rxq, int value)
+@@ -611,7 +614,7 @@ int mv_eth_ctrl_rxq_size_set(int port, i
  	pp->rxq_ctrl[rxq].rxq_size = value;
  
  	/* New RXQ will be created during mv_eth_start_internals */
@@ -220,7 +216,7 @@ index 994a35e..579bc12 100755
  }
  
  int mv_eth_ctrl_txq_size_set(int port, int txp, int txq, int value)
-@@ -637,7 +640,7 @@ int mv_eth_ctrl_txq_size_set(int port, int txp, int txq, int value)
+@@ -637,7 +640,7 @@ int mv_eth_ctrl_txq_size_set(int port, i
  	txq_ctrl->txq_size = value;
  
  	/* New TXQ will be created during mv_eth_start_internals */
@@ -229,7 +225,7 @@ index 994a35e..579bc12 100755
  }
  
  int mv_eth_ctrl_txq_mode_get(int port, int txp, int txq, int *value)
-@@ -694,7 +697,7 @@ int mv_eth_ctrl_txq_cpu_own(int port, int txp, int txq, int add, int cpu)
+@@ -694,7 +697,7 @@ int mv_eth_ctrl_txq_cpu_own(int port, in
  
  	mv_eth_txq_update_shared(txq_ctrl, pp);
  
@@ -238,7 +234,7 @@ index 994a35e..579bc12 100755
  }
  
  /* Set TXQ ownership to HWF from the RX port.  rxp=-1 - free TXQ ownership */
-@@ -722,7 +725,7 @@ int mv_eth_ctrl_txq_hwf_own(int port, int txp, int txq, int rxp)
+@@ -722,7 +725,7 @@ int mv_eth_ctrl_txq_hwf_own(int port, in
  
  	txq_ctrl->hwf_rxp = (MV_U8) rxp;
  
@@ -247,7 +243,7 @@ index 994a35e..579bc12 100755
  }
  
  /* set or clear shared bit for this txq, txp=1 for pon , 0 for gbe */
-@@ -797,7 +800,7 @@ int mv_eth_ctrl_txq_cpu_def(int port, int txp, int txq, int cpu)
+@@ -797,7 +800,7 @@ int mv_eth_ctrl_txq_cpu_def(int port, in
  	pp->txp = txp;
  	cpuCtrl->txq = txq;
  
@@ -256,7 +252,7 @@ index 994a35e..579bc12 100755
  }
  
  
-@@ -874,7 +877,7 @@ int mv_eth_ctrl_tx_cmd(int port, u32 tx_cmd)
+@@ -874,7 +877,7 @@ int mv_eth_ctrl_tx_cmd(int port, u32 tx_
  
  	pp->hw_cmd = tx_cmd;
  
@@ -274,7 +270,7 @@ index 994a35e..579bc12 100755
  }
  
  #ifdef CONFIG_MV_ETH_TX_SPECIAL
-@@ -937,7 +940,7 @@ static int mv_eth_set_features(struct net_device *dev, u32 features)
+@@ -937,7 +940,7 @@ static int mv_eth_set_features(struct ne
  			mvPncLbModeL4(LB_DISABLE_VALUE);
  		}
  	}
@@ -283,7 +279,7 @@ index 994a35e..579bc12 100755
  }
  #endif
  
-@@ -1312,7 +1315,7 @@ int mv_eth_skb_recycle(struct sk_buff *skb)
+@@ -1312,7 +1315,7 @@ int mv_eth_skb_recycle(struct sk_buff *s
  			mv_eth_skb_save(skb, "recycle");
  #endif /* ETH_SKB_DEBUG */
  
@@ -292,7 +288,7 @@ index 994a35e..579bc12 100755
  	}
  	STAT_DBG(pool->stats.skb_recycled_err++);
  
-@@ -1473,7 +1476,7 @@ inline int mv_eth_refill(struct eth_port *pp, int rxq,
+@@ -1473,7 +1476,7 @@ inline int mv_eth_refill(struct eth_port
  	}
  	mv_eth_rxq_refill(pp, rxq, pkt, pool, rx_desc);
  
@@ -301,7 +297,7 @@ index 994a35e..579bc12 100755
  }
  EXPORT_SYMBOL(mv_eth_refill);
  
-@@ -1872,8 +1875,8 @@ static int mv_eth_tx(struct sk_buff *skb, struct net_device *dev)
+@@ -1872,8 +1875,8 @@ static int mv_eth_tx(struct sk_buff *skb
  	if (pp->flags & MV_ETH_F_DBG_TX) {
  		printk(KERN_ERR "\n");
  		printk(KERN_ERR "%s - eth_tx_%lu: cpu=%d, in_intr=0x%lx, port=%d, txp=%d, txq=%d\n",
@@ -312,7 +308,7 @@ index 994a35e..579bc12 100755
  		printk(KERN_ERR "\t skb=%p, head=%p, data=%p, size=%d\n", skb, skb->head, skb->data, skb->len);
  		mv_eth_tx_desc_print(tx_desc);
  		/*mv_eth_skb_print(skb);*/
-@@ -1950,7 +1953,7 @@ static inline int mv_eth_tso_validate(struct sk_buff *skb, struct net_device *de
+@@ -1950,7 +1953,7 @@ static inline int mv_eth_tso_validate(st
  		printk(KERN_ERR "***** ERROR: Protocol is not TCP over IP\n");
  		return 1;
  	}
@@ -321,7 +317,7 @@ index 994a35e..579bc12 100755
  }
  
  static inline int mv_eth_tso_build_hdr_desc(struct neta_tx_desc *tx_desc, struct eth_port *priv, struct sk_buff *skb,
-@@ -1964,7 +1967,7 @@ static inline int mv_eth_tso_build_hdr_desc(struct neta_tx_desc *tx_desc, struct
+@@ -1964,7 +1967,7 @@ static inline int mv_eth_tso_build_hdr_d
  
  	data = mv_eth_extra_pool_get(priv);
  	if (!data)
@@ -330,7 +326,7 @@ index 994a35e..579bc12 100755
  
  	txq_ctrl->shadow_txq[txq_ctrl->shadow_txq_put_i] = ((MV_ULONG)data | MV_ETH_SHADOW_EXT);
  
-@@ -2066,7 +2069,7 @@ int mv_eth_tx_tso(struct sk_buff *skb, struct net_device *dev,
+@@ -2066,7 +2069,7 @@ int mv_eth_tx_tso(struct sk_buff *skb, s
  	printk(KERN_ERR "mv_eth_tx_tso_%d ENTER: skb=%p, total_len=%d\n", priv->stats.tx_tso, skb, skb->len);
  */
  	if (mv_eth_tso_validate(skb, dev))
@@ -339,7 +335,7 @@ index 994a35e..579bc12 100755
  
  	/* Calculate expected number of TX descriptors */
  	totalDescNum = skb_shinfo(skb)->gso_segs * 2 + skb_shinfo(skb)->nr_frags;
-@@ -2078,7 +2081,7 @@ int mv_eth_tx_tso(struct sk_buff *skb, struct net_device *dev,
+@@ -2078,7 +2081,7 @@ int mv_eth_tx_tso(struct sk_buff *skb, s
  					skb_shinfo(skb)->gso_segs);
  */
  		STAT_ERR(txq_ctrl->stats.txq_err++);
@@ -348,7 +344,7 @@ index 994a35e..579bc12 100755
  	}
  
  	total_len = skb->len;
-@@ -2093,7 +2096,7 @@ int mv_eth_tx_tso(struct sk_buff *skb, struct net_device *dev,
+@@ -2093,7 +2096,7 @@ int mv_eth_tx_tso(struct sk_buff *skb, s
  
  	if (frag_size < hdr_len) {
  		printk(KERN_ERR "***** ERROR: frag_size=%d, hdr_len=%d\n", frag_size, hdr_len);
@@ -366,7 +362,7 @@ index 994a35e..579bc12 100755
  }
  #endif /* CONFIG_MV_ETH_TSO */
  
-@@ -2361,6 +2364,37 @@ static void mv_eth_tx_frag_process(struct eth_port *pp, struct sk_buff *skb, str
+@@ -2361,6 +2364,37 @@ static void mv_eth_tx_frag_process(struc
  	}
  }
  
@@ -404,7 +400,7 @@ index 994a35e..579bc12 100755
  
  /* Free "num" buffers from the pool */
  static int mv_eth_pool_free(int pool, int num)
-@@ -2485,7 +2519,7 @@ static int mv_eth_pool_add(int pool, int buf_num)
+@@ -2485,7 +2519,7 @@ static int mv_eth_pool_add(int pool, int
  
  	if ((pool < 0) || (pool >= MV_ETH_BM_POOLS)) {
  		printk(KERN_ERR "%s: invalid pool number %d\n", __func__, pool);
@@ -413,7 +409,7 @@ index 994a35e..579bc12 100755
  	}
  
  	bm_pool = &mv_eth_pool[pool];
-@@ -2494,7 +2528,7 @@ static int mv_eth_pool_add(int pool, int buf_num)
+@@ -2494,7 +2528,7 @@ static int mv_eth_pool_add(int pool, int
  	if (bm_pool->pkt_size == 0) {
  		printk(KERN_ERR "%s: invalid pool #%d state: pkt_size=%d, buf_size=%d, buf_num=%d\n",
  		       __func__, pool, bm_pool->pkt_size, RX_BUF_SIZE(bm_pool->pkt_size), bm_pool->buf_num);
@@ -422,7 +418,7 @@ index 994a35e..579bc12 100755
  	}
  
  	/* Insure buf_num is smaller than capacity */
-@@ -2502,7 +2536,7 @@ static int mv_eth_pool_add(int pool, int buf_num)
+@@ -2502,7 +2536,7 @@ static int mv_eth_pool_add(int pool, int
  
  		printk(KERN_ERR "%s: can't add %d buffers into bm_pool=%d: capacity=%d, buf_num=%d\n",
  		       __func__, buf_num, pool, bm_pool->capacity, bm_pool->buf_num);
@@ -431,7 +427,7 @@ index 994a35e..579bc12 100755
  	}
  
  	MV_ETH_LOCK(&bm_pool->lock, flags);
-@@ -2590,6 +2624,7 @@ void	*mv_eth_bm_pool_create(int pool, int capacity, MV_ULONG *pPhysAddr)
+@@ -2590,6 +2624,7 @@ void	*mv_eth_bm_pool_create(int pool, in
  static MV_STATUS mv_eth_pool_create(int pool, int capacity)
  {
  	struct bm_pool *bm_pool;
@@ -439,7 +435,7 @@ index 994a35e..579bc12 100755
  
  	if ((pool < 0) || (pool >= MV_ETH_BM_POOLS)) {
  		printk(KERN_ERR "%s: pool=%d is out of range\n", __func__, pool);
-@@ -2600,7 +2635,7 @@ static MV_STATUS mv_eth_pool_create(int pool, int capacity)
+@@ -2600,7 +2635,7 @@ static MV_STATUS mv_eth_pool_create(int
  	memset(bm_pool, 0, sizeof(struct bm_pool));
  
  #ifdef CONFIG_MV_ETH_BM_CPU
@@ -448,7 +444,7 @@ index 994a35e..579bc12 100755
  	if (bm_pool->bm_pool == NULL)
  		return MV_FAIL;
  #endif /* CONFIG_MV_ETH_BM_CPU */
-@@ -2617,6 +2652,7 @@ static MV_STATUS mv_eth_pool_create(int pool, int capacity)
+@@ -2617,6 +2652,7 @@ static MV_STATUS mv_eth_pool_create(int
  	bm_pool->capacity = capacity;
  	bm_pool->pkt_size = 0;
  	bm_pool->buf_num = 0;
@@ -456,7 +452,7 @@ index 994a35e..579bc12 100755
  	spin_lock_init(&bm_pool->lock);
  
  	return MV_OK;
-@@ -2932,7 +2968,7 @@ static MV_STATUS mv_eth_bm_pools_init(void)
+@@ -2932,7 +2968,7 @@ static MV_STATUS mv_eth_bm_pools_init(vo
  		mv_eth_pool[i].pkt_size = 0;
  #endif /* CONFIG_MV_ETH_BM */
  	}
@@ -465,7 +461,7 @@ index 994a35e..579bc12 100755
  }
  
  /* Note: call this function only after mv_eth_ports_num is initialized */
-@@ -3051,7 +3087,7 @@ static int mv_eth_load_network_interfaces(MV_U32 portMask, MV_U32 cpuMask,
+@@ -3051,7 +3087,7 @@ static int mv_eth_load_network_interface
  
  	mv_net_devs_num = dev_i;
  
@@ -474,7 +470,7 @@ index 994a35e..579bc12 100755
  }
  
  
-@@ -3085,8 +3121,173 @@ int mv_eth_resume_network_interfaces(struct eth_port *pp)
+@@ -3085,8 +3121,173 @@ int mv_eth_resume_network_interfaces(str
  		mvNetaTxqCpuMaskSet(pp->port, pp->cpu_config[cpu]->cpuTxqMask, cpu);
  	}
  
@@ -798,7 +794,7 @@ index 994a35e..579bc12 100755
  {
  	struct eth_port *pp = mv_eth_port_by_id(port);
  
-@@ -3232,7 +3474,7 @@ int	mv_eth_pm_mode_set(int port, int mode)
+@@ -3232,7 +3474,7 @@ int	mv_eth_pm_mode_set(int port, int mod
  		return -EINVAL;
  	}
  
@@ -807,7 +803,7 @@ index 994a35e..579bc12 100755
  		printk(KERN_ERR "%s: mode = %d, Invalid value.\n", __func__, mode);
  		return -EINVAL;
  	}
-@@ -3241,9 +3483,14 @@ int	mv_eth_pm_mode_set(int port, int mode)
+@@ -3241,9 +3483,14 @@ int	mv_eth_pm_mode_set(int port, int mod
  		printk(KERN_ERR "Port %d must resumed before\n", port);
  		return -EINVAL;
  	}
@@ -824,7 +820,7 @@ index 994a35e..579bc12 100755
  }
  
  /***********************************************************
-@@ -3355,7 +3602,7 @@ static int mv_eth_probe(struct platform_device *pdev)
+@@ -3355,7 +3602,7 @@ static int mv_eth_probe(struct platform_
  
  	mv_eth_initialized = 1;
  
@@ -833,7 +829,7 @@ index 994a35e..579bc12 100755
  oom:
  	if (mv_eth_ports)
  		mvOsFree(mv_eth_ports);
-@@ -3438,7 +3685,7 @@ static int mv_eth_config_get(struct eth_port *pp, MV_U8 *mac_addr)
+@@ -3438,7 +3685,7 @@ static int mv_eth_config_get(struct eth_
  
  	default:
  		printk(KERN_ERR "eth_get_config: Unexpected port number %d\n", pp->port);
@@ -851,7 +847,7 @@ index 994a35e..579bc12 100755
  oom:
  	printk(KERN_ERR "%s: port=%d: out of memory\n", __func__, pp->port);
  	return -ENODEV;
-@@ -3862,19 +4109,19 @@ int mv_eth_napi_set_cpu_affinity(int port, int group, int affinity)
+@@ -3862,19 +4109,19 @@ int mv_eth_napi_set_cpu_affinity(int por
  	struct eth_port *pp = mv_eth_port_by_id(port);
  	if (pp == NULL) {
  		printk(KERN_ERR "%s: pp == NULL, port=%d\n", __func__, port);
@@ -874,7 +870,7 @@ index 994a35e..579bc12 100755
  
  }
  void handle_group_affinity(int port)
-@@ -3923,7 +4170,7 @@ int	mv_eth_napi_set_rxq_affinity(int port, int group, int rxqAffinity)
+@@ -3923,7 +4170,7 @@ int	mv_eth_napi_set_rxq_affinity(int por
  	}
  	if (group >= CONFIG_MV_ETH_NAPI_GROUPS) {
  		printk(KERN_ERR "%s: group number is higher than %d\n", __func__, CONFIG_MV_ETH_NAPI_GROUPS-1);
@@ -883,7 +879,7 @@ index 994a35e..579bc12 100755
  		}
  	if (pp->flags & MV_ETH_F_STARTED) {
  		printk(KERN_ERR "Port %d must be stopped before\n", port);
-@@ -4023,7 +4270,7 @@ static int mv_eth_rxq_fill(struct eth_port *pp, int rxq, int num)
+@@ -4023,7 +4270,7 @@ static int mv_eth_rxq_fill(struct eth_po
  	rx_ctrl = pp->rxq_ctrl[rxq].q;
  	if (!rx_ctrl) {
  		printk(KERN_ERR "%s: rxq %d is not initialized\n", __func__, rxq);
@@ -892,7 +888,7 @@ index 994a35e..579bc12 100755
  	}
  
  	for (i = 0; i < num; i++) {
-@@ -4069,7 +4316,7 @@ static int mv_eth_txq_create(struct eth_port *pp, struct tx_queue *txq_ctrl)
+@@ -4069,7 +4316,7 @@ static int mv_eth_txq_create(struct eth_
  	mvNetaHwfTxqInit(pp->port, txq_ctrl->txp, txq_ctrl->txq);
  #endif /* CONFIG_MV_ETH_HWF */
  
@@ -901,7 +897,7 @@ index 994a35e..579bc12 100755
  
  no_mem:
  	mv_eth_txq_delete(pp, txq_ctrl);
-@@ -4106,7 +4353,7 @@ static int mv_force_port_link_speed_fc(int port, MV_ETH_PORT_SPEED port_speed, i
+@@ -4106,7 +4353,7 @@ static int mv_force_port_link_speed_fc(i
  			return -EIO;
  		}
  	}
@@ -928,7 +924,7 @@ index 994a35e..579bc12 100755
  }
  
  /***********************************************************
-@@ -4476,111 +4723,26 @@ int mv_eth_resume_internals(struct eth_port *pp, int mtu)
+@@ -4476,111 +4723,26 @@ int mv_eth_resume_internals(struct eth_p
  	}
  #endif /* CONFIG_MV_PON */
  
@@ -1047,7 +1043,7 @@ index 994a35e..579bc12 100755
  	mv_eth_interrupts_mask(pp);
  	smp_call_function_many(cpu_online_mask, (smp_call_func_t)mv_eth_interrupts_mask, (void *)pp, 1);
  
-@@ -4594,22 +4756,7 @@ int mv_eth_suspend_internals(struct eth_port *pp)
+@@ -4594,22 +4756,7 @@ int mv_eth_suspend_internals(struct eth_
  
  	mdelay(10);
  
@@ -1071,7 +1067,7 @@ index 994a35e..579bc12 100755
  }
  
  
-@@ -4664,11 +4811,11 @@ int mv_eth_stop_internals(struct eth_port *pp)
+@@ -4664,11 +4811,11 @@ int mv_eth_stop_internals(struct eth_por
  	for (queue = 0; queue < CONFIG_MV_ETH_RXQ; queue++)
  		mv_eth_rxq_drop_pkts(pp, queue);
  
@@ -1085,7 +1081,7 @@ index 994a35e..579bc12 100755
  }
  
  /* return positive if MTU is valid */
-@@ -4721,7 +4868,7 @@ int mv_eth_check_mtu_internals(struct net_device *dev, int mtu)
+@@ -4721,7 +4868,7 @@ int mv_eth_check_mtu_internals(struct ne
  		}
  	}
  #endif /* CONFIG_MV_ETH_BM_CPU */
@@ -1094,7 +1090,7 @@ index 994a35e..579bc12 100755
  }
  
  /***********************************************************
-@@ -4740,7 +4887,7 @@ int mv_eth_change_mtu_internals(struct net_device *dev, int mtu)
+@@ -4740,7 +4887,7 @@ int mv_eth_change_mtu_internals(struct n
  		STAT_ERR(pp->stats.state_err++);
  		if (pp->flags & MV_ETH_F_DBG_RX)
  			printk(KERN_ERR "%s: port %d, STARTED_BIT = 0, Invalid value.\n", __func__, pp->port);
@@ -1103,7 +1099,7 @@ index 994a35e..579bc12 100755
  	}
  
  	if ((mtu != dev->mtu) && (pp->pool_long)) {
-@@ -4782,7 +4929,7 @@ int mv_eth_change_mtu_internals(struct net_device *dev, int mtu)
+@@ -4782,7 +4929,7 @@ int mv_eth_change_mtu_internals(struct n
  
  		/* DIMA debug; Free all buffers from short pool */
  /*
@@ -1112,7 +1108,7 @@ index 994a35e..579bc12 100755
  			mv_eth_pool_free(pp->pool_short->pool, pp->pool_short_num);
  			pp->pool_short = NULL;
  		}
-@@ -4792,7 +4939,7 @@ int mv_eth_change_mtu_internals(struct net_device *dev, int mtu)
+@@ -4792,7 +4939,7 @@ int mv_eth_change_mtu_internals(struct n
  
  	mv_eth_netdev_update_features(dev);
  
@@ -1121,7 +1117,7 @@ index 994a35e..579bc12 100755
  }
  
  /***********************************************************
-@@ -5033,7 +5180,7 @@ int mv_eth_txq_tos_map_set(int port, int txq, int cpu, unsigned int tos)
+@@ -5033,7 +5180,7 @@ int mv_eth_txq_tos_map_set(int port, int
  
  	/* The same txq - do nothing */
  	if (old_txq == (MV_U8) txq)
@@ -1130,7 +1126,7 @@ index 994a35e..579bc12 100755
  
  	if (txq == -1) {
  		/* delete tos to txq mapping - free TXQ */
-@@ -5042,7 +5189,7 @@ int mv_eth_txq_tos_map_set(int port, int txq, int cpu, unsigned int tos)
+@@ -5042,7 +5189,7 @@ int mv_eth_txq_tos_map_set(int port, int
  
  		cpuCtrl->txq_tos_map[tos] = MV_ETH_TXQ_INVALID;
  		printk(KERN_ERR "Successfully deleted\n");
@@ -1139,7 +1135,7 @@ index 994a35e..579bc12 100755
  	}
  
  	if (mvNetaMaxCheck(txq, CONFIG_MV_ETH_TXQ))
-@@ -5059,7 +5206,7 @@ int mv_eth_txq_tos_map_set(int port, int txq, int cpu, unsigned int tos)
+@@ -5059,7 +5206,7 @@ int mv_eth_txq_tos_map_set(int port, int
  
  	cpuCtrl->txq_tos_map[tos] = (MV_U8) txq;
  	printk(KERN_ERR "Successfully added\n");
@@ -1148,7 +1144,7 @@ index 994a35e..579bc12 100755
  }
  
  static int mv_eth_priv_init(struct eth_port *pp, int port)
-@@ -5079,7 +5226,7 @@ static int mv_eth_priv_init(struct eth_port *pp, int port)
+@@ -5079,7 +5226,7 @@ static int mv_eth_priv_init(struct eth_p
  	pp->port = port;
  	pp->txp_num = 1;
  	pp->txp = 0;
@@ -1157,7 +1153,7 @@ index 994a35e..579bc12 100755
  	for_each_possible_cpu(cpu) {
  		cpuCtrl = pp->cpu_config[cpu];
  		cpuCtrl->txq = CONFIG_MV_ETH_TXQ_DEF;
-@@ -5184,7 +5331,7 @@ static int mv_eth_priv_init(struct eth_port *pp, int port)
+@@ -5184,7 +5331,7 @@ static int mv_eth_priv_init(struct eth_p
  		       pp->port, sizeof(u32) * (pp->txp_num * CONFIG_MV_ETH_TXQ * CONFIG_MV_ETH_TXQ_DESC + 1));
  #endif /* CONFIG_MV_ETH_STAT_DIST */
  
@@ -1166,7 +1162,7 @@ index 994a35e..579bc12 100755
  }
  
  /***********************************************************************************
-@@ -5313,12 +5460,10 @@ void mv_eth_port_status_print(unsigned int port)
+@@ -5313,12 +5460,10 @@ void mv_eth_port_status_print(unsigned i
  	else
  		printk(KERN_CONT "Disabled\n");
  #endif /* CONFIG_MV_ETH_NFP */
@@ -1181,7 +1177,7 @@ index 994a35e..579bc12 100755
  
  	printk(KERN_ERR "rxq_coal(pkts)[ q]   = ");
  	for (q = 0; q < CONFIG_MV_ETH_RXQ; q++)
-@@ -5389,10 +5534,9 @@ void mv_eth_port_status_print(unsigned int port)
+@@ -5389,10 +5534,9 @@ void mv_eth_port_status_print(unsigned i
  			cpuCtrl = pp->cpu_config[cpu];
  			if (MV_BIT_CHECK(pp->cpuMask, cpu))
  				printk(KERN_ERR "  %d:   %d   0x%08x   %d    0x%02x    0x%02x    0x%02x    %d\n",
@@ -1362,7 +1358,7 @@ index 994a35e..579bc12 100755
  }
  
  
-@@ -5984,41 +6086,40 @@ int mv_eth_resume(struct platform_device *pdev)
+@@ -5984,41 +6086,40 @@ int mv_eth_resume(struct platform_device
  	struct eth_port *pp;
  	int port;
  
@@ -1419,11 +1415,9 @@ index 994a35e..579bc12 100755
  }
  
  static void mv_eth_shutdown(struct platform_device *pdev)
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
-index 25499be..36ae9e9 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
-@@ -140,17 +140,21 @@ int mv_eth_skb_recycle(struct sk_buff *skb);
+@@ -140,17 +140,21 @@ int mv_eth_skb_recycle(struct sk_buff *s
  		local_irq_restore(flags);
  
  
@@ -1476,7 +1470,7 @@ index 25499be..36ae9e9 100755
  	u32         *bm_pool;
  	MV_STACK    *stack;
  	spinlock_t  lock;
-@@ -733,7 +731,7 @@ int         mv_eth_restore_registers(struct eth_port *pp, int mtu);
+@@ -733,7 +731,7 @@ int         mv_eth_restore_registers(str
  
  void        mv_eth_win_init(int port);
  int         mv_eth_resume_network_interfaces(struct eth_port *pp);
@@ -1485,11 +1479,9 @@ index 25499be..36ae9e9 100755
  
  int	    mv_eth_cpu_txq_mask_set(int port, int cpu, int txqMask);
  
-diff --git a/arch/arm/plat-armada/mv_hal/neta/bm/mvBm.c b/arch/arm/plat-armada/mv_hal/neta/bm/mvBm.c
-index d7168bf..07bf3c0 100755
 --- a/arch/arm/plat-armada/mv_hal/neta/bm/mvBm.c
 +++ b/arch/arm/plat-armada/mv_hal/neta/bm/mvBm.c
-@@ -78,10 +78,20 @@ static MV_BM_POOL	mvBmPools[MV_BM_POOLS];
+@@ -78,10 +78,20 @@ static MV_BM_POOL	mvBmPools[MV_BM_POOLS]
  /* Initialize Hardware Buffer management unit */
  MV_STATUS mvBmInit(MV_U8 *virtBase)
  {
@@ -1522,7 +1514,7 @@ index d7168bf..07bf3c0 100755
  }
  
  MV_STATUS mvBmControl(MV_COMMAND cmd)
-@@ -260,7 +268,8 @@ MV_STATUS mvBmPoolInit(int pool, void *virtPoolBase, MV_ULONG physPoolBase, int
+@@ -260,7 +268,8 @@ MV_STATUS mvBmPoolInit(int pool, void *v
  	pBmPool = &mvBmPools[pool];
  	if (pBmPool->pVirt != NULL) {
  		mvOsPrintf("bmPool = %d is already busy\n", pool);
@@ -1532,11 +1524,9 @@ index d7168bf..07bf3c0 100755
  	}
  
  	pBmPool->pool = pool;
-diff --git a/arch/arm/plat-armada/mv_hal/neta/bm/mvBm.h b/arch/arm/plat-armada/mv_hal/neta/bm/mvBm.h
-index fddc413..caf48da 100755
 --- a/arch/arm/plat-armada/mv_hal/neta/bm/mvBm.h
 +++ b/arch/arm/plat-armada/mv_hal/neta/bm/mvBm.h
-@@ -112,6 +112,7 @@ static INLINE MV_ULONG mvBmPoolGet(int poolId)
+@@ -112,6 +112,7 @@ static INLINE MV_ULONG mvBmPoolGet(int p
  
  /* prototypes */
  MV_STATUS mvBmInit(MV_U8 *virtBase);
@@ -1544,6 +1534,3 @@ index fddc413..caf48da 100755
  void      mvBmConfigSet(MV_U32 mask);
  void      mvBmConfigClear(MV_U32 mask);
  MV_STATUS mvBmControl(MV_COMMAND cmd);
--- 
-1.7.9.5
-

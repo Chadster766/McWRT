@@ -22,8 +22,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/mm/proc-sheeva_pj4bv7lpae.S |    2 +-
  3 files changed, 74 insertions(+), 4 deletions(-)
 
-diff --git a/arch/arm/mm/cache-v7.S b/arch/arm/mm/cache-v7.S
-index bd70e50..8168ed5 100644
 --- a/arch/arm/mm/cache-v7.S
 +++ b/arch/arm/mm/cache-v7.S
 @@ -34,6 +34,78 @@ ENTRY(v7_flush_icache_all)
@@ -105,8 +103,6 @@ index bd70e50..8168ed5 100644
   *	v7_flush_dcache_all()
   *
   *	Flush the whole D-cache.
-diff --git a/arch/arm/mm/proc-sheeva_pj4bv7.S b/arch/arm/mm/proc-sheeva_pj4bv7.S
-index e98a765..68b822d 100644
 --- a/arch/arm/mm/proc-sheeva_pj4bv7.S
 +++ b/arch/arm/mm/proc-sheeva_pj4bv7.S
 @@ -472,7 +472,7 @@ __pj4bv7_setup:
@@ -118,7 +114,7 @@ index e98a765..68b822d 100644
  	ldmia	r12, {r0-r5, r7, r9, r11, lr}
  
  	mrc	p15, 0, r0, c0, c0, 0		@ read main ID register
-@@ -546,9 +546,7 @@ adr	r12, __pj4bv7_setup_stack		@ the local stack
+@@ -546,9 +546,7 @@ adr	r12, __pj4bv7_setup_stack		@ the loc
  #endif
  
  3:	mov	r10, #0
@@ -128,8 +124,6 @@ index e98a765..68b822d 100644
  	dsb
  #ifdef CONFIG_MMU
  	mcr	p15, 0, r10, c8, c7, 0		@ invalidate I + D TLBs
-diff --git a/arch/arm/mm/proc-sheeva_pj4bv7lpae.S b/arch/arm/mm/proc-sheeva_pj4bv7lpae.S
-index d21b06e..c760d0c 100644
 --- a/arch/arm/mm/proc-sheeva_pj4bv7lpae.S
 +++ b/arch/arm/mm/proc-sheeva_pj4bv7lpae.S
 @@ -332,7 +332,7 @@ __pj4bv7_setup:
@@ -141,6 +135,3 @@ index d21b06e..c760d0c 100644
  	ldmia	r12, {r0-r5, r7, r9, r11, lr}
  
  	mov	r10, #0
--- 
-1.7.9.5
-

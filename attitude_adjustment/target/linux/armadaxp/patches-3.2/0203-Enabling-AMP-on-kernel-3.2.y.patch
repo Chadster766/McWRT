@@ -17,9 +17,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  create mode 100644 arch/arm/configs/armada_xp_amp_g0_defconfig
  create mode 100644 arch/arm/configs/armada_xp_amp_g1_defconfig
 
-diff --git a/arch/arm/configs/armada_xp_amp_g0_defconfig b/arch/arm/configs/armada_xp_amp_g0_defconfig
-new file mode 100644
-index 0000000..549513d
 --- /dev/null
 +++ b/arch/arm/configs/armada_xp_amp_g0_defconfig
 @@ -0,0 +1,235 @@
@@ -258,9 +255,6 @@ index 0000000..549513d
 +# CONFIG_CRYPTO_ANSI_CPRNG is not set
 +CONFIG_CRC_CCITT=y
 +CONFIG_LIBCRC32C=y
-diff --git a/arch/arm/configs/armada_xp_amp_g1_defconfig b/arch/arm/configs/armada_xp_amp_g1_defconfig
-new file mode 100644
-index 0000000..26b739a
 --- /dev/null
 +++ b/arch/arm/configs/armada_xp_amp_g1_defconfig
 @@ -0,0 +1,240 @@
@@ -504,11 +498,9 @@ index 0000000..26b739a
 +# CONFIG_CRYPTO_ANSI_CPRNG is not set
 +CONFIG_CRC_CCITT=y
 +CONFIG_LIBCRC32C=y
-diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
-index 7c85baa..296e53d 100755
 --- a/arch/arm/mach-armadaxp/core.c
 +++ b/arch/arm/mach-armadaxp/core.c
-@@ -1606,7 +1606,7 @@ void __init axp_tag_fixup_mem32(struct machine_desc *mdesc, struct tag *t,
+@@ -1606,7 +1606,7 @@ void __init axp_tag_fixup_mem32(struct m
  
  MACHINE_START(ARMADA_XP_DB, "Marvell Armada XP Development Board")
  	/* MAINTAINER("MARVELL") */
@@ -517,8 +509,6 @@ index 7c85baa..296e53d 100755
  	.map_io		= axp_map_io,
  	.init_irq	= axp_init_irq,
  	.timer		= &axp_timer,
-diff --git a/arch/arm/mach-armadaxp/include/mach/memory.h b/arch/arm/mach-armadaxp/include/mach/memory.h
-index 61f84a0..86fe350 100644
 --- a/arch/arm/mach-armadaxp/include/mach/memory.h
 +++ b/arch/arm/mach-armadaxp/include/mach/memory.h
 @@ -11,6 +11,7 @@
@@ -529,8 +519,6 @@ index 61f84a0..86fe350 100644
  /* #define __virt_to_bus(x)	__virt_to_phys(x) */
  /* #define __bus_to_virt(x)	__phys_to_virt(x) */
  
-diff --git a/arch/arm/mach-armadaxp/irq.c b/arch/arm/mach-armadaxp/irq.c
-index 227a6f6..09fb924 100644
 --- a/arch/arm/mach-armadaxp/irq.c
 +++ b/arch/arm/mach-armadaxp/irq.c
 @@ -202,7 +202,7 @@ MV_REG_WRITE(addr, temp);
@@ -542,8 +530,6 @@ index 227a6f6..09fb924 100644
  #else
  spin_unlock(&irq_controller_lock);
  #endif
-diff --git a/arch/arm/plat-armada/Kconfig b/arch/arm/plat-armada/Kconfig
-index 17ee416..4149d1b 100644
 --- a/arch/arm/plat-armada/Kconfig
 +++ b/arch/arm/plat-armada/Kconfig
 @@ -186,21 +186,6 @@ config MV_AMP_ENABLE
@@ -623,8 +609,6 @@ index 17ee416..4149d1b 100644
  endmenu
  
  
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c
-index a6e07be..5c9d2a2 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c
 @@ -47,7 +47,6 @@
@@ -635,7 +619,7 @@ index a6e07be..5c9d2a2 100644
  static void ipc_net_tx_timeout( struct net_device *dev);
  int ipc_net_start(struct net_device *dev);
  int ipc_net_stop( struct net_device *dev);
-@@ -81,23 +80,12 @@ static const struct net_device_ops mv_ipc_netdev_ops = {
+@@ -81,23 +80,12 @@ static const struct net_device_ops mv_ip
  	.ndo_open = ipc_net_start,
  	.ndo_stop = ipc_net_stop,
  	.ndo_start_xmit = ipc_net_xmit,
@@ -659,11 +643,9 @@ index a6e07be..5c9d2a2 100644
  /****************************************************************************************
   * ipc_net_tx_timeout()                                 				        		*
   *   transmit timeout function function (dummy)											*
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c
-index 5bee482..ec38cc3 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c
-@@ -62,6 +62,7 @@ static int mv_eth_start(struct net_device *dev)
+@@ -62,6 +62,7 @@ static int mv_eth_start(struct net_devic
  {
  	struct eth_port *priv = MV_ETH_PRIV(dev);
  	int group;
@@ -671,6 +653,3 @@ index 5bee482..ec38cc3 100644
  	/* in default link is down */
  	netif_carrier_off(dev);
  
--- 
-1.7.9.5
-

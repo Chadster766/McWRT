@@ -7,8 +7,6 @@ Subject: [PATCH 1/1] 910
  lib/kobject_uevent.c |   15 +++++++++++++++
  1 file changed, 15 insertions(+)
 
-diff --git a/lib/kobject_uevent.c b/lib/kobject_uevent.c
-index 6d40244..14ddc2e 100644
 --- a/lib/kobject_uevent.c
 +++ b/lib/kobject_uevent.c
 @@ -29,6 +29,7 @@
@@ -38,7 +36,7 @@ index 6d40244..14ddc2e 100644
  /**
   * kobject_action_type - translate action string to numeric type
   *
-@@ -137,6 +150,7 @@ int kobject_uevent_env(struct kobject *kobj, enum kobject_action action,
+@@ -137,6 +150,7 @@ int kobject_uevent_env(struct kobject *k
  	struct kobject *top_kobj;
  	struct kset *kset;
  	const struct kset_uevent_ops *uevent_ops;
@@ -46,7 +44,7 @@ index 6d40244..14ddc2e 100644
  	int i = 0;
  	int retval = 0;
  #ifdef CONFIG_NET
-@@ -245,6 +259,7 @@ int kobject_uevent_env(struct kobject *kobj, enum kobject_action action,
+@@ -245,6 +259,7 @@ int kobject_uevent_env(struct kobject *k
  
  	mutex_lock(&uevent_sock_mutex);
  	/* we will send an event, so request a new sequence number */
@@ -54,6 +52,3 @@ index 6d40244..14ddc2e 100644
  	retval = add_uevent_var(env, "SEQNUM=%llu", (unsigned long long)++uevent_seqnum);
  	if (retval) {
  		mutex_unlock(&uevent_sock_mutex);
--- 
-1.7.9.5
-

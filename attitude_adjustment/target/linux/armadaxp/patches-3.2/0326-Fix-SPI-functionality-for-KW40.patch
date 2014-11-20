@@ -20,11 +20,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  drivers/mtd/nand/Makefile                          |    1 -
  6 files changed, 44 insertions(+), 10 deletions(-)
 
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/sflash.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/sflash.c
-index 3458e99..e61b0e0 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/sflash.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/sflash.c
-@@ -131,7 +131,7 @@ static struct mtd_info *sflash_probe(struct map_info *map)
+@@ -131,7 +131,7 @@ static struct mtd_info *sflash_probe(str
  	memset(mtd, 0, sizeof(*mtd));
  	memset(sflash, 0, sizeof(*sflash));
  	    
@@ -33,7 +31,7 @@ index 3458e99..e61b0e0 100644
  #ifdef CONFIG_ARCH_FEROCEON_ORION	
  	/* First check that SPI bus mode is configured to connect to an external SFlash */
      if (mvCtrlSpiBusModeDetect() != MV_SPI_CONN_TO_EXT_FLASH)
-@@ -144,7 +144,7 @@ static struct mtd_info *sflash_probe(struct map_info *map)
+@@ -144,7 +144,7 @@ static struct mtd_info *sflash_probe(str
  #endif
  	/* Try to detect the flash and initialize it over SPI */	
  	sflash->baseAddr         = map->phys;
@@ -42,11 +40,9 @@ index 3458e99..e61b0e0 100644
  	sflash_disable_irqs(flags, sflash_in_irq);	
  	if (mvSFlashInit(sflash) != MV_OK)
  	{
-diff --git a/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c b/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c
-index 3c97d7c..e1adb4f 100644
 --- a/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c
 +++ b/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c
-@@ -295,6 +295,30 @@ static MV_SFLASH_DEVICE_PARAMS sflash[] = {
+@@ -295,6 +295,30 @@ static MV_SFLASH_DEVICE_PARAMS sflash[]
       MV_S25FL128_MAX_SPI_FREQ,
       MV_M25P128_MAX_FAST_SPI_FREQ,
       MV_M25P128_FAST_READ_DUMMY_BYTES
@@ -77,7 +73,7 @@ index 3c97d7c..e1adb4f 100644
      }
  };
  
-@@ -588,6 +612,8 @@ MV_STATUS mvSFlashInit(MV_SFLASH_INFO *pFlinfo)
+@@ -588,6 +612,8 @@ MV_STATUS mvSFlashInit(MV_SFLASH_INFO *p
  
      /* loop over the whole table and look for the appropriate SFLASH */
      for (indx = 0; indx < MV_ARRAY_SIZE(sflash); indx++) {
@@ -86,7 +82,7 @@ index 3c97d7c..e1adb4f 100644
  	if ((manf == sflash[indx].manufacturerId) && (dev == sflash[indx].deviceId)) {
  		pFlinfo->manufacturerId = manf;
  		pFlinfo->deviceId = dev;
-@@ -597,7 +623,8 @@ MV_STATUS mvSFlashInit(MV_SFLASH_INFO *pFlinfo)
+@@ -597,7 +623,8 @@ MV_STATUS mvSFlashInit(MV_SFLASH_INFO *p
      }
  
      if (!detectFlag) {
@@ -96,8 +92,6 @@ index 3c97d7c..e1adb4f 100644
  	return MV_FAIL;
      }
  
-diff --git a/arch/arm/plat-armada/mv_hal/sflash/mvSFlashSpec.h b/arch/arm/plat-armada/mv_hal/sflash/mvSFlashSpec.h
-index c9b33b8..ea1138a 100644
 --- a/arch/arm/plat-armada/mv_hal/sflash/mvSFlashSpec.h
 +++ b/arch/arm/plat-armada/mv_hal/sflash/mvSFlashSpec.h
 @@ -178,15 +178,22 @@ extern "C" {
@@ -138,8 +132,6 @@ index c9b33b8..ea1138a 100644
  #define     MV_MX25L_STATUS_BP_NONE             (0x00 << MV_SFLASH_STATUS_REG_WP_OFFSET)
  #define     MV_MX25L_STATUS_BP_1_OF_128         (0x01 << MV_SFLASH_STATUS_REG_WP_OFFSET)
  #define     MV_MX25L_STATUS_BP_1_OF_64          (0x02 << MV_SFLASH_STATUS_REG_WP_OFFSET)
-diff --git a/drivers/mtd/Makefile b/drivers/mtd/Makefile
-index a28f6ee..96b8df9 100644
 --- a/drivers/mtd/Makefile
 +++ b/drivers/mtd/Makefile
 @@ -33,3 +33,4 @@ inftl-objs		:= inftlcore.o inftlmount.o
@@ -147,11 +139,9 @@ index a28f6ee..96b8df9 100644
  
  obj-$(CONFIG_MTD_UBI)		+= ubi/
 +obj-$(CONFIG_MTD)		+= ../../arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/
-diff --git a/drivers/mtd/maps/Makefile b/drivers/mtd/maps/Makefile
-index b161f4d..4ac7fed 100644
 --- a/drivers/mtd/maps/Makefile
 +++ b/drivers/mtd/maps/Makefile
-@@ -59,7 +59,7 @@ obj-$(CONFIG_MTD_BCM963XX)	+= bcm963xx-flash.o
+@@ -59,7 +59,7 @@ obj-$(CONFIG_MTD_BCM963XX)	+= bcm963xx-f
  obj-$(CONFIG_MTD_LATCH_ADDR)	+= latch-addr-flash.o
  obj-$(CONFIG_MTD_LANTIQ)	+= lantiq-flash.o
  
@@ -162,8 +152,6 @@ index b161f4d..4ac7fed 100644
 +	include $(srctree)/$(MACHINE)/config/mvRules.mk
 +	obj-$(CONFIG_MV_INCLUDE_SPI) += ../../../$(MACHINE)/flashmap.o
  endif
-diff --git a/drivers/mtd/nand/Makefile b/drivers/mtd/nand/Makefile
-index e7bbd7e..413fac9 100644
 --- a/drivers/mtd/nand/Makefile
 +++ b/drivers/mtd/nand/Makefile
 @@ -50,6 +50,5 @@ obj-$(CONFIG_MTD_NAND_RICOH)		+= r852.o
@@ -173,6 +161,3 @@ index e7bbd7e..413fac9 100644
 -obj-$(CONFIG_MTD_NAND_NFC)			+= ../../../arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/
  
  nand-objs := nand_base.o nand_bbt.o
--- 
-1.7.9.5
-

@@ -9,11 +9,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  .../mv_drivers_lsp/mv_trace/dbg-trace.c            |    2 +-
  2 files changed, 19 insertions(+), 21 deletions(-)
 
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_phone/tdm_if.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_phone/tdm_if.c
-index 617041f..2fa60c9 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_phone/tdm_if.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_phone/tdm_if.c
-@@ -163,10 +163,8 @@ MV_STATUS tdm_if_init(tdm_if_register_ops_t* register_ops, tdm_if_params_t* tdm_
+@@ -163,10 +163,8 @@ MV_STATUS tdm_if_init(tdm_if_register_op
  	/* Extract TDM irq number */
  	irqnr = mvCtrlTdmUnitIrqGet();
  
@@ -26,7 +24,7 @@ index 617041f..2fa60c9 100644
  
  #if defined(CONFIG_ARCH_FEROCEON_KW)
  	/* Assign TDM MPPs  - TBD */
-@@ -202,7 +200,7 @@ MV_STATUS tdm_if_init(tdm_if_register_ops_t* register_ops, tdm_if_params_t* tdm_
+@@ -202,7 +200,7 @@ MV_STATUS tdm_if_init(tdm_if_register_op
  
  	printk("Marvell Telephony Driver Loaded Successfully\n");
  
@@ -89,7 +87,7 @@ index 617041f..2fa60c9 100644
  	return;
  }
  
-@@ -296,7 +294,7 @@ static irqreturn_t tdm_if_isr(int irq, void* dev_id)
+@@ -296,7 +294,7 @@ static irqreturn_t tdm_if_isr(int irq, v
  	MV_TDM_INT_INFO tdm_int_info;
  	unsigned int int_type;
  
@@ -98,7 +96,7 @@ index 617041f..2fa60c9 100644
  
  	/* Extract interrupt information from low level ISR */
  #ifdef CONFIG_MV_TDM_SUPPORT
-@@ -317,7 +315,7 @@ static irqreturn_t tdm_if_isr(int irq, void* dev_id)
+@@ -317,7 +315,7 @@ static irqreturn_t tdm_if_isr(int irq, v
  	if(int_type & MV_RX_INT) {
  		if(rxBuff != NULL) {
  			rx_miss++;
@@ -107,7 +105,7 @@ index 617041f..2fa60c9 100644
  		}
  		else {
  			rxBuff = tdm_int_info.tdmRxBuff;
-@@ -332,7 +330,7 @@ static irqreturn_t tdm_if_isr(int irq, void* dev_id)
+@@ -332,7 +330,7 @@ static irqreturn_t tdm_if_isr(int irq, v
  	if(int_type & MV_TX_INT) {
  		if(txBuff != NULL) {
  			tx_miss++;
@@ -116,7 +114,7 @@ index 617041f..2fa60c9 100644
  		}
  		else {
  			txBuff = tdm_int_info.tdmTxBuff;
-@@ -355,17 +353,17 @@ static irqreturn_t tdm_if_isr(int irq, void* dev_id)
+@@ -355,17 +353,17 @@ static irqreturn_t tdm_if_isr(int irq, v
  
  
  out:
@@ -137,7 +135,7 @@ index 617041f..2fa60c9 100644
  			return;
  		}
  
-@@ -384,18 +382,18 @@ static void tdm_if_pcm_rx_process(unsigned long arg)
+@@ -384,18 +382,18 @@ static void tdm_if_pcm_rx_process(unsign
  	/* Clear rxBuff for next iteration */
  	rxBuff = NULL;
  
@@ -159,11 +157,9 @@ index 617041f..2fa60c9 100644
  			return;
  		}
  
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.c
-index 1ad4cf1..b0dc2ba 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_trace/dbg-trace.c
-@@ -185,7 +185,7 @@ void TRC_OUTPUT(int cpu_mask, int time_mode)
+@@ -185,7 +185,7 @@ void TRC_OUTPUT(int cpu_mask, int time_m
  		msec = usec / 1000;
  		usec = usec % 1000;
  		printk(KERN_INFO "%03d: %d: [%02u:%03u:%03u]: ", i, cpu, sec, msec, usec);
@@ -172,6 +168,3 @@ index 1ad4cf1..b0dc2ba 100755
  		i = mv_trace_next_idx(i);
  		if (time_mode == 1)
  			tv_base = &p->tv;
--- 
-1.7.9.5
-

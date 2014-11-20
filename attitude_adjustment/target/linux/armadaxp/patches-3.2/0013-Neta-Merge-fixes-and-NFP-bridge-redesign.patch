@@ -22,8 +22,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  net/netfilter/nf_conntrack_standalone.c            |    2 +-
  15 files changed, 119 insertions(+), 82 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
-index 1c18d71..7a5d0d2 100644
 --- a/arch/arm/mach-armadaxp/Makefile
 +++ b/arch/arm/mach-armadaxp/Makefile
 @@ -62,7 +62,7 @@ ifdef CONFIG_MV_ETH_NFP_CT
@@ -35,8 +33,6 @@ index 1c18d71..7a5d0d2 100644
  	NFPOBJS += $(HAL_ETH_NFP_DIR)/mvNfpFdb.o
  else
  	NFPOBJS    += $(HAL_ETH_NFP_DIR)/mvNfpBridge.o
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
-index c140f89..177258f 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
 @@ -692,11 +692,18 @@ config MV_ETH_NFP_LIB
@@ -151,8 +147,6 @@ index c140f89..177258f 100644
          ---help---
  
  
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile
-index 61f3db8..600889f 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile
 @@ -5,6 +5,10 @@ ifeq ($(CONFIG_ARCH_FEROCEON),y)
@@ -166,11 +160,9 @@ index 61f3db8..600889f 100644
  ifeq ($(CONFIG_ARCH_ARMADA_XP),y)
  	include $(srctree)/arch/arm/mach-armadaxp/config/mvRules.mk
  endif
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-index c27914e..5c78468 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-@@ -133,7 +133,7 @@ extern u8 mvMacAddr[CONFIG_MV_ETH_PORTS_NUM][MV_MAC_ADDR_SIZE];
+@@ -133,7 +133,7 @@ extern u8 mvMacAddr[CONFIG_MV_ETH_PORTS_
  extern u16 mvMtu[CONFIG_MV_ETH_PORTS_NUM];
  
  extern unsigned int switch_enabled_ports;
@@ -179,7 +171,7 @@ index c27914e..5c78468 100644
  
  struct bm_pool mv_eth_pool[MV_ETH_BM_POOLS];
  struct eth_port **mv_eth_ports;
-@@ -1950,7 +1950,7 @@ int mv_eth_nfp_ext(struct net_device *dev, struct sk_buff *skb, MV_EXT_PKT_INFO
+@@ -1950,7 +1950,7 @@ int mv_eth_nfp_ext(struct net_device *de
  #define NEEDED_HEADROOM (MV_PPPOE_HDR_SIZE + MV_VLAN_HLEN)
  
  	/* Check that NFP is eanbled */
@@ -188,7 +180,7 @@ index c27914e..5c78468 100644
  		return 1;
  
  	/* Check if external interface is mapped to NFP */
-@@ -4922,6 +4922,7 @@ int mv_eth_change_mtu_internals(struct net_device *dev, int mtu)
+@@ -4922,6 +4922,7 @@ int mv_eth_change_mtu_internals(struct n
  {
  	struct bm_pool	*new_pool = NULL;
  	struct eth_port *pp = MV_ETH_PRIV(dev);
@@ -196,7 +188,7 @@ index c27914e..5c78468 100644
  	unsigned long	rwflags;
  
  	if ((mtu != dev->mtu) && (pp->pool_long)) {
-@@ -4929,29 +4930,32 @@ int mv_eth_change_mtu_internals(struct net_device *dev, int mtu)
+@@ -4929,29 +4930,32 @@ int mv_eth_change_mtu_internals(struct n
  		write_lock_irqsave(&pp->rwlock, rwflags);
  
  #ifdef CONFIG_MV_ETH_BM_CPU
@@ -236,8 +228,6 @@ index c27914e..5c78468 100644
  #endif /* CONFIG_MV_ETH_BM_CPU */
  
  			pp->pool_long->port_map &= ~(1 << pp->port);
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/nfp_mgr/mv_nfp_mgr_if.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/nfp_mgr/mv_nfp_mgr_if.h
-index dad1ef1..63e1305 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/nfp_mgr/mv_nfp_mgr_if.h
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/nfp_mgr/mv_nfp_mgr_if.h
 @@ -10,7 +10,7 @@
@@ -258,11 +248,9 @@ index dad1ef1..63e1305 100644
  void nfp_bridge_learn_enable(int en);
  #endif
  
-diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
-index fc8eb75..3e85584 100644
 --- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
 +++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
-@@ -513,7 +513,7 @@ MV_STATUS	mvNetaRxqCpuMaskSet(int port, int rxq, int cpu_mask)
+@@ -513,7 +513,7 @@ MV_STATUS	mvNetaRxqCpuMaskSet(int port,
  
  #ifdef MV_ETH_GMAC_NEW
  
@@ -271,8 +259,6 @@ index fc8eb75..3e85584 100644
  {
  	MV_U32  regVal;
  
-diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
-index dd3407f..5653e4c 100644
 --- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
 +++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
 @@ -232,6 +232,8 @@ typedef struct {
@@ -284,7 +270,7 @@ index dd3407f..5653e4c 100644
  
  #ifdef CONFIG_MV_ETH_BM
  	MV_ULONG bmPhysBase;
-@@ -704,8 +706,9 @@ MV_STATUS mvNetaFlowCtrlSet(int port, MV_ETH_PORT_FC flowControl);
+@@ -704,8 +706,9 @@ MV_STATUS mvNetaFlowCtrlSet(int port, MV
  MV_STATUS mvNetaFlowCtrlGet(int port, MV_ETH_PORT_FC *flowControl);
  
  #ifdef MV_ETH_GMAC_NEW
@@ -295,11 +281,9 @@ index dd3407f..5653e4c 100644
  #endif /* MV_ETH_GMAC_NEW */
  
  #ifdef CONFIG_MV_PON
-diff --git a/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
-index 7d7f1b0..0a90fbe 100644
 --- a/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
 +++ b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
-@@ -92,7 +92,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -92,7 +92,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  
  #define NFP_MAX_PORTS   (MV_ETH_MAX_PORTS + NFP_EXT_NUM)
  
@@ -308,7 +292,7 @@ index 7d7f1b0..0a90fbe 100644
  		defined(CONFIG_MV_ETH_NFP_PPP_LEARN) || defined(CONFIG_MV_ETH_NFP_CT_LEARN)
  #define NFP_LEARN
  #endif
-@@ -149,8 +149,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -149,8 +149,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #define NFP_BRIDGE
  #endif
  
@@ -323,11 +307,9 @@ index 7d7f1b0..0a90fbe 100644
  #endif
  
  #ifdef CONFIG_MV_ETH_SWITCH
-diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncAging.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncAging.c
-index 6ef6ea0..2602828 100644
 --- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncAging.c
 +++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncAging.c
-@@ -26,6 +26,8 @@ DISCLAIMED.  The GPL License provides additional details about this warranty
+@@ -26,6 +26,8 @@ DISCLAIMED.  The GPL License provides ad
  disclaimer.
  *******************************************************************************/
  
@@ -341,11 +323,9 @@ index 6ef6ea0..2602828 100644
  		mvPncAgingGroupCntrClear(gr);
  }
 +#endif /* MV_ETH_PNC_AGING */
-diff --git a/net/bridge/br_fdb.c b/net/bridge/br_fdb.c
-index 7548984..ec08eb0 100644
 --- a/net/bridge/br_fdb.c
 +++ b/net/bridge/br_fdb.c
-@@ -32,11 +32,11 @@ static void fdb_notify(const struct net_bridge_fdb_entry *, int);
+@@ -32,11 +32,11 @@ static void fdb_notify(const struct net_
  
  static u32 fdb_salt __read_mostly;
  
@@ -359,7 +339,7 @@ index 7548984..ec08eb0 100644
  
  int __init br_fdb_init(void)
  {
-@@ -71,13 +71,13 @@ static inline int has_expired(const struct net_bridge *br,
+@@ -71,13 +71,13 @@ static inline int has_expired(const stru
  	if (fdb->is_static)
  		return 0;
  
@@ -375,7 +355,7 @@ index 7548984..ec08eb0 100644
  
  	return time_before_eq(fdb->updated + hold_time(br), jiffies);
  }
-@@ -98,12 +98,12 @@ static void fdb_rcu_free(struct rcu_head *head)
+@@ -98,12 +98,12 @@ static void fdb_rcu_free(struct rcu_head
  
  static inline void fdb_delete(struct net_bridge_fdb_entry *f)
  {
@@ -406,7 +386,7 @@ index 7548984..ec08eb0 100644
  
  			this_timer = f->updated + delay;
  			if (time_before_eq(this_timer, jiffies))
-@@ -380,11 +380,11 @@ static struct net_bridge_fdb_entry *fdb_create(struct hlist_head *head,
+@@ -380,11 +380,11 @@ static struct net_bridge_fdb_entry *fdb_
  		fdb->updated = fdb->used = jiffies;
  		hlist_add_head_rcu(&fdb->hlist, head);
  
@@ -420,7 +400,7 @@ index 7548984..ec08eb0 100644
  	}
  	return fdb;
  }
-@@ -741,7 +741,7 @@ int br_fdb_delete(struct sk_buff *skb, struct nlmsghdr *nlh, void *arg)
+@@ -741,7 +741,7 @@ int br_fdb_delete(struct sk_buff *skb, s
  	return err;
  }
  
@@ -435,8 +415,6 @@ index 7548984..ec08eb0 100644
  }
 -#endif /* CONFIG_MV_ETH_NFP_BRIDGE_LEARN */
 +#endif /* CONFIG_MV_ETH_NFP_FDB_LEARN */
-diff --git a/net/bridge/br_if.c b/net/bridge/br_if.c
-index 668f6f2..cbbd03a 100644
 --- a/net/bridge/br_if.c
 +++ b/net/bridge/br_if.c
 @@ -26,10 +26,10 @@
@@ -452,7 +430,7 @@ index 668f6f2..cbbd03a 100644
  
  /*
   * Determine initial path cost based on speed.
-@@ -173,18 +173,18 @@ void br_dev_delete(struct net_device *dev, struct list_head *head)
+@@ -173,18 +173,18 @@ void br_dev_delete(struct net_device *de
  
  	list_for_each_entry_safe(p, n, &br->port_list, list) {
  
@@ -475,7 +453,7 @@ index 668f6f2..cbbd03a 100644
  
  	br_sysfs_delbr(br->dev);
  	unregister_netdevice_queue(br->dev, head);
-@@ -440,9 +440,9 @@ int br_del_if(struct net_bridge *br, struct net_device *dev)
+@@ -440,9 +440,9 @@ int br_del_if(struct net_bridge *br, str
  	if (!p || p->br != br)
  		return -EINVAL;
  
@@ -487,8 +465,6 @@ index 668f6f2..cbbd03a 100644
  
  	del_nbp(p);
  
-diff --git a/net/bridge/br_private.h b/net/bridge/br_private.h
-index 03bc1e9..f47bfa7 100644
 --- a/net/bridge/br_private.h
 +++ b/net/bridge/br_private.h
 @@ -75,9 +75,9 @@ struct net_bridge_fdb_entry
@@ -503,8 +479,6 @@ index 03bc1e9..f47bfa7 100644
  };
  
  struct net_bridge_port_group {
-diff --git a/net/core/neighbour.c b/net/core/neighbour.c
-index d8b199e..c1d808c 100644
 --- a/net/core/neighbour.c
 +++ b/net/core/neighbour.c
 @@ -2903,35 +2903,41 @@ void neigh_sync(int family)
@@ -520,13 +494,7 @@ index d8b199e..c1d808c 100644
 -		if (tbl->family == family) {
 -			nht = rcu_dereference_protected(tbl->nht,
 -					lockdep_is_held(&tbl->lock));
-+	rcu_read_lock_bh();
-+
-+	for (tbl = neigh_tables; tbl; tbl = tbl->next) {
-+	if (tbl->family != family)
-+		continue;
-+	nht = rcu_dereference_bh(tbl->nht);
- 
+-
 -			for (h = 0; h < (1 << nht->hash_mask); h++) {
 -				for (n = nht->hash_buckets[h], idx = 0; n; n = n->next) {
 -					if (!(n->nfp)) {
@@ -540,6 +508,13 @@ index d8b199e..c1d808c 100644
 -								n->dev->ifindex)) {
 -							n->nfp = true;
 -						}
++	rcu_read_lock_bh();
++
++	for (tbl = neigh_tables; tbl; tbl = tbl->next) {
++	if (tbl->family != family)
++		continue;
++	nht = rcu_dereference_bh(tbl->nht);
++
 +	for (h = 0; h <= nht->hash_mask; h++) {
 +		for (n = rcu_dereference_bh(nht->hash_buckets[h]); n != NULL;
 +		     n = rcu_dereference_bh(n->next)) {
@@ -567,8 +542,6 @@ index d8b199e..c1d808c 100644
  #endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
  
  static int __init neigh_init(void)
-diff --git a/net/ipv6/ip6_fib.c b/net/ipv6/ip6_fib.c
-index b9b2fea..33563dc 100644
 --- a/net/ipv6/ip6_fib.c
 +++ b/net/ipv6/ip6_fib.c
 @@ -467,7 +467,7 @@ void nfp_fib6_sync(void)
@@ -580,11 +553,9 @@ index b9b2fea..33563dc 100644
  
  /*
   *	Routing Table
-diff --git a/net/netfilter/nf_conntrack_standalone.c b/net/netfilter/nf_conntrack_standalone.c
-index b12092c..1107465 100644
 --- a/net/netfilter/nf_conntrack_standalone.c
 +++ b/net/netfilter/nf_conntrack_standalone.c
-@@ -248,7 +248,7 @@ static int ct_seq_show(struct seq_file *s, void *v)
+@@ -248,7 +248,7 @@ static int ct_seq_show(struct seq_file *
  #if defined(CONFIG_NETFILTER_XT_MATCH_LAYER7) || defined(CONFIG_NETFILTER_XT_MATCH_LAYER7_MODULE)
  	if(ct->layer7.app_proto &&
             seq_printf(s, "l7proto=%s ", ct->layer7.app_proto))
@@ -593,6 +564,3 @@ index b12092c..1107465 100644
  #endif
  
  #if defined(CONFIG_MV_ETH_NFP_CT_LEARN)
--- 
-1.7.9.5
-

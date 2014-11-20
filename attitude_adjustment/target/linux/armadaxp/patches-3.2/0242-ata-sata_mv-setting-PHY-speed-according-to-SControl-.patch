@@ -11,8 +11,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  drivers/ata/sata_mv.c |   12 ++++++++++++
  1 file changed, 12 insertions(+)
 
-diff --git a/drivers/ata/sata_mv.c b/drivers/ata/sata_mv.c
-index f66bf30..3f5b612 100644
 --- a/drivers/ata/sata_mv.c
 +++ b/drivers/ata/sata_mv.c
 @@ -302,6 +302,7 @@ enum {
@@ -23,7 +21,7 @@ index f66bf30..3f5b612 100644
  
  	MV_M2_PREAMP_MASK	= 0x7e0,
  
-@@ -1348,6 +1349,8 @@ static int mv_scr_write(struct ata_link *link, unsigned int sc_reg_in, u32 val)
+@@ -1348,6 +1349,8 @@ static int mv_scr_write(struct ata_link
  
  	if (ofs != 0xffffffffU) {
  		void __iomem *addr = mv_ap_base(link->ap) + ofs;
@@ -32,7 +30,7 @@ index f66bf30..3f5b612 100644
  		if (sc_reg_in == SCR_CONTROL) {
  			/*
  			 * Workaround for 88SX60x1 FEr SATA#26:
-@@ -1364,6 +1367,15 @@ static int mv_scr_write(struct ata_link *link, unsigned int sc_reg_in, u32 val)
+@@ -1364,6 +1367,15 @@ static int mv_scr_write(struct ata_link
  			 */
  			if ((val & 0xf) == 1 || (readl(addr) & 0xf) == 1)
  				val |= 0xf000;
@@ -48,6 +46,3 @@ index f66bf30..3f5b612 100644
  		}
  		writelfl(val, addr);
  		return 0;
--- 
-1.7.9.5
-

@@ -14,11 +14,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.h     |    1 +
  5 files changed, 232 insertions(+), 68 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
-index 3d7b42c..ff0a788 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
-@@ -355,7 +355,35 @@ MV_32 mvBoardPhyAddrGet(MV_U32 ethPortNum)
+@@ -355,7 +355,35 @@ MV_32 mvBoardPhyAddrGet(MV_U32 ethPortNu
  }
  
  /*******************************************************************************
@@ -55,8 +53,6 @@ index 3d7b42c..ff0a788 100644
  *
  * DESCRIPTION:
  *       This routine returns the Phy address of a given ethernet port.
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
-index 75ebb8d..50742b5 100755
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
 @@ -260,8 +260,9 @@ typedef enum _boardMacSpeed {
@@ -71,7 +67,7 @@ index 75ebb8d..50742b5 100755
  } MV_BOARD_MAC_INFO;
  
  typedef struct _boardMppInfo {
-@@ -365,6 +366,8 @@ MV_BOOL mvBoardIsPortInSgmii(MV_U32 ethPortNum);
+@@ -365,6 +366,8 @@ MV_BOOL mvBoardIsPortInSgmii(MV_U32 ethP
  MV_BOOL mvBoardIsPortInGmii(MV_U32 ethPortNum);
  MV_BOOL mvBoardIsPortInRgmii(MV_U32 ethPortNum);
  MV_32 mvBoardPhyAddrGet(MV_U32 ethPortNum);
@@ -80,11 +76,9 @@ index 75ebb8d..50742b5 100755
  MV_32 mvBoardPhyLinkCryptPortAddrGet(MV_U32 ethPortNum);
  
  MV_BOOL mvBoardSpecInitGet(MV_U32 *regOff, MV_U32 *data);
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
-index 760fc18..ea46f13 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
-@@ -94,10 +94,10 @@ MV_BOARD_TWSI_INFO	db88f78XX0InfoBoardTwsiDev[] = {
+@@ -94,10 +94,10 @@ MV_BOARD_TWSI_INFO	db88f78XX0InfoBoardTw
  
  MV_BOARD_MAC_INFO db88f78XX0InfoBoardMacInfo[] = {
  	/* {{MV_BOARD_MAC_SPEED	boardMacSpeed, MV_U8 boardEthSmiAddr}} */
@@ -99,7 +93,7 @@ index 760fc18..ea46f13 100644
  };
  
  MV_BOARD_MODULE_TYPE_INFO db88f78XX0InfoBoardModTypeInfo[] = {
-@@ -284,10 +284,10 @@ MV_BOARD_TWSI_INFO	db88f78XX0rev2InfoBoardTwsiDev[] = {
+@@ -284,10 +284,10 @@ MV_BOARD_TWSI_INFO	db88f78XX0rev2InfoBoa
  
  MV_BOARD_MAC_INFO db88f78XX0rev2InfoBoardMacInfo[] = {
  	/* {{MV_BOARD_MAC_SPEED	boardMacSpeed, MV_U8 boardEthSmiAddr}} */
@@ -159,7 +153,7 @@ index 760fc18..ea46f13 100644
  };
  
  MV_BOARD_MODULE_TYPE_INFO rd78460ServerRev2InfoBoardModTypeInfo[] = {
-@@ -801,10 +801,10 @@ MV_BOARD_TWSI_INFO	db78X60pcacInfoBoardTwsiDev[] = {
+@@ -801,10 +801,10 @@ MV_BOARD_TWSI_INFO	db78X60pcacInfoBoardT
  
  MV_BOARD_MAC_INFO db78X60pcacInfoBoardMacInfo[] = {
  	/* {{MV_BOARD_MAC_SPEED	boardMacSpeed, MV_U8 boardEthSmiAddr}} */
@@ -174,7 +168,7 @@ index 760fc18..ea46f13 100644
  };
  
  
-@@ -920,10 +920,10 @@ MV_U8	db78X60pcacrev2InfoBoardDebugLedIf[] = {53, 54, 55, 56};
+@@ -920,10 +920,10 @@ MV_U8	db78X60pcacrev2InfoBoardDebugLedIf
  
  MV_BOARD_MAC_INFO db78X60pcacrev2InfoBoardMacInfo[] = {
  	/* {{MV_BOARD_MAC_SPEED	boardMacSpeed, MV_U8 boardEthSmiAddr}} */
@@ -198,7 +192,7 @@ index 760fc18..ea46f13 100644
  	.ledsPolarity			= 0,
  
  	/* GPP values */
-@@ -1164,10 +1164,10 @@ MV_BOARD_TWSI_INFO	db78X60amcInfoBoardTwsiDev[] = {
+@@ -1164,10 +1164,10 @@ MV_BOARD_TWSI_INFO	db78X60amcInfoBoardTw
  
  MV_BOARD_MAC_INFO db78X60amcInfoBoardMacInfo[] = {
  	/* {{MV_BOARD_MAC_SPEED	boardMacSpeed, MV_U8 boardEthSmiAddr}} */
@@ -213,7 +207,7 @@ index 760fc18..ea46f13 100644
  };
  
  
-@@ -1290,10 +1290,10 @@ MV_BOARD_TWSI_INFO   rd78460gpInfoBoardTwsiDev[] = {
+@@ -1290,10 +1290,10 @@ MV_BOARD_TWSI_INFO   rd78460gpInfoBoardT
  MV_BOARD_MAC_INFO rd78460gpInfoBoardMacInfo[] = {
  	/* {{MV_BOARD_MAC_SPEED	boardMacSpeed, MV_U8 boardEthSmiAddr}} */
          /* speed will toggle to force link 1000 when SW module detected */
@@ -243,11 +237,9 @@ index 760fc18..ea46f13 100644
  };
  
  MV_BOARD_MODULE_TYPE_INFO rd78460customerInfoBoardModTypeInfo[] = {
-diff --git a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
-index 8b46d39..3ecacd4 100755
 --- a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
 +++ b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
-@@ -68,6 +68,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -68,6 +68,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #include "mvSysEthPhyConfig.h"
  #include "mvEthPhyRegs.h"
  #include "mvEthPhy.h"
@@ -262,7 +254,7 @@ index 8b46d39..3ecacd4 100755
  
  static 	MV_VOID	mvEthPhyPower(MV_U32 ethPortNum, MV_BOOL enable);
  
-@@ -199,6 +207,19 @@ MV_STATUS mvEthPhyInit(MV_U32 ethPortNum, MV_BOOL eeeEnable)
+@@ -199,6 +207,19 @@ MV_STATUS mvEthPhyInit(MV_U32 ethPortNum
  	return MV_OK;
  }
  
@@ -282,7 +274,7 @@ index 8b46d39..3ecacd4 100755
  /*******************************************************************************
  * mvEthPhyRegRead - Read from ethernet phy register.
  *
-@@ -313,11 +334,11 @@ MV_STATUS mvEthPhyRegWrite(MV_U32 phyAddr, MV_U32 regOffs, MV_U16 data)
+@@ -313,11 +334,11 @@ MV_STATUS mvEthPhyRegWrite(MV_U32 phyAdd
  
  	/* check parameters */
  	if ((phyAddr <<  ETH_PHY_SMI_DEV_ADDR_OFFS) & ~ETH_PHY_SMI_DEV_ADDR_MASK) {
@@ -296,7 +288,7 @@ index 8b46d39..3ecacd4 100755
  		return MV_BAD_PARAM;
  	}
  
-@@ -1649,11 +1670,119 @@ MV_VOID mvEth1540Y0PhyBasicInit(MV_U32 ethPortNum, MV_BOOL eeeEnable)
+@@ -1649,11 +1670,119 @@ MV_VOID mvEth1540Y0PhyBasicInit(MV_U32 e
  	mvOsDelay(300);
  
  }
@@ -416,7 +408,7 @@ index 8b46d39..3ecacd4 100755
  
  	/* Enable QSGMII AN */
  	/* Set page to 4. */
-@@ -1686,6 +1815,7 @@ MV_VOID mvEth1540A0PhyBasicInit(MV_U32 ethPortNum, MV_BOOL eeeEnable)
+@@ -1686,6 +1815,7 @@ MV_VOID mvEth1540A0PhyBasicInit(MV_U32 e
  	mvEthPhyRegWrite(i, 2, 0x0000);
  	mvEthPhyRegWrite(i, 3, 0x0FB4);
  	mvEthPhyRegWrite(i, 22, 0x0000);
@@ -424,7 +416,7 @@ index 8b46d39..3ecacd4 100755
  	mvEthPhyRegWrite(i, 22, 0x00FA);
  	mvEthPhyRegWrite(i, 8, 0x0010);
  
-@@ -1771,30 +1901,23 @@ MV_VOID mvEth1540A0PhyBasicInit(MV_U32 ethPortNum, MV_BOOL eeeEnable)
+@@ -1771,30 +1901,23 @@ MV_VOID mvEth1540A0PhyBasicInit(MV_U32 e
  	mvEthPhyRegWrite(i, 0x16, 0x0);
  
  	if (0 == initJumboPackets) {
@@ -469,7 +461,7 @@ index 8b46d39..3ecacd4 100755
  	/* Configure LED */
  	mvEthPhyRegWrite(i, 22, 3);
  	mvEthPhyRegWrite(i, 16, 0x1111);
-@@ -1827,9 +1950,18 @@ MV_VOID mvEth1540PhyBasicInit(MV_U32 ethPortNum, MV_BOOL eeeEnable)
+@@ -1827,9 +1950,18 @@ MV_VOID mvEth1540PhyBasicInit(MV_U32 eth
  
  	if (reg == 0x100)
  		mvEth1540Y0PhyBasicInit(ethPortNum, eeeEnable);
@@ -489,8 +481,6 @@ index 8b46d39..3ecacd4 100755
  	return;
  }
  
-diff --git a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.h b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.h
-index 039e079..e86045d 100755
 --- a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.h
 +++ b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.h
 @@ -110,6 +110,7 @@ typedef struct {
@@ -501,6 +491,3 @@ index 039e079..e86045d 100755
  } MV_ETHPHY_HAL_DATA;
  
  MV_STATUS 	mvEthPhyHalInit(MV_ETHPHY_HAL_DATA *halData);
--- 
-1.7.9.5
-

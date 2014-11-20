@@ -88,8 +88,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  delete mode 100644 net/netfilter/regexp/regsub.c
  delete mode 100644 net/netfilter/xt_layer7.c
 
-diff --git a/arch/arm/configs/armada_xp_defconfig b/arch/arm/configs/armada_xp_defconfig
-index 0f99b49..6b8dfa4 100644
 --- a/arch/arm/configs/armada_xp_defconfig
 +++ b/arch/arm/configs/armada_xp_defconfig
 @@ -332,25 +332,45 @@ CONFIG_MV_ETH_RXQ=8
@@ -375,8 +373,6 @@ index 0f99b49..6b8dfa4 100644
  # CONFIG_DECNET is not set
  CONFIG_LLC=y
  # CONFIG_LLC2 is not set
-diff --git a/arch/arm/include/asm/setup.h b/arch/arm/include/asm/setup.h
-index 22ec049..1e9dfdf 100644
 --- a/arch/arm/include/asm/setup.h
 +++ b/arch/arm/include/asm/setup.h
 @@ -145,14 +145,14 @@ struct tag_memclk {
@@ -397,8 +393,6 @@ index 22ec049..1e9dfdf 100644
  	__u32 nand_ecc;
  	__u32 rgmii0Src;
  	__u32 feGeSrc;
-diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
-index b40d163..1c18d71 100644
 --- a/arch/arm/mach-armadaxp/Makefile
 +++ b/arch/arm/mach-armadaxp/Makefile
 @@ -1,20 +1,86 @@
@@ -497,7 +491,7 @@ index b40d163..1c18d71 100644
  # Objects list
  COMMON_OBJS	= $(COMMON_DIR)/mvDebug.o $(COMMON_DIR)/mvCommon.o $(COMMON_DIR)/mvStack.o $(COMMON_DIR)/mvList.o
  
-@@ -32,7 +98,7 @@ KW_FAM_OBJS	= $(BOARD_ENV_DIR)/mvBoardEnvSpec.o $(SOC_ENV_DIR)/mvCtrlEnvLib.o	\
+@@ -32,7 +98,7 @@ KW_FAM_OBJS	= $(BOARD_ENV_DIR)/mvBoardEn
  		  $(BOARD_ENV_DIR)/mvBoardEnvLib.o $(SOC_ENV_DIR)/mvCtrlEnvAddrDec.o 	\
  		  $(SOC_SYS_DIR)/mvAhbToMbus.o $(SOC_SYS_DIR)/mvCpuIf.o 		\
  		  $(SOC_CPU_DIR)/mvCpu.o $(SOC_DEVICE_DIR)/mvDevice.o
@@ -506,7 +500,7 @@ index b40d163..1c18d71 100644
  QD_OBJS		= $(HAL_QD_DIR)/src/driver/gtDrvConfig.o $(HAL_QD_DIR)/src/driver/gtDrvEvents.o \
                    $(HAL_QD_DIR)/src/driver/gtHwCntl.o $(HAL_QD_DIR)/src/platform/gtMiiSmiIf.o	\
                    $(HAL_QD_DIR)/src/platform/platformDeps.o $(HAL_QD_DIR)/src/platform/gtSem.o	\
-@@ -66,14 +132,18 @@ armadaxp-$(CONFIG_MV_INCLUDE_USB) 	+= $(HAL_USB_DIR)/mvUsb.o $(HAL_USB_DIR)/mvUs
+@@ -66,14 +132,18 @@ armadaxp-$(CONFIG_MV_INCLUDE_USB) 	+= $(
  					   $(HAL_IF_DIR)/mvSysUsb.o
  armadaxp-y				+= $(HAL_ETHPHY_DIR)/mvEthPhy.o $(HAL_IF_DIR)/mvSysEthPhy.o
  
@@ -550,7 +544,7 @@ index b40d163..1c18d71 100644
  endif
  
  armadaxp-$(CONFIG_MV_INCLUDE_CESA) 	+= $(HAL_CESA_DIR)/mvCesa.o $(HAL_CESA_DIR)/mvCesaDebug.o 	\
-@@ -120,17 +185,19 @@ obj-$(CONFIG_MV_INCLUDE_SWITCH) 	+= $(QD_OBJS)
+@@ -120,17 +185,19 @@ obj-$(CONFIG_MV_INCLUDE_SWITCH) 	+= $(QD
  # drivers part
  # Legacy Giga driver
  ifeq ($(CONFIG_MV_ETH_LEGACY),y)
@@ -574,14 +568,12 @@ index b40d163..1c18d71 100644
  obj-$(CONFIG_MV_ETH_L2FW)               += $(LSP_L2FW_DIR)/l2fw_sysfs.o $(LSP_L2FW_DIR)/mv_eth_l2fw.o
  endif
  
-@@ -154,3 +221,5 @@ armadaxp-$(CONFIG_PROC_FS)		+= dump_cp15_regs.o
+@@ -154,3 +221,5 @@ armadaxp-$(CONFIG_PROC_FS)		+= dump_cp15
  obj-$(CONFIG_FB_DOVE_CLCD)		+= clcd.o
  obj-$(CONFIG_PM)			+= pm.o
  
 +endif
 +
-diff --git a/arch/arm/mach-armadaxp/config/mvRules.mk b/arch/arm/mach-armadaxp/config/mvRules.mk
-index c4f4de9..7d0d6ed 100644
 --- a/arch/arm/mach-armadaxp/config/mvRules.mk
 +++ b/arch/arm/mach-armadaxp/config/mvRules.mk
 @@ -48,6 +48,7 @@ HAL_ETH_GBE_DIR   = $(HAL_DIR)/neta/gbe
@@ -592,8 +584,6 @@ index c4f4de9..7d0d6ed 100644
  LSP_NETWORK_DIR   = $(PLAT_DRIVERS)/mv_neta
  LSP_NET_DEV_DIR   = $(LSP_NETWORK_DIR)/net_dev
  LSP_NFP_MGR_DIR   = $(LSP_NETWORK_DIR)/nfp_mgr
-diff --git a/arch/arm/mach-armadaxp/config/mvSysEthConfig.h b/arch/arm/mach-armadaxp/config/mvSysEthConfig.h
-index c6757da..62f898e 100644
 --- a/arch/arm/mach-armadaxp/config/mvSysEthConfig.h
 +++ b/arch/arm/mach-armadaxp/config/mvSysEthConfig.h
 @@ -1,22 +1,67 @@
@@ -624,16 +614,17 @@ index c6757da..62f898e 100644
 -available along with the File in the license.txt file or by writing to the Free 
 -Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or 
 -on the worldwide web at http://www.gnu.org/licenses/gpl.txt. 
+-
+-THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED 
+-WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY 
+-DISCLAIMED.  The GPL License provides additional details about this warranty 
 +If you received this File from Marvell, you may opt to use, redistribute and/or
 +modify this File in accordance with the terms and conditions of the General
 +Public License Version 2, June 1991 (the "GPL License"), a copy of which is
 +available along with the File in the license.txt file or by writing to the Free
 +Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
 +on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
- 
--THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED 
--WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY 
--DISCLAIMED.  The GPL License provides additional details about this warranty 
++
 +THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
 +WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
 +DISCLAIMED.  The GPL License provides additional details about this warranty
@@ -691,11 +682,9 @@ index c6757da..62f898e 100644
  
  #if defined(CONFIG_MV_INCLUDE_GIG_ETH)
  
-diff --git a/arch/arm/mach-armadaxp/mv_hal_if/mvSysNeta.c b/arch/arm/mach-armadaxp/mv_hal_if/mvSysNeta.c
-index 47f40dc..85d3c4f 100644
 --- a/arch/arm/mach-armadaxp/mv_hal_if/mvSysNeta.c
 +++ b/arch/arm/mach-armadaxp/mv_hal_if/mvSysNeta.c
-@@ -39,15 +39,15 @@ Redistribution and use in source and binary forms, with or without modification,
+@@ -39,15 +39,15 @@ Redistribution and use in source and bin
  are permitted provided that the following conditions are met:
  
      *   Redistributions of source code must retain the above copyright notice,
@@ -777,11 +766,9 @@ index 47f40dc..85d3c4f 100644
  	}
  	mvNetaHalInit(&halData);
  
-diff --git a/arch/arm/plat-armada/common/mv802_3.h b/arch/arm/plat-armada/common/mv802_3.h
-index 8232494..5723310 100644
 --- a/arch/arm/plat-armada/common/mv802_3.h
 +++ b/arch/arm/plat-armada/common/mv802_3.h
-@@ -74,13 +74,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -74,13 +74,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  /* 802.3 types */
  #define MV_IP_TYPE                  0x0800
  #define MV_IP_ARP_TYPE              0x0806
@@ -792,10 +779,11 @@ index 8232494..5723310 100644
 -#define MV_EAPOL_TYPE				0x888e
 -#define MV_VLAN_TYPE				0x8100
 -#define MV_PPPOE_TYPE				0x8864
+-
 +#define MV_EAPOL_TYPE               0x888e
 +#define MV_VLAN_TYPE                0x8100
 +#define MV_PPPOE_TYPE               0x8864
- 
++
 +/* PPPoE protocol type */
 +#define MV_IP_PPP  0x0021
 +#define MV_IP6_PPP 0x0057
@@ -813,11 +801,9 @@ index 8232494..5723310 100644
  		MV_IP_HEADER  *ip4;
  		MV_IP6_HEADER *ip6;
  	} ip_hdr;
-diff --git a/arch/arm/plat-armada/common/mvCommon.h b/arch/arm/plat-armada/common/mvCommon.h
-index 08d77c9..6fd1504 100644
 --- a/arch/arm/plat-armada/common/mvCommon.h
 +++ b/arch/arm/plat-armada/common/mvCommon.h
-@@ -65,6 +65,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -65,6 +65,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #ifndef __INCmvCommonh
  #define __INCmvCommonh
  
@@ -828,7 +814,7 @@ index 08d77c9..6fd1504 100644
  #include "mvTypes.h"
  #include "mvDeviceId.h"
  #ifndef MV_ASMLANGUAGE
-@@ -72,9 +76,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -72,9 +76,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #include "mvVideo.h"
  #endif
  
@@ -876,7 +862,7 @@ index 08d77c9..6fd1504 100644
  #ifndef MV_ASMLANGUAGE
  /* mvCommon API list */
  
-@@ -361,6 +365,6 @@ MV_STATUS mvWinWithinWinTest(MV_ADDR_WIN *pAddrWin1, MV_ADDR_WIN *pAddrWin2);
+@@ -361,6 +365,6 @@ MV_STATUS mvWinWithinWinTest(MV_ADDR_WIN
  
  #ifdef __cplusplus
  }
@@ -884,11 +870,9 @@ index 08d77c9..6fd1504 100644
 +#endif	/* __cplusplus */
  
  #endif /* __INCmvCommonh */
-diff --git a/arch/arm/plat-armada/common/mvTypes.h b/arch/arm/plat-armada/common/mvTypes.h
-index bf14651..18d5296 100644
 --- a/arch/arm/plat-armada/common/mvTypes.h
 +++ b/arch/arm/plat-armada/common/mvTypes.h
-@@ -68,17 +68,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -68,17 +68,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  /* Defines */
  
  /* The following is a list of Marvell status    */
@@ -917,7 +901,7 @@ index bf14651..18d5296 100644
  #define MV_CREATE_ERROR     (10)	/* Fail while creating an item           */
  #define MV_NOT_FOUND        (11)	/* Item not found                        */
  #define MV_NO_MORE          (12)	/* No more items found                   */
-@@ -106,7 +106,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -106,7 +106,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #define MV_WRITE_PROTECT    (34)	/* Write protected                       */
  #define MV_DROPPED          (35)	/* Packet dropped                        */
  #define MV_STOLEN           (36)	/* Packet stolen */
@@ -935,8 +919,6 @@ index bf14651..18d5296 100644
  
  typedef int (*MV_FUNCPTR) (void);	/* ptr to function returning int   */
  typedef void (*MV_VOIDFUNCPTR) (void);	/* ptr to function returning void  */
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
-index 9d4b634..c140f89 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
 @@ -1,286 +1,289 @@
@@ -1165,8 +1147,7 @@ index 9d4b634..c140f89 100644
          ---help---
 -        Number of DSCP priorities can be mapped to different RXQs.
 -        Valid range from 1 to 8.
-+	Number of short buffers allocated for this port.
- 
+-
 -config MV_ETH_PNC_WOL
 -	depends on MV_ETH_PNC_PARSER
 -	bool "Use PNC for Wake On LAN support"
@@ -1174,7 +1155,8 @@ index 9d4b634..c140f89 100644
 -	---help---
 -	Use PNC rules for TCAM filtering for Wake on LAN support.
 -	When enabled, MV_ETH_NFP_PNC will be disabled.
--
++	Number of short buffers allocated for this port.
+ 
 -menuconfig MV_ETH_HWF
 -	depends on (MV_ETH_PNC && MV_ETH_BM)
 -        bool "Hardware Forwarding support (HWF)"
@@ -1425,14 +1407,14 @@ index 9d4b634..c140f89 100644
          ---help---
  
  config MV_ETH_HWF_TXQ_DROP
-@@ -298,8 +301,26 @@ config MV_ETH_HWF_TXQ_DROP_RND
+@@ -298,9 +301,27 @@ config MV_ETH_HWF_TXQ_DROP_RND
  config MV_ETH_PMT
          depends on MV_ETH_NETA
          bool "Packet Modification Table (PMT)"
 -        default y
 +        default n
-+        ---help---
-+
+         ---help---
+ 
 +config MV_ETH_PMT_FLOWS
 +	int "Number of different flows can be set to PMT"
 +	depends on MV_ETH_PMT
@@ -1446,13 +1428,14 @@ index 9d4b634..c140f89 100644
 +        int "Number of PMT entries reserved for each flow"
 +        depends on MV_ETH_PMT
 +        default 12
-         ---help---
++        ---help---
 +        Depend on total number of PMT entries and
 +        number of flows to be supported.
 +	MV_ETH_PMT_SIZE >= (MV_ETH_PMT_FLOWS * (MV_ETH_PMT_CMD_PER_FLOW + 1))
- 
++
  menu "Network Interface configuration"
  
+ config  MV_ETH_0_MTU
 @@ -315,7 +336,7 @@ config  MV_ETH_0_MACADDR
          depends on (MV_ETH_PORTS_NUM != 0)
          default "00:00:00:00:00:80"
@@ -1948,8 +1931,6 @@ index 9d4b634..c140f89 100644
 +        If set swap of RX and TX descriptors in BE mode will be done by driver
 +
 +endmenu
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/bm/bm_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/bm/bm_sysfs.c
-index d8ca6d3..7698e27 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/bm/bm_sysfs.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/bm/bm_sysfs.c
 @@ -42,7 +42,9 @@ static ssize_t bm_help(char *buf)
@@ -1962,7 +1943,7 @@ index d8ca6d3..7698e27 100644
  
  	return off;
  }
-@@ -62,29 +64,32 @@ static ssize_t bm_show(struct device *dev,
+@@ -62,29 +64,32 @@ static ssize_t bm_show(struct device *de
  		mvBmRegs();
  	else if (!strcmp(name, "stat"))
  		mvBmStatus();
@@ -1999,7 +1980,7 @@ index d8ca6d3..7698e27 100644
  	} else {
  		err = 1;
  		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
-@@ -94,13 +99,17 @@ static ssize_t bm_store(struct device *dev,
+@@ -94,13 +99,17 @@ static ssize_t bm_store(struct device *d
  	return err ? -EINVAL : len;
  }
  
@@ -2021,9 +2002,6 @@ index d8ca6d3..7698e27 100644
  	&dev_attr_regs.attr,
  	&dev_attr_stat.attr,
  	&dev_attr_help.attr,
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/bm/mv_eth_bm.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/bm/mv_eth_bm.c
-new file mode 100644
-index 0000000..35efcab
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/bm/mv_eth_bm.c
 @@ -0,0 +1,186 @@
@@ -2213,8 +2191,6 @@ index 0000000..35efcab
 +	mvOsPrintf("\n");
 +}
 +
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/hwf/hwf_bm.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/hwf/hwf_bm.c
-index 2648ab3..cbb8eb0 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/hwf/hwf_bm.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/hwf/hwf_bm.c
 @@ -38,64 +38,7 @@ disclaimer.
@@ -2282,7 +2258,7 @@ index 2648ab3..cbb8eb0 100644
  
  static int mv_eth_hwf_pool_add(MV_BM_POOL *pBmPool, int bufNum)
  {
-@@ -131,7 +74,7 @@ static int mv_eth_hwf_pool_add(MV_BM_POOL *pBmPool, int bufNum)
+@@ -131,7 +74,7 @@ static int mv_eth_hwf_pool_add(MV_BM_POO
  }
  
  /*******************************************************************************
@@ -2291,7 +2267,7 @@ index 2648ab3..cbb8eb0 100644
   *
   * INPUT:
   *       int        port	- port number
-@@ -144,7 +87,8 @@ MV_STATUS mv_eth_hwf_bm_create(int port, int mtuPktSize)
+@@ -144,7 +87,8 @@ MV_STATUS mv_eth_hwf_bm_create(int port,
  {
  	static bool		isFirst = true;
  	MV_BM_POOL		*pBmPool;
@@ -2301,7 +2277,7 @@ index 2648ab3..cbb8eb0 100644
  
  	/* Check validity of the parameters */
  	if (mvNetaPortCheck(port))
-@@ -153,94 +97,84 @@ MV_STATUS mv_eth_hwf_bm_create(int port, int mtuPktSize)
+@@ -153,94 +97,84 @@ MV_STATUS mv_eth_hwf_bm_create(int port,
  	/* For the first time - clean hwfBmPool array */
  	if (isFirst == true) {
  		memset(&hwfBmPool, 0, sizeof(hwfBmPool));
@@ -2423,8 +2399,6 @@ index 2648ab3..cbb8eb0 100644
  	mvOsPrintf("HWF BM Pools configuration\n");
  	mvOsPrintf("pool:    capacity    bufSize    bufNum      virtPtr       physAddr\n");
  	for (i = 0; i < MV_BM_POOLS; i++) {
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/hwf/hwf_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/hwf/hwf_sysfs.c
-index 669a3b1..a86bbe2 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/hwf/hwf_sysfs.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/hwf/hwf_sysfs.c
 @@ -39,7 +39,10 @@ static ssize_t hwf_help(char *buf)
@@ -2438,7 +2412,7 @@ index 669a3b1..a86bbe2 100644
  	off += mvOsSPrintf(buf+off, "echo rxp p txp         > regs  - print HWF registers of port <p>\n");
  	off += mvOsSPrintf(buf+off, "echo rxp p txp         > cntrs - print HWF counters of port <p>\n");
  	off += mvOsSPrintf(buf+off, "echo rxp p txp txq en  > en    - enable HWF from <rxp> to specific <txq>\n");
-@@ -58,8 +61,10 @@ static ssize_t hwf_show(struct device *dev,
+@@ -58,8 +61,10 @@ static ssize_t hwf_show(struct device *d
  
  	if (!strcmp(name, "help"))
  		return hwf_help(buf);
@@ -2449,8 +2423,6 @@ index 669a3b1..a86bbe2 100644
  
  	return 0;
  }
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile
-index 252b124..61f3db8 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile
 @@ -9,9 +9,16 @@ ifeq ($(CONFIG_ARCH_ARMADA_XP),y)
@@ -2475,9 +2447,6 @@ index 252b124..61f3db8 100644
 +	obj-$(CONFIG_MV_ETH_TOOL) += mv_eth_tool.o
 +endif
  
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_proc.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_proc.c
-deleted file mode 100644
-index 691852e..0000000
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_proc.c
 +++ /dev/null
 @@ -1,520 +0,0 @@
@@ -3001,9 +2970,6 @@ index 691852e..0000000
 -}
 -
 -module_init(start_mv_eth_tool);
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_proc.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_proc.h
-deleted file mode 100644
-index 6dc04ba..0000000
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_proc.h
 +++ /dev/null
 @@ -1,126 +0,0 @@
@@ -3133,8 +3099,6 @@ index 6dc04ba..0000000
 -
 -#endif
 -
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_switch.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_switch.c
-index 90bfbe9..e5c4e59 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_switch.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_switch.c
 @@ -47,6 +47,7 @@ disclaimer.
@@ -3184,7 +3148,7 @@ index 90bfbe9..e5c4e59 100644
  /* Local function prototypes */
  static int mv_eth_check_open_bracket(char **p_net_config)
  {
-@@ -100,7 +112,7 @@ static int mv_eth_check_comma(char **p_net_config)
+@@ -100,7 +112,7 @@ static int mv_eth_check_comma(char **p_n
  	return -EINVAL;
  }
  
@@ -3193,7 +3157,7 @@ index 90bfbe9..e5c4e59 100644
  {
  	int     num;
  	char *config_str = *p_net_config;
-@@ -112,7 +124,7 @@ static int mv_eth_netconfig_mac_addr_get(char **p_net_config, int idx)
+@@ -112,7 +124,7 @@ static int mv_eth_netconfig_mac_addr_get
  		&mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
  	if (num == MV_MAC_ADDR_SIZE) {
  		while (--num >= 0)
@@ -3202,7 +3166,7 @@ index 90bfbe9..e5c4e59 100644
  
  		(*p_net_config) = config_str + 17;
  		return 0;
-@@ -121,13 +133,13 @@ static int mv_eth_netconfig_mac_addr_get(char **p_net_config, int idx)
+@@ -121,13 +133,13 @@ static int mv_eth_netconfig_mac_addr_get
  	return -EINVAL;
  }
  
@@ -3219,7 +3183,7 @@ index 90bfbe9..e5c4e59 100644
  	/* example 0: )         - no ports */
  	/* example 1: 0)        - single port 0 */
  	/* example 2: 1:2:3:4)  - multiple ports */
-@@ -140,12 +152,12 @@ static int mv_eth_netconfig_ports_get(char **p_net_config, int idx)
+@@ -140,12 +152,12 @@ static int mv_eth_netconfig_ports_get(ch
  			status = 0;
  			break;
  		}
@@ -3236,7 +3200,7 @@ index 90bfbe9..e5c4e59 100644
  
  		if (*config_str == ':')
  			config_str++;
-@@ -153,16 +165,16 @@ static int mv_eth_netconfig_ports_get(char **p_net_config, int idx)
+@@ -153,16 +165,16 @@ static int mv_eth_netconfig_ports_get(ch
  	*p_net_config = config_str;
  
  	if (status == 0) {
@@ -3256,7 +3220,7 @@ index 90bfbe9..e5c4e59 100644
  {
  	unsigned int mtu;
  
-@@ -170,7 +182,7 @@ static int  mv_eth_netconfig_mtu_get(char **p_net_config)
+@@ -170,7 +182,7 @@ static int  mv_eth_netconfig_mtu_get(cha
  		*p_net_config += 4;
  		mtu = strtol(*p_net_config, p_net_config, 10);
  		if (mtu > 0) {
@@ -3265,7 +3229,7 @@ index 90bfbe9..e5c4e59 100644
  			printk(KERN_ERR "      o MTU set to %d.\n", mtu);
  			return 0;
  		}
-@@ -178,19 +190,19 @@ static int  mv_eth_netconfig_mtu_get(char **p_net_config)
+@@ -178,19 +190,19 @@ static int  mv_eth_netconfig_mtu_get(cha
  		return -EINVAL;
  	}
  
@@ -3289,7 +3253,7 @@ index 90bfbe9..e5c4e59 100644
  		(*p_net_config) += 1;
  		return 0;
  	}
-@@ -198,33 +210,51 @@ static int mv_eth_netconfig_max_get(char **p_net_config)
+@@ -198,33 +210,51 @@ static int mv_eth_netconfig_max_get(char
  	return -EINVAL;
  }
  
@@ -3355,7 +3319,7 @@ index 90bfbe9..e5c4e59 100644
  		}
  
  		if (mv_eth_check_comma(&p_net_config))
-@@ -234,16 +264,16 @@ int mv_eth_switch_config_get(int use_existing_config)
+@@ -234,16 +264,16 @@ int mv_eth_switch_config_get(int use_exi
  			if (mv_eth_check_open_bracket(&p_net_config))
  				return -EINVAL;
  
@@ -3375,7 +3339,7 @@ index 90bfbe9..e5c4e59 100644
  
  			/* If we have a comma after the closing bracket, then interface */
  			/* definition is done.                                          */
-@@ -260,11 +290,11 @@ int mv_eth_switch_config_get(int use_existing_config)
+@@ -260,11 +290,11 @@ int mv_eth_switch_config_get(int use_exi
  				return -EINVAL;
  
  		if (*p_net_config != '\0') {
@@ -3390,7 +3354,7 @@ index 90bfbe9..e5c4e59 100644
  		}
  
  		/* at this point, we have parsed up to CONFIG_MV_ETH_SWITCH_NETDEV_NUM, and the mtu value */
-@@ -281,11 +311,11 @@ int mv_eth_switch_config_get(int use_existing_config)
+@@ -281,11 +311,11 @@ int mv_eth_switch_config_get(int use_exi
  		/* and mv_eth_switch_netdev_last, as well as mv_net_devs[], are valid.      */
  		for (i = mv_eth_switch_netdev_first; i <= mv_eth_switch_netdev_last; i++) {
  			if (mv_net_devs[i] != NULL)
@@ -3404,7 +3368,7 @@ index 90bfbe9..e5c4e59 100644
  			return 1;
  	}
  
-@@ -385,18 +415,10 @@ int     mv_eth_switch_change_mtu(struct net_device *dev, int mtu)
+@@ -385,18 +415,10 @@ int     mv_eth_switch_change_mtu(struct
  	int i;
  	struct eth_port *priv = MV_ETH_PRIV(dev);
  
@@ -3426,7 +3390,7 @@ index 90bfbe9..e5c4e59 100644
  			return -EPERM;
  		}
  	}
-@@ -404,26 +426,21 @@ int     mv_eth_switch_change_mtu(struct net_device *dev, int mtu)
+@@ -404,26 +426,21 @@ int     mv_eth_switch_change_mtu(struct
  	if (dev->mtu != mtu) {
  		int old_mtu = dev->mtu;
  
@@ -3458,7 +3422,7 @@ index 90bfbe9..e5c4e59 100644
  	}
  
  	return 0;
-@@ -434,9 +451,9 @@ int    mv_eth_switch_start(struct net_device *dev)
+@@ -434,9 +451,9 @@ int    mv_eth_switch_start(struct net_de
  	struct eth_port	*priv = MV_ETH_PRIV(dev);
  	struct eth_netdev *dev_priv = MV_DEV_PRIV(dev);
  	unsigned char broadcast[MV_MAC_ADDR_SIZE] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
@@ -3470,7 +3434,7 @@ index 90bfbe9..e5c4e59 100644
  	for (i = mv_eth_switch_netdev_first; i <= mv_eth_switch_netdev_last; i++) {
  		if ((mv_net_devs[i] != NULL) && (mv_net_devs[i]->mtu != dev->mtu)) {
  			printk(KERN_ERR "All gateway devices must have same MTU\n");
-@@ -459,21 +476,20 @@ int    mv_eth_switch_start(struct net_device *dev)
+@@ -459,21 +476,20 @@ int    mv_eth_switch_start(struct net_de
  #endif /* CONFIG_MV_ETH_SWITCH_LINK */
  
  	if (mv_eth_switch_started == 0)	{
@@ -3504,7 +3468,7 @@ index 90bfbe9..e5c4e59 100644
  	struct eth_port *priv = MV_ETH_PRIV(dev);
  	struct eth_netdev *dev_priv = MV_DEV_PRIV(dev);
  
-@@ -527,8 +542,7 @@ int     mv_eth_switch_stop(struct net_device *dev)
+@@ -527,8 +542,7 @@ int     mv_eth_switch_stop(struct net_de
  		/* first make sure that the port finished its Rx polling - see tg3 */
  		/* otherwise it may cause issue in SMP, one CPU is here and the other is doing the polling */
  		/* and both of it are messing with the descriptors rings!! */
@@ -3514,7 +3478,7 @@ index 90bfbe9..e5c4e59 100644
  
  		/* stop tx/rx activity, mask all interrupts, relese skb in rings,*/
  		mv_eth_stop_internals(priv);
-@@ -648,6 +662,7 @@ void mv_eth_switch_update_link(unsigned int p, unsigned int link_up)
+@@ -648,6 +662,7 @@ void mv_eth_switch_update_link(unsigned
  int     mv_eth_switch_port_add(struct net_device *dev, int port)
  {
  	struct eth_netdev *dev_priv = MV_DEV_PRIV(dev);
@@ -3522,7 +3486,7 @@ index 90bfbe9..e5c4e59 100644
  	int i, switch_port, err = 0;
  
  	if (dev_priv == NULL) {
-@@ -676,7 +691,7 @@ int     mv_eth_switch_port_add(struct net_device *dev, int port)
+@@ -676,7 +691,7 @@ int     mv_eth_switch_port_add(struct ne
  	dev_priv->port_map |= (1 << switch_port);
  	for (i = mv_eth_switch_netdev_first; i <= mv_eth_switch_netdev_last; i++) {
  		if ((mv_net_devs[i] != NULL) && (mv_net_devs[i] == dev))
@@ -3531,7 +3495,7 @@ index 90bfbe9..e5c4e59 100644
  	}
  	switch_enabled_ports |= (1 << switch_port);
  	dev_priv->tx_vlan_mh = cpu_to_be16((MV_SWITCH_VLAN_TO_GROUP(dev_priv->vlan_grp_id) << 12) | dev_priv->port_map);
-@@ -691,6 +706,7 @@ int     mv_eth_switch_port_add(struct net_device *dev, int port)
+@@ -691,6 +706,7 @@ int     mv_eth_switch_port_add(struct ne
  int     mv_eth_switch_port_del(struct net_device *dev, int port)
  {
  	struct eth_netdev *dev_priv = MV_DEV_PRIV(dev);
@@ -3539,7 +3503,7 @@ index 90bfbe9..e5c4e59 100644
  	int i, switch_port, err = 0;
  
  	if (dev_priv == NULL) {
-@@ -724,7 +740,7 @@ int     mv_eth_switch_port_del(struct net_device *dev, int port)
+@@ -724,7 +740,7 @@ int     mv_eth_switch_port_del(struct ne
  	dev_priv->port_map &= ~(1 << switch_port);
  	for (i = mv_eth_switch_netdev_first; i <= mv_eth_switch_netdev_last; i++) {
  		if ((mv_net_devs[i] != NULL) && (mv_net_devs[i] == dev))
@@ -3548,7 +3512,7 @@ index 90bfbe9..e5c4e59 100644
  	}
  	dev_priv->link_map &= ~(1 << switch_port);
  	switch_enabled_ports &= ~(1 << switch_port);
-@@ -747,12 +763,12 @@ void    mv_eth_switch_status_print(int port)
+@@ -747,12 +763,12 @@ void    mv_eth_switch_status_print(int p
  		printk(KERN_ERR "ethPort=%d: mv_eth_switch status - pp=%p, flags=0x%lx\n", port, pp, pp->flags);
  
  		printk(KERN_ERR "mtu=%d, netdev_max=%d, netdev_cfg=%d, first=%d, last=%d\n",
@@ -3564,8 +3528,6 @@ index 90bfbe9..e5c4e59 100644
  		}
  		for (i = mv_eth_switch_netdev_first; i <= mv_eth_switch_netdev_last; i++) {
  			dev = mv_eth_netdev_by_id(i);
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
-index 1f51325..e759726 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
 @@ -41,6 +41,9 @@ static ssize_t mv_eth_help(char *buf)
@@ -3631,7 +3593,7 @@ index 1f51325..e759726 100644
  int run_rxq_type(int port, int q, int t)
  {
  	void *port_hndl = mvNetaPortHndlGet(port);
-@@ -192,6 +223,10 @@ static ssize_t mv_eth_port_store(struct device *dev,
+@@ -192,6 +223,10 @@ static ssize_t mv_eth_port_store(struct
  	} else if (!strcmp(name, "gmac_regs")) {
  		mvNetaGmacRegs(p);
  #endif /* MV_ETH_GMAC_NEW */
@@ -3642,7 +3604,7 @@ index 1f51325..e759726 100644
  	} else {
  		err = 1;
  		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
-@@ -225,6 +260,8 @@ static ssize_t mv_eth_3_hex_store(struct device *dev,
+@@ -225,6 +260,8 @@ static ssize_t mv_eth_3_hex_store(struct
  		err = mv_eth_txq_tos_map_set(p, i, v);
  	} else if (!strcmp(name, "rxq_tos")) {
  		err = mv_eth_rxq_tos_map_set(p, i, v);
@@ -3651,7 +3613,7 @@ index 1f51325..e759726 100644
  	} else if (!strcmp(name, "rxq_cpus")) {
  		err = mvNetaRxqCpuMaskSet(p, i, v);
  	} else {
-@@ -279,10 +316,8 @@ static ssize_t mv_eth_3_store(struct device *dev,
+@@ -279,10 +316,8 @@ static ssize_t mv_eth_3_store(struct dev
  		err = mv_eth_ctrl_set_poll_rx_weight(p, i);
  	} else if (!strcmp(name, "tx_done")) {
  		mv_eth_ctrl_txdone(p);
@@ -3662,7 +3624,7 @@ index 1f51325..e759726 100644
  	} else {
  		err = 1;
  		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
-@@ -368,6 +403,7 @@ static DEVICE_ATTR(txp_reset,   S_IWUSR, mv_eth_show, mv_eth_3_store);
+@@ -368,6 +403,7 @@ static DEVICE_ATTR(txp_reset,   S_IWUSR,
  static DEVICE_ATTR(ejp,         S_IWUSR, mv_eth_show, mv_eth_3_store);
  static DEVICE_ATTR(buf_num,     S_IWUSR, mv_eth_show, mv_eth_3_store);
  static DEVICE_ATTR(rxq_tos,     S_IWUSR, mv_eth_show, mv_eth_3_hex_store);
@@ -3670,7 +3632,7 @@ index 1f51325..e759726 100644
  static DEVICE_ATTR(rxq_cpus,    S_IWUSR, mv_eth_show, mv_eth_3_hex_store);
  static DEVICE_ATTR(txq_tos,     S_IWUSR, mv_eth_show, mv_eth_3_hex_store);
  static DEVICE_ATTR(mh_en,       S_IWUSR, mv_eth_show, mv_eth_port_store);
-@@ -392,6 +428,9 @@ static DEVICE_ATTR(gmac_regs,   S_IWUSR, mv_eth_show, mv_eth_port_store);
+@@ -392,6 +428,9 @@ static DEVICE_ATTR(gmac_regs,   S_IWUSR,
  static DEVICE_ATTR(txp_regs,    S_IWUSR, mv_eth_show, mv_eth_4_store);
  static DEVICE_ATTR(rxq_type,    S_IWUSR, mv_eth_show, mv_eth_3_store);
  static DEVICE_ATTR(tx_done,     S_IWUSR, mv_eth_show, mv_eth_3_store);
@@ -3680,7 +3642,7 @@ index 1f51325..e759726 100644
  
  static struct attribute *mv_eth_attrs[] = {
  
-@@ -414,6 +453,7 @@ static struct attribute *mv_eth_attrs[] = {
+@@ -414,6 +453,7 @@ static struct attribute *mv_eth_attrs[]
  	&dev_attr_buf_num.attr,
  	&dev_attr_rxq_cpus.attr,
  	&dev_attr_rxq_tos.attr,
@@ -3688,7 +3650,7 @@ index 1f51325..e759726 100644
  	&dev_attr_txq_tos.attr,
  	&dev_attr_mh_en.attr,
  	&dev_attr_mh_2B.attr,
-@@ -437,6 +477,9 @@ static struct attribute *mv_eth_attrs[] = {
+@@ -437,6 +477,9 @@ static struct attribute *mv_eth_attrs[]
  	&dev_attr_tx_done.attr,
  	&dev_attr_help.attr,
  	&dev_attr_rx_weight.attr,
@@ -3698,8 +3660,6 @@ index 1f51325..e759726 100644
  	NULL
  };
  
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c
-index 175426e..ee5f8aa 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c
 @@ -50,7 +50,6 @@ disclaimer.
@@ -3718,7 +3678,7 @@ index 175426e..ee5f8aa 100644
  
  static int isSwitch(struct eth_port *priv)
  {
-@@ -301,7 +299,7 @@ int mv_eth_tool_get_regs_len(struct net_device *netdev)
+@@ -301,7 +299,7 @@ int mv_eth_tool_get_regs_len(struct net_
  {
  #define MV_ETH_TOOL_REGS_LEN 32
  
@@ -3727,7 +3687,7 @@ index 175426e..ee5f8aa 100644
  }
  
  
-@@ -433,7 +431,7 @@ u32 mv_eth_tool_get_link(struct net_device *netdev)
+@@ -433,7 +431,7 @@ u32 mv_eth_tool_get_link(struct net_devi
  	struct eth_port     *pp = MV_ETH_PRIV(netdev);
  	struct eth_netdev   *dev_priv = MV_DEV_PRIV(netdev);
  
@@ -3736,7 +3696,7 @@ index 175426e..ee5f8aa 100644
  		printk(KERN_ERR "interface %s is not supported\n", netdev->name);
  		return -EOPNOTSUPP;
  	}
-@@ -443,11 +441,12 @@ u32 mv_eth_tool_get_link(struct net_device *netdev)
+@@ -443,11 +441,12 @@ u32 mv_eth_tool_get_link(struct net_devi
  			return -EOPNOTSUPP;
  		return (dev_priv->link_map != 0);
  	}
@@ -3753,7 +3713,7 @@ index 175426e..ee5f8aa 100644
  }
  /******************************************************************************
  * mv_eth_tool_get_coalesce
-@@ -465,7 +464,7 @@ int mv_eth_tool_get_coalesce(struct net_device *netdev,
+@@ -465,7 +464,7 @@ int mv_eth_tool_get_coalesce(struct net_
  			     struct ethtool_coalesce *cmd)
  {
  	struct eth_port *pp = MV_ETH_PRIV(netdev);
@@ -3762,7 +3722,7 @@ index 175426e..ee5f8aa 100644
  	   notice that if you use ethtool to set coal, then all queues have the same value */
  	cmd->rx_coalesce_usecs = mvNetaRxqTimeCoalGet(pp->port, 0);
  	cmd->rx_max_coalesced_frames = mvNetaRxqPktsCoalGet(pp->port, 0);
-@@ -763,13 +762,6 @@ void mv_eth_tool_get_strings(struct net_device *netdev,
+@@ -763,13 +762,6 @@ void mv_eth_tool_get_strings(struct net_
  
  }
  
@@ -3776,8 +3736,6 @@ index 175426e..ee5f8aa 100644
  /******************************************************************************
  * mv_eth_tool_get_stats_count
  * Description:
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c
-index be5b30d..b3138e1 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c
 @@ -29,9 +29,9 @@ disclaimer.
@@ -3799,7 +3757,7 @@ index be5b30d..b3138e1 100644
  #include "mv_netdev.h"
  
  #ifdef CONFIG_MV_ETH_SWITCH_LINK
-@@ -66,16 +67,16 @@ static int mv_eth_start(struct net_device *dev)
+@@ -66,16 +67,16 @@ static int mv_eth_start(struct net_devic
  	/* Stop the TX queue - it will be enabled upon PHY status change after link-up interrupt/timer */
  	netif_stop_queue(dev);
  
@@ -3820,7 +3778,7 @@ index be5b30d..b3138e1 100644
  	if ((priv->flags & MV_ETH_F_LINK_UP) && !(priv->flags & MV_ETH_F_EXT_SWITCH)) {
  
  		if (mv_eth_ctrl_is_tx_enabled(priv)) {
-@@ -97,7 +98,8 @@ static int mv_eth_start(struct net_device *dev)
+@@ -97,7 +98,8 @@ static int mv_eth_start(struct net_devic
  		/* connect to port interrupt line */
  		if (request_irq(dev->irq, mv_eth_isr, (IRQF_DISABLED|IRQF_SAMPLE_RANDOM), "mv_eth", priv)) {
  			printk(KERN_ERR "cannot request irq %d for %s port %d\n", dev->irq, dev->name, priv->port);
@@ -3830,7 +3788,7 @@ index be5b30d..b3138e1 100644
  			goto error;
  		}
  
-@@ -106,13 +108,9 @@ static int mv_eth_start(struct net_device *dev)
+@@ -106,13 +108,9 @@ static int mv_eth_start(struct net_devic
  
  		printk(KERN_NOTICE "%s: started\n", dev->name);
  	}
@@ -3853,7 +3811,7 @@ index be5b30d..b3138e1 100644
  	/* stop upper layer */
  	netif_carrier_off(dev);
  	netif_stop_queue(dev);
-@@ -155,10 +153,9 @@ int mv_eth_change_mtu(struct net_device *dev, int mtu)
+@@ -155,10 +153,9 @@ int mv_eth_change_mtu(struct net_device
  {
  	int old_mtu = dev->mtu;
  
@@ -3866,7 +3824,7 @@ index be5b30d..b3138e1 100644
  
  	if (!netif_running(dev)) {
  		if (mv_eth_change_mtu_internals(dev, mtu) == -1)
-@@ -170,6 +167,9 @@ int mv_eth_change_mtu(struct net_device *dev, int mtu)
+@@ -170,6 +167,9 @@ int mv_eth_change_mtu(struct net_device
  		return 0;
  	}
  
@@ -3876,7 +3834,7 @@ index be5b30d..b3138e1 100644
  	if (mv_eth_stop(dev)) {
  		printk(KERN_ERR "%s: stop interface failed\n", dev->name);
  		goto error;
-@@ -205,14 +205,17 @@ static int mv_eth_set_mac_addr_internals(struct net_device *dev, void *addr)
+@@ -205,14 +205,17 @@ static int mv_eth_set_mac_addr_internals
  	u8              *mac = &(((u8 *)addr)[2]);  /* skip on first 2B (ether HW addr type) */
  	int             i;
  
@@ -3900,7 +3858,7 @@ index be5b30d..b3138e1 100644
  	/* remove previous address table entry */
  	if (mvNetaMacAddrSet(priv->port, dev->dev_addr, -1) != MV_OK) {
  		printk(KERN_ERR "%s: ethSetMacAddr failed\n", dev->name);
-@@ -224,7 +227,7 @@ static int mv_eth_set_mac_addr_internals(struct net_device *dev, void *addr)
+@@ -224,7 +227,7 @@ static int mv_eth_set_mac_addr_internals
  		printk(KERN_ERR "%s: ethSetMacAddr failed\n", dev->name);
  		return -1;
  	}
@@ -3909,7 +3867,7 @@ index be5b30d..b3138e1 100644
  
  	/* set addr in the device */
  	for (i = 0; i < 6; i++)
-@@ -235,7 +238,7 @@ static int mv_eth_set_mac_addr_internals(struct net_device *dev, void *addr)
+@@ -235,7 +238,7 @@ static int mv_eth_set_mac_addr_internals
  	return 0;
  }
  
@@ -3918,7 +3876,7 @@ index be5b30d..b3138e1 100644
  void mv_eth_set_multicast_list(struct net_device *dev)
  {
  	struct eth_port     *priv = MV_ETH_PRIV(dev);
-@@ -244,6 +247,11 @@ void mv_eth_set_multicast_list(struct net_device *dev)
+@@ -244,6 +247,11 @@ void mv_eth_set_multicast_list(struct ne
  	printk("%s - mv_eth_set_multicast_list: flags=0x%x, mc_count=%d\n",
  		dev->name, dev->flags, dev->mc_count);
  */
@@ -3930,7 +3888,7 @@ index be5b30d..b3138e1 100644
  	if (dev->flags & IFF_PROMISC) {
  		/* Accept all */
  		pnc_mac_me(priv->port, NULL, rxq);
-@@ -290,15 +298,7 @@ void mv_eth_set_multicast_list(struct net_device *dev)
+@@ -290,15 +298,7 @@ void mv_eth_set_multicast_list(struct ne
  		}
  	}
  }
@@ -3947,7 +3905,7 @@ index be5b30d..b3138e1 100644
  void mv_eth_set_multicast_list(struct net_device *dev)
  {
  	struct eth_port    *priv = MV_ETH_PRIV(dev);
-@@ -348,7 +348,7 @@ void mv_eth_set_multicast_list(struct net_device *dev)
+@@ -348,7 +348,7 @@ void mv_eth_set_multicast_list(struct ne
  		}
  	}
  }
@@ -3986,8 +3944,6 @@ index be5b30d..b3138e1 100644
  
  	if (mv_eth_start(dev)) {
  		printk(KERN_ERR "%s: start interface failed\n", dev->name);
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-index 85818ed..c27914e 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 @@ -32,6 +32,7 @@ disclaimer.
@@ -4052,14 +4008,14 @@ index 85818ed..c27914e 100644
 +
 +#ifdef CONFIG_MV_ETH_NFP
 +extern int nfp_sysfs_init(void);
- 
++
 +static INLINE int mv_eth_need_fragment(MV_NFP_RESULT *res);
+ 
++static MV_STATUS mv_eth_nfp(struct eth_port *pp, int rxq, struct neta_rx_desc *rx_desc,
++						struct eth_pbuf *pkt, struct bm_pool *pool);
  
 -static MV_STATUS mv_eth_nfp(struct eth_port *pp, struct neta_rx_desc *rx_desc, struct eth_pbuf *pkt);
 -extern void nfp_port_register(int, int);
-+static MV_STATUS mv_eth_nfp(struct eth_port *pp, int rxq, struct neta_rx_desc *rx_desc,
-+						struct eth_pbuf *pkt, struct bm_pool *pool);
-+
 +static MV_STATUS mv_eth_nfp_tx(struct eth_pbuf *pkt, MV_NFP_RESULT *res);
 +
 +/* Enable NFP */
@@ -4082,7 +4038,7 @@ index 85818ed..c27914e 100644
  #endif /* CONFIG_MV_ETH_NFP */
  
  #ifdef CONFIG_NET_SKB_RECYCLE
-@@ -110,6 +133,7 @@ extern u8 mvMacAddr[CONFIG_MV_ETH_PORTS_NUM][MV_MAC_ADDR_SIZE];
+@@ -110,6 +133,7 @@ extern u8 mvMacAddr[CONFIG_MV_ETH_PORTS_
  extern u16 mvMtu[CONFIG_MV_ETH_PORTS_NUM];
  
  extern unsigned int switch_enabled_ports;
@@ -4090,7 +4046,7 @@ index 85818ed..c27914e 100644
  
  struct bm_pool mv_eth_pool[MV_ETH_BM_POOLS];
  struct eth_port **mv_eth_ports;
-@@ -144,7 +168,6 @@ static void mv_eth_priv_cleanup(struct eth_port *pp);
+@@ -144,7 +168,6 @@ static void mv_eth_priv_cleanup(struct e
  static int  mv_eth_config_get(struct eth_port *pp, u8 *mac);
  static int  mv_eth_hal_init(struct eth_port *pp);
  struct net_device *mv_eth_netdev_init(struct eth_port *pp, int mtu, u8 *mac);
@@ -4098,7 +4054,7 @@ index 85818ed..c27914e 100644
  static void mv_eth_netdev_set_features(struct net_device *dev);
  
  static MV_STATUS mv_eth_pool_create(int pool, int capacity);
-@@ -401,6 +424,20 @@ inline void mv_eth_tx_desc_flush(struct neta_tx_desc *tx_desc)
+@@ -401,6 +424,20 @@ inline void mv_eth_tx_desc_flush(struct
  	mvOsCacheLineFlush(NULL, tx_desc);
  }
  
@@ -4119,7 +4075,7 @@ index 85818ed..c27914e 100644
  void mv_eth_ctrl_txdone(int num)
  {
  	mv_ctrl_txdone = num;
-@@ -424,13 +461,9 @@ int mv_eth_ctrl_flag(int port, u32 flag, u32 val)
+@@ -424,13 +461,9 @@ int mv_eth_ctrl_flag(int port, u32 flag,
  	else
  		clear_bit(bit_flag, &(pp->flags));
  
@@ -4134,7 +4090,7 @@ index 85818ed..c27914e 100644
  	return 0;
  }
  
-@@ -465,6 +498,64 @@ int mv_eth_ctrl_port_buf_num_set(int port, int long_num, int short_num)
+@@ -465,6 +498,64 @@ int mv_eth_ctrl_port_buf_num_set(int por
  	return 0;
  }
  
@@ -4199,7 +4155,7 @@ index 85818ed..c27914e 100644
  int mv_eth_ctrl_set_poll_rx_weight(int port, u32 weight)
  {
  	struct eth_port *pp = mv_eth_port_by_id(port);
-@@ -696,9 +787,7 @@ static const struct net_device_ops mv_eth_netdev_ops = {
+@@ -696,9 +787,7 @@ static const struct net_device_ops mv_et
  	.ndo_open = mv_eth_open,
  	.ndo_stop = mv_eth_stop,
  	.ndo_start_xmit = mv_eth_tx,
@@ -4209,7 +4165,7 @@ index 85818ed..c27914e 100644
  	.ndo_set_mac_address = mv_eth_set_mac_addr,
  	.ndo_change_mtu = mv_eth_change_mtu,
  	.ndo_tx_timeout = mv_eth_tx_timeout,
-@@ -739,6 +828,7 @@ static inline struct net_device *mv_eth_switch_netdev_get(struct eth_port *pp, s
+@@ -739,6 +828,7 @@ static inline struct net_device *mv_eth_
  void mv_eth_switch_priv_update(struct net_device *netdev, int i)
  {
  	struct eth_netdev *dev_priv;
@@ -4217,7 +4173,7 @@ index 85818ed..c27914e 100644
  	int print_flag, port, switch_port;
  
  	/* Update dev_priv structure */
-@@ -748,7 +838,7 @@ void mv_eth_switch_priv_update(struct net_device *netdev, int i)
+@@ -748,7 +838,7 @@ void mv_eth_switch_priv_update(struct ne
  
  	print_flag = 1;
  	for (port = 0; port < BOARD_ETH_SWITCH_PORT_NUM; port++) {
@@ -4226,7 +4182,7 @@ index 85818ed..c27914e 100644
  			if (print_flag) {
  				printk(KERN_CONT ". Interface ports: ");
  				print_flag = 0;
-@@ -778,8 +868,8 @@ int mv_eth_switch_netdev_init(struct eth_port *pp, int dev_i)
+@@ -778,8 +868,8 @@ int mv_eth_switch_netdev_init(struct eth
  
  	switch_enabled_ports = 0;
  
@@ -4248,7 +4204,7 @@ index 85818ed..c27914e 100644
  
  	if (link.linkup) {
  		printk(KERN_CONT "link up");
-@@ -859,15 +953,17 @@ static void mv_eth_rx_error(struct eth_port *pp, struct neta_rx_desc *rx_desc)
+@@ -859,15 +953,17 @@ static void mv_eth_rx_error(struct eth_p
  
  void mv_eth_skb_print(struct sk_buff *skb)
  {
@@ -4271,7 +4227,7 @@ index 85818ed..c27914e 100644
  #endif /* CONFIG_NET_SKB_RECYCLE */
  }
  
-@@ -916,18 +1012,12 @@ void mv_eth_rx_desc_print(struct neta_rx_desc *desc)
+@@ -916,18 +1012,12 @@ void mv_eth_rx_desc_print(struct neta_rx
  		printk(KERN_CONT "DA_BC, ");
  	if (desc->pncInfo & NETA_PNC_DA_UC)
  		printk(KERN_CONT "DA_UC, ");
@@ -4292,7 +4248,7 @@ index 85818ed..c27914e 100644
  #endif /* CONFIG_MV_ETH_PNC */
  
  	printk(KERN_CONT "\n");
-@@ -946,14 +1036,13 @@ void mv_eth_tx_desc_print(struct neta_tx_desc *desc)
+@@ -946,14 +1036,13 @@ void mv_eth_tx_desc_print(struct neta_tx
  
  void mv_eth_pkt_print(struct eth_pbuf *pkt)
  {
@@ -4313,7 +4269,7 @@ index 85818ed..c27914e 100644
  }
  
  static inline void mv_eth_rx_csum(struct eth_port *pp, struct neta_rx_desc *rx_desc, struct sk_buff *skb)
-@@ -983,8 +1072,7 @@ inline int mv_eth_pool_put(struct bm_pool *pool, struct eth_pbuf *pkt)
+@@ -983,8 +1072,7 @@ inline int mv_eth_pool_put(struct bm_poo
  		MV_ETH_UNLOCK(&pool->lock, flags);
  
  		/* free pkt+skb */
@@ -4323,7 +4279,7 @@ index 85818ed..c27914e 100644
  		return 1;
  	}
  	mvStackPush(pool->stack, (MV_U32) pkt);
-@@ -1131,11 +1219,14 @@ static int mv_eth_skb_recycle(struct sk_buff *skb)
+@@ -1131,11 +1219,14 @@ static int mv_eth_skb_recycle(struct sk_
  
  		return 0;
  	}
@@ -4339,7 +4295,7 @@ index 85818ed..c27914e 100644
  	return 1;
  }
  #endif /* CONFIG_NET_SKB_RECYCLE */
-@@ -1157,7 +1248,11 @@ static struct sk_buff *mv_eth_skb_alloc(struct bm_pool *pool, struct eth_pbuf *p
+@@ -1157,7 +1248,11 @@ static struct sk_buff *mv_eth_skb_alloc(
  
  #ifdef CONFIG_MV_ETH_BM_CPU
  	/* Save pkt as first 4 bytes in the buffer */
@@ -4352,7 +4308,7 @@ index 85818ed..c27914e 100644
  	mvOsCacheLineFlush(NULL, skb->head);
  #endif /* CONFIG_MV_ETH_BM_CPU */
  
-@@ -1310,6 +1405,21 @@ static inline int mv_eth_rx(struct eth_port *pp, int rx_todo, int rxq)
+@@ -1310,6 +1405,21 @@ static inline int mv_eth_rx(struct eth_p
  		rx_bytes = rx_desc->dataSize - (MV_ETH_CRC_SIZE + MV_ETH_MH_SIZE);
  		dev->stats.rx_bytes += rx_bytes;
  
@@ -4374,7 +4330,7 @@ index 85818ed..c27914e 100644
  #ifdef CONFIG_MV_ETH_DEBUG_CODE
  		if (pp->flags & MV_ETH_F_DBG_RX)
  			mvDebugMemDump(pkt->pBuf + pkt->offset, 64, 1);
-@@ -1335,44 +1445,17 @@ static inline int mv_eth_rx(struct eth_port *pp, int rx_todo, int rxq)
+@@ -1335,44 +1445,17 @@ static inline int mv_eth_rx(struct eth_p
  #endif /* CONFIG_MV_ETH_PNC && CONFIG_MV_ETH_RX_SPECIAL */
  
  #ifdef CONFIG_MV_ETH_NFP
@@ -4386,7 +4342,7 @@ index 85818ed..c27914e 100644
  			pkt->offset = NET_SKB_PAD;
 -			pkt->tx_cmd = NETA_TX_L4_CSUM_NOT;
 -			pkt->hw_cmd = 0;
--
+ 
 -			status = mv_eth_nfp(pp, rx_desc, pkt);
 -			if (status == MV_OK) {
 -				STAT_DBG(pp->stats.rx_nfp++);
@@ -4412,7 +4368,6 @@ index 85818ed..c27914e 100644
 -					/* BM - no refill */
 -					mvOsCacheLineInv(NULL, rx_desc);
 -				}
-+
 +			status = mv_eth_nfp(pp, rxq, rx_desc, pkt, pool);
 +			if (status == MV_OK)
  				continue;
@@ -4425,7 +4380,7 @@ index 85818ed..c27914e 100644
  				continue;
  			}
  			/* MV_TERMINATE - packet returned to slow path */
-@@ -1392,8 +1475,6 @@ static inline int mv_eth_rx(struct eth_port *pp, int rx_todo, int rxq)
+@@ -1392,8 +1475,6 @@ static inline int mv_eth_rx(struct eth_p
  
  		skb->protocol = eth_type_trans(skb, dev);
  
@@ -4434,7 +4389,7 @@ index 85818ed..c27914e 100644
  #ifdef CONFIG_NET_SKB_RECYCLE
  		if (mv_eth_is_recycle()) {
  			skb->skb_recycle = mv_eth_skb_recycle;
-@@ -1402,8 +1483,11 @@ static inline int mv_eth_rx(struct eth_port *pp, int rx_todo, int rxq)
+@@ -1402,8 +1483,11 @@ static inline int mv_eth_rx(struct eth_p
  		}
  #endif /* CONFIG_NET_SKB_RECYCLE */
  
@@ -4447,7 +4402,7 @@ index 85818ed..c27914e 100644
  			if (!(rx_status & NETA_RX_IP4_FRAG_MASK) && (NETA_RX_L4_IS_TCP(rx_status))) {
  				struct iphdr *iph = (struct iphdr *)skb->data;
  				if (iph->daddr == mv_eth_dev_ip(dev)) {
-@@ -1441,28 +1525,695 @@ static inline int mv_eth_rx(struct eth_port *pp, int rx_todo, int rxq)
+@@ -1441,28 +1525,695 @@ static inline int mv_eth_rx(struct eth_p
  	return rx_done;
  }
  
@@ -5153,7 +5108,7 @@ index 85818ed..c27914e 100644
  	/* Get next descriptor for tx, single buffer, so FIRST & LAST */
  	tx_desc = mv_eth_tx_desc_get(txq_ctrl, 1);
  	if (tx_desc == NULL) {
-@@ -1472,31 +2223,71 @@ static MV_STATUS mv_eth_nfp_tx(struct neta_rx_desc *rx_desc, struct eth_pbuf *pk
+@@ -1472,31 +2223,71 @@ static MV_STATUS mv_eth_nfp_tx(struct ne
  		status = MV_DROPPED;
  		goto out;
  	}
@@ -5235,7 +5190,7 @@ index 85818ed..c27914e 100644
  		mv_eth_tx_desc_print(tx_desc);
  		mv_eth_pkt_print(pkt);
  	}
-@@ -1504,30 +2295,31 @@ static MV_STATUS mv_eth_nfp_tx(struct neta_rx_desc *rx_desc, struct eth_pbuf *pk
+@@ -1504,30 +2295,31 @@ static MV_STATUS mv_eth_nfp_tx(struct ne
  
  	mv_eth_tx_desc_flush(tx_desc);
  
@@ -5294,7 +5249,7 @@ index 85818ed..c27914e 100644
  
  #ifdef CONFIG_MV_ETH_DEBUG_CODE
  	if (pp->flags & MV_ETH_F_DBG_RX) {
-@@ -1552,26 +2347,71 @@ static MV_STATUS mv_eth_nfp(struct eth_port *pp, struct neta_rx_desc *rx_desc, s
+@@ -1552,26 +2347,71 @@ static MV_STATUS mv_eth_nfp(struct eth_p
  	}
  #endif /* CONFIG_MV_ETH_DEBUG_CODE */
  
@@ -5304,6 +5259,20 @@ index 85818ed..c27914e 100644
 -		goto tx;
 -	}
 -#endif /* CONFIG_MV_ETH_NFP_SWF */
+-
+-#ifdef NFP_PNC
+-	if (rx_desc->pncInfo & NETA_PNC_NFP) {
+-		status = mvNfpPnC(pp->port, rx_desc, pkt);
+-		goto tx;
+-	}
+-#endif /* NFP_PNC */
+-
+-	status = mvNfpRx(pp->port, rx_desc, pkt);
+-#if defined(CONFIG_MV_ETH_NFP_SWF) || defined(NFP_PNC)
+-tx:
+-#endif
+-	if (status == MV_OK)
+-		status = mv_eth_nfp_tx(rx_desc, pkt);
 +	read_lock(&nfp_lock);
 +
 +	status = mvNfpRx(pp->port, rx_desc, pkt, &res);
@@ -5312,11 +5281,7 @@ index 85818ed..c27914e 100644
 +	read_unlock(&nfp_lock);
 +
 +	if (status == MV_OK) {
- 
--#ifdef NFP_PNC
--	if (rx_desc->pncInfo & NETA_PNC_NFP) {
--		status = mvNfpPnC(pp->port, rx_desc, pkt);
--		goto tx;
++
 +		if (res.flags & MV_NFP_RES_L4_CSUM_NEEDED) {
 +			MV_IP_HEADER_INFO *pIpInfo = &res.ipInfo;
 +			MV_U8 *pIpHdr = pIpInfo->ip_hdr.l3;
@@ -5345,17 +5310,10 @@ index 85818ed..c27914e 100644
 +#endif /* CONFIG_MV_ETH_NFP_EXT */
 +			/* INT RX -> INT TX */
 +			status = mv_eth_nfp_tx(pkt, &res);
- 	}
--#endif /* NFP_PNC */
++	}
 +	if (status == MV_OK) {
 +		STAT_DBG(pp->stats.rx_nfp++);
- 
--	status = mvNfpRx(pp->port, rx_desc, pkt);
--#if defined(CONFIG_MV_ETH_NFP_SWF) || defined(NFP_PNC)
--tx:
--#endif
--	if (status == MV_OK)
--		status = mv_eth_nfp_tx(rx_desc, pkt);
++
 +		/* Packet transmited - refill now */
 +		if (!tx_external && mv_eth_pool_bm(pool)) {
 +			/* BM - no refill */
@@ -5383,7 +5341,7 @@ index 85818ed..c27914e 100644
  	return status;
  }
  #endif /* CONFIG_MV_ETH_NFP */
-@@ -1740,6 +2580,11 @@ static int mv_eth_tx(struct sk_buff *skb, struct net_device *dev)
+@@ -1740,6 +2580,11 @@ static int mv_eth_tx(struct sk_buff *skb
  	}
  #endif /* CONFIG_MV_ETH_DEBUG_CODE */
  
@@ -5406,7 +5364,7 @@ index 85818ed..c27914e 100644
  	} else {
  		dev->stats.tx_dropped++;
  		dev_kfree_skb_any(skb);
-@@ -1820,7 +2661,7 @@ static inline int mv_eth_tso_build_hdr_desc(struct neta_tx_desc *tx_desc, struct
+@@ -1820,7 +2661,7 @@ static inline int mv_eth_tso_build_hdr_d
  
  	data = mv_eth_extra_pool_get(priv);
  	if (!data)
@@ -5415,7 +5373,7 @@ index 85818ed..c27914e 100644
  
  	txq_ctrl->shadow_txq[txq_ctrl->shadow_txq_put_i] = ((MV_ULONG)data | MV_ETH_SHADOW_EXT);
  
-@@ -1865,7 +2706,7 @@ static inline int mv_eth_tso_build_hdr_desc(struct neta_tx_desc *tx_desc, struct
+@@ -1865,7 +2706,7 @@ static inline int mv_eth_tso_build_hdr_d
  
  	mv_eth_tx_desc_flush(tx_desc);
  
@@ -5424,7 +5382,7 @@ index 85818ed..c27914e 100644
  }
  
  static inline int mv_eth_tso_build_data_desc(struct neta_tx_desc *tx_desc, struct sk_buff *skb,
-@@ -1906,7 +2747,7 @@ int mv_eth_tx_tso(struct sk_buff *skb, struct net_device *dev,
+@@ -1906,7 +2747,7 @@ int mv_eth_tx_tso(struct sk_buff *skb, s
  	int frag = 0;
  	int total_len, hdr_len, size, frag_size, data_left;
  	char *frag_ptr;
@@ -5433,7 +5391,7 @@ index 85818ed..c27914e 100644
  	struct neta_tx_desc *tx_desc;
  	MV_U16 ip_id;
  	MV_U32 tcp_seq = 0;
-@@ -1983,10 +2824,12 @@ int mv_eth_tx_tso(struct sk_buff *skb, struct net_device *dev,
+@@ -1983,10 +2824,12 @@ int mv_eth_tx_tso(struct sk_buff *skb, s
  		}
  
  		/* prepare packet headers: MAC + IP + TCP */
@@ -5448,7 +5406,7 @@ index 85818ed..c27914e 100644
  /*
  		printk(KERN_ERR "Header desc: tx_desc=%p, skb=%p, hdr_len=%d, data_left=%d\n",
  						tx_desc, skb, hdr_len, data_left);
-@@ -2003,7 +2846,7 @@ int mv_eth_tx_tso(struct sk_buff *skb, struct net_device *dev,
+@@ -2003,7 +2846,7 @@ int mv_eth_tx_tso(struct sk_buff *skb, s
  
  			size = mv_eth_tso_build_data_desc(tx_desc, skb, txq_ctrl,
  							  frag_ptr, frag_size, data_left, total_len);
@@ -5457,7 +5415,7 @@ index 85818ed..c27914e 100644
  /*
  			printk(KERN_ERR "Data desc: tx_desc=%p, skb=%p, size=%d, frag_size=%d, data_left=%d\n",
  							tx_desc, skb, size, frag_size, data_left);
-@@ -2025,7 +2868,12 @@ int mv_eth_tx_tso(struct sk_buff *skb, struct net_device *dev,
+@@ -2025,7 +2868,12 @@ int mv_eth_tx_tso(struct sk_buff *skb, s
  		}		/* of while data_left > 0 */
  	}			/* of while (total_len > 0) */
  
@@ -5471,22 +5429,20 @@ index 85818ed..c27914e 100644
  	STAT_DBG(txq_ctrl->stats.txq_tx += totalDescNum);
  
  	mvNetaTxqPendDescAdd(priv->port, txq_ctrl->txp, txq_ctrl->txq, totalDescNum);
-@@ -2061,12 +2909,8 @@ static inline void mv_eth_txq_bufs_free(struct eth_port *pp, struct tx_queue *tx
- 		mv_eth_shadow_inc_get(txq_ctrl);
+@@ -2062,11 +2910,7 @@ static inline void mv_eth_txq_bufs_free(
  
  		if (!shadow)
--			continue;
+ 			continue;
 -/*
 -		printk(KERN_ERR "tx_done: p=%d, txp=%d, txq=%d, writeIdx=%d, readIdx=%d, shadow=0x%x\n",
 -					pp->port, txq_ctrl->txp, txq_ctrl->txq, txq_ctrl->shadow_txq_put_i,
 -					txq_ctrl->shadow_txq_get_i, shadow);
 -*/
-+			continue;
 +
  		if (shadow & MV_ETH_SHADOW_SKB) {
  			shadow &= ~MV_ETH_SHADOW_SKB;
  			dev_kfree_skb_any((struct sk_buff *)shadow);
-@@ -2080,7 +2924,13 @@ static inline void mv_eth_txq_bufs_free(struct eth_port *pp, struct tx_queue *tx
+@@ -2080,7 +2924,13 @@ static inline void mv_eth_txq_bufs_free(
  				struct eth_pbuf *pkt = (struct eth_pbuf *)shadow;
  				struct bm_pool *pool = &mv_eth_pool[pkt->pool];
  
@@ -5501,7 +5457,7 @@ index 85818ed..c27914e 100644
  			}
  		}
  	}
-@@ -2268,65 +3118,78 @@ static int mv_eth_pool_free(int pool, int num)
+@@ -2268,65 +3118,78 @@ static int mv_eth_pool_free(int pool, in
  	int i = 0;
  	struct bm_pool *ppool = &mv_eth_pool[pool];
  	unsigned long flags = 0;
@@ -5617,7 +5573,7 @@ index 85818ed..c27914e 100644
  
  	MV_ETH_UNLOCK(&ppool->lock, flags);
  
-@@ -2544,11 +3407,19 @@ irqreturn_t mv_eth_isr(int irq, void *dev_id)
+@@ -2544,11 +3407,19 @@ irqreturn_t mv_eth_isr(int irq, void *de
  void mv_eth_link_event(struct eth_port *pp, int print)
  {
  	struct net_device *dev = pp->dev;
@@ -5638,7 +5594,7 @@ index 85818ed..c27914e 100644
  		mvNetaPortUp(pp->port);
  		set_bit(MV_ETH_F_LINK_UP_BIT, &(pp->flags));
  
-@@ -2730,71 +3601,40 @@ static void mv_eth_cpu_counters_init(void)
+@@ -2730,71 +3601,40 @@ static void mv_eth_cpu_counters_init(voi
  #endif /* CONFIG_MV_CPU_PERF_CNTRS */
  }
  
@@ -5728,7 +5684,7 @@ index 85818ed..c27914e 100644
  }
  
  
-@@ -2803,6 +3643,12 @@ static MV_STATUS mv_eth_bm_pools_init(void)
+@@ -2803,6 +3643,12 @@ static MV_STATUS mv_eth_bm_pools_init(vo
  	int i, j;
  	MV_STATUS status;
  
@@ -5741,7 +5697,7 @@ index 85818ed..c27914e 100644
  	/* Create all pools with maximum capacity */
  	for (i = 0; i < MV_ETH_BM_POOLS; i++) {
  		status = mv_eth_pool_create(i, MV_BM_POOL_CAP_MAX);
-@@ -2812,24 +3658,16 @@ static MV_STATUS mv_eth_bm_pools_init(void)
+@@ -2812,24 +3658,16 @@ static MV_STATUS mv_eth_bm_pools_init(vo
  				mv_eth_pool_destroy(j);
  			return status;
  		}
@@ -5775,7 +5731,7 @@ index 85818ed..c27914e 100644
  	return 0;
  }
  
-@@ -2873,9 +3711,8 @@ static int mv_eth_load_network_interfaces(void)
+@@ -2873,9 +3711,8 @@ static int mv_eth_load_network_interface
  
  #ifdef CONFIG_MV_ETH_SWITCH
  		if (pp->flags & (MV_ETH_F_SWITCH | MV_ETH_F_EXT_SWITCH)) {
@@ -5786,7 +5742,7 @@ index 85818ed..c27914e 100644
  			if (status < 0) {
  				printk(KERN_ERR "\nWarning: port %d - Invalid netconfig string\n", port);
  				mv_eth_priv_cleanup(pp);
-@@ -2892,7 +3729,7 @@ static int mv_eth_load_network_interfaces(void)
+@@ -2892,7 +3729,7 @@ static int mv_eth_load_network_interface
  
  		if (pp->flags & MV_ETH_F_SWITCH) {
  			set_bit(MV_ETH_F_MH_BIT, &(pp->flags));
@@ -5795,7 +5751,7 @@ index 85818ed..c27914e 100644
  			if (mv_switch_init(RX_PKT_SIZE(mtu), SWITCH_CONNECTED_PORTS_MASK)) {
  				printk(KERN_ERR "\nWarning: port %d - Switch initialization failed\n", port);
  				mv_eth_priv_cleanup(pp);
-@@ -2915,7 +3752,7 @@ static int mv_eth_load_network_interfaces(void)
+@@ -2915,7 +3752,7 @@ static int mv_eth_load_network_interface
  
  			mv_eth_switch_netdev_first = dev_i;
  			dev_i = mv_eth_switch_netdev_init(pp, dev_i);
@@ -5804,7 +5760,7 @@ index 85818ed..c27914e 100644
  				printk(KERN_ERR "%s: can't create netdevice for switch\n", __func__);
  				mv_eth_priv_cleanup(pp);
  				return -EIO;
-@@ -2954,7 +3791,6 @@ static int mv_eth_probe(struct platform_device *pdev)
+@@ -2954,7 +3791,6 @@ static int mv_eth_probe(struct platform_
  	u32 port;
  	struct eth_port *pp;
  	int size;
@@ -5812,7 +5768,7 @@ index 85818ed..c27914e 100644
  
  #ifdef ETH_SKB_DEBUG
  	memset(mv_eth_skb_debug, 0, sizeof(mv_eth_skb_debug));
-@@ -2992,11 +3828,13 @@ static int mv_eth_probe(struct platform_device *pdev)
+@@ -2992,11 +3828,13 @@ static int mv_eth_probe(struct platform_
  		memset(mv_net_devs, 0, size);
  	}
  
@@ -5831,7 +5787,7 @@ index 85818ed..c27914e 100644
  
  	if (mv_eth_bm_pools_init())
  		goto oom;
-@@ -3012,14 +3850,6 @@ static int mv_eth_probe(struct platform_device *pdev)
+@@ -3012,14 +3850,6 @@ static int mv_eth_probe(struct platform_
  		if (mv_eth_load_network_interfaces())
  			goto oom;
  	}
@@ -5846,7 +5802,7 @@ index 85818ed..c27914e 100644
  
  #ifdef CONFIG_MV_ETH_HWF
  	for (port = 0; port < mv_eth_ports_num; port++) {
-@@ -3032,8 +3862,13 @@ static int mv_eth_probe(struct platform_device *pdev)
+@@ -3032,8 +3862,13 @@ static int mv_eth_probe(struct platform_
  	for (port = 0; port < mv_eth_ports_num; port++) {
  		pp = mv_eth_port_by_id(port);
  		if (pp) {
@@ -5862,7 +5818,7 @@ index 85818ed..c27914e 100644
  		}
  	}
  
-@@ -3159,6 +3994,7 @@ struct net_device *mv_eth_netdev_init(struct eth_port *pp, int mtu, u8 *mac)
+@@ -3159,6 +3994,7 @@ struct net_device *mv_eth_netdev_init(st
  	int cpu, i;
  	struct net_device *dev;
  	struct eth_dev_priv *dev_priv;
@@ -5870,7 +5826,7 @@ index 85818ed..c27914e 100644
  	dev = alloc_etherdev(sizeof(struct eth_dev_priv));
  	if (!dev)
  		return NULL;
-@@ -3205,7 +4041,7 @@ struct net_device *mv_eth_netdev_init(struct eth_port *pp, int mtu, u8 *mac)
+@@ -3205,7 +4041,7 @@ struct net_device *mv_eth_netdev_init(st
  	SET_ETHTOOL_OPS(dev, &mv_eth_tool_ops);
  #endif
  	/* Default NAPI initialization */
@@ -5879,7 +5835,7 @@ index 85818ed..c27914e 100644
  		pp->napiGroup[i] = (struct napi_struct *)kmalloc(sizeof(struct napi_struct), GFP_KERNEL);
  		memset(pp->napiGroup[i], 0, sizeof(struct napi_struct));
  	}
-@@ -3239,10 +4075,20 @@ struct net_device *mv_eth_netdev_init(struct eth_port *pp, int mtu, u8 *mac)
+@@ -3239,10 +4075,20 @@ struct net_device *mv_eth_netdev_init(st
  	return dev;
  }
  
@@ -5901,7 +5857,7 @@ index 85818ed..c27914e 100644
  	struct eth_dev_priv *dev_priv;
  #ifdef CONFIG_MV_ETH_SWITCH
  	struct eth_netdev *eth_netdev_priv;
-@@ -3254,11 +4100,10 @@ void mv_eth_netdev_update(int dev_index, struct eth_port *pp)
+@@ -3254,11 +4100,10 @@ void mv_eth_netdev_update(int dev_index,
  	dev_priv->port_p = pp;
  
  	dev->irq = NET_TH_RXTX_IRQ_NUM(pp->port);
@@ -5999,7 +5955,7 @@ index 85818ed..c27914e 100644
  #endif /* CONFIG_MV_ETH_SWITCH */
  
  	printk(KERN_ERR "\n");
-@@ -3497,11 +4351,16 @@ void mv_eth_priv_cleanup(struct eth_port *pp)
+@@ -3497,11 +4351,16 @@ void mv_eth_priv_cleanup(struct eth_port
  	/* TODO */
  }
  
@@ -6019,7 +5975,7 @@ index 85818ed..c27914e 100644
  
  	/* look for free pool pkt_size == 0. First check pool == pp->port */
  	/* if no free pool choose larger than required */
-@@ -3513,8 +4372,6 @@ static inline struct bm_pool *mv_eth_pool_find(struct eth_port *pp, int pkt_size
+@@ -3513,8 +4372,6 @@ static inline struct bm_pool *mv_eth_poo
  
  		if (bm_pool->pkt_size == 0) {
  			/* found free pool */
@@ -6028,7 +5984,7 @@ index 85818ed..c27914e 100644
  
  			MV_ETH_UNLOCK(&bm_pool->lock, flags);
  			return bm_pool;
-@@ -3529,6 +4386,12 @@ static inline struct bm_pool *mv_eth_pool_find(struct eth_port *pp, int pkt_size
+@@ -3529,6 +4386,12 @@ static inline struct bm_pool *mv_eth_poo
  	}
  	return temp_pool;
  }
@@ -6041,7 +5997,7 @@ index 85818ed..c27914e 100644
  
  static int mv_eth_rxq_fill(struct eth_port *pp, int rxq, int num)
  {
-@@ -3776,38 +4639,63 @@ int mv_eth_start_internals(struct eth_port *pp, int mtu)
+@@ -3776,38 +4639,63 @@ int mv_eth_start_internals(struct eth_po
  
  	/* Allocate buffers for Long buffers pool */
  	if (pp->pool_long == NULL) {
@@ -6119,7 +6075,7 @@ index 85818ed..c27914e 100644
  #endif /* CONFIG_MV_ETH_BM_CPU */
  
  	for (rxq = 0; rxq < CONFIG_MV_ETH_RXQ; rxq++) {
-@@ -3895,12 +4783,15 @@ int mv_eth_start_internals(struct eth_port *pp, int mtu)
+@@ -3895,12 +4783,15 @@ int mv_eth_start_internals(struct eth_po
  
  	/* start the hal - rx/tx activity */
  	status = mvNetaPortEnable(pp->port);
@@ -6160,21 +6116,24 @@ index 85818ed..c27914e 100644
  		printk(KERN_INFO "MTU must be at least 64, change mtu failed\n");
  		return -EINVAL;
  	}
-@@ -3995,31 +4877,84 @@ int mv_eth_change_mtu_internals(struct net_device *dev, int mtu)
+@@ -3995,31 +4877,84 @@ int mv_eth_change_mtu_internals(struct n
  		mtu = MV_ALIGN_UP(RX_PKT_SIZE(mtu), 8);
  		printk(KERN_CONT " rounding MTU to: %d \n", mtu);
  	}
 +	return mtu;
 +}
-+
+ 
+-	if (mtu != dev->mtu) {
 +/* Check if MTU can be changed */
 +int mv_eth_check_mtu_internals(struct net_device *dev, int mtu)
 +{
 +	struct eth_port *pp = MV_ETH_PRIV(dev);
 +	struct bm_pool	*new_pool = NULL;
-+
+ 
+-		write_lock_irqsave(&pp->rwlock, rwflags);
 +	new_pool = mv_eth_long_pool_get(pp, RX_PKT_SIZE(mtu));
-+
+ 
+-		mv_eth_rx_reset(pp->port);
 +	/* If no pool for new MTU or shared pool is used - MTU can be changed only when interface is stopped */
 +	if (new_pool == NULL) {
 +		printk(KERN_ERR "%s: No BM pool available for MTU=%d\n", __func__, mtu);
@@ -6199,7 +6158,13 @@ index 85818ed..c27914e 100644
 +	return 0;
 +}
  
--	if (mtu != dev->mtu) {
+-#ifdef CONFIG_MV_ETH_POOL_PREDEFINED
+-		/* Check if new MTU require pool change */
+-		new_pool = mv_eth_pool_find(pp, RX_PKT_SIZE(mtu));
+-		if (new_pool == NULL)
+-			printk(KERN_ERR "%s FAILED: port=%d, Can't find pool for pkt_size=%d\n",
+-					__func__, pp->port, RX_PKT_SIZE(mtu));
+-#endif /* CONFIG_MV_ETH_POOL_PREDEFINED */
 +/***********************************************************
 + * mv_eth_change_mtu_internals --                          *
 + *   stop port activity. release skb from rings. set new   *
@@ -6211,20 +6176,11 @@ index 85818ed..c27914e 100644
 +	struct bm_pool	*new_pool = NULL;
 +	struct eth_port *pp = MV_ETH_PRIV(dev);
 +	unsigned long	rwflags;
- 
++
 +	if ((mtu != dev->mtu) && (pp->pool_long)) {
 +		/* If long pool assigned and MTU really changed and can't use old pool - free buffers */
- 		write_lock_irqsave(&pp->rwlock, rwflags);
- 
--		mv_eth_rx_reset(pp->port);
--
--#ifdef CONFIG_MV_ETH_POOL_PREDEFINED
--		/* Check if new MTU require pool change */
--		new_pool = mv_eth_pool_find(pp, RX_PKT_SIZE(mtu));
--		if (new_pool == NULL)
--			printk(KERN_ERR "%s FAILED: port=%d, Can't find pool for pkt_size=%d\n",
--					__func__, pp->port, RX_PKT_SIZE(mtu));
--#endif /* CONFIG_MV_ETH_POOL_PREDEFINED */
++		write_lock_irqsave(&pp->rwlock, rwflags);
++
 +#ifdef CONFIG_MV_ETH_BM_CPU
 +		new_pool = mv_eth_long_pool_get(pp, RX_PKT_SIZE(mtu));
 +#else
@@ -6258,7 +6214,7 @@ index 85818ed..c27914e 100644
  			pp->pool_long = NULL;
  		}
  
-@@ -4032,7 +4967,6 @@ int mv_eth_change_mtu_internals(struct net_device *dev, int mtu)
+@@ -4032,7 +4967,6 @@ int mv_eth_change_mtu_internals(struct n
  */
  		write_unlock_irqrestore(&pp->rwlock, rwflags);
  	}
@@ -6266,7 +6222,7 @@ index 85818ed..c27914e 100644
  	dev->mtu = mtu;
  
  	mv_eth_netdev_set_features(dev);
-@@ -4089,15 +5023,16 @@ static void mv_eth_cleanup_timer_callback(unsigned long data)
+@@ -4089,15 +5023,16 @@ static void mv_eth_cleanup_timer_callbac
  
  void mv_eth_mac_show(int port)
  {
@@ -6317,7 +6273,7 @@ index 85818ed..c27914e 100644
  
  	printk(KERN_ERR "\n");
  	printk(KERN_ERR " TOS <=> TXQ map for port #%d\n\n", port);
-@@ -4134,13 +5070,14 @@ int mv_eth_rxq_tos_map_set(int port, int rxq, unsigned char tos)
+@@ -4134,13 +5070,14 @@ int mv_eth_rxq_tos_map_set(int port, int
  {
  	int status = 1;
  
@@ -6338,7 +6294,7 @@ index 85818ed..c27914e 100644
  
  	if (status == 0)
  		printk(KERN_ERR "Succeeded\n");
-@@ -4152,6 +5089,21 @@ int mv_eth_rxq_tos_map_set(int port, int rxq, unsigned char tos)
+@@ -4152,6 +5089,21 @@ int mv_eth_rxq_tos_map_set(int port, int
  	return status;
  }
  
@@ -6360,7 +6316,7 @@ index 85818ed..c27914e 100644
  /* Set TXQ for special TOS value. txq=-1 - use default TXQ for this port */
  int mv_eth_txq_tos_map_set(int port, int txq, unsigned char tos)
  {
-@@ -4207,22 +5159,19 @@ static int mv_eth_priv_init(struct eth_port *pp, int port)
+@@ -4207,22 +5159,19 @@ static int mv_eth_priv_init(struct eth_p
  		pp->txq[i] = CONFIG_MV_ETH_TXQ_DEF;
  
  	pp->flags = 0;
@@ -6420,7 +6376,7 @@ index 85818ed..c27914e 100644
  }
  
  /***********************************************************************************
-@@ -4421,6 +5371,14 @@ void mv_eth_port_status_print(unsigned int port)
+@@ -4421,6 +5371,14 @@ void mv_eth_port_status_print(unsigned i
  
  	mv_eth_link_status_print(port);
  
@@ -6435,7 +6391,7 @@ index 85818ed..c27914e 100644
  	printk(KERN_ERR "rxq_coal(pkts)[ q]   = ");
  	for (q = 0; q < CONFIG_MV_ETH_RXQ; q++)
  		printk(KERN_CONT "%3d ", mvNetaRxqPktsCoalGet(port, q));
-@@ -4542,6 +5500,7 @@ void mv_eth_port_stats_print(unsigned int port)
+@@ -4542,6 +5500,7 @@ void mv_eth_port_stats_print(unsigned in
  	printk(KERN_CONT "\n-------------------------------\n");
  	printk(KERN_ERR "poll..........................%10u\n", stat->poll);
  	printk(KERN_ERR "poll_exit.....................%10u\n", stat->poll_exit);
@@ -6515,7 +6471,7 @@ index 85818ed..c27914e 100644
  int mv_eth_suspend(struct platform_device *pdev, pm_message_t state)
  {
  #ifdef CONFIG_MV_ETH_PNC_WOL
-@@ -4950,7 +5934,7 @@ int mv_eth_resume(struct platform_device *pdev)
+@@ -4950,7 +5934,7 @@ int mv_eth_resume(struct platform_device
  #endif /* CONFIG_MV_ETH_PNC_WOL */
  	return 0;
  }
@@ -6524,7 +6480,7 @@ index 85818ed..c27914e 100644
  
  static int mv_eth_remove(struct platform_device *pdev)
  {
-@@ -4967,10 +5951,10 @@ static struct platform_driver mv_eth_driver = {
+@@ -4967,10 +5951,10 @@ static struct platform_driver mv_eth_dri
  	.probe = mv_eth_probe,
  	.remove = mv_eth_remove,
  	.shutdown = mv_eth_shutdown,
@@ -6537,7 +6493,7 @@ index 85818ed..c27914e 100644
  	.driver = {
  		.name = "mv88fx_neta",
  	},
-@@ -4978,6 +5962,13 @@ static struct platform_driver mv_eth_driver = {
+@@ -4978,6 +5962,13 @@ static struct platform_driver mv_eth_dri
  
  static int __init mv_eth_init_module(void)
  {
@@ -6551,8 +6507,6 @@ index 85818ed..c27914e 100644
  	return platform_driver_register(&mv_eth_driver);
  }
  module_init(mv_eth_init_module);
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
-index d5c72fa..a80ed00 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
 @@ -68,6 +68,11 @@ disclaimer.
@@ -6736,7 +6690,7 @@ index d5c72fa..a80ed00 100644
  int     mv_eth_switch_set_mac_addr(struct net_device *dev, void *mac);
  void    mv_eth_switch_set_multicast_list(struct net_device *dev);
  int     mv_eth_switch_change_mtu(struct net_device *dev, int mtu);
-@@ -436,9 +454,13 @@ int     mv_eth_switch_port_del(struct net_device *dev, int port);
+@@ -436,9 +454,13 @@ int     mv_eth_switch_port_del(struct ne
   ******************************************************/
  int         mv_eth_stop(struct net_device *dev);
  int         mv_eth_change_mtu(struct net_device *dev, int mtu);
@@ -6750,7 +6704,7 @@ index d5c72fa..a80ed00 100644
  
  irqreturn_t mv_eth_isr(int irq, void *dev_id);
  int         mv_eth_start_internals(struct eth_port *pp, int mtu);
-@@ -454,12 +476,15 @@ MV_STATUS   mv_eth_tx_done_ptks_coal_set(int port, int txp, int txq, MV_U32 valu
+@@ -454,12 +476,15 @@ MV_STATUS   mv_eth_tx_done_ptks_coal_set
  
  struct eth_port     *mv_eth_port_by_id(unsigned int port);
  struct net_device   *mv_eth_netdev_by_id(unsigned int idx);
@@ -6766,7 +6720,7 @@ index d5c72fa..a80ed00 100644
  void        mv_eth_netdev_print(struct net_device *netdev);
  void        mv_eth_status_print(void);
  void        mv_eth_port_status_print(unsigned int port);
-@@ -467,7 +492,8 @@ void        mv_eth_port_stats_print(unsigned int port);
+@@ -467,7 +492,8 @@ void        mv_eth_port_stats_print(unsi
  
  void        mv_eth_set_noqueue(struct net_device *dev, int enable);
  
@@ -6776,7 +6730,7 @@ index d5c72fa..a80ed00 100644
  void        mv_eth_ctrl_recycle(int en);
  void        mv_eth_ctrl_txdone(int num);
  int         mv_eth_ctrl_tx_mh(int port, u16 mh);
-@@ -480,6 +506,7 @@ int         mv_eth_ctrl_flag(int port, u32 flag, u32 val);
+@@ -480,6 +506,7 @@ int         mv_eth_ctrl_flag(int port, u
  int         mv_eth_ctrl_txq_size_set(int port, int txp, int txq, int value);
  int         mv_eth_ctrl_rxq_size_set(int port, int rxq, int value);
  int         mv_eth_ctrl_port_buf_num_set(int port, int long_num, int short_num);
@@ -6784,7 +6738,7 @@ index d5c72fa..a80ed00 100644
  int         mv_eth_ctrl_set_poll_rx_weight(int port, u32 weight);
  
  void        mv_eth_tx_desc_print(struct neta_tx_desc *desc);
-@@ -489,9 +516,15 @@ void        mv_eth_skb_print(struct sk_buff *skb);
+@@ -489,9 +516,15 @@ void        mv_eth_skb_print(struct sk_b
  void        mv_eth_link_status_print(int port);
  
  #ifdef CONFIG_MV_PON
@@ -6803,7 +6757,7 @@ index d5c72fa..a80ed00 100644
  #endif /* CONFIG_MV_PON */
  
  #ifdef CONFIG_MV_ETH_TX_SPECIAL
-@@ -528,9 +561,9 @@ inline struct neta_rx_desc *mv_eth_rx_prefetch(struct eth_port *pp,
+@@ -528,9 +561,9 @@ inline struct neta_rx_desc *mv_eth_rx_pr
  void	*mv_eth_bm_pool_create(int pool, int capacity, MV_ULONG *physAddr);
  #endif /* CONFIG_MV_ETH_BM */
  
@@ -6815,9 +6769,6 @@ index d5c72fa..a80ed00 100644
 +#endif /* CONFIG_MV_ETH_HWF && !CONFIG_MV_ETH_BM_CPU */
  
  #endif /* __mv_netdev_h__ */
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/nfp_mgr/mv_nfp_mgr_if.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/nfp_mgr/mv_nfp_mgr_if.h
-new file mode 100644
-index 0000000..dad1ef1
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/nfp_mgr/mv_nfp_mgr_if.h
 @@ -0,0 +1,40 @@
@@ -6861,8 +6812,6 @@ index 0000000..dad1ef1
 +extern rwlock_t nfp_lock;
 +#endif
 +
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pmt/pmt_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pmt/pmt_sysfs.c
-index a320934..7684237 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pmt/pmt_sysfs.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pmt/pmt_sysfs.c
 @@ -34,111 +34,233 @@ disclaimer.
@@ -7006,27 +6955,15 @@ index a320934..7684237 100644
 +		err = mvNetaPmtClear(p);
 +	} else
 +		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
- 
- 	local_irq_restore(flags);
- 
--	if (err) 
--		printk("%s: <%s>, error %d\n", __FUNCTION__, attr->attr.name, err);
--	
++
++	local_irq_restore(flags);
++
 +	if (err)
 +		printk(KERN_ERR "%s: <%s>, error %d\n", __func__, attr->attr.name, err);
 +
- 	return err ? -EINVAL : len;
- }
- 
--static DEVICE_ATTR(mh_reg,  S_IWUSR, pmt_show, pmt_store);
--static DEVICE_ATTR(eth_reg, S_IWUSR, pmt_show, pmt_store);
--static DEVICE_ATTR(hw_write,S_IWUSR, pmt_show, pmt_store);
--static DEVICE_ATTR(hw_read, S_IWUSR, pmt_show, pmt_store);
--static DEVICE_ATTR(hw_dump, S_IWUSR, pmt_show, pmt_store);
--static DEVICE_ATTR(hw_regs, S_IWUSR, pmt_show, pmt_store);
--static DEVICE_ATTR(hw_init, S_IWUSR, pmt_show, pmt_store);
--static DEVICE_ATTR(hw_inv,  S_IWUSR, pmt_show, pmt_store);
--static DEVICE_ATTR(help,    S_IRUSR, pmt_show, pmt_store);
++	return err ? -EINVAL : len;
++}
++
 +static ssize_t pmt_sw_dec_store(struct device *dev,
 +			struct device_attribute *attr, const char *buf, size_t len)
 +{
@@ -7096,15 +7033,27 @@ index a320934..7684237 100644
 +		mvNetaPmtReplaceL4csum(&mv_neta_pmt_e, v);
 +	} else
 +		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
-+
-+	local_irq_restore(flags);
-+
+ 
+ 	local_irq_restore(flags);
+ 
+-	if (err) 
+-		printk("%s: <%s>, error %d\n", __FUNCTION__, attr->attr.name, err);
+-	
 +	if (err)
 +		printk(KERN_ERR "%s: <%s>, error %d\n", __func__, attr->attr.name, err);
 +
-+	return err ? -EINVAL : len;
-+}
-+
+ 	return err ? -EINVAL : len;
+ }
+ 
+-static DEVICE_ATTR(mh_reg,  S_IWUSR, pmt_show, pmt_store);
+-static DEVICE_ATTR(eth_reg, S_IWUSR, pmt_show, pmt_store);
+-static DEVICE_ATTR(hw_write,S_IWUSR, pmt_show, pmt_store);
+-static DEVICE_ATTR(hw_read, S_IWUSR, pmt_show, pmt_store);
+-static DEVICE_ATTR(hw_dump, S_IWUSR, pmt_show, pmt_store);
+-static DEVICE_ATTR(hw_regs, S_IWUSR, pmt_show, pmt_store);
+-static DEVICE_ATTR(hw_init, S_IWUSR, pmt_show, pmt_store);
+-static DEVICE_ATTR(hw_inv,  S_IWUSR, pmt_show, pmt_store);
+-static DEVICE_ATTR(help,    S_IRUSR, pmt_show, pmt_store);
 +static DEVICE_ATTR(help,        S_IRUSR, pmt_show, NULL);
 +static DEVICE_ATTR(sw_dump,     S_IRUSR, pmt_show, NULL);
 +static DEVICE_ATTR(sw_clear,    S_IRUSR, pmt_show, NULL);
@@ -7185,11 +7134,9 @@ index a320934..7684237 100644
  MODULE_DESCRIPTION("PMT for Marvell NetA MV65xxx");
  MODULE_LICENSE("GPL");
  
-diff --git a/arch/arm/plat-armada/mv_hal/neta/bm/mvBm.c b/arch/arm/plat-armada/mv_hal/neta/bm/mvBm.c
-index b541c5e..d7168bf 100644
 --- a/arch/arm/plat-armada/mv_hal/neta/bm/mvBm.c
 +++ b/arch/arm/plat-armada/mv_hal/neta/bm/mvBm.c
-@@ -298,13 +298,10 @@ MV_STATUS mvBmPoolBufSizeSet(int pool, int buf_size)
+@@ -298,13 +298,10 @@ MV_STATUS mvBmPoolBufSizeSet(int pool, i
  		mvOsPrintf("bmPoolId = %d is invalid \n", pool);
  		return MV_BAD_PARAM;
  	}
@@ -7205,8 +7152,6 @@ index b541c5e..d7168bf 100644
  	return MV_OK;
  }
  
-diff --git a/arch/arm/plat-armada/mv_hal/neta/bm/mvBm.h b/arch/arm/plat-armada/mv_hal/neta/bm/mvBm.h
-index aa67f34..fddc413 100644
 --- a/arch/arm/plat-armada/mv_hal/neta/bm/mvBm.h
 +++ b/arch/arm/plat-armada/mv_hal/neta/bm/mvBm.h
 @@ -78,9 +78,7 @@ typedef struct {
@@ -7225,8 +7170,6 @@ index aa67f34..fddc413 100644
  
 -
  #endif /* __mvBm_h__ */
-diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
-index 57dc1d4..fc8eb75 100644
 --- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
 +++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
 @@ -402,16 +402,30 @@ MV_STATUS mvNetaDefaultsSet(int port)
@@ -7242,12 +7185,13 @@ index 57dc1d4..fc8eb75 100644
 -	}
 -
 -	regVal |= (ETH_RX_NO_DATA_SWAP_MASK | ETH_TX_NO_DATA_SWAP_MASK | ETH_NO_DESC_SWAP_MASK);
+-
 +#ifdef CONFIG_MV_ETH_REDUCE_BURST_SIZE_WA
 +        /* This is a WA for the IOCC HW BUG involve in using 128B burst size */
 +        regVal |= ETH_TX_BURST_SIZE_MASK(ETH_BURST_SIZE_2_64BIT_VALUE);
 +        regVal |= ETH_RX_BURST_SIZE_MASK(ETH_BURST_SIZE_2_64BIT_VALUE);
 +#else
- 
++
 +#ifdef CONFIG_MV_ETH_REDUCE_BURST_SIZE_WA
 +        /* This is a WA for the IOCC HW BUG involve in using 128B burst size */
 +        regVal |= ETH_TX_BURST_SIZE_MASK(ETH_BURST_SIZE_2_64BIT_VALUE);
@@ -7269,7 +7213,7 @@ index 57dc1d4..fc8eb75 100644
  	/* Assign port SDMA configuration */
  	MV_REG_WRITE(ETH_SDMA_CONFIG_REG(port), regVal);
  
-@@ -499,7 +513,7 @@ MV_STATUS	mvNetaRxqCpuMaskSet(int port, int rxq, int cpu_mask)
+@@ -499,7 +513,7 @@ MV_STATUS	mvNetaRxqCpuMaskSet(int port,
  
  #ifdef MV_ETH_GMAC_NEW
  
@@ -7278,7 +7222,7 @@ index 57dc1d4..fc8eb75 100644
  {
  	MV_U32  regVal;
  
-@@ -519,7 +533,7 @@ static void mvNetaPortSgmiiConfig(int port)
+@@ -519,7 +533,7 @@ static void mvNetaPortSgmiiConfig(int po
  	/* FIXME */
  }
  
@@ -7287,7 +7231,7 @@ index 57dc1d4..fc8eb75 100644
  {
  	MV_U32 regVal;
  
-@@ -529,6 +543,8 @@ void mvNetaPortPowerUp(int port, MV_BOOL isSgmii,MV_BOOL isGmii)
+@@ -529,6 +543,8 @@ void mvNetaPortPowerUp(int port, MV_BOOL
  	if (isSgmii)
  		mvNetaPortSgmiiConfig(port);
  
@@ -7296,7 +7240,7 @@ index 57dc1d4..fc8eb75 100644
  	/* Cancel Port Reset */
  	regVal = MV_REG_READ(NETA_GMAC_CTRL_2_REG(port));
  	regVal &= (~NETA_GMAC_PORT_RESET_MASK);
-@@ -978,7 +994,7 @@ static void mvNetaPortSgmiiConfig(int port)
+@@ -978,7 +994,7 @@ static void mvNetaPortSgmiiConfig(int po
  	MV_REG_WRITE(ETH_PORT_SERIAL_CTRL_1_REG(port), regVal);
  }
  
@@ -7305,7 +7249,7 @@ index 57dc1d4..fc8eb75 100644
  {
  	MV_U32 regVal;
  
-@@ -992,7 +1008,10 @@ void mvNetaPortPowerUp(int port, MV_BOOL isSgmii,MV_BOOL isGmii)
+@@ -992,7 +1008,10 @@ void mvNetaPortPowerUp(int port, MV_BOOL
  	/* Cancel Port Reset */
  	regVal = MV_REG_READ(ETH_PORT_SERIAL_CTRL_1_REG(port));
  	regVal &= (~ETH_PORT_RESET_MASK);
@@ -7317,8 +7261,6 @@ index 57dc1d4..fc8eb75 100644
  		regVal &= (~ETH_RGMII_ENABLE_MASK);
  
  	MV_REG_WRITE(ETH_PORT_SERIAL_CTRL_1_REG(port), regVal);
-diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
-index e161e3a..dd3407f 100644
 --- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
 +++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
 @@ -76,25 +76,82 @@ extern "C" {
@@ -7424,7 +7366,7 @@ index e161e3a..dd3407f 100644
  } MV_ETH_PKT;
  
  typedef struct {
-@@ -267,7 +321,7 @@ static INLINE MV_NETA_TXQ_CTRL *mvNetaTxqHndlGet(int port, int txp, int txq)
+@@ -267,7 +321,7 @@ static INLINE MV_NETA_TXQ_CTRL *mvNetaTx
  	return &pPortCtrl->pTxQueue[txp * pPortCtrl->txqNum + txq];
  }
  
@@ -7433,7 +7375,7 @@ index e161e3a..dd3407f 100644
  /* Swap RX descriptor to be BE */
  static INLINE void mvNetaRxqDescSwap(NETA_RX_DESC *pRxDesc)
  {
-@@ -292,7 +346,14 @@ static INLINE void mvNetaTxqDescSwap(NETA_TX_DESC *pTxDesc)
+@@ -292,7 +346,14 @@ static INLINE void mvNetaTxqDescSwap(NET
      pTxDesc->bufPhysAddr = MV_BYTE_SWAP_32BIT(pTxDesc->bufPhysAddr);
      pTxDesc->hw_cmd = MV_BYTE_SWAP_32BIT(pTxDesc->hw_cmd);
  }
@@ -7449,7 +7391,7 @@ index e161e3a..dd3407f 100644
  
  /* Get number of RX descriptors occupied by received packets */
  static INLINE int mvNetaRxqBusyDescNumGet(int port, int rxq)
-@@ -453,7 +514,11 @@ static INLINE void mvNetaRxDescFill(NETA_RX_DESC *pRxDesc, MV_U32 physAddr, MV_U
+@@ -453,7 +514,11 @@ static INLINE void mvNetaRxDescFill(NETA
  {
  	pRxDesc->bufCookie = (MV_U32)cookie;
  
@@ -7461,7 +7403,7 @@ index e161e3a..dd3407f 100644
  
  	mvOsCacheLineFlush(NULL, pRxDesc);
  }
-@@ -578,7 +643,7 @@ void 		mvNetaPhyAddrSet(int port, int phyAddr);
+@@ -578,7 +643,7 @@ void 		mvNetaPhyAddrSet(int port, int ph
  int 		mvNetaPhyAddrGet(int port);
  
  void 		mvNetaPortPowerDown(int port);
@@ -7470,7 +7412,7 @@ index e161e3a..dd3407f 100644
  
  /* Interrupt Coalesting functions */
  MV_STATUS mvNetaRxqTimeCoalSet(int port, int rxq, MV_U32 uSec);
-@@ -639,7 +704,6 @@ MV_STATUS mvNetaFlowCtrlSet(int port, MV_ETH_PORT_FC flowControl);
+@@ -639,7 +704,6 @@ MV_STATUS mvNetaFlowCtrlSet(int port, MV
  MV_STATUS mvNetaFlowCtrlGet(int port, MV_ETH_PORT_FC *flowControl);
  
  #ifdef MV_ETH_GMAC_NEW
@@ -7478,8 +7420,6 @@ index e161e3a..dd3407f 100644
  MV_STATUS	mvNetaGmacLpiSet(int port, int mode);
  void	mvNetaGmacRegs(int port);
  #endif /* MV_ETH_GMAC_NEW */
-diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaRegs.h b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaRegs.h
-index 3d17f11..1ae714a 100644
 --- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaRegs.h
 +++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaRegs.h
 @@ -942,20 +942,38 @@ extern "C" {
@@ -7580,11 +7520,9 @@ index 3d17f11..1ae714a 100644
  
  #define NETA_TX_L4_CSUM_BIT                 30
  #define NETA_TX_L4_CSUM_MASK                (3 << NETA_TX_L4_CSUM_BIT)
-diff --git a/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
-index 1230f07..7d7f1b0 100644
 --- a/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
 +++ b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
-@@ -63,11 +63,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -63,11 +63,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  *******************************************************************************/
  
  /*******************************************************************************
@@ -7597,7 +7535,7 @@ index 1230f07..7d7f1b0 100644
  *
  * DEPENDENCIES:
  *       None.
-@@ -77,29 +75,130 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -77,29 +75,130 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #ifndef __mvNfpDefs_h__
  #define __mvNfpDefs_h__
  
@@ -7732,11 +7670,9 @@ index 1230f07..7d7f1b0 100644
  #endif /* CONFIG_MV_ETH_NFP */
  
  #endif /* __mvNfp_h__ */
-diff --git a/arch/arm/plat-armada/mv_hal/neta/pmt/mvPmt.c b/arch/arm/plat-armada/mv_hal/neta/pmt/mvPmt.c
-index 60dc7ae..dce977a 100644
 --- a/arch/arm/plat-armada/mv_hal/neta/pmt/mvPmt.c
 +++ b/arch/arm/plat-armada/mv_hal/neta/pmt/mvPmt.c
-@@ -62,7 +62,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -62,7 +62,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  
  *******************************************************************************/
  
@@ -7745,7 +7681,7 @@ index 60dc7ae..dce977a 100644
  #include "mvTypes.h"
  #include "mvDebug.h"
  #include "mvOs.h"
-@@ -71,156 +71,569 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -71,156 +71,569 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  
  #include "mvPmt.h"
  
@@ -7949,10 +7885,10 @@ index 60dc7ae..dce977a 100644
 +
 +/*******************************************************************************
 +* mvNetaPmtDestroy - Free PMT Base memory
++*
++* INPUT:
  *
 -* NOTE:
-+* INPUT:
-+*
 +* RETURN:   void
  *******************************************************************************/
 -MV_STATUS mvNetaPmtDump(int port)
@@ -7982,15 +7918,15 @@ index 60dc7ae..dce977a 100644
 +
 +	if (pEntry->word & MV_NETA_PMT_IP4_CSUM_MASK)
 +		mvOsPrintf(", IPv4 csum");
-+
-+	if (pEntry->word & MV_NETA_PMT_L4_CSUM_MASK)
-+		mvOsPrintf(", L4 csum");
  
 -	for (idx = 0; idx < NETA_TX_PMT_SIZE; idx++) {
 -		mvNetaPmtRead(port, idx, &entry);
 -		if (entry.mt_w0 || entry.mt_w1 || entry.mt_w2) {
 -			count++;
 -			mvOsPrintf("[%2x] 0x%08x 0x%08x 0x%08x\n", idx, entry.mt_w0, entry.mt_w1, entry.mt_w2);
++	if (pEntry->word & MV_NETA_PMT_L4_CSUM_MASK)
++		mvOsPrintf(", L4 csum");
++
 +	if (pEntry->word & MV_NETA_PMT_LAST_MASK)
 +		mvOsPrintf(", Last");
 +
@@ -8383,11 +8319,9 @@ index 60dc7ae..dce977a 100644
 +
 +	return idx;
  }
-diff --git a/arch/arm/plat-armada/mv_hal/neta/pmt/mvPmt.h b/arch/arm/plat-armada/mv_hal/neta/pmt/mvPmt.h
-index 13800f1..201cc23 100644
 --- a/arch/arm/plat-armada/mv_hal/neta/pmt/mvPmt.h
 +++ b/arch/arm/plat-armada/mv_hal/neta/pmt/mvPmt.h
-@@ -39,7 +39,7 @@ Redistribution and use in source and binary forms, with or without modification,
+@@ -39,7 +39,7 @@ Redistribution and use in source and bin
  are permitted provided that the following conditions are met:
  
      *   Redistributions of source code must retain the above copyright notice,
@@ -8595,11 +8529,9 @@ index 13800f1..201cc23 100644
  
  #ifdef __cplusplus
  }
-diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
-index 8f4f332..c07bdcd 100644
 --- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
 +++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
-@@ -96,7 +96,6 @@ static int rxq_ip6 = CONFIG_MV_ETH_RXQ_DEF;
+@@ -96,7 +96,6 @@ static int rxq_ip6 = CONFIG_MV_ETH_RXQ_D
  static int rxq_ip4 = CONFIG_MV_ETH_RXQ_DEF;
  static int rxq_ip4_tcp = CONFIG_MV_ETH_RXQ_DEF;
  static int rxq_ip4_udp = CONFIG_MV_ETH_RXQ_DEF;
@@ -8607,7 +8539,7 @@ index 8f4f332..c07bdcd 100644
  static int rxq_arp 		= CONFIG_MV_ETH_RXQ_DEF;
  
  
-@@ -517,92 +516,35 @@ static void pnc_match_etype(struct tcam_entry *te, unsigned short ethertype)
+@@ -517,92 +516,35 @@ static void pnc_match_etype(struct tcam_
  	tcam_sw_set_byte(te, 1, ethertype & 0xFF);
  }
  
@@ -8799,7 +8731,7 @@ index 8f4f332..c07bdcd 100644
  	pnc_etype_ip4();
  	pnc_etype_ip6();
  	pnc_etype_pppoe();
-@@ -827,15 +773,14 @@ int pnc_ip4_dscp(unsigned char dscp, unsigned char mask, int rxq)
+@@ -827,15 +773,14 @@ int pnc_ip4_dscp(unsigned char dscp, uns
  #endif /* (CONFIG_MV_ETH_PNC_DSCP_PRIO > 0) */
  }
  
@@ -8891,7 +8823,7 @@ index 8f4f332..c07bdcd 100644
   *
   ******************************************************************************
   */
-@@ -1152,12 +1073,12 @@ int pnc_ipv4_2_tuples_add(unsigned int tid, unsigned int flow_id, unsigned int s
+@@ -1152,12 +1073,12 @@ int pnc_ipv4_2_tuples_add(unsigned int t
  	struct tcam_entry *te;
  
  	PNC_DBG("%s [%d] flow=%d " MV_IPQUAD_FMT "->" MV_IPQUAD_FMT "\n",
@@ -8907,7 +8839,7 @@ index 8f4f332..c07bdcd 100644
  		ERR_ON_OOR(1);
  
  	te = tcam_sw_alloc(TCAM_LU_FLOW_IP4);
-@@ -1175,7 +1096,7 @@ int pnc_ipv4_2_tuples_add(unsigned int tid, unsigned int flow_id, unsigned int s
+@@ -1175,7 +1096,7 @@ int pnc_ipv4_2_tuples_add(unsigned int t
  	sram_sw_set_lookup_done(te, 1);
  	sram_sw_set_flowid(te, flow_id, FLOWID_CTRL_FULL_MASK);
  	sram_sw_set_rxq(te, rxq, 0);
@@ -8916,7 +8848,7 @@ index 8f4f332..c07bdcd 100644
  	tcam_sw_text(te, "ipv4_2t");
  
  	tcam_hw_write(te, tid);
-@@ -1194,7 +1115,7 @@ int pnc_ipv4_5_tuples_add(unsigned int tid, unsigned int flow_id,
+@@ -1194,7 +1115,7 @@ int pnc_ipv4_5_tuples_add(unsigned int t
  	struct tcam_entry *te;
  
  	PNC_DBG("%s [%d] flow=%d " MV_IPQUAD_FMT "->" MV_IPQUAD_FMT ", ports=0x%x, proto=%d\n",
@@ -8968,11 +8900,9 @@ index 8f4f332..c07bdcd 100644
 -	return 0;
 -}
 -
-diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
-index e9fc554..7ad23f3 100644
 --- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
 +++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
-@@ -65,6 +65,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -65,6 +65,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #ifndef __MV_PNC_H__
  #define __MV_PNC_H__
  
@@ -8980,7 +8910,7 @@ index e9fc554..7ad23f3 100644
  #include "mvTcam.h"
  
  /*
-@@ -81,40 +82,36 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -81,40 +82,36 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #define PNC_ERR_INV			1			/* invalid parameter */
  
   /* Result info bits assigment */
@@ -9034,7 +8964,7 @@ index e9fc554..7ad23f3 100644
  #define RI_RX_SPECIAL       (BIT20) /* Packet for special RX processing */
  
   /* Additional info bits assigment */
-@@ -122,21 +119,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -122,21 +119,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #define AI_DONE_MASK        (1 << AI_DONE_BIT)
  
  /* PnC result info */
@@ -9105,7 +9035,7 @@ index e9fc554..7ad23f3 100644
  
  #ifdef CONFIG_MV_ETH_PNC_WOL
  	TE_WOL,
-@@ -299,6 +285,18 @@ int pnc_mac_me(unsigned int port, unsigned char *mac, int rxq);
+@@ -299,6 +285,18 @@ int pnc_mac_me(unsigned int port, unsign
  /* Set Multicast MAC address to be accepted on the port */
  int pnc_mcast_me(unsigned int port, unsigned char *mac);
  
@@ -9124,7 +9054,7 @@ index e9fc554..7ad23f3 100644
  /* Enable / Disable accept ALL Multicast */
  int pnc_mcast_all(unsigned int port, int en);
  
-@@ -309,7 +307,6 @@ int     pnc_ip4_dscp(unsigned char dscp, unsigned char mask, int rxq);
+@@ -309,7 +307,6 @@ int     pnc_ip4_dscp(unsigned char dscp,
  void    pnc_ipv4_dscp_show(void);
  
  
@@ -9132,7 +9062,7 @@ index e9fc554..7ad23f3 100644
  /* 2 tuple match */
  int pnc_ipv4_2_tuples_add(unsigned int tid, unsigned int flow_hi,
  			      unsigned int sip, unsigned int dip, unsigned int rxq);
-@@ -321,7 +318,6 @@ int pnc_ipv6_2_tuples_add(unsigned int tid1, unsigned int tid2, unsigned int flo
+@@ -321,7 +318,6 @@ int pnc_ipv6_2_tuples_add(unsigned int t
  int pnc_ipv4_5_tuples_add(unsigned int tid, unsigned int flow_hi,
  				unsigned int sip, unsigned int dip,
  				unsigned int proto, unsigned int ports, unsigned int rxq);
@@ -9149,16 +9079,13 @@ index e9fc554..7ad23f3 100644
  #ifdef MV_ETH_PNC_AGING
  MV_U32  mvPncAgingCntrRead(int tid);
  void    mvPncAgingCntrWrite(int tid, MV_U32 w32);
-@@ -349,4 +343,6 @@ void    mvPncAgingCntrGroupSet(int tid, int gr);
+@@ -349,4 +343,6 @@ void    mvPncAgingCntrGroupSet(int tid,
  void    mvPncAgingCounterClear(int tid, int gr);
  #endif /* MV_ETH_PNC_AGING */
  
 +#endif /* CONFIG_MV_ETH_PNC */
 +
  #endif /*__MV_PNC_H__ */
-diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncAging.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncAging.c
-new file mode 100644
-index 0000000..6ef6ea0
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncAging.c
 @@ -0,0 +1,279 @@
@@ -9441,8 +9368,6 @@ index 0000000..6ef6ea0
 +	for (gr = 0; gr < MV_PNC_AGING_MAX_GROUP; gr++)
 +		mvPncAgingGroupCntrClear(gr);
 +}
-diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncWol.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncWol.c
-index f32ff6c..61f7961 100644
 --- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncWol.c
 +++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncWol.c
 @@ -370,8 +370,8 @@ int mv_pnc_wol_rule_del_all(int port)
@@ -9467,8 +9392,6 @@ index f32ff6c..61f7961 100644
  
  	pWolRule = mv_pnc_wol_tbl[idx];
  	if (pWolRule == NULL)
-diff --git a/drivers/net/ppp/ppp_generic.c b/drivers/net/ppp/ppp_generic.c
-index 3ed983c..e039dc1 100644
 --- a/drivers/net/ppp/ppp_generic.c
 +++ b/drivers/net/ppp/ppp_generic.c
 @@ -55,6 +55,9 @@
@@ -9481,7 +9404,7 @@ index 3ed983c..e039dc1 100644
  
  /*
   * Network protocols we support.
-@@ -2840,8 +2843,10 @@ ppp_connect_channel(struct channel *pch, int unit)
+@@ -2840,8 +2843,10 @@ ppp_connect_channel(struct channel *pch,
  	atomic_inc(&ppp->file.refcnt);
  	ppp_unlock(ppp);
  	ret = 0;
@@ -9494,8 +9417,6 @@ index 3ed983c..e039dc1 100644
  	write_unlock_bh(&pch->upl);
   out:
  	mutex_unlock(&pn->all_ppp_mutex);
-diff --git a/drivers/net/ppp/pppoe.c b/drivers/net/ppp/pppoe.c
-index 39e7974..3b250fb 100644
 --- a/drivers/net/ppp/pppoe.c
 +++ b/drivers/net/ppp/pppoe.c
 @@ -84,6 +84,12 @@
@@ -9511,7 +9432,7 @@ index 39e7974..3b250fb 100644
  
  #define PPPOE_HASH_BITS 4
  #define PPPOE_HASH_SIZE (1 << PPPOE_HASH_BITS)
-@@ -593,6 +599,9 @@ static int pppoe_release(struct socket *sock)
+@@ -593,6 +599,9 @@ static int pppoe_release(struct socket *
  	 * protect "po" from concurrent updates
  	 * on pppoe_flush_dev
  	 */
@@ -9521,7 +9442,7 @@ index 39e7974..3b250fb 100644
  	delete_item(pn, po->pppoe_pa.sid, po->pppoe_pa.remote,
  		    po->pppoe_ifindex);
  
-@@ -693,6 +702,9 @@ static int pppoe_connect(struct socket *sock, struct sockaddr *uservaddr,
+@@ -693,6 +702,9 @@ static int pppoe_connect(struct socket *
  		}
  
  		sk->sk_state = PPPOX_CONNECTED;
@@ -9551,8 +9472,6 @@ index 39e7974..3b250fb 100644
  	unregister_netdevice_notifier(&pppoe_notifier);
  	dev_remove_pack(&pppoed_ptype);
  	dev_remove_pack(&pppoes_ptype);
-diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
-index 1f4e856..a82cb26 100644
 --- a/include/linux/netdevice.h
 +++ b/include/linux/netdevice.h
 @@ -2734,6 +2734,26 @@ do {								\
@@ -9582,9 +9501,6 @@ index 1f4e856..a82cb26 100644
  #endif /* __KERNEL__ */
  
  #endif	/* _LINUX_NETDEVICE_H */
-diff --git a/include/linux/netfilter/ipt_NFP.h b/include/linux/netfilter/ipt_NFP.h
-new file mode 100644
-index 0000000..d4c7ab6
 --- /dev/null
 +++ b/include/linux/netfilter/ipt_NFP.h
 @@ -0,0 +1,126 @@
@@ -9714,8 +9630,6 @@ index 0000000..d4c7ab6
 +
 +
 +#endif
-diff --git a/include/net/ip6_fib.h b/include/net/ip6_fib.h
-index 5735a0f..2efb1d6 100644
 --- a/include/net/ip6_fib.h
 +++ b/include/net/ip6_fib.h
 @@ -119,6 +119,11 @@ struct rt6_info {
@@ -9730,8 +9644,6 @@ index 5735a0f..2efb1d6 100644
  };
  
  static inline struct inet6_dev *ip6_dst_idev(struct dst_entry *dst)
-diff --git a/include/net/neighbour.h b/include/net/neighbour.h
-index 2720884..fa927d9 100644
 --- a/include/net/neighbour.h
 +++ b/include/net/neighbour.h
 @@ -113,6 +113,9 @@ struct neighbour {
@@ -9744,8 +9656,6 @@ index 2720884..fa927d9 100644
  	u8			primary_key[0];
  };
  
-diff --git a/include/net/netfilter/nf_conntrack.h b/include/net/netfilter/nf_conntrack.h
-index 0b6a3e8..6f45bbf 100644
 --- a/include/net/netfilter/nf_conntrack.h
 +++ b/include/net/netfilter/nf_conntrack.h
 @@ -128,6 +128,21 @@ struct nf_conn {
@@ -9793,8 +9703,6 @@ index 0b6a3e8..6f45bbf 100644
  #define MODULE_ALIAS_NFCT_HELPER(helper) \
          MODULE_ALIAS("nfct-helper-" helper)
  
-diff --git a/include/net/netfilter/nf_conntrack_tuple.h b/include/net/netfilter/nf_conntrack_tuple.h
-index 2f8fb77..d85d340 100644
 --- a/include/net/netfilter/nf_conntrack_tuple.h
 +++ b/include/net/netfilter/nf_conntrack_tuple.h
 @@ -70,6 +70,15 @@ struct nf_conntrack_tuple {
@@ -9813,8 +9721,6 @@ index 2f8fb77..d85d340 100644
  };
  
  struct nf_conntrack_tuple_mask {
-diff --git a/include/net/route.h b/include/net/route.h
-index b1c0d5b..1a607ef 100644
 --- a/include/net/route.h
 +++ b/include/net/route.h
 @@ -69,6 +69,10 @@ struct rtable {
@@ -9828,8 +9734,6 @@ index b1c0d5b..1a607ef 100644
  };
  
  static inline bool rt_is_input_route(const struct rtable *rt)
-diff --git a/net/8021q/vlan.c b/net/8021q/vlan.c
-index 5471628..94134c1 100644
 --- a/net/8021q/vlan.c
 +++ b/net/8021q/vlan.c
 @@ -42,6 +42,13 @@
@@ -9846,7 +9750,7 @@ index 5471628..94134c1 100644
  /* Global VLAN variables */
  
  int vlan_net_id __read_mostly;
-@@ -122,6 +129,10 @@ void unregister_vlan_dev(struct net_device *dev, struct list_head *head)
+@@ -122,6 +129,10 @@ void unregister_vlan_dev(struct net_devi
  	if (vlan->flags & VLAN_FLAG_GVRP)
  		vlan_gvrp_request_leave(dev);
  
@@ -9857,7 +9761,7 @@ index 5471628..94134c1 100644
  	vlan_group_set_device(grp, vlan_id, NULL);
  	/* Because unregister_netdevice_queue() makes sure at least one rcu
  	 * grace period is respected before device freeing,
-@@ -288,6 +299,10 @@ static int register_vlan_device(struct net_device *real_dev, u16 vlan_id)
+@@ -288,6 +299,10 @@ static int register_vlan_device(struct n
  	if (err < 0)
  		goto out_free_newdev;
  
@@ -9868,7 +9772,7 @@ index 5471628..94134c1 100644
  	return 0;
  
  out_free_newdev:
-@@ -712,6 +727,26 @@ static void __exit vlan_cleanup_module(void)
+@@ -712,6 +727,26 @@ static void __exit vlan_cleanup_module(v
  	vlan_gvrp_uninit();
  }
  
@@ -9895,11 +9799,9 @@ index 5471628..94134c1 100644
  module_init(vlan_proto_init);
  module_exit(vlan_cleanup_module);
  
-diff --git a/net/bridge/br_fdb.c b/net/bridge/br_fdb.c
-index c8e7861..7548984 100644
 --- a/net/bridge/br_fdb.c
 +++ b/net/bridge/br_fdb.c
-@@ -32,6 +32,12 @@ static void fdb_notify(const struct net_bridge_fdb_entry *, int);
+@@ -32,6 +32,12 @@ static void fdb_notify(const struct net_
  
  static u32 fdb_salt __read_mostly;
  
@@ -9912,7 +9814,7 @@ index c8e7861..7548984 100644
  int __init br_fdb_init(void)
  {
  	br_fdb_cache = kmem_cache_create("bridge_fdb_cache",
-@@ -60,10 +66,20 @@ static inline unsigned long hold_time(const struct net_bridge *br)
+@@ -60,10 +66,20 @@ static inline unsigned long hold_time(co
  }
  
  static inline int has_expired(const struct net_bridge *br,
@@ -9936,7 +9838,7 @@ index c8e7861..7548984 100644
  }
  
  static inline int br_mac_hash(const unsigned char *mac)
-@@ -82,6 +98,13 @@ static void fdb_rcu_free(struct rcu_head *head)
+@@ -82,6 +98,13 @@ static void fdb_rcu_free(struct rcu_head
  
  static inline void fdb_delete(struct net_bridge_fdb_entry *f)
  {
@@ -9966,7 +9868,7 @@ index c8e7861..7548984 100644
  			this_timer = f->updated + delay;
  			if (time_before_eq(this_timer, jiffies))
  				fdb_delete(f);
-@@ -335,7 +367,7 @@ static struct net_bridge_fdb_entry *fdb_find_rcu(struct hlist_head *head,
+@@ -335,7 +367,7 @@ static struct net_bridge_fdb_entry *fdb_
  
  static struct net_bridge_fdb_entry *fdb_create(struct hlist_head *head,
  					       struct net_bridge_port *source,
@@ -9975,7 +9877,7 @@ index c8e7861..7548984 100644
  {
  	struct net_bridge_fdb_entry *fdb;
  
-@@ -343,11 +375,16 @@ static struct net_bridge_fdb_entry *fdb_create(struct hlist_head *head,
+@@ -343,11 +375,16 @@ static struct net_bridge_fdb_entry *fdb_
  	if (fdb) {
  		memcpy(fdb->addr.addr, addr, ETH_ALEN);
  		fdb->dst = source;
@@ -9995,7 +9897,7 @@ index c8e7861..7548984 100644
  	}
  	return fdb;
  }
-@@ -374,7 +411,7 @@ static int fdb_insert(struct net_bridge *br, struct net_bridge_port *source,
+@@ -374,7 +411,7 @@ static int fdb_insert(struct net_bridge
  		fdb_delete(fdb);
  	}
  
@@ -10004,7 +9906,7 @@ index c8e7861..7548984 100644
  	if (!fdb)
  		return -ENOMEM;
  
-@@ -425,7 +462,7 @@ void br_fdb_update(struct net_bridge *br, struct net_bridge_port *source,
+@@ -425,7 +462,7 @@ void br_fdb_update(struct net_bridge *br
  	} else {
  		spin_lock(&br->hash_lock);
  		if (likely(!fdb_find(head, addr)))
@@ -10013,7 +9915,7 @@ index c8e7861..7548984 100644
  
  		/* else  we lose race and someone else inserts
  		 * it first, don't bother updating
-@@ -440,7 +477,7 @@ static int fdb_to_nud(const struct net_bridge_fdb_entry *fdb)
+@@ -440,7 +477,7 @@ static int fdb_to_nud(const struct net_b
  		return NUD_PERMANENT;
  	else if (fdb->is_static)
  		return NUD_NOARP;
@@ -10022,7 +9924,7 @@ index c8e7861..7548984 100644
  		return NUD_STALE;
  	else
  		return NUD_REACHABLE;
-@@ -703,3 +740,37 @@ int br_fdb_delete(struct sk_buff *skb, struct nlmsghdr *nlh, void *arg)
+@@ -703,3 +740,37 @@ int br_fdb_delete(struct sk_buff *skb, s
  
  	return err;
  }
@@ -10060,8 +9962,6 @@ index c8e7861..7548984 100644
 +	rtnl_unlock();
 +}
 +#endif /* CONFIG_MV_ETH_NFP_BRIDGE_LEARN */
-diff --git a/net/bridge/br_if.c b/net/bridge/br_if.c
-index f3f75ad..668f6f2 100644
 --- a/net/bridge/br_if.c
 +++ b/net/bridge/br_if.c
 @@ -26,6 +26,11 @@
@@ -10076,7 +9976,7 @@ index f3f75ad..668f6f2 100644
  /*
   * Determine initial path cost based on speed.
   * using recommendations from 802.1d standard
-@@ -167,11 +172,20 @@ void br_dev_delete(struct net_device *dev, struct list_head *head)
+@@ -167,11 +172,20 @@ void br_dev_delete(struct net_device *de
  	struct net_bridge_port *p, *n;
  
  	list_for_each_entry_safe(p, n, &br->port_list, list) {
@@ -10097,7 +9997,7 @@ index f3f75ad..668f6f2 100644
  	br_sysfs_delbr(br->dev);
  	unregister_netdevice_queue(br->dev, head);
  }
-@@ -426,6 +440,10 @@ int br_del_if(struct net_bridge *br, struct net_device *dev)
+@@ -426,6 +440,10 @@ int br_del_if(struct net_bridge *br, str
  	if (!p || p->br != br)
  		return -EINVAL;
  
@@ -10108,8 +10008,6 @@ index f3f75ad..668f6f2 100644
  	del_nbp(p);
  
  	spin_lock_bh(&br->lock);
-diff --git a/net/bridge/br_private.h b/net/bridge/br_private.h
-index ec3da16..03bc1e9 100644
 --- a/net/bridge/br_private.h
 +++ b/net/bridge/br_private.h
 @@ -74,6 +74,10 @@ struct net_bridge_fdb_entry
@@ -10123,8 +10021,6 @@ index ec3da16..03bc1e9 100644
  };
  
  struct net_bridge_port_group {
-diff --git a/net/core/neighbour.c b/net/core/neighbour.c
-index 5b9709f..d8b199e 100644
 --- a/net/core/neighbour.c
 +++ b/net/core/neighbour.c
 @@ -37,6 +37,12 @@
@@ -10140,7 +10036,7 @@ index 5b9709f..d8b199e 100644
  #define NEIGH_DEBUG 1
  
  #define NEIGH_PRINTK(x...) printk(x)
-@@ -571,7 +577,7 @@ struct pneigh_entry *__pneigh_lookup(struct neigh_table *tbl,
+@@ -571,7 +577,7 @@ struct pneigh_entry *__pneigh_lookup(str
  }
  EXPORT_SYMBOL_GPL(__pneigh_lookup);
  
@@ -10149,7 +10045,7 @@ index 5b9709f..d8b199e 100644
  				    struct net *net, const void *pkey,
  				    struct net_device *dev, int creat)
  {
-@@ -701,6 +707,15 @@ void neigh_destroy(struct neighbour *neigh)
+@@ -701,6 +707,15 @@ void neigh_destroy(struct neighbour *nei
  	if (neigh_del_timer(neigh))
  		printk(KERN_WARNING "Impossible event.\n");
  
@@ -10165,16 +10061,17 @@ index 5b9709f..d8b199e 100644
  	skb_queue_purge(&neigh->arp_queue);
  
  	dev_put(neigh->dev);
-@@ -732,8 +747,15 @@ static void neigh_suspect(struct neighbour *neigh)
+@@ -732,8 +747,15 @@ static void neigh_suspect(struct neighbo
   */
  static void neigh_connect(struct neighbour *neigh)
  {
 -	NEIGH_PRINTK2("neigh %p is connected.\n", neigh);
+-
 +#if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
 +       neigh->nfp = false;
 +       if (!nfp_hook_arp_add(neigh->tbl->family, neigh->primary_key, neigh->ha, neigh->dev->ifindex)) {
 +               neigh->nfp = true;
- 
++
 +               NEIGH_PRINTK2("0x%8lx: neigh %p, ref=%d, state=%d, nfp=%d is connected in %s.\n",
 +                       jiffies, neigh, atomic_read(&neigh->refcnt), neigh->nud_state, neigh->nfp, __func__);
 +       }
@@ -10182,7 +10079,7 @@ index 5b9709f..d8b199e 100644
  	neigh->output = neigh->ops->connected_output;
  }
  
-@@ -781,6 +803,19 @@ static void neigh_periodic_work(struct work_struct *work)
+@@ -781,6 +803,19 @@ static void neigh_periodic_work(struct w
  			if (time_before(n->used, n->confirmed))
  				n->used = n->confirmed;
  
@@ -10202,7 +10099,7 @@ index 5b9709f..d8b199e 100644
  			if (atomic_read(&n->refcnt) == 1 &&
  			    (state == NUD_FAILED ||
  			     time_after(jiffies, n->used + n->parms->gc_staletime))) {
-@@ -829,7 +864,7 @@ static void neigh_invalidate(struct neighbour *neigh)
+@@ -829,7 +864,7 @@ static void neigh_invalidate(struct neig
  	struct sk_buff *skb;
  
  	NEIGH_CACHE_STAT_INC(neigh->tbl, res_failed);
@@ -10211,7 +10108,7 @@ index 5b9709f..d8b199e 100644
  	neigh->updated = jiffies;
  
  	/* It is very thin place. report_unreachable is very complicated
-@@ -880,17 +915,17 @@ static void neigh_timer_handler(unsigned long arg)
+@@ -880,17 +915,17 @@ static void neigh_timer_handler(unsigned
  	if (state & NUD_REACHABLE) {
  		if (time_before_eq(now,
  				   neigh->confirmed + neigh->parms->reachable_time)) {
@@ -10232,7 +10129,7 @@ index 5b9709f..d8b199e 100644
  			neigh->nud_state = NUD_STALE;
  			neigh->updated = jiffies;
  			neigh_suspect(neigh);
-@@ -906,7 +941,7 @@ static void neigh_timer_handler(unsigned long arg)
+@@ -906,7 +941,7 @@ static void neigh_timer_handler(unsigned
  			notify = 1;
  			next = neigh->confirmed + neigh->parms->reachable_time;
  		} else {
@@ -10241,7 +10138,7 @@ index 5b9709f..d8b199e 100644
  			neigh->nud_state = NUD_PROBE;
  			neigh->updated = jiffies;
  			atomic_set(&neigh->probes, 0);
-@@ -973,7 +1008,8 @@ int __neigh_event_send(struct neighbour *neigh, struct sk_buff *skb)
+@@ -973,7 +1008,8 @@ int __neigh_event_send(struct neighbour
  			return 1;
  		}
  	} else if (neigh->nud_state & NUD_STALE) {
@@ -10294,8 +10191,6 @@ index 5b9709f..d8b199e 100644
  static int __init neigh_init(void)
  {
  	rtnl_register(PF_UNSPEC, RTM_NEWNEIGH, neigh_add, NULL, NULL);
-diff --git a/net/ipv4/netfilter/Kconfig b/net/ipv4/netfilter/Kconfig
-index f19f218..d926520 100644
 --- a/net/ipv4/netfilter/Kconfig
 +++ b/net/ipv4/netfilter/Kconfig
 @@ -182,6 +182,13 @@ config IP_NF_TARGET_NETMAP
@@ -10312,11 +10207,9 @@ index f19f218..d926520 100644
  config IP_NF_TARGET_REDIRECT
  	tristate "REDIRECT target support"
  	depends on NF_NAT
-diff --git a/net/ipv4/netfilter/Makefile b/net/ipv4/netfilter/Makefile
-index dca2082..096fa01 100644
 --- a/net/ipv4/netfilter/Makefile
 +++ b/net/ipv4/netfilter/Makefile
-@@ -57,6 +57,7 @@ obj-$(CONFIG_IP_NF_TARGET_ECN) += ipt_ECN.o
+@@ -57,6 +57,7 @@ obj-$(CONFIG_IP_NF_TARGET_ECN) += ipt_EC
  obj-$(CONFIG_IP_NF_TARGET_LOG) += ipt_LOG.o
  obj-$(CONFIG_IP_NF_TARGET_MASQUERADE) += ipt_MASQUERADE.o
  obj-$(CONFIG_IP_NF_TARGET_NETMAP) += ipt_NETMAP.o
@@ -10324,11 +10217,9 @@ index dca2082..096fa01 100644
  obj-$(CONFIG_IP_NF_TARGET_REDIRECT) += ipt_REDIRECT.o
  obj-$(CONFIG_IP_NF_TARGET_REJECT) += ipt_REJECT.o
  obj-$(CONFIG_IP_NF_TARGET_ULOG) += ipt_ULOG.o
-diff --git a/net/ipv4/netfilter/nf_conntrack_l3proto_ipv4_compat.c b/net/ipv4/netfilter/nf_conntrack_l3proto_ipv4_compat.c
-index 9682b36..02a5ee8 100644
 --- a/net/ipv4/netfilter/nf_conntrack_l3proto_ipv4_compat.c
 +++ b/net/ipv4/netfilter/nf_conntrack_l3proto_ipv4_compat.c
-@@ -179,6 +179,19 @@ static int ct_seq_show(struct seq_file *s, void *v)
+@@ -179,6 +179,19 @@ static int ct_seq_show(struct seq_file *
  	if (ct_show_secctx(s, ct))
  		goto release;
  
@@ -10348,8 +10239,6 @@ index 9682b36..02a5ee8 100644
  	if (seq_printf(s, "use=%u\n", atomic_read(&ct->ct_general.use)))
  		goto release;
  	ret = 0;
-diff --git a/net/ipv4/route.c b/net/ipv4/route.c
-index 94cdbc5..270c661 100644
 --- a/net/ipv4/route.c
 +++ b/net/ipv4/route.c
 @@ -112,6 +112,13 @@
@@ -10379,7 +10268,7 @@ index 94cdbc5..270c661 100644
  	call_rcu_bh(&rt->dst.rcu_head, dst_rcu_free);
  }
  
-@@ -691,6 +704,14 @@ static int rt_may_expire(struct rtable *rth, unsigned long tmo1, unsigned long t
+@@ -691,6 +704,14 @@ static int rt_may_expire(struct rtable *
  	if (atomic_read(&rth->dst.__refcnt))
  		goto out;
  
@@ -10394,7 +10283,7 @@ index 94cdbc5..270c661 100644
  	age = jiffies - rth->dst.lastuse;
  	if ((age <= tmo1 && !rt_fast_clean(rth)) ||
  	    (age <= tmo2 && rt_valuable(rth)))
-@@ -805,6 +826,54 @@ static void rt_do_flush(struct net *net, int process_context)
+@@ -805,6 +826,54 @@ static void rt_do_flush(struct net *net,
  	}
  }
  
@@ -10449,7 +10338,7 @@ index 94cdbc5..270c661 100644
  /*
   * While freeing expired entries, we compute average chain length
   * and standard deviation, using fixed-point arithmetic.
-@@ -2216,6 +2285,16 @@ static int __mkroute_input(struct sk_buff *skb,
+@@ -2216,6 +2285,16 @@ static int __mkroute_input(struct sk_buf
  
  	rt_set_nexthop(rth, NULL, res, res->fi, res->type, itag);
  
@@ -10478,8 +10367,6 @@ index 94cdbc5..270c661 100644
  	  .mode = 0555, .child = empty},
  	{ }
  };
-diff --git a/net/ipv6/ip6_fib.c b/net/ipv6/ip6_fib.c
-index 93718f3..b9b2fea 100644
 --- a/net/ipv6/ip6_fib.c
 +++ b/net/ipv6/ip6_fib.c
 @@ -43,6 +43,13 @@
@@ -10550,7 +10437,7 @@ index 93718f3..b9b2fea 100644
  /*
   *	Routing Table
   *
-@@ -668,6 +722,16 @@ static int fib6_add_rt2node(struct fib6_node *fn, struct rt6_info *rt,
+@@ -668,6 +722,16 @@ static int fib6_add_rt2node(struct fib6_
  		fn->fn_flags |= RTN_RTINFO;
  	}
  
@@ -10567,7 +10454,7 @@ index 93718f3..b9b2fea 100644
  	return 0;
  }
  
-@@ -1156,6 +1220,14 @@ static void fib6_del_route(struct fib6_node *fn, struct rt6_info **rtp,
+@@ -1156,6 +1220,14 @@ static void fib6_del_route(struct fib6_n
  	}
  
  	inet6_rt_notify(RTM_DELROUTE, rt, info);
@@ -10582,7 +10469,7 @@ index 93718f3..b9b2fea 100644
  	rt6_release(rt);
  }
  
-@@ -1456,6 +1528,13 @@ static int fib6_age(struct rt6_info *rt, void *arg)
+@@ -1456,6 +1528,13 @@ static int fib6_age(struct rt6_info *rt,
  				  rt);
  			return -1;
  		}
@@ -10601,8 +10488,6 @@ index 93718f3..b9b2fea 100644
  	kmem_cache_destroy(fib6_node_kmem);
  }
 +
-diff --git a/net/ipv6/netfilter/Kconfig b/net/ipv6/netfilter/Kconfig
-index f792b34..292338b 100644
 --- a/net/ipv6/netfilter/Kconfig
 +++ b/net/ipv6/netfilter/Kconfig
 @@ -194,6 +194,14 @@ config IP6_NF_RAW
@@ -10620,11 +10505,9 @@ index f792b34..292338b 100644
  # security table for MAC policy
  config IP6_NF_SECURITY
         tristate "Security table"
-diff --git a/net/ipv6/netfilter/Makefile b/net/ipv6/netfilter/Makefile
-index abfee91..3eb2420 100644
 --- a/net/ipv6/netfilter/Makefile
 +++ b/net/ipv6/netfilter/Makefile
-@@ -28,6 +28,7 @@ obj-$(CONFIG_IP6_NF_MATCH_IPV6HEADER) += ip6t_ipv6header.o
+@@ -28,6 +28,7 @@ obj-$(CONFIG_IP6_NF_MATCH_IPV6HEADER) +=
  obj-$(CONFIG_IP6_NF_MATCH_MH) += ip6t_mh.o
  obj-$(CONFIG_IP6_NF_MATCH_OPTS) += ip6t_hbh.o
  obj-$(CONFIG_IP6_NF_MATCH_RT) += ip6t_rt.o
@@ -10632,8 +10515,6 @@ index abfee91..3eb2420 100644
  
  # targets
  obj-$(CONFIG_IP6_NF_TARGET_LOG) += ip6t_LOG.o
-diff --git a/net/ipv6/route.c b/net/ipv6/route.c
-index 19724bd..491b34b 100644
 --- a/net/ipv6/route.c
 +++ b/net/ipv6/route.c
 @@ -831,6 +831,14 @@ restart:
@@ -10651,8 +10532,6 @@ index 19724bd..491b34b 100644
  		err = ip6_ins_rt(nrt);
  		if (!err)
  			goto out2;
-diff --git a/net/netfilter/Kconfig b/net/netfilter/Kconfig
-index 220edf3..d5e3117 100644
 --- a/net/netfilter/Kconfig
 +++ b/net/netfilter/Kconfig
 @@ -1043,6 +1043,27 @@ config NETFILTER_XT_MATCH_LAYER7_DEBUG
@@ -10683,11 +10562,9 @@ index 220edf3..d5e3117 100644
  config NETFILTER_XT_MATCH_STATISTIC
  	tristate '"statistic" match support'
  	depends on NETFILTER_ADVANCED
-diff --git a/net/netfilter/Makefile b/net/netfilter/Makefile
-index 0427cbd..1a02853 100644
 --- a/net/netfilter/Makefile
 +++ b/net/netfilter/Makefile
-@@ -102,7 +102,6 @@ obj-$(CONFIG_NETFILTER_XT_MATCH_RECENT) += xt_recent.o
+@@ -102,7 +102,6 @@ obj-$(CONFIG_NETFILTER_XT_MATCH_RECENT)
  obj-$(CONFIG_NETFILTER_XT_MATCH_SCTP) += xt_sctp.o
  obj-$(CONFIG_NETFILTER_XT_MATCH_SOCKET) += xt_socket.o
  obj-$(CONFIG_NETFILTER_XT_MATCH_STATE) += xt_state.o
@@ -10695,8 +10572,6 @@ index 0427cbd..1a02853 100644
  obj-$(CONFIG_NETFILTER_XT_MATCH_STATISTIC) += xt_statistic.o
  obj-$(CONFIG_NETFILTER_XT_MATCH_STRING) += xt_string.o
  obj-$(CONFIG_NETFILTER_XT_MATCH_TCPMSS) += xt_tcpmss.o
-diff --git a/net/netfilter/nf_conntrack_core.c b/net/netfilter/nf_conntrack_core.c
-index 0c56e4c..d5c7d19 100644
 --- a/net/netfilter/nf_conntrack_core.c
 +++ b/net/netfilter/nf_conntrack_core.c
 @@ -46,6 +46,19 @@
@@ -10719,7 +10594,7 @@ index 0c56e4c..d5c7d19 100644
  
  #define NF_CONNTRACK_VERSION	"0.5.0"
  
-@@ -299,6 +319,82 @@ static void death_by_timeout(unsigned long ul_conntrack)
+@@ -299,6 +312,82 @@ static void death_by_timeout(unsigned lo
  	struct nf_conn *ct = (void *)ul_conntrack;
  	struct nf_conn_tstamp *tstamp;
  
@@ -10802,7 +10677,7 @@ index 0c56e4c..d5c7d19 100644
  	tstamp = nf_conn_tstamp_find(ct);
  	if (tstamp && tstamp->stop == 0)
  		tstamp->stop = ktime_to_ns(ktime_get_real());
-@@ -704,6 +800,19 @@ __nf_conntrack_alloc(struct net *net, u16 zone,
+@@ -704,6 +793,19 @@ __nf_conntrack_alloc(struct net *net, u1
  		nf_ct_zone->id = zone;
  	}
  #endif
@@ -10822,7 +10697,7 @@ index 0c56e4c..d5c7d19 100644
  	/*
  	 * changes to lookup keys must be done before setting refcnt to 1
  	 */
-@@ -731,6 +840,14 @@ void nf_conntrack_free(struct nf_conn *ct)
+@@ -731,6 +833,14 @@ void nf_conntrack_free(struct nf_conn *c
  {
  	struct net *net = nf_ct_net(ct);
  
@@ -10837,7 +10712,7 @@ index 0c56e4c..d5c7d19 100644
  	nf_ct_ext_destroy(ct);
  	atomic_dec(&net->ct.count);
  	nf_ct_ext_free(ct);
-@@ -1432,6 +1549,84 @@ void nf_ct_untracked_status_or(unsigned long bits)
+@@ -1432,6 +1542,84 @@ void nf_ct_untracked_status_or(unsigned
  }
  EXPORT_SYMBOL_GPL(nf_ct_untracked_status_or);
  
@@ -10922,11 +10797,9 @@ index 0c56e4c..d5c7d19 100644
  static int nf_conntrack_init_init_net(void)
  {
  	int max_factor = 8;
-diff --git a/net/netfilter/nf_conntrack_proto_tcp.c b/net/netfilter/nf_conntrack_proto_tcp.c
-index 37c4324..aab0481 100644
 --- a/net/netfilter/nf_conntrack_proto_tcp.c
 +++ b/net/netfilter/nf_conntrack_proto_tcp.c
-@@ -821,6 +821,9 @@ static int tcp_packet(struct nf_conn *ct,
+@@ -821,6 +821,9 @@ static int tcp_packet(struct nf_conn *ct
  {
  	struct net *net = nf_ct_net(ct);
  	struct nf_conntrack_tuple *tuple;
@@ -10936,7 +10809,7 @@ index 37c4324..aab0481 100644
  	enum tcp_conntrack new_state, old_state;
  	enum ip_conntrack_dir dir;
  	const struct tcphdr *th;
-@@ -837,7 +840,9 @@ static int tcp_packet(struct nf_conn *ct,
+@@ -837,7 +840,9 @@ static int tcp_packet(struct nf_conn *ct
  	index = get_conntrack_index(th);
  	new_state = tcp_conntracks[dir][index][old_state];
  	tuple = &ct->tuplehash[dir].tuple;
@@ -10947,7 +10820,7 @@ index 37c4324..aab0481 100644
  	switch (new_state) {
  	case TCP_CONNTRACK_SYN_SENT:
  		if (old_state < TCP_CONNTRACK_TIME_WAIT)
-@@ -989,6 +994,15 @@ static int tcp_packet(struct nf_conn *ct,
+@@ -989,6 +994,15 @@ static int tcp_packet(struct nf_conn *ct
  		break;
  	}
  
@@ -10963,11 +10836,9 @@ index 37c4324..aab0481 100644
  	if (!tcp_in_window(ct, &ct->proto.tcp, dir, index,
  			   skb, dataoff, th, pf)) {
  		spin_unlock_bh(&ct->lock);
-diff --git a/net/netfilter/nf_conntrack_standalone.c b/net/netfilter/nf_conntrack_standalone.c
-index 621e2da..b12092c 100644
 --- a/net/netfilter/nf_conntrack_standalone.c
 +++ b/net/netfilter/nf_conntrack_standalone.c
-@@ -245,6 +245,25 @@ static int ct_seq_show(struct seq_file *s, void *v)
+@@ -245,6 +245,25 @@ static int ct_seq_show(struct seq_file *
  		return -ENOSPC;
  #endif
  
@@ -10993,9 +10864,6 @@ index 621e2da..b12092c 100644
  	if (seq_printf(s, "use=%u\n", atomic_read(&ct->ct_general.use)))
  		goto release;
  
-diff --git a/net/netfilter/regexp/regexp.c b/net/netfilter/regexp/regexp.c
-deleted file mode 100644
-index 9006988..0000000
 --- a/net/netfilter/regexp/regexp.c
 +++ /dev/null
 @@ -1,1197 +0,0 @@
@@ -12196,9 +12064,6 @@ index 9006988..0000000
 -#endif
 -
 -
-diff --git a/net/netfilter/regexp/regexp.h b/net/netfilter/regexp/regexp.h
-deleted file mode 100644
-index a72eba7..0000000
 --- a/net/netfilter/regexp/regexp.h
 +++ /dev/null
 @@ -1,41 +0,0 @@
@@ -12243,9 +12108,6 @@ index a72eba7..0000000
 -void regerror(char *s);
 -
 -#endif
-diff --git a/net/netfilter/regexp/regmagic.h b/net/netfilter/regexp/regmagic.h
-deleted file mode 100644
-index 5acf447..0000000
 --- a/net/netfilter/regexp/regmagic.h
 +++ /dev/null
 @@ -1,5 +0,0 @@
@@ -12254,9 +12116,6 @@ index 5acf447..0000000
 - * number; the start node begins in the second byte.
 - */
 -#define	MAGIC	0234
-diff --git a/net/netfilter/regexp/regsub.c b/net/netfilter/regexp/regsub.c
-deleted file mode 100644
-index 339631f..0000000
 --- a/net/netfilter/regexp/regsub.c
 +++ /dev/null
 @@ -1,95 +0,0 @@
@@ -12355,9 +12214,6 @@ index 339631f..0000000
 -	}
 -	*dst++ = '\0';
 -}
-diff --git a/net/netfilter/xt_layer7.c b/net/netfilter/xt_layer7.c
-deleted file mode 100644
-index 837fe2f..0000000
 --- a/net/netfilter/xt_layer7.c
 +++ /dev/null
 @@ -1,700 +0,0 @@
@@ -13061,6 +12917,3 @@ index 837fe2f..0000000
 -
 -module_init(xt_layer7_init);
 -module_exit(xt_layer7_fini);
--- 
-1.7.9.5
-

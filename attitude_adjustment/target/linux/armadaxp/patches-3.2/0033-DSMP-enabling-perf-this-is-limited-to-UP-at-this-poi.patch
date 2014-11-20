@@ -12,11 +12,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/mach-armadaxp/irq.c      |    1 +
  4 files changed, 12 insertions(+), 10 deletions(-)
 
-diff --git a/arch/arm/kernel/hw_breakpoint.c b/arch/arm/kernel/hw_breakpoint.c
-index 2bc1a8e..f6c6f47 100644
 --- a/arch/arm/kernel/hw_breakpoint.c
 +++ b/arch/arm/kernel/hw_breakpoint.c
-@@ -1050,7 +1050,7 @@ static int __init arch_hw_breakpoint_init(void)
+@@ -1050,7 +1050,7 @@ static int __init arch_hw_breakpoint_ini
  	register_cpu_notifier(&dbg_reset_nb);
  	return 0;
  }
@@ -25,11 +23,9 @@ index 2bc1a8e..f6c6f47 100644
  
  void hw_breakpoint_pmu_read(struct perf_event *bp)
  {
-diff --git a/arch/arm/kernel/perf_event.c b/arch/arm/kernel/perf_event.c
-index f5e530c..8775b32 100644
 --- a/arch/arm/kernel/perf_event.c
 +++ b/arch/arm/kernel/perf_event.c
-@@ -387,7 +387,11 @@ armpmu_release_hardware(struct arm_pmu *armpmu)
+@@ -387,7 +387,11 @@ armpmu_release_hardware(struct arm_pmu *
  			continue;
  		irq = platform_get_irq(pmu_device, i);
  		if (irq >= 0)
@@ -41,7 +37,7 @@ index f5e530c..8775b32 100644
  	}
  
  	release_pmu(armpmu->type);
-@@ -440,7 +444,7 @@ armpmu_reserve_hardware(struct arm_pmu *armpmu)
+@@ -440,7 +444,7 @@ armpmu_reserve_hardware(struct arm_pmu *
  		}
  
  #ifdef CONFIG_ARCH_ARMADA_XP
@@ -50,7 +46,7 @@ index f5e530c..8775b32 100644
  #else
  		err = request_irq(irq, handle_irq,
  				  IRQF_DISABLED | IRQF_NOBALANCING,
-@@ -566,7 +570,6 @@ static int armpmu_event_init(struct perf_event *event)
+@@ -566,7 +570,6 @@ static int armpmu_event_init(struct perf
  
  	if (err)
  		return err;
@@ -71,11 +67,9 @@ index f5e530c..8775b32 100644
  			break;
  		}
  	}
-diff --git a/arch/arm/kernel/perf_event_pj4b.c b/arch/arm/kernel/perf_event_pj4b.c
-index 8f92487..3539532 100644
 --- a/arch/arm/kernel/perf_event_pj4b.c
 +++ b/arch/arm/kernel/perf_event_pj4b.c
-@@ -296,7 +296,7 @@ static inline int mrvl_pj4b_pmu_counter_has_overflowed(unsigned long val,
+@@ -296,7 +296,7 @@ static inline int mrvl_pj4b_pmu_counter_
  				  enum pj4b_pmu_counters counter)
  {
  	int ret = 0;
@@ -84,7 +78,7 @@ index 8f92487..3539532 100644
  	if (counter == MRVL_PJ4B_CCNT)
  		ret = (val & (1 << MRVL_PJ4B_CCNT_BIT_OFFSET));
  	else if (counter < MRVL_PJ4B_MAX_COUNTERS)
-@@ -451,6 +451,7 @@ static irqreturn_t mrvl_pj4b_pmu_handle_irq(int irq, void *arg)
+@@ -451,6 +451,7 @@ static irqreturn_t mrvl_pj4b_pmu_handle_
  	struct perf_sample_data data;	
  	struct cpu_hw_events *cpuc;	
  	u32 pmnc;
@@ -92,7 +86,7 @@ index 8f92487..3539532 100644
  	pmnc = mrvl_pj4b_read_pmnc();	
  	pmnc &= ~MRVL_PJ4B_PMU_ENABLE;
  	mrvl_pj4b_write_pmnc(pmnc);	
-@@ -588,8 +589,8 @@ static const struct arm_pmu mrvl_pj4b_pmu = {
+@@ -588,8 +589,8 @@ static const struct arm_pmu mrvl_pj4b_pm
  	.read_counter	= mrvl_pj4b_pmu_read_counter, /*v*/
  	.write_counter	= mrvl_pj4b_pmu_write_counter, /*v*/
  	.get_event_idx	= mrvl_pj4b_pmu_get_event_idx,/*v*/
@@ -103,8 +97,6 @@ index 8f92487..3539532 100644
  	.handle_irq		= mrvl_pj4b_pmu_handle_irq, /*v*/
  	.reset 			= mrvl_pj4b_pmu_reset,
  	/*.raw_event		= mrvl_pj4b_pmu_raw_event,*/
-diff --git a/arch/arm/mach-armadaxp/irq.c b/arch/arm/mach-armadaxp/irq.c
-index f024b70..e07c4c2 100644
 --- a/arch/arm/mach-armadaxp/irq.c
 +++ b/arch/arm/mach-armadaxp/irq.c
 @@ -298,6 +298,7 @@ void __init axp_init_irq(void)
@@ -115,6 +107,3 @@ index f024b70..e07c4c2 100644
  	int ret = request_irq(irq, handler, IRQF_DISABLED | IRQF_NOBALANCING, "armpmu", NULL);
  	if (!ret) {
  		for_each_online_cpu(i) {
--- 
-1.7.9.5
-

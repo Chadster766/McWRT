@@ -15,8 +15,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  .../plat-armada/mv_drivers_lsp/mv_network/Kconfig  |    2 +-
  8 files changed, 84 insertions(+), 70 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
-index f758bf1..2085184 100644
 --- a/arch/arm/mach-armadaxp/Makefile
 +++ b/arch/arm/mach-armadaxp/Makefile
 @@ -71,10 +71,11 @@ ifdef CONFIG_MV_ETH_NFP_FIB
@@ -35,7 +33,7 @@ index f758bf1..2085184 100644
  # Objects list
  COMMON_OBJS	= $(COMMON_DIR)/mvDebug.o $(COMMON_DIR)/mvCommon.o $(COMMON_DIR)/mvStack.o $(COMMON_DIR)/mvList.o $(COMMON_DIR)/mvIpc.o
  
-@@ -126,7 +127,7 @@ armadaxp-$(CONFIG_MV_INCLUDE_USB) 	+= $(HAL_USB_DIR)/mvUsb.o $(HAL_USB_DIR)/mvUs
+@@ -126,7 +127,7 @@ armadaxp-$(CONFIG_MV_INCLUDE_USB) 	+= $(
  					   $(HAL_IF_DIR)/mvSysUsb.o
  armadaxp-y				+= $(HAL_ETHPHY_DIR)/mvEthPhy.o $(HAL_IF_DIR)/mvSysEthPhy.o
  
@@ -44,14 +42,12 @@ index f758bf1..2085184 100644
  	armadaxp-y += $(NFPOBJS)
  endif
  
-@@ -219,5 +220,4 @@ armadaxp-$(CONFIG_PROC_FS)		+= dump_cp15_regs.o
+@@ -219,5 +220,4 @@ armadaxp-$(CONFIG_PROC_FS)		+= dump_cp15
  obj-$(CONFIG_FB_DOVE_CLCD)		+= clcd.o
  obj-$(CONFIG_PM)			+= pm.o
  
 -endif
  
-diff --git a/arch/arm/mach-armadaxp/export.c b/arch/arm/mach-armadaxp/export.c
-index 7706b1c..82cad4f 100644
 --- a/arch/arm/mach-armadaxp/export.c
 +++ b/arch/arm/mach-armadaxp/export.c
 @@ -25,6 +25,8 @@
@@ -74,11 +70,9 @@ index 7706b1c..82cad4f 100644
 +#endif
 +EXPORT_SYMBOL(mvListCreate);
 +#endif
-diff --git a/arch/arm/plat-armada/common/mvList.c b/arch/arm/plat-armada/common/mvList.c
-index 5d7928f..965d23f 100644
 --- a/arch/arm/plat-armada/common/mvList.c
 +++ b/arch/arm/plat-armada/common/mvList.c
-@@ -68,6 +68,7 @@ MV_STATUS mvListDestroy(MV_LIST_ELEMENT *head)
+@@ -68,6 +68,7 @@ MV_STATUS mvListDestroy(MV_LIST_ELEMENT
  
  	return MV_OK;
  }
@@ -86,8 +80,6 @@ index 5d7928f..965d23f 100644
  
  /* Count the number of elements in the list (not including the head) */
  MV_LONG mvListElementsCount(MV_LIST_ELEMENT *head)
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
-index aeb6e22..5882663 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
 @@ -670,50 +670,28 @@ endmenu
@@ -245,8 +237,6 @@ index aeb6e22..5882663 100644
          ---help---
  
  config  MV_ETH_NFP_STATS
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile
-index 600889f..866029a 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile
 @@ -1,6 +1,7 @@
@@ -257,8 +247,6 @@ index 600889f..866029a 100644
  ifeq ($(CONFIG_ARCH_FEROCEON),y)
  	include $(srctree)/$(MACHINE)/config/mvRules.mk
  endif
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-index db7531e..cdd4cba 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 @@ -60,6 +60,9 @@ disclaimer.
@@ -294,7 +282,7 @@ index db7531e..cdd4cba 100755
  /*
   * Static declarations
   */
-@@ -165,6 +167,20 @@ __setup("mv_port2_config=", mv_eth_cmdline_port2_config);
+@@ -165,6 +167,20 @@ __setup("mv_port2_config=", mv_eth_cmdli
  int mv_eth_cmdline_port3_config(char *s);
  __setup("mv_port3_config=", mv_eth_cmdline_port3_config);
  
@@ -315,7 +303,7 @@ index db7531e..cdd4cba 100755
  int mv_eth_cmdline_port0_config(char *s)
  {
  	port0_config_str = s;
-@@ -1008,6 +1024,7 @@ void mv_eth_rx_desc_print(struct neta_rx_desc *desc)
+@@ -1008,6 +1024,7 @@ void mv_eth_rx_desc_print(struct neta_rx
  
  	printk(KERN_CONT "\n");
  }
@@ -323,7 +311,7 @@ index db7531e..cdd4cba 100755
  
  void mv_eth_tx_desc_print(struct neta_tx_desc *desc)
  {
-@@ -1019,6 +1036,7 @@ void mv_eth_tx_desc_print(struct neta_tx_desc *desc)
+@@ -1019,6 +1036,7 @@ void mv_eth_tx_desc_print(struct neta_tx
  		printk(KERN_CONT "%8.8x ", *words++);
  	printk(KERN_CONT "\n");
  }
@@ -331,7 +319,7 @@ index db7531e..cdd4cba 100755
  
  void mv_eth_pkt_print(struct eth_pbuf *pkt)
  {
-@@ -1030,6 +1048,7 @@ void mv_eth_pkt_print(struct eth_pbuf *pkt)
+@@ -1030,6 +1048,7 @@ void mv_eth_pkt_print(struct eth_pbuf *p
  	mvDebugMemDump(pkt->pBuf + pkt->offset, 64, 1);
  	mvOsCacheInvalidate(NULL, pkt->pBuf + pkt->offset, 64);
  }
@@ -339,7 +327,7 @@ index db7531e..cdd4cba 100755
  
  static inline void mv_eth_rx_csum(struct eth_port *pp, struct neta_rx_desc *rx_desc, struct sk_buff *skb)
  {
-@@ -1118,6 +1137,8 @@ int mv_eth_skb_recycle(struct sk_buff *skb)
+@@ -1118,6 +1137,8 @@ int mv_eth_skb_recycle(struct sk_buff *s
  
  	return 1;
  }
@@ -348,7 +336,7 @@ index db7531e..cdd4cba 100755
  #endif /* CONFIG_NET_SKB_RECYCLE */
  
  static struct sk_buff *mv_eth_skb_alloc(struct bm_pool *pool, struct eth_pbuf *pkt)
-@@ -1211,6 +1232,7 @@ inline u32 mv_eth_txq_done(struct eth_port *pp, struct tx_queue *txq_ctrl)
+@@ -1211,6 +1232,7 @@ inline u32 mv_eth_txq_done(struct eth_po
  
  	return tx_done;
  }
@@ -356,7 +344,7 @@ index db7531e..cdd4cba 100755
  
  inline struct eth_pbuf *mv_eth_pool_get(struct bm_pool *pool)
  {
-@@ -1266,7 +1288,7 @@ inline int mv_eth_refill(struct eth_port *pp, int rxq,
+@@ -1266,7 +1288,7 @@ inline int mv_eth_refill(struct eth_port
  
  	return 0;
  }
@@ -365,7 +353,7 @@ index db7531e..cdd4cba 100755
  
  static inline MV_U32 mv_eth_skb_tx_csum(struct eth_port *pp, struct sk_buff *skb)
  {
-@@ -1447,14 +1469,14 @@ static inline int mv_eth_rx(struct eth_port *pp, int rx_todo, int rxq)
+@@ -1447,14 +1469,14 @@ static inline int mv_eth_rx(struct eth_p
  		}
  #endif /* CONFIG_MV_ETH_PNC && CONFIG_MV_ETH_RX_SPECIAL */
  
@@ -382,7 +370,7 @@ index db7531e..cdd4cba 100755
  			if (status == MV_OK)
  				continue;
  			if (status == MV_FAIL) {
-@@ -1502,7 +1524,7 @@ static inline int mv_eth_rx(struct eth_port *pp, int rx_todo, int rxq)
+@@ -1502,7 +1524,7 @@ static inline int mv_eth_rx(struct eth_p
  		if (skb) {
  			STAT_DBG(pp->stats.rx_netif++);
  			rx_status = netif_receive_skb(skb);
@@ -405,7 +393,7 @@ index db7531e..cdd4cba 100755
  		}
  		/* If after calling mv_eth_txq_done, txq_ctrl->txq_count equals frags, we need to set the timer */
  		if ((txq_ctrl->txq_count == frags) && (frags > 0))
-@@ -2051,8 +2073,7 @@ inline u32 mv_eth_tx_done_pon(struct eth_port *pp, int *tx_todo)
+@@ -2051,8 +2073,7 @@ inline u32 mv_eth_tx_done_pon(struct eth
  		}
  	}
  
@@ -415,7 +403,7 @@ index db7531e..cdd4cba 100755
  
  	return tx_done;
  }
-@@ -2088,8 +2109,7 @@ inline u32 mv_eth_tx_done_gbe(struct eth_port *pp, u32 cause_tx_done, int *tx_to
+@@ -2088,8 +2109,7 @@ inline u32 mv_eth_tx_done_gbe(struct eth
  		}
  	}
  
@@ -425,7 +413,7 @@ index db7531e..cdd4cba 100755
  
  	return tx_done;
  }
-@@ -2541,8 +2561,7 @@ int mv_eth_poll(struct napi_struct *napi, int budget)
+@@ -2541,8 +2561,7 @@ int mv_eth_poll(struct napi_struct *napi
  	budget -= rx_done;
  #endif /* (CONFIG_MV_ETH_RXQ > 1) */
  
@@ -435,7 +423,7 @@ index db7531e..cdd4cba 100755
  
  #ifdef CONFIG_MV_ETH_DEBUG_CODE
  	if (pp->flags & MV_ETH_F_DBG_POLL) {
-@@ -2913,15 +2932,9 @@ static int mv_eth_probe(struct platform_device *pdev)
+@@ -2913,15 +2932,9 @@ static int mv_eth_probe(struct platform_
  		}
  	}
  
@@ -453,7 +441,7 @@ index db7531e..cdd4cba 100755
  
  	printk(KERN_ERR "\n");
  
-@@ -3140,6 +3153,7 @@ bool mv_eth_netdev_find(unsigned int dev_idx)
+@@ -3140,6 +3153,7 @@ bool mv_eth_netdev_find(unsigned int dev
  	}
  	return false;
  }
@@ -461,11 +449,9 @@ index db7531e..cdd4cba 100755
  
  void mv_eth_netdev_update(int dev_index, struct eth_port *pp)
  {
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
-index 5892247..d50a62b 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
-@@ -730,4 +730,15 @@ MV_STATUS mv_eth_hwf_bm_create(int port, int mtuPktSize);
+@@ -730,4 +730,15 @@ MV_STATUS mv_eth_hwf_bm_create(int port,
  void      mv_hwf_bm_dump(void);
  #endif /* CONFIG_MV_ETH_HWF && !CONFIG_MV_ETH_BM_CPU */
  
@@ -481,8 +467,6 @@ index 5892247..d50a62b 100755
 +
 +
  #endif /* __mv_netdev_h__ */
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_network/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_network/Kconfig
-index 102412b..a67f8c2 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_network/Kconfig
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_network/Kconfig
 @@ -196,7 +196,7 @@ config NET_SKB_RECYCLE_DEF
@@ -494,6 +478,3 @@ index 102412b..a67f8c2 100644
  	default y
          ---help---
          Choosing this option will include NFP support in the image.
--- 
-1.7.9.5
-

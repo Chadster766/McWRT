@@ -10,8 +10,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/mach-armadaxp/include/mach/irqs.h |    2 +-
  2 files changed, 43 insertions(+), 6 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/hwmon.c b/arch/arm/mach-armadaxp/hwmon.c
-index e326718..eb87175 100644
 --- a/arch/arm/mach-armadaxp/hwmon.c
 +++ b/arch/arm/mach-armadaxp/hwmon.c
 @@ -30,6 +30,7 @@
@@ -30,7 +28,7 @@ index e326718..eb87175 100644
  #define	PMU_INT_CAUSE_REG	0x1c120
  #define PMU_INT_OVRHEAT_MASK	0x1
  #define PMU_INT_COOLING_MASK	0x2
-@@ -99,7 +101,7 @@ static void axptemp_set_thresholds(unsigned int max, unsigned int min)
+@@ -99,7 +101,7 @@ static void axptemp_set_thresholds(unsig
  	reg |= (temp << PMU_TM_OVRHEAT_THRSH_OFFS);
  	writel(reg, (INTER_REGS_BASE | PMU_THERMAL_MNGR_REG));
  
@@ -49,7 +47,7 @@ index e326718..eb87175 100644
  
  	return 0;
  }
-@@ -192,7 +197,7 @@ static ssize_t show_alarm(struct device *dev, struct device_attribute
+@@ -192,7 +197,7 @@ static ssize_t show_alarm(struct device
  		writel ((reg & ~PMU_INT_COOLING_MASK), (INTER_REGS_BASE | PMU_INT_CAUSE_REG));
  	}
  
@@ -58,7 +56,7 @@ index e326718..eb87175 100644
  }
  
  static ssize_t show_info(struct device *dev,
-@@ -256,11 +261,38 @@ static ssize_t set_temp(struct device *dev, struct device_attribute *devattr,
+@@ -256,11 +261,38 @@ static ssize_t set_temp(struct device *d
  	else
  		printk(KERN_ERR "axp-temp: Invalid sensor attribute!");
  
@@ -98,7 +96,7 @@ index e326718..eb87175 100644
  /* TODO - Add read/write support in order to support setting max/min */
  static SENSOR_DEVICE_ATTR(temp1_type, S_IRUGO, show_info, NULL,
  			  SHOW_TYPE);
-@@ -292,7 +324,7 @@ static const struct attribute_group axptemp_group = {
+@@ -292,7 +324,7 @@ static const struct attribute_group axpt
  
  static int __devinit axptemp_probe(struct platform_device *pdev)
  {
@@ -107,7 +105,7 @@ index e326718..eb87175 100644
  
  	err = axptemp_init_sensor();
  	if (err)
-@@ -309,10 +341,15 @@ static int __devinit axptemp_probe(struct platform_device *pdev)
+@@ -309,10 +341,15 @@ static int __devinit axptemp_probe(struc
  		goto exit;
  	}
  
@@ -124,8 +122,6 @@ index e326718..eb87175 100644
  exit:
  	sysfs_remove_group(&pdev->dev.kobj, &axptemp_group);
  	return err;
-diff --git a/arch/arm/mach-armadaxp/include/mach/irqs.h b/arch/arm/mach-armadaxp/include/mach/irqs.h
-index 7f805a7..3968cf9 100644
 --- a/arch/arm/mach-armadaxp/include/mach/irqs.h
 +++ b/arch/arm/mach-armadaxp/include/mach/irqs.h
 @@ -120,7 +120,7 @@
@@ -137,6 +133,3 @@ index 7f805a7..3968cf9 100644
  
  #define IRQ_AURORA_DRAM		108
  
--- 
-1.7.9.5
-

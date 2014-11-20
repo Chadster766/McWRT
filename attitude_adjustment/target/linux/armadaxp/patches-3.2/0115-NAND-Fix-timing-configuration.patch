@@ -13,8 +13,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/plat-armada/mv_hal/nfc/mvNfcRegs.h   |   10 +-
  5 files changed, 225 insertions(+), 55 deletions(-)
 
-diff --git a/arch/arm/configs/armada_xp_defconfig b/arch/arm/configs/armada_xp_defconfig
-index 5616a7f..fedba3f 100644
 --- a/arch/arm/configs/armada_xp_defconfig
 +++ b/arch/arm/configs/armada_xp_defconfig
 @@ -299,7 +299,6 @@ CONFIG_MV_INCLUDE_SDIO=y
@@ -25,8 +23,6 @@ index 5616a7f..fedba3f 100644
  CONFIG_MV_GPP_MAX_PINS=67
  CONFIG_MV_DCACHE_SIZE=0x8000
  
-diff --git a/arch/arm/mach-armadaxp/config/mvSysHwConfig.h b/arch/arm/mach-armadaxp/config/mvSysHwConfig.h
-index 8d245ca..caf7774 100644
 --- a/arch/arm/mach-armadaxp/config/mvSysHwConfig.h
 +++ b/arch/arm/mach-armadaxp/config/mvSysHwConfig.h
 @@ -163,6 +163,21 @@ disclaimer.
@@ -51,8 +47,6 @@ index 8d245ca..caf7774 100644
  #ifdef CONFIG_MV_INCLUDE_PDMA
  #define MV_INCLUDE_PDMA
  #endif
-diff --git a/arch/arm/plat-armada/Kconfig b/arch/arm/plat-armada/Kconfig
-index 75efd2c..8def98e 100644
 --- a/arch/arm/plat-armada/Kconfig
 +++ b/arch/arm/plat-armada/Kconfig
 @@ -337,6 +337,14 @@ config MTD_NAND_NFC_INIT_RESET
@@ -70,11 +64,9 @@ index 75efd2c..8def98e 100644
  endmenu
  
  choice
-diff --git a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
-index 4979573..ee5c19c 100644
 --- a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
 +++ b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
-@@ -98,7 +98,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -98,7 +98,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  /* NAND special features bitmask definition.	*/
  #define NFC_FLAGS_NONE			0x0
  #define NFC_FLAGS_ONFI_MODE_3_SET	0x1
@@ -83,7 +75,7 @@ index 4979573..ee5c19c 100644
  
  /* End of NAND special features definitions.	*/
  
-@@ -135,6 +135,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -135,6 +135,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  /* Macros */
  /**********/
  #define ns_clk(ns, ns2clk)	((ns % ns2clk) ? (MV_U32)((ns/ns2clk)+1) : (MV_U32)(ns/ns2clk))
@@ -353,7 +345,7 @@ index 4979573..ee5c19c 100644
  
  	if (mvNfcDbgFlag)
  		mvOsPrintf("NFC write 0x%08x = %08x\n", addr, val);
-@@ -531,9 +560,6 @@ static MV_STATUS mvDfcWait4Complete(MV_U32 statMask, MV_U32 usec);
+@@ -531,9 +560,6 @@ static MV_STATUS mvDfcWait4Complete(MV_U
  static MV_STATUS mvNfcReadIdNative(MV_NFC_CHIP_SEL cs, MV_U16 *id);
  static MV_STATUS mvNfcTimingSet(MV_U32 tclk, MV_NFC_FLASH_INFO *flInfo);
  static MV_U32 mvNfcColBits(MV_U32 pg_size);
@@ -363,7 +355,7 @@ index 4979573..ee5c19c 100644
  static MV_STATUS mvNfcDeviceFeatureSet(MV_NFC_CTRL *nfcCtrl, MV_U8 cmd, MV_U8 addr, MV_U32 data0, MV_U32 data1);
  static MV_STATUS mvNfcDeviceFeatureGet(MV_NFC_CTRL *nfcCtrl, MV_U8 cmd, MV_U8 addr, MV_U32 *data0, MV_U32 *data1);
  static MV_STATUS mvNfcDeviceModeSet(MV_NFC_CTRL *nfcCtrl, MV_NFC_ONFI_MODE mode);
-@@ -598,6 +624,10 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo, MV_NFC_CTRL *nfcCtrl)
+@@ -598,6 +624,10 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo
  	setNANDClock(8); /* Go down to 125MHz */
  	nand_clock = 125000000;
  
@@ -374,7 +366,7 @@ index 4979573..ee5c19c 100644
  	/* make sure ECC is disabled at this point - will be enabled only when issuing certain commands */
  	MV_REG_BIT_RESET(NFC_CONTROL_REG, NFC_CTRL_ECC_EN_MASK);
  	if (nfcInfo->eccMode != MV_NFC_ECC_HAMMING)
-@@ -636,12 +666,12 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo, MV_NFC_CTRL *nfcCtrl)
+@@ -636,12 +666,12 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo
  	/* Write registers before device detection */
  	MV_REG_WRITE(NFC_CONTROL_REG, ctrl_reg);
  
@@ -389,7 +381,7 @@ index 4979573..ee5c19c 100644
  
  	/* Read the device ID */
  	ret = mvNfcReadIdNative(nfcCtrl->currCs, &read_id);
-@@ -666,9 +696,9 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo, MV_NFC_CTRL *nfcCtrl)
+@@ -666,9 +696,9 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo
  	}
  
  	/* Critical Initialization done. Raise NFC clock if needed */
@@ -402,7 +394,7 @@ index 4979573..ee5c19c 100644
  	}
  
  	/* Configure the command set based on page size */
-@@ -2450,7 +2480,7 @@ static MV_STATUS mvNfcDeviceModeSet(MV_NFC_CTRL *nfcCtrl, MV_NFC_ONFI_MODE mode)
+@@ -2450,7 +2480,7 @@ static MV_STATUS mvNfcDeviceModeSet(MV_N
  
  	if (mode == MV_NFC_ONFI_MODE_3) {
  		/* Switch to faster mode */
@@ -411,7 +403,7 @@ index 4979573..ee5c19c 100644
  		if (ret != MV_OK)
  			return ret;
  
-@@ -2465,7 +2495,7 @@ static MV_STATUS mvNfcDeviceModeSet(MV_NFC_CTRL *nfcCtrl, MV_NFC_ONFI_MODE mode)
+@@ -2465,7 +2495,7 @@ static MV_STATUS mvNfcDeviceModeSet(MV_N
  }
  
  
@@ -429,7 +421,7 @@ index 4979573..ee5c19c 100644
  /*******************************************************************************
  * mvNfcReadIdNative
  *
-@@ -2598,8 +2628,13 @@ static MV_STATUS mvNfcReadIdNative(MV_NFC_CHIP_SEL cs, MV_U16 *id)
+@@ -2598,8 +2628,13 @@ static MV_STATUS mvNfcReadIdNative(MV_NF
  *******************************************************************************/
  static MV_STATUS mvNfcTimingSet(MV_U32 tclk, MV_NFC_FLASH_INFO *flInfo)
  {
@@ -444,7 +436,7 @@ index 4979573..ee5c19c 100644
  
  	switch (tclk) {
  	case 125000000:
-@@ -2618,25 +2653,138 @@ static MV_STATUS mvNfcTimingSet(MV_U32 tclk, MV_NFC_FLASH_INFO *flInfo)
+@@ -2618,25 +2653,138 @@ static MV_STATUS mvNfcTimingSet(MV_U32 t
  		return MV_FAIL;
  	};
  
@@ -600,8 +592,6 @@ index 4979573..ee5c19c 100644
  	MV_REG_WRITE(NFC_TIMING_1_REG, reg);
  
  	return MV_OK;
-diff --git a/arch/arm/plat-armada/mv_hal/nfc/mvNfcRegs.h b/arch/arm/plat-armada/mv_hal/nfc/mvNfcRegs.h
-index c3a9d10..213b0ce 100644
 --- a/arch/arm/plat-armada/mv_hal/nfc/mvNfcRegs.h
 +++ b/arch/arm/plat-armada/mv_hal/nfc/mvNfcRegs.h
 @@ -118,8 +118,8 @@ extern "C" {
@@ -635,6 +625,3 @@ index c3a9d10..213b0ce 100644
  #define NFC_TMNG1_TR_OFFS		16
  #define NFC_TMNG1_TR_MASK		(0xFFFF << NFC_TMNG1_TR_OFFS)
  
--- 
-1.7.9.5
-

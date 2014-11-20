@@ -19,11 +19,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/mm/idmap.c            |   36 ++++++++++++++++++++++++++++++++++--
  2 files changed, 34 insertions(+), 6 deletions(-)
 
-diff --git a/arch/arm/include/asm/pgtable.h b/arch/arm/include/asm/pgtable.h
-index fdb98a1..449b1bb 100644
 --- a/arch/arm/include/asm/pgtable.h
 +++ b/arch/arm/include/asm/pgtable.h
-@@ -266,10 +266,6 @@ static inline pte_t *pmd_page_vaddr(pmd_t pmd)
+@@ -266,10 +266,6 @@ static inline pte_t *pmd_page_vaddr(pmd_
  
  #define pmd_page(pmd)		pfn_to_page(__phys_to_pfn(pmd_val(pmd) & PHYS_MASK))
  
@@ -34,8 +32,6 @@ index fdb98a1..449b1bb 100644
  #ifndef CONFIG_HIGHPTE
  #define __pte_map(pmd)		pmd_page_vaddr(*(pmd))
  #define __pte_unmap(pte)	do { } while (0)
-diff --git a/arch/arm/mm/idmap.c b/arch/arm/mm/idmap.c
-index 2be9139..24e0655 100644
 --- a/arch/arm/mm/idmap.c
 +++ b/arch/arm/mm/idmap.c
 @@ -1,9 +1,36 @@
@@ -75,7 +71,7 @@ index 2be9139..24e0655 100644
  static void idmap_add_pmd(pud_t *pud, unsigned long addr, unsigned long end,
  	unsigned long prot)
  {
-@@ -15,6 +42,7 @@ static void idmap_add_pmd(pud_t *pud, unsigned long addr, unsigned long end,
+@@ -15,6 +42,7 @@ static void idmap_add_pmd(pud_t *pud, un
  	pmd[1] = __pmd(addr);
  	flush_pmd_entry(pmd);
  }
@@ -83,7 +79,7 @@ index 2be9139..24e0655 100644
  
  static void idmap_add_pud(pgd_t *pgd, unsigned long addr, unsigned long end,
  	unsigned long prot)
-@@ -32,7 +60,7 @@ void identity_mapping_add(pgd_t *pgd, unsigned long addr, unsigned long end)
+@@ -32,7 +60,7 @@ void identity_mapping_add(pgd_t *pgd, un
  {
  	unsigned long prot, next;
  
@@ -92,7 +88,7 @@ index 2be9139..24e0655 100644
  	if (cpu_architecture() <= CPU_ARCH_ARMv5TEJ && !cpu_is_xscale())
  		prot |= PMD_BIT4;
  
-@@ -46,7 +74,11 @@ void identity_mapping_add(pgd_t *pgd, unsigned long addr, unsigned long end)
+@@ -46,7 +74,11 @@ void identity_mapping_add(pgd_t *pgd, un
  #ifdef CONFIG_SMP
  static void idmap_del_pmd(pud_t *pud, unsigned long addr, unsigned long end)
  {
@@ -105,6 +101,3 @@ index 2be9139..24e0655 100644
  	pmd_clear(pmd);
  }
  
--- 
-1.7.9.5
-

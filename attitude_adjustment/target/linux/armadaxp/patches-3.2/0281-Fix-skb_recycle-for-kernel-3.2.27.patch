@@ -14,11 +14,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  net/core/skbuff.c                                  |   10 ++++
  2 files changed, 59 insertions(+), 14 deletions(-)
 
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-index d4320cc..8d4f549 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-@@ -1279,15 +1279,41 @@ static inline int mv_eth_tx_policy(struct eth_port *pp, struct sk_buff *skb)
+@@ -1279,15 +1279,41 @@ static inline int mv_eth_tx_policy(struc
  int mv_eth_skb_recycle(struct sk_buff *skb)
  {
  	struct eth_pbuf *pkt = skb->hw_cookie;
@@ -26,7 +24,7 @@ index d4320cc..8d4f549 100755
 -	int status = 0;
 +	struct bm_pool  *pool;
 +	int             status = 0;
-+
+ 
 +#if defined(CONFIG_MV_ETH_DEBUG_CODE) && defined(CONFIG_MV_ETH_BM_CPU)
 +	/* Check that first 4 bytes of the buffer contain hw_cookie */
 +	if (*((MV_U32 *) skb->head) != (MV_U32)pkt) {
@@ -48,7 +46,7 @@ index d4320cc..8d4f549 100755
 +		printk(KERN_ERR "\n");
 +		goto err;
 +	}
- 
++
 +	pool = &mv_eth_pool[pkt->pool];
  	if (skb_recycle_check(skb, pool->pkt_size)) {
  
@@ -63,7 +61,7 @@ index d4320cc..8d4f549 100755
  #endif /* CONFIG_MV_ETH_DEBUG_CODE */
  
  		STAT_DBG(pool->stats.skb_recycled_ok++);
-@@ -1302,14 +1328,13 @@ int mv_eth_skb_recycle(struct sk_buff *skb)
+@@ -1302,14 +1328,13 @@ int mv_eth_skb_recycle(struct sk_buff *s
  
  		return 0;
  	}
@@ -80,7 +78,7 @@ index d4320cc..8d4f549 100755
  	return 1;
  }
  EXPORT_SYMBOL(mv_eth_skb_recycle);
-@@ -1343,6 +1368,7 @@ static struct sk_buff *mv_eth_skb_alloc(struct bm_pool *pool, struct eth_pbuf *p
+@@ -1343,6 +1368,7 @@ static struct sk_buff *mv_eth_skb_alloc(
  
  	pkt->osInfo = (void *)skb;
  	pkt->pBuf = skb->head;
@@ -88,7 +86,7 @@ index d4320cc..8d4f549 100755
  	pkt->physAddr = mvOsCacheInvalidate(NULL, skb->head, RX_BUF_SIZE(pool->pkt_size));
  	pkt->offset = NET_SKB_PAD;
  	pkt->pool = pool->pool;
-@@ -1620,8 +1646,10 @@ static inline int mv_eth_rx(struct eth_port *pp, int rx_todo, int rxq)
+@@ -1620,8 +1646,10 @@ static inline int mv_eth_rx(struct eth_p
  #endif /* !CONFIG_MV_ETH_PNC */
  
  #ifdef CONFIG_MV_ETH_DEBUG_CODE
@@ -100,7 +98,7 @@ index d4320cc..8d4f549 100755
  #endif /* CONFIG_MV_ETH_DEBUG_CODE */
  
  #if defined(CONFIG_MV_ETH_PNC) && defined(CONFIG_MV_ETH_RX_SPECIAL)
-@@ -1856,9 +1884,9 @@ static int mv_eth_tx(struct sk_buff *skb, struct net_device *dev)
+@@ -1856,9 +1884,9 @@ static int mv_eth_tx(struct sk_buff *skb
  #ifdef CONFIG_MV_ETH_DEBUG_CODE
  	if (pp->flags & MV_ETH_F_DBG_TX) {
  		printk(KERN_ERR "\n");
@@ -127,7 +125,7 @@ index d4320cc..8d4f549 100755
  	}
  #endif /* CONFIG_MV_ETH_TXDONE_ISR */
  
-@@ -4780,9 +4811,9 @@ static void mv_eth_tx_done_timer_callback(unsigned long data)
+@@ -4780,9 +4811,9 @@ static void mv_eth_tx_done_timer_callbac
  
  	clear_bit(MV_ETH_F_TX_DONE_TIMER_BIT, &(cpuCtrl->flags));
  
@@ -138,7 +136,7 @@ index d4320cc..8d4f549 100755
  #ifdef CONFIG_MV_ETH_DEBUG_CODE
  		if (pp->flags & MV_ETH_F_DBG_TX)
  			printk(KERN_ERR "%s: port #%d is stopped, STARTED_BIT = 0, exit timer.\n", __func__, pp->port);
-@@ -5226,7 +5257,7 @@ void mv_eth_netdev_print(struct net_device *dev)
+@@ -5226,7 +5257,7 @@ void mv_eth_netdev_print(struct net_devi
  {
  	struct eth_netdev *dev_priv = MV_DEV_PRIV(dev);
  
@@ -147,7 +145,7 @@ index d4320cc..8d4f549 100755
  	printk(KERN_ERR "ifIdx=%d, features=0x%x, flags=0x%x, mtu=%u, size=%d, MAC=" MV_MACQUAD_FMT "\n",
  	       dev->ifindex, (unsigned int)(dev->features), (unsigned int)(dev->flags),
  	       dev->mtu, RX_PKT_SIZE(dev->mtu), MV_MACQUAD(dev->dev_addr));
-@@ -5234,6 +5265,7 @@ void mv_eth_netdev_print(struct net_device *dev)
+@@ -5234,6 +5265,7 @@ void mv_eth_netdev_print(struct net_devi
  	if (dev_priv)
  		printk(KERN_ERR "group=%d, tx_vlan_mh=0x%04x, switch_port_map=0x%x, switch_port_link_map=0x%x\n",
  		       dev_priv->group, dev_priv->tx_vlan_mh, dev_priv->port_map, dev_priv->link_map);
@@ -155,7 +153,7 @@ index d4320cc..8d4f549 100755
  }
  
  void mv_eth_status_print(void)
-@@ -5378,6 +5410,9 @@ void mv_eth_port_status_print(unsigned int port)
+@@ -5378,6 +5410,9 @@ void mv_eth_port_status_print(unsigned i
  	}
  	printk(KERN_CONT "\n");
  
@@ -165,11 +163,9 @@ index d4320cc..8d4f549 100755
  #ifdef CONFIG_MV_ETH_SWITCH
  	if (pp->flags & MV_ETH_F_SWITCH)
  		mv_eth_switch_status_print(port);
-diff --git a/net/core/skbuff.c b/net/core/skbuff.c
-index 414db81..6379120 100644
 --- a/net/core/skbuff.c
 +++ b/net/core/skbuff.c
-@@ -940,6 +940,16 @@ int pskb_expand_head(struct sk_buff *skb, int nhead, int ntail,
+@@ -940,6 +940,16 @@ int pskb_expand_head(struct sk_buff *skb
  	       offsetof(struct skb_shared_info, frags[skb_shinfo(skb)->nr_frags]));
  
  	if (fastpath) {
@@ -186,6 +182,3 @@ index 414db81..6379120 100644
  		kfree(skb->head);
  	} else {
  		/* copy this zero copy skb frags */
--- 
-1.7.9.5
-

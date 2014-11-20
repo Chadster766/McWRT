@@ -8,11 +8,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |   53 ++++++++++++++++++--
  1 file changed, 50 insertions(+), 3 deletions(-)
 
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-index 789cd98..7bd9a68 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-@@ -469,6 +469,11 @@ int mv_eth_ctrl_port_buf_num_set(int port, int long_num, int short_num)
+@@ -469,6 +469,11 @@ int mv_eth_ctrl_port_buf_num_set(int por
  {
  	struct eth_port *pp = mv_eth_port_by_id(port);
  
@@ -24,7 +22,7 @@ index 789cd98..7bd9a68 100755
  	if (pp->flags & MV_ETH_F_STARTED) {
  		printk(KERN_ERR "Port %d must be stopped before\n", port);
  		return -EINVAL;
-@@ -586,6 +591,11 @@ int mv_eth_ctrl_rxq_size_set(int port, int rxq, int value)
+@@ -586,6 +591,11 @@ int mv_eth_ctrl_rxq_size_set(int port, i
  	struct eth_port *pp = mv_eth_port_by_id(port);
  	struct rx_queue	*rxq_ctrl;
  
@@ -36,7 +34,7 @@ index 789cd98..7bd9a68 100755
  	if (pp->flags & MV_ETH_F_STARTED) {
  		printk(KERN_ERR "Port %d must be stopped before\n", port);
  		return -EINVAL;
-@@ -609,6 +619,11 @@ int mv_eth_ctrl_txq_size_set(int port, int txp, int txq, int value)
+@@ -609,6 +619,11 @@ int mv_eth_ctrl_txq_size_set(int port, i
  	struct tx_queue *txq_ctrl;
  	struct eth_port *pp = mv_eth_port_by_id(port);
  
@@ -48,7 +46,7 @@ index 789cd98..7bd9a68 100755
  	if (pp->flags & MV_ETH_F_STARTED) {
  		printk(KERN_ERR "Port %d must be stopped before\n", port);
  		return -EINVAL;
-@@ -4236,6 +4251,13 @@ static void mv_eth_cleanup_timer_callback(unsigned long data)
+@@ -4236,6 +4251,13 @@ static void mv_eth_cleanup_timer_callbac
  
  void mv_eth_mac_show(int port)
  {
@@ -124,6 +122,3 @@ index 789cd98..7bd9a68 100755
  
  #ifdef CONFIG_MV_ETH_PNC
  	if (mv_eth_pnc_ctrl_en)
--- 
-1.7.9.5
-

@@ -25,8 +25,6 @@ Subject: [PATCH 1/1] Cesa fix for KW40         1. Replaced AXP CESA code with
  create mode 100644 arch/arm/plat-armada/mv_hal/cesa/mvCesaIf.h
  create mode 100644 arch/arm/plat-armada/mv_hal/cesa/mvCesaTest.c
 
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Makefile b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Makefile
-index 04f37af..dbd16b7 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Makefile
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Makefile
 @@ -1,8 +1,7 @@
@@ -48,11 +46,9 @@ index 04f37af..dbd16b7 100644
 -obj-$(CONFIG_MV_CESA_TEST) += cesa_test.o
  obj-$(CONFIG_MV_CESA_OCF)  += cesa_ocf_drv.o
  
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_dev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_dev.c
-index fc983f4..d0e1df8 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_dev.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_dev.c
-@@ -158,7 +158,6 @@ int run_cesa_debug(CESA_DEBUG *cesa_debug)
+@@ -158,7 +158,6 @@ int run_cesa_debug(CESA_DEBUG *cesa_debu
  
  static int
  cesadev_ioctl(
@@ -68,7 +64,7 @@ index fc983f4..d0e1df8 100644
  static int
  cesadev_open(struct inode *inode, struct file *filp)
  {
-@@ -221,7 +219,12 @@ static struct file_operations cesadev_fops = {
+@@ -221,7 +219,12 @@ static struct file_operations cesadev_fo
  	.owner = THIS_MODULE,
  	.open = cesadev_open,
  	.release = cesadev_release,
@@ -81,11 +77,9 @@ index fc983f4..d0e1df8 100644
  };
  
  static struct miscdevice cesadev = {
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_ocf_drv.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_ocf_drv.c
-index 91790a0..15033a2 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_ocf_drv.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_ocf_drv.c
-@@ -26,9 +26,6 @@ DISCLAIMED.  The GPL License provides additional details about this warranty
+@@ -26,9 +26,6 @@ DISCLAIMED.  The GPL License provides ad
  disclaimer.
  *******************************************************************************/
  
@@ -120,7 +114,7 @@ index 91790a0..15033a2 100644
  
  /* static APIs */
  static int 		cesa_ocf_process	(device_t, struct cryptop *, int);
-@@ -187,7 +183,7 @@ skb_copy_bits_back(struct sk_buff *skb, int offset, caddr_t cp, int len)
+@@ -187,7 +183,7 @@ skb_copy_bits_back(struct sk_buff *skb,
          offset -= skb_headlen(skb);
          for (i = 0; len > 0 && i < skb_shinfo(skb)->nr_frags; i++) {
                  if (offset < skb_shinfo(skb)->frags[i].size) {
@@ -129,7 +123,7 @@ index 91790a0..15033a2 100644
                                          skb_shinfo(skb)->frags[i].page_offset,
                                          cp, min_t(int, skb_shinfo(skb)->frags[i].size, len));
                          len -= skb_shinfo(skb)->frags[i].size;
-@@ -310,7 +306,7 @@ cesa_ocf_process(device_t dev, struct cryptop *crp, int hint)
+@@ -310,7 +306,7 @@ cesa_ocf_process(device_t dev, struct cr
  	struct cesa_ocf_data *cesa_ocf_cur_ses;
  	int sid = 0, temp_len = 0, i;
  	int encrypt = 0, decrypt = 0, auth = 0;
@@ -138,7 +132,7 @@ index 91790a0..15033a2 100644
  	struct sk_buff *skb = NULL;
  	struct uio *uiop = NULL;
  	unsigned char *ivp;
-@@ -323,9 +319,11 @@ cesa_ocf_process(device_t dev, struct cryptop *crp, int hint)
+@@ -323,9 +319,11 @@ cesa_ocf_process(device_t dev, struct cr
          dprintk("%s()\n", __func__);
  
  	for(chan = 0; chan < MV_CESA_CHANNELS; chan++)
@@ -152,7 +146,7 @@ index 91790a0..15033a2 100644
                  	dprintk("%s,%d: ERESTART\n", __FILE__, __LINE__);
                  	return ERESTART;
  		}
-@@ -414,7 +412,7 @@ cesa_ocf_process(device_t dev, struct cryptop *crp, int hint)
+@@ -414,7 +412,7 @@ cesa_ocf_process(device_t dev, struct cr
          	for ( i = 0; i < skb_shinfo(skb)->nr_frags; i++ ) {
              		skb_frag_t *frag = &skb_shinfo(skb)->frags[i];
              		p_buf_info->bufSize = frag->size;
@@ -161,7 +155,7 @@ index 91790a0..15033a2 100644
              		p_buf_info++;
          	}
          	p_mbuf_info->numFrags = skb_shinfo(skb)->nr_frags + 1;
-@@ -677,7 +675,7 @@ cesa_ocf_process(device_t dev, struct cryptop *crp, int hint)
+@@ -677,7 +675,7 @@ cesa_ocf_process(device_t dev, struct cr
  
  	/* Hal Q is full, send again. This should never happen */
  	if(status == MV_NO_RESOURCE) {
@@ -200,7 +194,7 @@ index 91790a0..15033a2 100644
  	return;
  }
  
-@@ -743,44 +737,44 @@ cesa_interrupt_handler(int irq, void *arg)
+@@ -743,44 +737,44 @@ cesa_interrupt_handler(int irq, void *ar
  {
  	MV_CESA_RESULT  	result;
  	MV_STATUS               status;
@@ -299,8 +293,6 @@ index 91790a0..15033a2 100644
              		printk("%s,%d: cannot assign irq %x\n", __FILE__, __LINE__, CESA_IRQ(chan));
  			return EINVAL;
          	}
-diff --git a/arch/arm/plat-armada/mv_hal/cesa/mvCesa.h b/arch/arm/plat-armada/mv_hal/cesa/mvCesa.h
-index 38a6be8..6fded48 100644
 --- a/arch/arm/plat-armada/mv_hal/cesa/mvCesa.h
 +++ b/arch/arm/plat-armada/mv_hal/cesa/mvCesa.h
 @@ -88,21 +88,6 @@ typedef enum {
@@ -333,11 +325,9 @@ index 38a6be8..6fded48 100644
  } MV_CESA_COMMAND;
  
  MV_STATUS mvCesaHalInit(int numOfSession, int queueDepth, void *osHandle, MV_CESA_HAL_DATA *halData);
-diff --git a/arch/arm/plat-armada/mv_hal/cesa/mvCesaAddrDec.c b/arch/arm/plat-armada/mv_hal/cesa/mvCesaAddrDec.c
-index 6946464..555b1bc 100644
 --- a/arch/arm/plat-armada/mv_hal/cesa/mvCesaAddrDec.c
 +++ b/arch/arm/plat-armada/mv_hal/cesa/mvCesaAddrDec.c
-@@ -178,7 +178,7 @@ static MV_STATUS mvCesaTdmaWinWrite(MV_U8 chan, MV_U32 winNum, MV_UNIT_WIN_INFO
+@@ -178,7 +178,7 @@ static MV_STATUS mvCesaTdmaWinWrite(MV_U
  	/* check if address is aligned to the size */
  	if (MV_IS_NOT_ALIGN(pDecWin->addrWin.baseLow, pDecWin->addrWin.size)) {
  		mvOsPrintf("mvCesaTdmaWinSet: Error setting CESA TDMA window %d.\n"
@@ -346,9 +336,6 @@ index 6946464..555b1bc 100644
  			   winNum, pDecWin->addrWin.baseLow, pDecWin->addrWin.size);
  		return MV_ERROR;
  	}
-diff --git a/arch/arm/plat-armada/mv_hal/cesa/mvCesaIf.c b/arch/arm/plat-armada/mv_hal/cesa/mvCesaIf.c
-new file mode 100644
-index 0000000..af8878c
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_hal/cesa/mvCesaIf.c
 @@ -0,0 +1,307 @@
@@ -659,9 +646,6 @@ index 0000000..af8878c
 +{
 +	return mvCesaDebugMbuf(str, pMbuf, offset, size);
 +}
-diff --git a/arch/arm/plat-armada/mv_hal/cesa/mvCesaIf.h b/arch/arm/plat-armada/mv_hal/cesa/mvCesaIf.h
-new file mode 100644
-index 0000000..a2eda95
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_hal/cesa/mvCesaIf.h
 @@ -0,0 +1,116 @@
@@ -781,9 +765,6 @@ index 0000000..a2eda95
 +#endif
 +
 +#endif /* __mvCesaIf_h__ */
-diff --git a/arch/arm/plat-armada/mv_hal/cesa/mvCesaTest.c b/arch/arm/plat-armada/mv_hal/cesa/mvCesaTest.c
-new file mode 100644
-index 0000000..824d60b
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_hal/cesa/mvCesaTest.c
 @@ -0,0 +1,3026 @@
@@ -3813,11 +3794,9 @@ index 0000000..824d60b
 +	}
 +#endif /* CESA_TEST_DEBUG */
 +}
-diff --git a/arch/arm/plat-armada/mv_hal/cesa/mvSHA256.c b/arch/arm/plat-armada/mv_hal/cesa/mvSHA256.c
-index 6d84453..a47dcb8 100644
 --- a/arch/arm/plat-armada/mv_hal/cesa/mvSHA256.c
 +++ b/arch/arm/plat-armada/mv_hal/cesa/mvSHA256.c
-@@ -298,7 +298,7 @@ MV_VOID mvSHA256Finish(sha256_context *ctx, MV_U8 *digest)
+@@ -298,7 +298,7 @@ MV_VOID mvSHA256Finish(sha256_context *c
  	PUT_UINT32(ctx->state[7], digest, 28);
  }
  
@@ -3826,8 +3805,6 @@ index 6d84453..a47dcb8 100644
  {
  	sha256_context ctx;
  
-diff --git a/arch/arm/plat-armada/mv_hal/cesa/mvSHA256.h b/arch/arm/plat-armada/mv_hal/cesa/mvSHA256.h
-index ac91708..489e0e7 100644
 --- a/arch/arm/plat-armada/mv_hal/cesa/mvSHA256.h
 +++ b/arch/arm/plat-armada/mv_hal/cesa/mvSHA256.h
 @@ -79,7 +79,7 @@ sha256_context;
@@ -3839,6 +3816,3 @@ index ac91708..489e0e7 100644
  
  #ifdef __cplusplus
  }
--- 
-1.7.9.5
-

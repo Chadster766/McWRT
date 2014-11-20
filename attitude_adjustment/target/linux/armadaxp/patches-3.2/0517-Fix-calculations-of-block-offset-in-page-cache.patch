@@ -21,11 +21,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  fs/buffer.c |    7 +++++--
  1 file changed, 5 insertions(+), 2 deletions(-)
 
-diff --git a/fs/buffer.c b/fs/buffer.c
-index 19a4f0b..b12edfb 100644
 --- a/fs/buffer.c
 +++ b/fs/buffer.c
-@@ -1019,7 +1019,8 @@ grow_dev_page(struct block_device *bdev, sector_t block,
+@@ -1019,7 +1019,8 @@ grow_dev_page(struct block_device *bdev,
  		bh = page_buffers(page);
  		if (bh->b_size == size) {
  			end_block = init_page_buffers(page, bdev,
@@ -35,7 +33,7 @@ index 19a4f0b..b12edfb 100644
  			goto done;
  		}
  		if (!try_to_free_buffers(page))
-@@ -1040,7 +1041,9 @@ grow_dev_page(struct block_device *bdev, sector_t block,
+@@ -1040,7 +1041,9 @@ grow_dev_page(struct block_device *bdev,
  	 */
  	spin_lock(&inode->i_mapping->private_lock);
  	link_dev_buffers(page, bh);
@@ -46,6 +44,3 @@ index 19a4f0b..b12edfb 100644
  	spin_unlock(&inode->i_mapping->private_lock);
  done:
  	ret = (block < end_block) ? 1 : -ENXIO;
--- 
-1.7.9.5
-

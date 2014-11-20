@@ -276,8 +276,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  delete mode 100644 drivers/scsi/vanir/readme.arm
  delete mode 100644 drivers/scsi/vanir/readme.vmware
 
-diff --git a/drivers/scsi/Kconfig b/drivers/scsi/Kconfig
-index 7b7bbc9..f94ecf1 100644
 --- a/drivers/scsi/Kconfig
 +++ b/drivers/scsi/Kconfig
 @@ -354,11 +354,6 @@ config SCSI_MV_THOR
@@ -292,11 +290,9 @@ index 7b7bbc9..f94ecf1 100644
  config ISCSI_TCP
  	tristate "iSCSI Initiator over TCP/IP"
  	depends on SCSI && INET
-diff --git a/drivers/scsi/Makefile b/drivers/scsi/Makefile
-index 464392d..8c84a4e 100644
 --- a/drivers/scsi/Makefile
 +++ b/drivers/scsi/Makefile
-@@ -52,7 +52,6 @@ obj-$(CONFIG_GVP11_SCSI)	+= gvp11.o	wd33c93.o
+@@ -52,7 +52,6 @@ obj-$(CONFIG_GVP11_SCSI)	+= gvp11.o	wd33
  obj-$(CONFIG_MVME147_SCSI)	+= mvme147.o	wd33c93.o
  obj-$(CONFIG_SGIWD93_SCSI)	+= sgiwd93.o	wd33c93.o
  obj-$(CONFIG_SCSI_MV_THOR)      += thor/
@@ -304,9 +300,6 @@ index 464392d..8c84a4e 100644
  obj-$(CONFIG_ATARI_SCSI)	+= atari_scsi.o
  obj-$(CONFIG_MAC_SCSI)		+= mac_scsi.o
  obj-$(CONFIG_SCSI_MAC_ESP)	+= esp_scsi.o	mac_esp.o
-diff --git a/drivers/scsi/vanir/History-NonRAID.txt b/drivers/scsi/vanir/History-NonRAID.txt
-deleted file mode 100644
-index a7bb343..0000000
 --- a/drivers/scsi/vanir/History-NonRAID.txt
 +++ /dev/null
 @@ -1,331 +0,0 @@
@@ -641,9 +634,6 @@ index a7bb343..0000000
 -	2061: Kernel panic when running tio-test under RHEL AS 4U8.
 -	2094: Kernel panic when install MRU under RHEL AS 4U8.
 -	2113: Timeout when run  tiotest on md.
-diff --git a/drivers/scsi/vanir/Makefile b/drivers/scsi/vanir/Makefile
-deleted file mode 100644
-index 57bd53f..0000000
 --- a/drivers/scsi/vanir/Makefile
 +++ /dev/null
 @@ -1,253 +0,0 @@
@@ -900,9 +890,6 @@ index 57bd53f..0000000
 -clean:
 -	$(MAKE) ARCH=$(ARCH_TYPE) CC=$(MV_CC) LD=$(MV_LD) CROSS_COMPILE=$(CROSS_COMPILE) V=$(V) -C $(KERNEL_BLD_DIR) SUBDIRS=`pwd` clean
 -endif
-diff --git a/drivers/scsi/vanir/Makefile.kbuild b/drivers/scsi/vanir/Makefile.kbuild
-deleted file mode 100644
-index 7aa82f1..0000000
 --- a/drivers/scsi/vanir/Makefile.kbuild
 +++ /dev/null
 @@ -1,215 +0,0 @@
@@ -1121,9 +1108,6 @@ index 7aa82f1..0000000
 -
 -EXTRA_CFLAGS  +=  -Wno-unused-variable
 -EXTRA_CFLAGS  += -D__LEGACY_OSSW__=1 -D_OS_LINUX
-diff --git a/drivers/scsi/vanir/Makefile.xen b/drivers/scsi/vanir/Makefile.xen
-deleted file mode 100644
-index cc8a94b..0000000
 --- a/drivers/scsi/vanir/Makefile.xen
 +++ /dev/null
 @@ -1,26 +0,0 @@
@@ -1153,9 +1137,6 @@ index cc8a94b..0000000
 -
 -%.o: %-xen.S FORCE
 -	$(call if_changed_dep,as_o_S)
-diff --git a/drivers/scsi/vanir/core/api/core_api.c b/drivers/scsi/vanir/core/api/core_api.c
-deleted file mode 100644
-index a41ac92..0000000
 --- a/drivers/scsi/vanir/core/api/core_api.c
 +++ /dev/null
 @@ -1,941 +0,0 @@
@@ -2100,9 +2081,6 @@ index a41ac92..0000000
 -
 -	return MV_QUEUE_COMMAND_RESULT_FINISHED;
 -}
-diff --git a/drivers/scsi/vanir/core/api/core_api.h b/drivers/scsi/vanir/core/api/core_api.h
-deleted file mode 100644
-index bef5a98..0000000
 --- a/drivers/scsi/vanir/core/api/core_api.h
 +++ /dev/null
 @@ -1,40 +0,0 @@
@@ -2146,9 +2124,6 @@ index bef5a98..0000000
 -        MV_U8 light_behavior, MV_U8 flag);
 -#define MAX_BIOS_SIZE           192L * 1024
 -#endif /* CORE_API_H */
-diff --git a/drivers/scsi/vanir/core/api/core_api_bbu.c b/drivers/scsi/vanir/core/api/core_api_bbu.c
-deleted file mode 100644
-index 4853ca2..0000000
 --- a/drivers/scsi/vanir/core/api/core_api_bbu.c
 +++ /dev/null
 @@ -1,74 +0,0 @@
@@ -2226,9 +2201,6 @@ index 4853ca2..0000000
 -
 -    return MV_QUEUE_COMMAND_RESULT_FINISHED;
 -}
-diff --git a/drivers/scsi/vanir/core/api/core_api_exp.c b/drivers/scsi/vanir/core/api/core_api_exp.c
-deleted file mode 100644
-index e814c90..0000000
 --- a/drivers/scsi/vanir/core/api/core_api_exp.c
 +++ /dev/null
 @@ -1,476 +0,0 @@
@@ -2708,9 +2680,6 @@ index e814c90..0000000
 -        core_unmap_data_buffer(req);
 -	return MV_QUEUE_COMMAND_RESULT_FINISHED;
 -}
-diff --git a/drivers/scsi/vanir/core/api/core_api_flash.c b/drivers/scsi/vanir/core/api/core_api_flash.c
-deleted file mode 100644
-index 5a5f5bd..0000000
 --- a/drivers/scsi/vanir/core/api/core_api_flash.c
 +++ /dev/null
 @@ -1,408 +0,0 @@
@@ -3122,9 +3091,6 @@ index 5a5f5bd..0000000
 -	}
 -	return status;
 -}
-diff --git a/drivers/scsi/vanir/core/api/core_api_led.c b/drivers/scsi/vanir/core/api/core_api_led.c
-deleted file mode 100644
-index 2c45599..0000000
 --- a/drivers/scsi/vanir/core/api/core_api_led.c
 +++ /dev/null
 @@ -1,383 +0,0 @@
@@ -3511,9 +3477,6 @@ index 2c45599..0000000
 -
 -	return MV_QUEUE_COMMAND_RESULT_FINISHED;
 -}
-diff --git a/drivers/scsi/vanir/core/api/core_api_pd.c b/drivers/scsi/vanir/core/api/core_api_pd.c
-deleted file mode 100644
-index 6d72206..0000000
 --- a/drivers/scsi/vanir/core/api/core_api_pd.c
 +++ /dev/null
 @@ -1,1172 +0,0 @@
@@ -4689,9 +4652,6 @@ index 6d72206..0000000
 -		return MV_QUEUE_COMMAND_RESULT_REPLACED;
 -	}
 -}
-diff --git a/drivers/scsi/vanir/core/api/core_console.h b/drivers/scsi/vanir/core/api/core_console.h
-deleted file mode 100644
-index a3063e5..0000000
 --- a/drivers/scsi/vanir/core/api/core_console.h
 +++ /dev/null
 @@ -1,70 +0,0 @@
@@ -4765,9 +4725,6 @@ index a3063e5..0000000
 -MV_U8 core_pd_request_get_hd_status(core_extension * core_p, PMV_Request req);
 -MV_U8 core_pd_request_get_hd_info_ext(core_extension * core_p, PMV_Request req);
 -#endif /* CORE_CONSOLE_H */
-diff --git a/drivers/scsi/vanir/core/core/core_alarm.c b/drivers/scsi/vanir/core/core/core_alarm.c
-deleted file mode 100644
-index e0fff91..0000000
 --- a/drivers/scsi/vanir/core/core/core_alarm.c
 +++ /dev/null
 @@ -1,98 +0,0 @@
@@ -4869,9 +4826,6 @@ index e0fff91..0000000
 -		break;
 -	}
 -}
-diff --git a/drivers/scsi/vanir/core/core/core_alarm.h b/drivers/scsi/vanir/core/core/core_alarm.h
-deleted file mode 100644
-index ce80d4c..0000000
 --- a/drivers/scsi/vanir/core/core/core_alarm.h
 +++ /dev/null
 @@ -1,38 +0,0 @@
@@ -4913,9 +4867,6 @@ index ce80d4c..0000000
 -MV_VOID core_alarm_change_state(MV_PVOID core_p, MV_U8 state);
 -
 -#endif /* _CORE_ALARM_H */
-diff --git a/drivers/scsi/vanir/core/core/core_device.c b/drivers/scsi/vanir/core/core/core_device.c
-deleted file mode 100644
-index 72658aa..0000000
 --- a/drivers/scsi/vanir/core/core/core_device.c
 +++ /dev/null
 @@ -1,288 +0,0 @@
@@ -5207,9 +5158,6 @@ index 72658aa..0000000
 -	enclosure->status = ENCLOSURE_STATUS_EXISTING | ENCLOSURE_STATUS_FUNCTIONAL;
 -	enclosure->enc_flag = ENC_FLAG_FIRST_INIT;
 -}
-diff --git a/drivers/scsi/vanir/core/core/core_device.h b/drivers/scsi/vanir/core/core/core_device.h
-deleted file mode 100644
-index 94ac835..0000000
 --- a/drivers/scsi/vanir/core/core/core_device.h
 +++ /dev/null
 @@ -1,55 +0,0 @@
@@ -5268,9 +5216,6 @@ index 94ac835..0000000
 -	domain_enclosure *enclosure,
 -	command_handler *handler);
 -#endif /* _CORE_DEVICE_H */
-diff --git a/drivers/scsi/vanir/core/core/core_error.c b/drivers/scsi/vanir/core/core/core_error.c
-deleted file mode 100644
-index 8205d91..0000000
 --- a/drivers/scsi/vanir/core/core/core_error.c
 +++ /dev/null
 @@ -1,1351 +0,0 @@
@@ -6625,9 +6570,6 @@ index 8205d91..0000000
 -	CORE_PRINT(("abort disk %d running req for async sdb fis.\n", dev->base.id));
 -
 -}
-diff --git a/drivers/scsi/vanir/core/core/core_error.h b/drivers/scsi/vanir/core/core/core_error.h
-deleted file mode 100644
-index 508756f..0000000
 --- a/drivers/scsi/vanir/core/core/core_error.h
 +++ /dev/null
 @@ -1,170 +0,0 @@
@@ -6801,9 +6743,6 @@ index 508756f..0000000
 -	} while (0)
 -
 -#endif /* __CORE_ERROR_H */
-diff --git a/drivers/scsi/vanir/core/core/core_event.c b/drivers/scsi/vanir/core/core/core_event.c
-deleted file mode 100644
-index 5f07f4b..0000000
 --- a/drivers/scsi/vanir/core/core/core_event.c
 +++ /dev/null
 @@ -1,489 +0,0 @@
@@ -7296,9 +7235,6 @@ index 5f07f4b..0000000
 -	core_append_request(root, req);
 -
 -}
-diff --git a/drivers/scsi/vanir/core/core/core_exp.h b/drivers/scsi/vanir/core/core/core_exp.h
-deleted file mode 100644
-index bf3eca1..0000000
 --- a/drivers/scsi/vanir/core/core/core_exp.h
 +++ /dev/null
 @@ -1,36 +0,0 @@
@@ -7338,9 +7274,6 @@ index bf3eca1..0000000
 -#define core_start_cmpl_notify(core)  	HBA_ModuleStarted(core)
 -
 -#endif /* __CORE_EXP_H */
-diff --git a/drivers/scsi/vanir/core/core/core_header.h b/drivers/scsi/vanir/core/core/core_header.h
-deleted file mode 100644
-index cea9355..0000000
 --- a/drivers/scsi/vanir/core/core/core_header.h
 +++ /dev/null
 @@ -1,23 +0,0 @@
@@ -7367,9 +7300,6 @@ index cea9355..0000000
 -
 -
 -#endif /* __CORE_HEADER_H */
-diff --git a/drivers/scsi/vanir/core/core/core_init.h b/drivers/scsi/vanir/core/core/core_init.h
-deleted file mode 100644
-index 8989bd4..0000000
 --- a/drivers/scsi/vanir/core/core/core_init.h
 +++ /dev/null
 @@ -1,22 +0,0 @@
@@ -7395,9 +7325,6 @@ index 8989bd4..0000000
 -void io_chip_init(MV_PVOID root);
 -
 -#endif /* __CORE_INIT_H */
-diff --git a/drivers/scsi/vanir/core/core/core_internal.h b/drivers/scsi/vanir/core/core/core_internal.h
-deleted file mode 100644
-index eb6a476..0000000
 --- a/drivers/scsi/vanir/core/core/core_internal.h
 +++ /dev/null
 @@ -1,651 +0,0 @@
@@ -8052,9 +7979,6 @@ index eb6a476..0000000
 -void pal_notify_event(pl_root *root, MV_U8 phy_id, MV_U8 event);
 -
 -#endif /* __CORE_INTERNAL_H */
-diff --git a/drivers/scsi/vanir/core/core/core_large_req.c b/drivers/scsi/vanir/core/core/core_large_req.c
-deleted file mode 100644
-index ff8188e..0000000
 --- a/drivers/scsi/vanir/core/core/core_large_req.c
 +++ /dev/null
 @@ -1,241 +0,0 @@
@@ -8299,9 +8223,6 @@ index ff8188e..0000000
 -	large_req->Scsi_Status = REQ_STATUS_PENDING;
 -	return (sub_req);
 -}
-diff --git a/drivers/scsi/vanir/core/core/core_manager.c b/drivers/scsi/vanir/core/core/core_manager.c
-deleted file mode 100644
-index 8e7a6db..0000000
 --- a/drivers/scsi/vanir/core/core/core_manager.c
 +++ /dev/null
 @@ -1,1107 +0,0 @@
@@ -9412,9 +9333,6 @@ index 8e7a6db..0000000
 -
 -	write_wide_port_register(root, port);
 -}
-diff --git a/drivers/scsi/vanir/core/core/core_manager.h b/drivers/scsi/vanir/core/core/core_manager.h
-deleted file mode 100644
-index e526baf..0000000
 --- a/drivers/scsi/vanir/core/core/core_manager.h
 +++ /dev/null
 @@ -1,140 +0,0 @@
@@ -9558,9 +9476,6 @@ index e526baf..0000000
 -};
 -
 -#endif /* __CORE_MANAGER_H */
-diff --git a/drivers/scsi/vanir/core/core/core_protocol.c b/drivers/scsi/vanir/core/core/core_protocol.c
-deleted file mode 100644
-index f168ae6..0000000
 --- a/drivers/scsi/vanir/core/core/core_protocol.c
 +++ /dev/null
 @@ -1,493 +0,0 @@
@@ -10057,9 +9972,6 @@ index f168ae6..0000000
 -		((MV_PU8)req->Sense_Info_Buffer)[12] = ad_sense_code;
 -	}
 -}
-diff --git a/drivers/scsi/vanir/core/core/core_protocol.h b/drivers/scsi/vanir/core/core/core_protocol.h
-deleted file mode 100644
-index 93e01aa..0000000
 --- a/drivers/scsi/vanir/core/core/core_protocol.h
 +++ /dev/null
 @@ -1,312 +0,0 @@
@@ -10375,9 +10287,6 @@ index 93e01aa..0000000
 -err_info_record * prot_get_command_error_info(mv_command_table *cmd_table,
 -	 MV_PU32 cmpl_q);
 -#endif /* __CORE_PROTOCOL_H */
-diff --git a/drivers/scsi/vanir/core/core/core_resource.c b/drivers/scsi/vanir/core/core/core_resource.c
-deleted file mode 100644
-index 833312c..0000000
 --- a/drivers/scsi/vanir/core/core/core_resource.c
 +++ /dev/null
 @@ -1,1126 +0,0 @@
@@ -11507,9 +11416,6 @@ index 833312c..0000000
 -	rsrc->enclosures= enc;
 -	rsrc->enc_count++;
 -}
-diff --git a/drivers/scsi/vanir/core/core/core_resource.h b/drivers/scsi/vanir/core/core/core_resource.h
-deleted file mode 100644
-index 533e54d..0000000
 --- a/drivers/scsi/vanir/core/core/core_resource.h
 +++ /dev/null
 @@ -1,199 +0,0 @@
@@ -11712,9 +11618,6 @@ index 533e54d..0000000
 -	core_free(root_p, rsrc,enc,CORE_RESOURCE_TYPE_DOMAIN_ENCLOSURE)
 -
 -#endif /* __CORE_RESOURCE_H */
-diff --git a/drivers/scsi/vanir/core/core/core_type.h b/drivers/scsi/vanir/core/core/core_type.h
-deleted file mode 100644
-index eb18912..0000000
 --- a/drivers/scsi/vanir/core/core/core_type.h
 +++ /dev/null
 @@ -1,31 +0,0 @@
@@ -11749,9 +11652,6 @@ index eb18912..0000000
 -#include "hba_exp.h"
 -
 -#endif /* __CORE_INCLUDE_H */
-diff --git a/drivers/scsi/vanir/core/core/core_util.c b/drivers/scsi/vanir/core/core/core_util.c
-deleted file mode 100644
-index 5f26001..0000000
 --- a/drivers/scsi/vanir/core/core/core_util.c
 +++ /dev/null
 @@ -1,608 +0,0 @@
@@ -12363,9 +12263,6 @@ index 5f26001..0000000
 -
 -	return asic_phy_map;
 -}
-diff --git a/drivers/scsi/vanir/core/core/core_util.h b/drivers/scsi/vanir/core/core/core_util.h
-deleted file mode 100644
-index 8173b08..0000000
 --- a/drivers/scsi/vanir/core/core/core_util.h
 +++ /dev/null
 @@ -1,117 +0,0 @@
@@ -12486,9 +12383,6 @@ index 8173b08..0000000
 -	domain_device *dev);
 -
 -#endif /* CORE_UTIL_H */
-diff --git a/drivers/scsi/vanir/core/pl/core_gpio.c b/drivers/scsi/vanir/core/pl/core_gpio.c
-deleted file mode 100644
-index 5f9a9bd..0000000
 --- a/drivers/scsi/vanir/core/pl/core_gpio.c
 +++ /dev/null
 @@ -1,725 +0,0 @@
@@ -13217,9 +13111,6 @@ index 5f9a9bd..0000000
 -	}
 -	return(MV_TRUE);
 -}
-diff --git a/drivers/scsi/vanir/core/pl/core_gpio.h b/drivers/scsi/vanir/core/pl/core_gpio.h
-deleted file mode 100644
-index 14609f5..0000000
 --- a/drivers/scsi/vanir/core/pl/core_gpio.h
 +++ /dev/null
 @@ -1,210 +0,0 @@
@@ -13433,9 +13324,6 @@ index 14609f5..0000000
 -void sgpio_write_pci_register(MV_PVOID core_p, MV_U8 reg_address, MV_U32 reg_value);
 -
 -#endif
-diff --git a/drivers/scsi/vanir/core/pl/core_rmw_flash.c b/drivers/scsi/vanir/core/pl/core_rmw_flash.c
-deleted file mode 100644
-index 29aff66..0000000
 --- a/drivers/scsi/vanir/core/pl/core_rmw_flash.c
 +++ /dev/null
 @@ -1,174 +0,0 @@
@@ -13613,9 +13501,6 @@ index 29aff66..0000000
 -	MV_DASSERT(data_tmp_addr + data_tmp_size == end);
 -	return MV_TRUE;
 -}
-diff --git a/drivers/scsi/vanir/core/pl/core_rmw_flash.h b/drivers/scsi/vanir/core/pl/core_rmw_flash.h
-deleted file mode 100644
-index dd4d30a..0000000
 --- a/drivers/scsi/vanir/core/pl/core_rmw_flash.h
 +++ /dev/null
 @@ -1,44 +0,0 @@
@@ -13663,9 +13548,6 @@ index dd4d30a..0000000
 -        MV_PU8 data, MV_U32 size);
 -
 -#endif
-diff --git a/drivers/scsi/vanir/core/pl/core_spi.h b/drivers/scsi/vanir/core/pl/core_spi.h
-deleted file mode 100644
-index 06a8167..0000000
 --- a/drivers/scsi/vanir/core/pl/core_spi.h
 +++ /dev/null
 @@ -1,210 +0,0 @@
@@ -13879,9 +13761,6 @@ index 06a8167..0000000
 -
 -
 -#endif
-diff --git a/drivers/scsi/vanir/core/pl/spi_hal.h b/drivers/scsi/vanir/core/pl/spi_hal.h
-deleted file mode 100644
-index a96ff4c..0000000
 --- a/drivers/scsi/vanir/core/pl/spi_hal.h
 +++ /dev/null
 @@ -1,35 +0,0 @@
@@ -13920,9 +13799,6 @@ index a96ff4c..0000000
 -#   define DelayUSec(_X_)        HBA_SleepMicrosecond(NULL, _X_)
 -
 -#endif
-diff --git a/drivers/scsi/vanir/core/pm/core_pm.c b/drivers/scsi/vanir/core/pm/core_pm.c
-deleted file mode 100644
-index e906679..0000000
 --- a/drivers/scsi/vanir/core/pm/core_pm.c
 +++ /dev/null
 @@ -1,689 +0,0 @@
@@ -14615,9 +14491,6 @@ index e906679..0000000
 -		ctx->error_info |= EH_INFO_NEED_RETRY;
 -	}
 -}
-diff --git a/drivers/scsi/vanir/core/pm/core_pm.h b/drivers/scsi/vanir/core/pm/core_pm.h
-deleted file mode 100644
-index b488d2a..0000000
 --- a/drivers/scsi/vanir/core/pm/core_pm.h
 +++ /dev/null
 @@ -1,53 +0,0 @@
@@ -14674,9 +14547,6 @@ index b488d2a..0000000
 -#define PM_SERROR_PHYRDY_CHANGE		MV_BIT(16)
 -
 -#endif /* __CORE_PM_H */
-diff --git a/drivers/scsi/vanir/core/sas_base/core_sas.h b/drivers/scsi/vanir/core/sas_base/core_sas.h
-deleted file mode 100644
-index f5a8de5..0000000
 --- a/drivers/scsi/vanir/core/sas_base/core_sas.h
 +++ /dev/null
 @@ -1,134 +0,0 @@
@@ -14814,9 +14684,6 @@ index f5a8de5..0000000
 -void sas_check_wide_port_device(MV_PVOID port_p);
 -
 -#endif /* __CORE_SAS_H */
-diff --git a/drivers/scsi/vanir/core/sas_base/sas_error.c b/drivers/scsi/vanir/core/sas_base/sas_error.c
-deleted file mode 100644
-index f262c5b..0000000
 --- a/drivers/scsi/vanir/core/sas_base/sas_error.c
 +++ /dev/null
 @@ -1,405 +0,0 @@
@@ -15225,9 +15092,6 @@ index f262c5b..0000000
 -                core_queue_error_req(root, err_ctx->error_req, MV_FALSE);
 -        }
 -}
-diff --git a/drivers/scsi/vanir/core/sas_base/sas_handler.c b/drivers/scsi/vanir/core/sas_base/sas_handler.c
-deleted file mode 100644
-index 2d297a5..0000000
 --- a/drivers/scsi/vanir/core/sas_base/sas_handler.c
 +++ /dev/null
 @@ -1,1878 +0,0 @@
@@ -17109,9 +16973,6 @@ index 2d297a5..0000000
 -                req->Scsi_Status = REQ_STATUS_SUCCESS;
 -	}
 -}
-diff --git a/drivers/scsi/vanir/core/sas_base/sas_init.c b/drivers/scsi/vanir/core/sas_base/sas_init.c
-deleted file mode 100644
-index 00f0563..0000000
 --- a/drivers/scsi/vanir/core/sas_base/sas_init.c
 +++ /dev/null
 @@ -1,704 +0,0 @@
@@ -17819,9 +17680,6 @@ index 00f0563..0000000
 -	}
 -	MV_ASSERT(matched_dev != NULL);
 -}
-diff --git a/drivers/scsi/vanir/core/sas_base/sas_util.c b/drivers/scsi/vanir/core/sas_base/sas_util.c
-deleted file mode 100644
-index 627bea8..0000000
 --- a/drivers/scsi/vanir/core/sas_base/sas_util.c
 +++ /dev/null
 @@ -1,435 +0,0 @@
@@ -18260,9 +18118,6 @@ index 627bea8..0000000
 -	reqlun[2] = 0;
 -	reqlun[3] = 0;
 -}
-diff --git a/drivers/scsi/vanir/core/sas_smp/core_discover.h b/drivers/scsi/vanir/core/sas_smp/core_discover.h
-deleted file mode 100644
-index 73f7dae..0000000
 --- a/drivers/scsi/vanir/core/sas_smp/core_discover.h
 +++ /dev/null
 @@ -1,2256 +0,0 @@
@@ -20522,9 +20377,6 @@ index 73f7dae..0000000
 -};
 -
 -#endif /* __CORE_DISCOVER_H */
-diff --git a/drivers/scsi/vanir/core/sas_smp/core_expander.c b/drivers/scsi/vanir/core/sas_smp/core_expander.c
-deleted file mode 100644
-index eee9760..0000000
 --- a/drivers/scsi/vanir/core/sas_smp/core_expander.c
 +++ /dev/null
 @@ -1,1224 +0,0 @@
@@ -21752,9 +21604,6 @@ index eee9760..0000000
 -		}
 -	}
 -}
-diff --git a/drivers/scsi/vanir/core/sas_smp/core_expander.h b/drivers/scsi/vanir/core/sas_smp/core_expander.h
-deleted file mode 100644
-index 309b416..0000000
 --- a/drivers/scsi/vanir/core/sas_smp/core_expander.h
 +++ /dev/null
 @@ -1,45 +0,0 @@
@@ -21803,9 +21652,6 @@ index 309b416..0000000
 -	MV_U8 operation, MV_PVOID callback);
 -
 -#endif /* __CORE_EXPANDER_H */
-diff --git a/drivers/scsi/vanir/core/sata_base/core_sata.c b/drivers/scsi/vanir/core/sata_base/core_sata.c
-deleted file mode 100644
-index 13abe9f..0000000
 --- a/drivers/scsi/vanir/core/sata_base/core_sata.c
 +++ /dev/null
 @@ -1,1919 +0,0 @@
@@ -23728,9 +23574,6 @@ index 13abe9f..0000000
 -	}
 -	return (MV_PVOID)fis;
 -}
-diff --git a/drivers/scsi/vanir/core/sata_base/core_sata.h b/drivers/scsi/vanir/core/sata_base/core_sata.h
-deleted file mode 100644
-index 959b3c2..0000000
 --- a/drivers/scsi/vanir/core/sata_base/core_sata.h
 +++ /dev/null
 @@ -1,401 +0,0 @@
@@ -24135,9 +23978,6 @@ index 959b3c2..0000000
 -};
 -
 -#endif /* __CORE_SATA_H */
-diff --git a/drivers/scsi/vanir/core/sata_base/sata_error.c b/drivers/scsi/vanir/core/sata_base/sata_error.c
-deleted file mode 100644
-index 575d5e8..0000000
 --- a/drivers/scsi/vanir/core/sata_base/sata_error.c
 +++ /dev/null
 @@ -1,1474 +0,0 @@
@@ -25615,9 +25455,6 @@ index 575d5e8..0000000
 -              core_queue_error_req(root, err_ctx->error_req, MV_FALSE);
 -        }
 -}
-diff --git a/drivers/scsi/vanir/core/scsi/core_sat.c b/drivers/scsi/vanir/core/scsi/core_sat.c
-deleted file mode 100644
-index 2ed6018..0000000
 --- a/drivers/scsi/vanir/core/scsi/core_sat.c
 +++ /dev/null
 @@ -1,4129 +0,0 @@
@@ -29750,9 +29587,6 @@ index 2ed6018..0000000
 -	fis->ICC = 0x0;
 -	*((MV_PU32)&fis->reserved2[0]) = 0x0;
 -}
-diff --git a/drivers/scsi/vanir/core/scsi/core_sat.h b/drivers/scsi/vanir/core/scsi/core_sat.h
-deleted file mode 100644
-index ee180f7..0000000
 --- a/drivers/scsi/vanir/core/scsi/core_sat.h
 +++ /dev/null
 @@ -1,76 +0,0 @@
@@ -29832,9 +29666,6 @@ index ee180f7..0000000
 -};
 -
 -#endif /* __CORE_SAT_H */
-diff --git a/drivers/scsi/vanir/core/scsi/core_ses.c b/drivers/scsi/vanir/core/scsi/core_ses.c
-deleted file mode 100644
-index d425af3..0000000
 --- a/drivers/scsi/vanir/core/scsi/core_ses.c
 +++ /dev/null
 @@ -1,669 +0,0 @@
@@ -30507,9 +30338,6 @@ index d425af3..0000000
 -	return req;
 -
 -}
-diff --git a/drivers/scsi/vanir/core/scsi/core_ses.h b/drivers/scsi/vanir/core/scsi/core_ses.h
-deleted file mode 100644
-index 8c33645..0000000
 --- a/drivers/scsi/vanir/core/scsi/core_ses.h
 +++ /dev/null
 @@ -1,424 +0,0 @@
@@ -30937,9 +30765,6 @@ index 8c33645..0000000
 -	device_enclosure_element device_type;
 -	array_enclosure_element array_type;
 -}ses_enclosure_element;
-diff --git a/drivers/scsi/vanir/hba_sm/hba_api.c b/drivers/scsi/vanir/hba_sm/hba_api.c
-deleted file mode 100644
-index 5320079..0000000
 --- a/drivers/scsi/vanir/hba_sm/hba_api.c
 +++ /dev/null
 @@ -1,381 +0,0 @@
@@ -31324,9 +31149,6 @@ index 5320079..0000000
 -	praid_feature->SMART_Status_Timer_Handle = NO_CURRENT_TIMER;
 -	return;
 -}
-diff --git a/drivers/scsi/vanir/hba_sm/hba_api.h b/drivers/scsi/vanir/hba_sm/hba_api.h
-deleted file mode 100644
-index dcbb789..0000000
 --- a/drivers/scsi/vanir/hba_sm/hba_api.h
 +++ /dev/null
 @@ -1,36 +0,0 @@
@@ -31366,9 +31188,6 @@ index dcbb789..0000000
 -void mvSetAdapterConfig( MV_PVOID This, PMV_Request pReq);
 -void mvGetAdapterConfig( MV_PVOID This, PMV_Request pReq);
 -#endif
-diff --git a/drivers/scsi/vanir/hba_sm/mv_hba.h b/drivers/scsi/vanir/hba_sm/mv_hba.h
-deleted file mode 100644
-index c310eba..0000000
 --- a/drivers/scsi/vanir/hba_sm/mv_hba.h
 +++ /dev/null
 @@ -1,23 +0,0 @@
@@ -31395,9 +31214,6 @@ index c310eba..0000000
 -#define MV_MAX_HD_DEVICE_ID                   		MAX_DEVICE_SUPPORTED_PERFORMANCE
 -
 -#endif /*__MV_HBA_H__*/
-diff --git a/drivers/scsi/vanir/include/com_dbg.h b/drivers/scsi/vanir/include/com_dbg.h
-deleted file mode 100644
-index 5c4f753..0000000
 --- a/drivers/scsi/vanir/include/com_dbg.h
 +++ /dev/null
 @@ -1,63 +0,0 @@
@@ -31464,9 +31280,6 @@ index 5c4f753..0000000
 -void mvLogMsg(MV_U8 moduleId, MV_U32 type, char* format, ...);
 -
 -#endif /* COMMON_DEBUG_H */
-diff --git a/drivers/scsi/vanir/include/com_list.c b/drivers/scsi/vanir/include/com_list.c
-deleted file mode 100644
-index 98300d3..0000000
 --- a/drivers/scsi/vanir/include/com_list.c
 +++ /dev/null
 @@ -1,374 +0,0 @@
@@ -31844,9 +31657,6 @@ index 98300d3..0000000
 -		MV_COUNTED_LIST_HEAD_INIT(list);
 -	}
 -}
-diff --git a/drivers/scsi/vanir/include/com_list.h b/drivers/scsi/vanir/include/com_list.h
-deleted file mode 100644
-index c3c5a58..0000000
 --- a/drivers/scsi/vanir/include/com_list.h
 +++ /dev/null
 @@ -1,160 +0,0 @@
@@ -32010,9 +31820,6 @@ index c3c5a58..0000000
 -	LIST_ENTRY(Counted_List_GetLast(head), type, member)
 -
 -#endif /* COMMON_LIST_H */
-diff --git a/drivers/scsi/vanir/include/com_mod_mgmt.h b/drivers/scsi/vanir/include/com_mod_mgmt.h
-deleted file mode 100644
-index 0394b07..0000000
 --- a/drivers/scsi/vanir/include/com_mod_mgmt.h
 +++ /dev/null
 @@ -1,107 +0,0 @@
@@ -32123,9 +31930,6 @@ index 0394b07..0000000
 -};
 -
 -#endif /* __MV_MODULE_MGMT__ */
-diff --git a/drivers/scsi/vanir/include/com_nvram.h b/drivers/scsi/vanir/include/com_nvram.h
-deleted file mode 100644
-index 62a7fe6..0000000
 --- a/drivers/scsi/vanir/include/com_nvram.h
 +++ /dev/null
 @@ -1,259 +0,0 @@
@@ -32388,9 +32192,6 @@ index 62a7fe6..0000000
 -extern MV_U8	mvCalculateChecksum(MV_PU8	Address, MV_U32 Size);
 -extern MV_U8	mvVerifyChecksum(MV_PU8	Address, MV_U32 Size);
 -#endif		/* COM_NVRAM_H */
-diff --git a/drivers/scsi/vanir/include/com_scsi.h b/drivers/scsi/vanir/include/com_scsi.h
-deleted file mode 100644
-index 9cc4dfa..0000000
 --- a/drivers/scsi/vanir/include/com_scsi.h
 +++ /dev/null
 @@ -1,418 +0,0 @@
@@ -32812,9 +32613,6 @@ index 9cc4dfa..0000000
 -};
 -
 -#endif /*  __MV_COM_SCSI_H__ */
-diff --git a/drivers/scsi/vanir/include/com_sgd.h b/drivers/scsi/vanir/include/com_sgd.h
-deleted file mode 100644
-index e8cdccb..0000000
 --- a/drivers/scsi/vanir/include/com_sgd.h
 +++ /dev/null
 @@ -1,375 +0,0 @@
@@ -33193,9 +32991,6 @@ index e8cdccb..0000000
 -	sgd_to_prd_fn		prd_fn
 -	);
 -#endif	/*__MV_COM_SGD_H__*/
-diff --git a/drivers/scsi/vanir/include/com_tag.h b/drivers/scsi/vanir/include/com_tag.h
-deleted file mode 100644
-index e75728c..0000000
 --- a/drivers/scsi/vanir/include/com_tag.h
 +++ /dev/null
 @@ -1,44 +0,0 @@
@@ -33243,9 +33038,6 @@ index e75728c..0000000
 -MV_BOOLEAN Tag_IsEmpty(PTag_Stack pTagStack);
 -
 -#endif /*  __MV_COM_TAG_H__ */
-diff --git a/drivers/scsi/vanir/include/com_type.h b/drivers/scsi/vanir/include/com_type.h
-deleted file mode 100644
-index f1c630a..0000000
 --- a/drivers/scsi/vanir/include/com_type.h
 +++ /dev/null
 @@ -1,289 +0,0 @@
@@ -33538,9 +33330,6 @@ index f1c630a..0000000
 -#define SIZE_OF_POINTER (sizeof(void*))
 -
 -#endif /* __MV_COM_TYPE_H__ */
-diff --git a/drivers/scsi/vanir/include/com_u64.h b/drivers/scsi/vanir/include/com_u64.h
-deleted file mode 100644
-index 1aaabf9..0000000
 --- a/drivers/scsi/vanir/include/com_u64.h
 +++ /dev/null
 @@ -1,37 +0,0 @@
@@ -33581,9 +33370,6 @@ index 1aaabf9..0000000
 -#define U64_SET_MAX_VALUE(v64)	do { v64.parts.low = v64.parts.high = 0xFFFFFFFFL; } while(0);
 -
 -#endif
-diff --git a/drivers/scsi/vanir/include/com_util.h b/drivers/scsi/vanir/include/com_util.h
-deleted file mode 100644
-index 83190ec..0000000
 --- a/drivers/scsi/vanir/include/com_util.h
 +++ /dev/null
 @@ -1,232 +0,0 @@
@@ -33819,9 +33605,6 @@ index 83190ec..0000000
 -MV_U16 remove_target_map(MV_U16 *map_table, MV_U16 target_id, MV_U16 max_id);
 -
 -#endif /*  __MV_COM_UTIL_H__ */
-diff --git a/drivers/scsi/vanir/include/csmisas.h b/drivers/scsi/vanir/include/csmisas.h
-deleted file mode 100644
-index de491a2..0000000
 --- a/drivers/scsi/vanir/include/csmisas.h
 +++ /dev/null
 @@ -1,1162 +0,0 @@
@@ -34987,9 +34770,6 @@ index de491a2..0000000
 -#pragma pack()
 -
 -#endif // _CSMI_SAS_H_
-diff --git a/drivers/scsi/vanir/include/generic/com_adapter_struct.h b/drivers/scsi/vanir/include/generic/com_adapter_struct.h
-deleted file mode 100644
-index 006c728..0000000
 --- a/drivers/scsi/vanir/include/generic/com_adapter_struct.h
 +++ /dev/null
 @@ -1,213 +0,0 @@
@@ -35206,9 +34986,6 @@ index 006c728..0000000
 -#pragma pack()
 -
 -#endif
-diff --git a/drivers/scsi/vanir/include/generic/com_array_struct.h b/drivers/scsi/vanir/include/generic/com_array_struct.h
-deleted file mode 100644
-index 5b45e80..0000000
 --- a/drivers/scsi/vanir/include/generic/com_array_struct.h
 +++ /dev/null
 @@ -1,128 +0,0 @@
@@ -35340,9 +35117,6 @@ index 5b45e80..0000000
 -#pragma pack()
 -
 -#endif
-diff --git a/drivers/scsi/vanir/include/generic/com_bbu_struct.h b/drivers/scsi/vanir/include/generic/com_bbu_struct.h
-deleted file mode 100644
-index ec8b57f..0000000
 --- a/drivers/scsi/vanir/include/generic/com_bbu_struct.h
 +++ /dev/null
 @@ -1,100 +0,0 @@
@@ -35446,9 +35220,6 @@ index ec8b57f..0000000
 -#pragma pack()
 -
 -#endif
-diff --git a/drivers/scsi/vanir/include/generic/com_dbg_struct.h b/drivers/scsi/vanir/include/generic/com_dbg_struct.h
-deleted file mode 100644
-index c4944ae..0000000
 --- a/drivers/scsi/vanir/include/generic/com_dbg_struct.h
 +++ /dev/null
 @@ -1,80 +0,0 @@
@@ -35532,9 +35303,6 @@ index c4944ae..0000000
 -#pragma pack()
 -
 -#endif
-diff --git a/drivers/scsi/vanir/include/generic/com_define.h b/drivers/scsi/vanir/include/generic/com_define.h
-deleted file mode 100644
-index f214aa9..0000000
 --- a/drivers/scsi/vanir/include/generic/com_define.h
 +++ /dev/null
 @@ -1,178 +0,0 @@
@@ -35716,9 +35484,6 @@ index f214aa9..0000000
 -#define msi_enabled(x)	hba_msi_enabled(x)
 -
 -#endif /* COM_DEFINE_H */
-diff --git a/drivers/scsi/vanir/include/generic/com_enc_struct.h b/drivers/scsi/vanir/include/generic/com_enc_struct.h
-deleted file mode 100644
-index 362acdd..0000000
 --- a/drivers/scsi/vanir/include/generic/com_enc_struct.h
 +++ /dev/null
 @@ -1,383 +0,0 @@
@@ -36105,9 +35870,6 @@ index 362acdd..0000000
 -#pragma pack()
 -
 -#endif
-diff --git a/drivers/scsi/vanir/include/generic/com_error.h b/drivers/scsi/vanir/include/generic/com_error.h
-deleted file mode 100644
-index bbf5aba..0000000
 --- a/drivers/scsi/vanir/include/generic/com_error.h
 +++ /dev/null
 @@ -1,130 +0,0 @@
@@ -36241,9 +36003,6 @@ index bbf5aba..0000000
 -#define ERR_ENTRY_NO_KEY                        (ERR_AES + 10) // the specified entry has no key.
 -
 -#endif /*  __COM_ERROR_H__ */
-diff --git a/drivers/scsi/vanir/include/generic/com_event_define.h b/drivers/scsi/vanir/include/generic/com_event_define.h
-deleted file mode 100644
-index 3e049bd..0000000
 --- a/drivers/scsi/vanir/include/generic/com_event_define.h
 +++ /dev/null
 @@ -1,496 +0,0 @@
@@ -36743,9 +36502,6 @@ index 3e049bd..0000000
 -#define EVT_ID_ADAPTER_REMOVED			_CLASS_ADPT(EVT_CODE_ADAPTER_REMOVED)
 -#define EVT_ID_ADAPTER_DETECTED			_CLASS_ADPT(EVT_CODE_ADAPTER_DETECTED)
 -#endif /*  COM_EVENT_DEFINE_H */
-diff --git a/drivers/scsi/vanir/include/generic/com_event_define_ext.h b/drivers/scsi/vanir/include/generic/com_event_define_ext.h
-deleted file mode 100644
-index d8ad36d..0000000
 --- a/drivers/scsi/vanir/include/generic/com_event_define_ext.h
 +++ /dev/null
 @@ -1,442 +0,0 @@
@@ -37191,9 +36947,6 @@ index d8ad36d..0000000
 -#define EVT_ID_ARRAY_DELETE                    _CLASS_ARRAY(EVT_CODE_ARRAY_DELETE)
 -
 -#endif
-diff --git a/drivers/scsi/vanir/include/generic/com_flash_struct.h b/drivers/scsi/vanir/include/generic/com_flash_struct.h
-deleted file mode 100644
-index debbfcb..0000000
 --- a/drivers/scsi/vanir/include/generic/com_flash_struct.h
 +++ /dev/null
 @@ -1,35 +0,0 @@
@@ -37232,9 +36985,6 @@ index debbfcb..0000000
 -#define	FLASH_PD_PAGE_FORCE			254	// Force to erase the whole PD page even PD id is in-use. Used by manufacturing only!
 -
 -#endif
-diff --git a/drivers/scsi/vanir/include/generic/com_passthrough_struct.h b/drivers/scsi/vanir/include/generic/com_passthrough_struct.h
-deleted file mode 100644
-index 268a119..0000000
 --- a/drivers/scsi/vanir/include/generic/com_passthrough_struct.h
 +++ /dev/null
 @@ -1,57 +0,0 @@
@@ -37295,9 +37045,6 @@ index 268a119..0000000
 -#pragma pack()
 -
 -#endif
-diff --git a/drivers/scsi/vanir/include/generic/com_pd_struct.h b/drivers/scsi/vanir/include/generic/com_pd_struct.h
-deleted file mode 100644
-index cc67c29..0000000
 --- a/drivers/scsi/vanir/include/generic/com_pd_struct.h
 +++ /dev/null
 @@ -1,286 +0,0 @@
@@ -37587,9 +37334,6 @@ index cc67c29..0000000
 -#pragma pack()
 -
 -#endif
-diff --git a/drivers/scsi/vanir/include/generic/com_physical_link.h b/drivers/scsi/vanir/include/generic/com_physical_link.h
-deleted file mode 100644
-index 345e473..0000000
 --- a/drivers/scsi/vanir/include/generic/com_physical_link.h
 +++ /dev/null
 @@ -1,59 +0,0 @@
@@ -37652,9 +37396,6 @@ index 345e473..0000000
 -#pragma pack()
 -
 -#endif
-diff --git a/drivers/scsi/vanir/include/generic/com_product.h b/drivers/scsi/vanir/include/generic/com_product.h
-deleted file mode 100644
-index ac99bf7..0000000
 --- a/drivers/scsi/vanir/include/generic/com_product.h
 +++ /dev/null
 @@ -1,117 +0,0 @@
@@ -37775,9 +37516,6 @@ index ac99bf7..0000000
 -#define MAGNI_PRODUCTID               "9123-1b4b"
 -#define MAGNI_PRODUCTID_II		"91xx Config"
 -#endif
-diff --git a/drivers/scsi/vanir/include/generic/com_raid_struct.h b/drivers/scsi/vanir/include/generic/com_raid_struct.h
-deleted file mode 100644
-index c65df2f..0000000
 --- a/drivers/scsi/vanir/include/generic/com_raid_struct.h
 +++ /dev/null
 @@ -1,210 +0,0 @@
@@ -37991,9 +37729,6 @@ index c65df2f..0000000
 -#define BLOCK_FLAG_TEMP_ASSIGN                  MV_BIT(3
 -
 -#endif
-diff --git a/drivers/scsi/vanir/include/generic/com_request_detail.h b/drivers/scsi/vanir/include/generic/com_request_detail.h
-deleted file mode 100644
-index b5e1873..0000000
 --- a/drivers/scsi/vanir/include/generic/com_request_detail.h
 +++ /dev/null
 @@ -1,144 +0,0 @@
@@ -38141,9 +37876,6 @@ index b5e1873..0000000
 -#pragma pack()
 -
 -#endif
-diff --git a/drivers/scsi/vanir/include/generic/com_request_header.h b/drivers/scsi/vanir/include/generic/com_request_header.h
-deleted file mode 100644
-index 7d7c65e..0000000
 --- a/drivers/scsi/vanir/include/generic/com_request_header.h
 +++ /dev/null
 @@ -1,61 +0,0 @@
@@ -38208,9 +37940,6 @@ index 7d7c65e..0000000
 -#pragma pack()
 -
 -#endif
-diff --git a/drivers/scsi/vanir/include/generic/com_struct.h b/drivers/scsi/vanir/include/generic/com_struct.h
-deleted file mode 100644
-index 7ab85d2..0000000
 --- a/drivers/scsi/vanir/include/generic/com_struct.h
 +++ /dev/null
 @@ -1,45 +0,0 @@
@@ -38259,9 +37988,6 @@ index 7ab85d2..0000000
 -#include "com_request_detail.h"
 -
 -#endif /*  __MV_COM_STRUCT_H__ */
-diff --git a/drivers/scsi/vanir/include/generic/com_vd_struct.h b/drivers/scsi/vanir/include/generic/com_vd_struct.h
-deleted file mode 100644
-index bacfda4..0000000
 --- a/drivers/scsi/vanir/include/generic/com_vd_struct.h
 +++ /dev/null
 @@ -1,137 +0,0 @@
@@ -38402,9 +38128,6 @@ index bacfda4..0000000
 -#pragma pack()
 -
 -#endif
-diff --git a/drivers/scsi/vanir/include/icommon/com_api.h b/drivers/scsi/vanir/include/icommon/com_api.h
-deleted file mode 100644
-index 4346dd5..0000000
 --- a/drivers/scsi/vanir/include/icommon/com_api.h
 +++ /dev/null
 @@ -1,266 +0,0 @@
@@ -38674,9 +38397,6 @@ index 4346dd5..0000000
 -#define APICDB2_SSD_DETECT_PHY_READY (APICDB2_SSD_INIT + 4)
 -
 -#endif /*  __MV_COM_API_H__ */
-diff --git a/drivers/scsi/vanir/include/icommon/com_diagnostic.h b/drivers/scsi/vanir/include/icommon/com_diagnostic.h
-deleted file mode 100644
-index 80e7c13..0000000
 --- a/drivers/scsi/vanir/include/icommon/com_diagnostic.h
 +++ /dev/null
 @@ -1,77 +0,0 @@
@@ -38757,9 +38477,6 @@ index 80e7c13..0000000
 -typedef MVATAPIDiagParas recv_diagnostic_page;
 -
 -#endif
-diff --git a/drivers/scsi/vanir/include/icommon/com_event_struct.h b/drivers/scsi/vanir/include/icommon/com_event_struct.h
-deleted file mode 100644
-index e9bbed4..0000000
 --- a/drivers/scsi/vanir/include/icommon/com_event_struct.h
 +++ /dev/null
 @@ -1,71 +0,0 @@
@@ -38834,9 +38551,6 @@ index e9bbed4..0000000
 -#pragma pack()
 -
 -#endif /*  COM_EVENT_DRIVER_H */
-diff --git a/drivers/scsi/vanir/include/icommon/com_extern.h b/drivers/scsi/vanir/include/icommon/com_extern.h
-deleted file mode 100644
-index 6211212..0000000
 --- a/drivers/scsi/vanir/include/icommon/com_extern.h
 +++ /dev/null
 @@ -1,45 +0,0 @@
@@ -38885,9 +38599,6 @@ index 6211212..0000000
 -}OS_disk_info, *POS_disk_info;
 -
 -#endif
-diff --git a/drivers/scsi/vanir/include/icommon/com_flash.h b/drivers/scsi/vanir/include/icommon/com_flash.h
-deleted file mode 100644
-index 35a2d58..0000000
 --- a/drivers/scsi/vanir/include/icommon/com_flash.h
 +++ /dev/null
 @@ -1,36 +0,0 @@
@@ -38927,9 +38638,6 @@ index 35a2d58..0000000
 -#pragma pack()
 -
 -#endif /* __MV_COM_FLASH_H__ */
-diff --git a/drivers/scsi/vanir/include/icommon/com_ioctl.h b/drivers/scsi/vanir/include/icommon/com_ioctl.h
-deleted file mode 100644
-index 28a867a..0000000
 --- a/drivers/scsi/vanir/include/icommon/com_ioctl.h
 +++ /dev/null
 @@ -1,94 +0,0 @@
@@ -39027,9 +38735,6 @@ index 28a867a..0000000
 -#pragma pack()
 -
 -#endif /* __MV_COM_IOCTL_H__ */
-diff --git a/drivers/scsi/vanir/lib/common/com_nvram.c b/drivers/scsi/vanir/lib/common/com_nvram.c
-deleted file mode 100644
-index 67ae34b..0000000
 --- a/drivers/scsi/vanir/lib/common/com_nvram.c
 +++ /dev/null
 @@ -1,488 +0,0 @@
@@ -39521,9 +39226,6 @@ index 67ae34b..0000000
 -		return MV_FALSE;
 -
 -}
-diff --git a/drivers/scsi/vanir/lib/common/com_scsi.c b/drivers/scsi/vanir/lib/common/com_scsi.c
-deleted file mode 100644
-index c5ce4bd..0000000
 --- a/drivers/scsi/vanir/lib/common/com_scsi.c
 +++ /dev/null
 @@ -1,75 +0,0 @@
@@ -39602,9 +39304,6 @@ index c5ce4bd..0000000
 -		pSense->AdditionalSenseLength = sizeof(MV_Sense_Data) - 8;
 -	}
 -}
-diff --git a/drivers/scsi/vanir/lib/common/com_sgd.c b/drivers/scsi/vanir/lib/common/com_sgd.c
-deleted file mode 100644
-index e6c7193..0000000
 --- a/drivers/scsi/vanir/lib/common/com_sgd.c
 +++ /dev/null
 @@ -1,851 +0,0 @@
@@ -40459,9 +40158,6 @@ index e6c7193..0000000
 -
 -	return ctx.itemCnt;
 -}
-diff --git a/drivers/scsi/vanir/lib/common/com_tag.c b/drivers/scsi/vanir/lib/common/com_tag.c
-deleted file mode 100644
-index a31b9f0..0000000
 --- a/drivers/scsi/vanir/lib/common/com_tag.c
 +++ /dev/null
 @@ -1,84 +0,0 @@
@@ -40549,9 +40245,6 @@ index a31b9f0..0000000
 -	}
 -	return MV_FALSE;
 -}
-diff --git a/drivers/scsi/vanir/lib/common/com_u64.c b/drivers/scsi/vanir/lib/common/com_u64.c
-deleted file mode 100644
-index 5526a01..0000000
 --- a/drivers/scsi/vanir/lib/common/com_u64.c
 +++ /dev/null
 @@ -1,140 +0,0 @@
@@ -40695,9 +40388,6 @@ index 5526a01..0000000
 -#endif
 -
 -}
-diff --git a/drivers/scsi/vanir/lib/common/com_util.c b/drivers/scsi/vanir/lib/common/com_util.c
-deleted file mode 100644
-index d595f2a..0000000
 --- a/drivers/scsi/vanir/lib/common/com_util.c
 +++ /dev/null
 @@ -1,569 +0,0 @@
@@ -41270,9 +40960,6 @@ index d595f2a..0000000
 -	return target_id;
 -
 -}
-diff --git a/drivers/scsi/vanir/linux/hba_exp.c b/drivers/scsi/vanir/linux/hba_exp.c
-deleted file mode 100644
-index 8842365..0000000
 --- a/drivers/scsi/vanir/linux/hba_exp.c
 +++ /dev/null
 @@ -1,817 +0,0 @@
@@ -42093,9 +41780,6 @@ index 8842365..0000000
 -	}
 -	return cmd_flag;
 -}
-diff --git a/drivers/scsi/vanir/linux/hba_exp.h b/drivers/scsi/vanir/linux/hba_exp.h
-deleted file mode 100644
-index e4374a6..0000000
 --- a/drivers/scsi/vanir/linux/hba_exp.h
 +++ /dev/null
 @@ -1,234 +0,0 @@
@@ -42333,9 +42017,6 @@ index e4374a6..0000000
 -#endif
 -
 -#endif
-diff --git a/drivers/scsi/vanir/linux/hba_header.h b/drivers/scsi/vanir/linux/hba_header.h
-deleted file mode 100644
-index 91bfa15..0000000
 --- a/drivers/scsi/vanir/linux/hba_header.h
 +++ /dev/null
 @@ -1,32 +0,0 @@
@@ -42371,9 +42052,6 @@ index 91bfa15..0000000
 -#include "hba_exp.h"
 -
 -#endif /* MV_INCLUDE_H */
-diff --git a/drivers/scsi/vanir/linux/hba_inter.h b/drivers/scsi/vanir/linux/hba_inter.h
-deleted file mode 100644
-index cad5acd..0000000
 --- a/drivers/scsi/vanir/linux/hba_inter.h
 +++ /dev/null
 @@ -1,135 +0,0 @@
@@ -42512,9 +42190,6 @@ index cad5acd..0000000
 -#define DRIVER_STATUS_SHUTDOWN   4   /* All modules shutdown. */
 -
 -#endif /* HBA_INTERNAL_H */
-diff --git a/drivers/scsi/vanir/linux/hba_mod.c b/drivers/scsi/vanir/linux/hba_mod.c
-deleted file mode 100644
-index 1455667..0000000
 --- a/drivers/scsi/vanir/linux/hba_mod.c
 +++ /dev/null
 @@ -1,657 +0,0 @@
@@ -43175,9 +42850,6 @@ index 1455667..0000000
 -        ++dbg_ret;
 -	return dbg_ret;
 -}
-diff --git a/drivers/scsi/vanir/linux/hba_mod.h b/drivers/scsi/vanir/linux/hba_mod.h
-deleted file mode 100644
-index 8ac54cd..0000000
 --- a/drivers/scsi/vanir/linux/hba_mod.h
 +++ /dev/null
 @@ -1,89 +0,0 @@
@@ -43270,9 +42942,6 @@ index 8ac54cd..0000000
 -				  struct pci_dev *dev);
 -
 -#endif /* __MODULE_MANAGE_H__ */
-diff --git a/drivers/scsi/vanir/linux/hba_priv.c b/drivers/scsi/vanir/linux/hba_priv.c
-deleted file mode 100644
-index 3d8d4bf..0000000
 --- a/drivers/scsi/vanir/linux/hba_priv.c
 +++ /dev/null
 @@ -1,256 +0,0 @@
@@ -43532,9 +43201,6 @@ index 3d8d4bf..0000000
 -
 -	return &__core_mod_ops;
 -}
-diff --git a/drivers/scsi/vanir/linux/hba_timer.c b/drivers/scsi/vanir/linux/hba_timer.c
-deleted file mode 100644
-index fed6bf6..0000000
 --- a/drivers/scsi/vanir/linux/hba_timer.c
 +++ /dev/null
 @@ -1,478 +0,0 @@
@@ -44016,9 +43682,6 @@ index fed6bf6..0000000
 -		}
 -	}
 -}
-diff --git a/drivers/scsi/vanir/linux/hba_timer.h b/drivers/scsi/vanir/linux/hba_timer.h
-deleted file mode 100644
-index 7a0bd4c..0000000
 --- a/drivers/scsi/vanir/linux/hba_timer.h
 +++ /dev/null
 @@ -1,62 +0,0 @@
@@ -44084,9 +43747,6 @@ index 7a0bd4c..0000000
 -#define TIMER_INTERVAL_SMALL_UNIT	100		/* millisecond */
 -
 -#endif /* __HBA_TIMER_H__ */
-diff --git a/drivers/scsi/vanir/linux/linux_iface.c b/drivers/scsi/vanir/linux/linux_iface.c
-deleted file mode 100644
-index 200497d..0000000
 --- a/drivers/scsi/vanir/linux/linux_iface.c
 +++ /dev/null
 @@ -1,844 +0,0 @@
@@ -44934,9 +44594,6 @@ index 200497d..0000000
 -#endif
 -	return error;
 -}
-diff --git a/drivers/scsi/vanir/linux/linux_iface.h b/drivers/scsi/vanir/linux/linux_iface.h
-deleted file mode 100644
-index 30f7558..0000000
 --- a/drivers/scsi/vanir/linux/linux_iface.h
 +++ /dev/null
 @@ -1,113 +0,0 @@
@@ -45053,9 +44710,6 @@ index 30f7558..0000000
 -void mv_unregister_chdev(struct hba_extension *hba);
 -
 -#endif /* ifndef __MV_HBA_LINUX_INTERFACE__ */
-diff --git a/drivers/scsi/vanir/linux/linux_main.c b/drivers/scsi/vanir/linux/linux_main.c
-deleted file mode 100644
-index 84a729a..0000000
 --- a/drivers/scsi/vanir/linux/linux_main.c
 +++ /dev/null
 @@ -1,1422 +0,0 @@
@@ -46481,9 +46135,6 @@ index 84a729a..0000000
 -MODULE_DEVICE_TABLE(pci, mv_pci_ids);
 -module_init(sas_hba_init);
 -module_exit(sas_hba_exit);
-diff --git a/drivers/scsi/vanir/linux/linux_main.h b/drivers/scsi/vanir/linux/linux_main.h
-deleted file mode 100644
-index bbb8c44..0000000
 --- a/drivers/scsi/vanir/linux/linux_main.h
 +++ /dev/null
 @@ -1,77 +0,0 @@
@@ -46564,9 +46215,6 @@ index bbb8c44..0000000
 -void hba_send_shutdown_req(MV_PVOID);
 -
 -#endif /*_LINUX_MAIN_H*/
-diff --git a/drivers/scsi/vanir/linux/mv_os.c b/drivers/scsi/vanir/linux/mv_os.c
-deleted file mode 100644
-index 460adaa..0000000
 --- a/drivers/scsi/vanir/linux/mv_os.c
 +++ /dev/null
 @@ -1,437 +0,0 @@
@@ -47007,9 +46655,6 @@ index 460adaa..0000000
 -	if(in_atomic())
 -		 printk("Present process is  in preemption-disabled context .\n");
 -}
-diff --git a/drivers/scsi/vanir/linux/mv_os.h b/drivers/scsi/vanir/linux/mv_os.h
-deleted file mode 100644
-index ff9681e..0000000
 --- a/drivers/scsi/vanir/linux/mv_os.h
 +++ /dev/null
 @@ -1,310 +0,0 @@
@@ -47323,16 +46968,10 @@ index ff9681e..0000000
 -#endif
 -
 -#endif /* LINUX_OS_H */
-diff --git a/drivers/scsi/vanir/mv_conf.mk b/drivers/scsi/vanir/mv_conf.mk
-deleted file mode 100644
-index 9104400..0000000
 --- a/drivers/scsi/vanir/mv_conf.mk
 +++ /dev/null
 @@ -1 +0,0 @@
 -SUPPORT_VANIR=y
-diff --git a/drivers/scsi/vanir/mv_config.h b/drivers/scsi/vanir/mv_config.h
-deleted file mode 100644
-index 6dd47cd..0000000
 --- a/drivers/scsi/vanir/mv_config.h
 +++ /dev/null
 @@ -1,17 +0,0 @@
@@ -47353,9 +46992,6 @@ index 6dd47cd..0000000
 -#define MV_CONFIGURATION_H
 -#include "mv_config_vanir.h"
 -#endif /* MV_CONFIGURATION_H */
-diff --git a/drivers/scsi/vanir/mv_config_vanir.h b/drivers/scsi/vanir/mv_config_vanir.h
-deleted file mode 100644
-index 855abe4..0000000
 --- a/drivers/scsi/vanir/mv_config_vanir.h
 +++ /dev/null
 @@ -1,35 +0,0 @@
@@ -47394,9 +47030,6 @@ index 855abe4..0000000
 -#include "mv_linux.h"
 -
 -#endif/*__MV_CONFIG_VANIR_H__*/
-diff --git a/drivers/scsi/vanir/mv_include.h b/drivers/scsi/vanir/mv_include.h
-deleted file mode 100644
-index 488bb38..0000000
 --- a/drivers/scsi/vanir/mv_include.h
 +++ /dev/null
 @@ -1,32 +0,0 @@
@@ -47432,9 +47065,6 @@ index 488bb38..0000000
 -#include "hba_exp.h"
 -
 -#endif /* MV_INCLUDE_H */
-diff --git a/drivers/scsi/vanir/mv_linux.h b/drivers/scsi/vanir/mv_linux.h
-deleted file mode 100644
-index 639b517..0000000
 --- a/drivers/scsi/vanir/mv_linux.h
 +++ /dev/null
 @@ -1,24 +0,0 @@
@@ -47462,9 +47092,6 @@ index 639b517..0000000
 -         MAX_PM_SUPPORTED + 1)/*reserved 1 ID for virtual device ID*/
 -
 -#endif /* __MV_LINUX_H__ */
-diff --git a/drivers/scsi/vanir/patch.kbuild b/drivers/scsi/vanir/patch.kbuild
-deleted file mode 100644
-index 9cf721c..0000000
 --- a/drivers/scsi/vanir/patch.kbuild
 +++ /dev/null
 @@ -1,10 +0,0 @@
@@ -47478,9 +47105,6 @@ index 9cf721c..0000000
 - obj-$(CONFIG_SGIWD93_SCSI)	+= sgiwd93.o	wd33c93.o
 - obj-$(CONFIG_ATARI_SCSI)	+= atari_scsi.o
 - obj-$(CONFIG_MAC_SCSI)		+= mac_scsi.o
-diff --git a/drivers/scsi/vanir/patch.sh b/drivers/scsi/vanir/patch.sh
-deleted file mode 100644
-index 75ee34b..0000000
 --- a/drivers/scsi/vanir/patch.sh
 +++ /dev/null
 @@ -1,87 +0,0 @@
@@ -47571,9 +47195,6 @@ index 75ee34b..0000000
 -subtxt Kconfig $2 > Kconfig.new
 -mv Kconfig Kconfig.orig
 -mv Kconfig.new Kconfig
-diff --git a/drivers/scsi/vanir/product/vanir/core_cpu.h b/drivers/scsi/vanir/product/vanir/core_cpu.h
-deleted file mode 100644
-index bac5ba4..0000000
 --- a/drivers/scsi/vanir/product/vanir/core_cpu.h
 +++ /dev/null
 @@ -1,91 +0,0 @@
@@ -47668,9 +47289,6 @@ index bac5ba4..0000000
 -#define CS_INTRFC_CORE_DMA 0
 -
 -#endif /* __CORE_CPU_H */
-diff --git a/drivers/scsi/vanir/product/vanir/core_hal.c b/drivers/scsi/vanir/product/vanir/core_hal.c
-deleted file mode 100644
-index 707ca09..0000000
 --- a/drivers/scsi/vanir/product/vanir/core_hal.c
 +++ /dev/null
 @@ -1,681 +0,0 @@
@@ -48355,9 +47973,6 @@ index 707ca09..0000000
 -
 -	MV_REG_WRITE_DWORD(core->mmio_base, TEST_PIN_OUTPUT_VALUE, reg);
 -}
-diff --git a/drivers/scsi/vanir/product/vanir/core_hal.h b/drivers/scsi/vanir/product/vanir/core_hal.h
-deleted file mode 100644
-index c2f462c..0000000
 --- a/drivers/scsi/vanir/product/vanir/core_hal.h
 +++ /dev/null
 @@ -1,939 +0,0 @@
@@ -49300,9 +48915,6 @@ index c2f462c..0000000
 -MV_VOID core_dump_common_reg(void *root_p);
 -
 -#endif /* __CORE_HAL_H */
-diff --git a/drivers/scsi/vanir/product/vanir/core_init.c b/drivers/scsi/vanir/product/vanir/core_init.c
-deleted file mode 100644
-index b30ce64..0000000
 --- a/drivers/scsi/vanir/product/vanir/core_init.c
 +++ /dev/null
 @@ -1,753 +0,0 @@
@@ -50059,9 +49671,6 @@ index b30ce64..0000000
 -	core->handlers[HANDLER_API].verify_command = api_verify_command;
 -
 -}
-diff --git a/drivers/scsi/vanir/product/vanir/core_spi.c b/drivers/scsi/vanir/product/vanir/core_spi.c
-deleted file mode 100644
-index bfd0c33..0000000
 --- a/drivers/scsi/vanir/product/vanir/core_spi.c
 +++ /dev/null
 @@ -1,1096 +0,0 @@
@@ -51161,9 +50770,6 @@ index bfd0c33..0000000
 -    }
 -    return 0;
 -}
-diff --git a/drivers/scsi/vanir/product/vanir/mv_product_vanir.h b/drivers/scsi/vanir/product/vanir/mv_product_vanir.h
-deleted file mode 100644
-index 0c437b1..0000000
 --- a/drivers/scsi/vanir/product/vanir/mv_product_vanir.h
 +++ /dev/null
 @@ -1,38 +0,0 @@
@@ -51205,9 +50811,6 @@ index 0c437b1..0000000
 -#define MAX_DEVICE_SUPPORTED_RAID             64
 -
 -#endif/*__MV_PRODUCT_VANIR_H__*/
-diff --git a/drivers/scsi/vanir/readme b/drivers/scsi/vanir/readme
-deleted file mode 100644
-index d328616..0000000
 --- a/drivers/scsi/vanir/readme
 +++ /dev/null
 @@ -1,130 +0,0 @@
@@ -51341,9 +50944,6 @@ index d328616..0000000
 --------
 -
 -* We've tested the patch successfully against kernel 2.6.16 and upward.
-diff --git a/drivers/scsi/vanir/readme.arm b/drivers/scsi/vanir/readme.arm
-deleted file mode 100644
-index f78f8df..0000000
 --- a/drivers/scsi/vanir/readme.arm
 +++ /dev/null
 @@ -1,32 +0,0 @@
@@ -51379,9 +50979,6 @@ index f78f8df..0000000
 -4) Notes:
 -	a) If boot with mv94xx driver built-in and devices attached, the OS drive's partition won't be /dev/sda1, then we need change "boot_args_root" value under uboot command line.
 -	b) It also supports to boot from the OS drive attached on Marvell mv94xx controller.
-diff --git a/drivers/scsi/vanir/readme.vmware b/drivers/scsi/vanir/readme.vmware
-deleted file mode 100644
-index 1f2a787..0000000
 --- a/drivers/scsi/vanir/readme.vmware
 +++ /dev/null
 @@ -1,13 +0,0 @@
@@ -51398,6 +50995,3 @@ index 1f2a787..0000000
 -1. SCSI device can not be removed from host with hot plug out and delete raid,
 -   reboot is needed after raid creation and removing.
 -2. Dual card are not supported yet for raid driver, especially with create/delete raid.
--- 
-1.7.9.5
-

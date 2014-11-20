@@ -16,8 +16,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  .../mv_drivers_lsp/mv_ipc_net/ipc_net.c            |    8 +++++---
  3 files changed, 8 insertions(+), 6 deletions(-)
 
-diff --git a/arch/arm/include/asm/entry-macro-multi.S b/arch/arm/include/asm/entry-macro-multi.S
-index d74dc30..50a7f3f 100644
 --- a/arch/arm/include/asm/entry-macro-multi.S
 +++ b/arch/arm/include/asm/entry-macro-multi.S
 @@ -21,7 +21,7 @@
@@ -29,11 +27,9 @@ index d74dc30..50a7f3f 100644
  	movne   r1, sp
  	adrne   lr, BSYM(1b)
  	bne     do_ipc_rx_irq
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/mv_ipc.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/mv_ipc.c
-index a0fc143..e1ab9c7 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/mv_ipc.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/mv_ipc.c
-@@ -162,7 +162,7 @@ void do_ipc_rx_irq(int irq, struct pt_regs *regs)
+@@ -162,7 +162,7 @@ void do_ipc_rx_irq(int irq, struct pt_re
  	int read_msgs = IPC_RX_MAX_MSGS_PER_ISR;
  	struct pt_regs *old_regs = set_irq_regs(regs);
  
@@ -42,7 +38,7 @@ index a0fc143..e1ab9c7 100644
  
  	irq_enter();
  	mvIpcDisableChnRx(irq);
-@@ -183,7 +183,7 @@ void do_ipc_rx_irq(int irq, struct pt_regs *regs)
+@@ -183,7 +183,7 @@ void do_ipc_rx_irq(int irq, struct pt_re
  	irq_exit();
  
  	if(read_msgs == IPC_RX_MAX_MSGS_PER_ISR)
@@ -51,11 +47,9 @@ index a0fc143..e1ab9c7 100644
  
  	set_irq_regs(old_regs);
  }
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c
-index 5c9d2a2..3092460 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c
-@@ -477,13 +477,15 @@ static int ipc_net_init(void *platform_data)
+@@ -477,13 +477,15 @@ static int ipc_net_init(void *platform_d
  	dev->irq 			= 0;
  	dev->tx_queue_len   = IPC_NET_MAX_TX_DESC;
  	dev->watchdog_timeo = 5*HZ;
@@ -74,6 +68,3 @@ index 5c9d2a2..3092460 100644
  		dev->dev_addr[i] = i + whoAmI();
  	}
  
--- 
-1.7.9.5
-

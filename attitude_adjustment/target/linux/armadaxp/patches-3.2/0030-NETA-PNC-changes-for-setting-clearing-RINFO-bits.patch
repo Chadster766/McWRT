@@ -18,10 +18,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.c
  mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.h
 
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c
-old mode 100644
-new mode 100755
-index efef7be..7800f47
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c
 @@ -48,10 +48,10 @@ static ssize_t tcam_help(char *buf)
@@ -72,7 +68,7 @@ index efef7be..7800f47
  	off += mvOsSPrintf(buf+off, " s_ainfo         - set ainfo value <a> with mask <b>\n");
  	off += mvOsSPrintf(buf+off, " s_flowid        - fill sram flowid nibbles <b> from value <a>\n");
  	off += mvOsSPrintf(buf+off, " s_flowid_part   - fill sram flowid part <b> with value <a>\n");
-@@ -200,6 +199,8 @@ static ssize_t tcam_store(struct device *dev,
+@@ -200,6 +199,8 @@ static ssize_t tcam_store(struct device
  		sram_sw_set_next_lookup(&te, a);
  	else if (!strcmp(name, "s_ainfo"))
  		sram_sw_set_ainfo(&te, a, b);
@@ -81,7 +77,7 @@ index efef7be..7800f47
  	else if (!strcmp(name, "s_lookup_done"))
  		sram_sw_set_lookup_done(&te, a);
  	else if (!strcmp(name, "s_next_lookup_shift"))
-@@ -208,8 +209,6 @@ static ssize_t tcam_store(struct device *dev,
+@@ -208,8 +209,6 @@ static ssize_t tcam_store(struct device
  		sram_sw_set_rxq(&te, a, b);
  	else if (!strcmp(name, "s_shift_update"))
  		sram_sw_set_shift_update(&te, a, b);
@@ -90,8 +86,6 @@ index efef7be..7800f47
  #ifdef MV_ETH_PNC_NEW
  	else if (!strcmp(name, "s_rinfo_extra"))
  		sram_sw_set_rinfo_extra(&te, a << (b & ~1));
-diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
-index e6a8e20..80b6ffd 100755
 --- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
 +++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
 @@ -279,7 +279,7 @@ static void pnc_mac_fc_drop(void)
@@ -103,7 +97,7 @@ index e6a8e20..80b6ffd 100755
  
  	tcam_sw_text(te, "flow control");
  	sram_sw_set_lookup_done(te, 1);
-@@ -317,7 +317,7 @@ static struct tcam_entry *pnc_mac_da(unsigned char *da, unsigned int len,
+@@ -317,7 +317,7 @@ static struct tcam_entry *pnc_mac_da(uns
  	tcam_sw_set_port(te, 0, port_mask);
  
  	/* result info bit */
@@ -220,7 +214,7 @@ index e6a8e20..80b6ffd 100755
  	sram_sw_set_rxq(te, rxq_ip6, 0);
  	sram_sw_set_lookup_done(te, 1);
  	sram_sw_set_flowid(te, FLOWID_EOF_LU_IP6, FLOWID_CTRL_LOW_HALF_MASK);
-@@ -1057,7 +1057,7 @@ int pnc_ipv6_2_tuples_add(unsigned int tid1, unsigned int tid2, unsigned int flo
+@@ -1057,7 +1057,7 @@ int pnc_ipv6_2_tuples_add(unsigned int t
  		sram_sw_set_rxq(te, rxq, 0);
  	}
  
@@ -229,7 +223,7 @@ index e6a8e20..80b6ffd 100755
  
  	tcam_sw_set_ainfo(te, unique, AI_MASK);
  	tcam_sw_text(te, "ipv6_2t_B");
-@@ -1096,7 +1096,7 @@ int pnc_ipv4_2_tuples_add(unsigned int tid, unsigned int flow_id, unsigned int s
+@@ -1096,7 +1096,7 @@ int pnc_ipv4_2_tuples_add(unsigned int t
  	sram_sw_set_lookup_done(te, 1);
  	sram_sw_set_flowid(te, flow_id, FLOWID_CTRL_FULL_MASK);
  	sram_sw_set_rxq(te, rxq, 0);
@@ -238,7 +232,7 @@ index e6a8e20..80b6ffd 100755
  	tcam_sw_text(te, "ipv4_2t");
  
  	tcam_hw_write(te, tid);
-@@ -1147,7 +1147,7 @@ int pnc_ipv4_5_tuples_add(unsigned int tid, unsigned int flow_id,
+@@ -1147,7 +1147,7 @@ int pnc_ipv4_5_tuples_add(unsigned int t
  	sram_sw_set_lookup_done(te, 1);
  	sram_sw_set_flowid(te, flow_id, FLOWID_CTRL_FULL_MASK);
  	sram_sw_set_rxq(te, rxq, 0);
@@ -247,13 +241,9 @@ index e6a8e20..80b6ffd 100755
  	tcam_sw_text(te, "ipv4_5t");
  
  	tcam_hw_write(te, tid);
-diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncAging.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncAging.c
-old mode 100644
-new mode 100755
-index 2602828..232bb6f
 --- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncAging.c
 +++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncAging.c
-@@ -26,8 +26,6 @@ DISCLAIMED.  The GPL License provides additional details about this warranty
+@@ -26,8 +26,6 @@ DISCLAIMED.  The GPL License provides ad
  disclaimer.
  *******************************************************************************/
  
@@ -271,10 +261,6 @@ index 2602828..232bb6f
  #define PNC_AGING_CNTRS_ADDR_MASK       (0 << 12)
  #define PNC_AGING_GROUPS_ADDR_MASK      (1 << 12)
  #define PNC_AGING_SCANNER_ADDR_MASK     (2 << 12)
-diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncWol.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncWol.c
-old mode 100644
-new mode 100755
-index 61f7961..815533e
 --- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncWol.c
 +++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncWol.c
 @@ -177,7 +177,7 @@ void mv_pnc_wol_init(void)
@@ -286,13 +272,9 @@ index 61f7961..815533e
  	sram_sw_set_lookup_done(te, 1);
  	tcam_sw_text(te, "wol_eof");
  
-diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.c
-old mode 100644
-new mode 100755
-index 6b85121..3b96928
 --- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.c
 +++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.c
-@@ -268,7 +268,7 @@ void sram_sw_set_flowid_partial(struct tcam_entry *te, unsigned int flowid,
+@@ -268,7 +268,7 @@ void sram_sw_set_flowid_partial(struct t
  	te->sram.word[1] |= 1 << idx;
  }
  
@@ -301,7 +283,7 @@ index 6b85121..3b96928
  {
  	unsigned int word;
  	unsigned int i;
-@@ -276,13 +276,16 @@ void sram_sw_set_rinfo(struct tcam_entry *te, unsigned int rinfo)
+@@ -276,13 +276,16 @@ void sram_sw_set_rinfo(struct tcam_entry
  	WARN_ON_OOR(rinfo > RI_MASK);
  
  	for (i = 0; i < RI_BITS; i++) {
@@ -321,13 +303,9 @@ index 6b85121..3b96928
  		}
  	}
  }
-diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.h b/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.h
-old mode 100644
-new mode 100755
-index 45bc29d..b668fca
 --- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.h
 +++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.h
-@@ -322,7 +322,7 @@ int  tcam_sw_cmp_byte(struct tcam_entry *te, unsigned int offset, unsigned char
+@@ -322,7 +322,7 @@ int  tcam_sw_cmp_byte(struct tcam_entry
  int  tcam_sw_cmp_bytes(struct tcam_entry *te, unsigned int offset, unsigned int size, unsigned char *data);
  
  void tcam_sw_set_mask(struct tcam_entry *te, unsigned int offset, unsigned char mask);
@@ -336,6 +314,3 @@ index 45bc29d..b668fca
  void sram_sw_set_shift_update(struct tcam_entry *te, unsigned int index, unsigned int value);
  void sram_sw_set_rxq(struct tcam_entry *te, unsigned int rxq, unsigned int force);
  
--- 
-1.7.9.5
-

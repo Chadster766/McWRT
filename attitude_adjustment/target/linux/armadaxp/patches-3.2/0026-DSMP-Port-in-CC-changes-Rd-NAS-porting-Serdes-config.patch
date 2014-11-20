@@ -19,11 +19,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaRegs.h  |    3 +
  10 files changed, 256 insertions(+), 31 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
-index 09078dc..29ca72c 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
-@@ -288,6 +288,7 @@ MV_BOOL mvBoardIsPortInSgmii(MV_U32 ethPortNum)
+@@ -288,6 +288,7 @@ MV_BOOL mvBoardIsPortInSgmii(MV_U32 ethP
  			return MV_TRUE;
  		break;
  	case DB_78X60_PCAC_ID:
@@ -58,7 +56,7 @@ index 09078dc..29ca72c 100644
  	case DB_88F78XX0_BP_REV2_ID:
  		if (mvBoardIsPexModuleConnected())
  			serdesCfg = 1;
-@@ -2339,6 +2346,7 @@ MV_BOARD_PEX_INFO *mvBoardPexInfoGet(void)
+@@ -2339,6 +2346,7 @@ MV_BOARD_PEX_INFO *mvBoardPexInfoGet(voi
  	case DB_78X60_PCAC_ID:
  	case FPGA_88F78XX0_ID:
  	case DB_88F78XX0_BP_REV2_ID:
@@ -66,11 +64,9 @@ index 09078dc..29ca72c 100644
  		return &BOARD_INFO(boardId)->boardPexInfo;
  		break;
  	default:
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
-index 32b80eb..7e297fd 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
-@@ -369,7 +369,7 @@ MV_BOARD_MPP_INFO db88f78XX0rev2InfoBoardMppConfigValue[] = {
+@@ -369,7 +369,7 @@ MV_BOARD_MPP_INFO db88f78XX0rev2InfoBoar
  
  MV_SERDES_CFG db88f78XX0rev2InfoBoardSerdesConfigValue[] = { //Faraj: change accordign to DB ==> stays the same
  	/* Z1B */
@@ -215,11 +211,9 @@ index 32b80eb..7e297fd 100644
 +	&db88f78XX0rev2Info,
 +	&rd78460nasInfo
  };
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
-index d54de09..197a352 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
-@@ -94,7 +94,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -94,7 +94,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #define DB_78X60_PCAC_ID			(RD_78460_SERVER_ID + 1)
  #define FPGA_88F78XX0_ID			(DB_78X60_PCAC_ID + 1)
  #define DB_88F78XX0_BP_REV2_ID			(FPGA_88F78XX0_ID + 1)
@@ -275,8 +269,6 @@ index d54de09..197a352 100644
  
  /*******************/
  /* RD-78460-SERVER */
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/cpu/mvCpu.c b/arch/arm/mach-armadaxp/armada_xp_family/cpu/mvCpu.c
-index eb72e99..699062c 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/cpu/mvCpu.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/cpu/mvCpu.c
 @@ -168,13 +168,16 @@ MV_VOID mvCpuNameGet(char *pNameBuff)
@@ -299,11 +291,9 @@ index eb72e99..699062c 100644
  		break;
  	default:
  		mvOsSPrintf(pNameBuff, "??? (0x%04x) (Rev %d)", cpuModel, mvOsCpuRevGet());
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
-index fab6c4b..984effc 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
-@@ -112,7 +112,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -112,7 +112,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  MV_U32 dummyFlavour = 0;
  MV_BIOS_MODE bios_modes[BIOS_MODES_NUM] = {
  #ifdef MV88F78X60_Z1
@@ -312,7 +302,7 @@ index fab6c4b..984effc 100644
  /*	0x4d/[1:0] 0x4d/[4:2] 0x4e[0] 0x4e/[4:1] 0x4f[0] 0x4f/[2:1] 0x4f/[4:3]	*/
         {"78130", 0x10, 0x7813, 0x1, 0x2, 0x0, 0xC, 0x0, 0x0, 0x1, 0x1},
         {"6710" , 0x11, 0x6710, 0x0, 0x2, 0x0, 0x5, 0x0, 0x0, 0x1, 0x0},
-@@ -123,15 +123,15 @@ MV_BIOS_MODE bios_modes[BIOS_MODES_NUM] = {
+@@ -123,15 +123,15 @@ MV_BIOS_MODE bios_modes[BIOS_MODES_NUM]
         {"78480", 0x16, 0x7846, 0x3, 0x2, 0x0, 0x5, 0x0, 0x3, 0x2, 0x0}
  };
  #else
@@ -470,8 +460,6 @@ index fab6c4b..984effc 100644
  					MV_REG_WRITE(regAddr[serdesLineNum][step+5], regVal[serdesLineNum][step+5]);
  				}
  			}
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
-index 3dd3ec4..13bd343 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
 @@ -170,7 +170,12 @@ typedef struct _boardSerdesConf {
@@ -487,8 +475,6 @@ index 3dd3ec4..13bd343 100644
  
  typedef struct {
  	char *name;
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
-index 1829ff9..19a85e2 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
 @@ -321,6 +321,7 @@ extern "C" {
@@ -554,8 +540,6 @@ index 1829ff9..19a85e2 100644
  
  /*
  	This enum should reflect the units numbers in register
-diff --git a/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIfRegs.h b/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIfRegs.h
-index 33de7d6..7b921e9 100644
 --- a/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIfRegs.h
 +++ b/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIfRegs.h
 @@ -149,6 +149,10 @@ extern "C" {
@@ -569,11 +553,9 @@ index 33de7d6..7b921e9 100644
  
  #ifdef __cplusplus
  }
-diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
-index 612ddcb..b881542 100644
 --- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
 +++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
-@@ -524,9 +524,14 @@ MV_STATUS       mvEthGmacRgmiiSet(int port, int enable)
+@@ -524,9 +524,14 @@ MV_STATUS       mvEthGmacRgmiiSet(int po
  
  static void mvNetaPortSgmiiConfig(int port)
  {
@@ -589,8 +571,6 @@ index 612ddcb..b881542 100644
  void mvNetaPortPowerUp(int port, MV_BOOL isSgmii, MV_BOOL isRgmii)
  {
  	MV_U32 regVal;
-diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaRegs.h b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaRegs.h
-index 1ae714a..4b6b62b 100644
 --- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaRegs.h
 +++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaRegs.h
 @@ -553,6 +553,9 @@ extern "C" {
@@ -603,6 +583,3 @@ index 1ae714a..4b6b62b 100644
  #define NETA_GMAC_PORT_RGMII_BIT            4
  #define NETA_GMAC_PORT_RGMII_MASK           (1 << NETA_GMAC_PORT_RGMII_BIT)
  
--- 
-1.7.9.5
-

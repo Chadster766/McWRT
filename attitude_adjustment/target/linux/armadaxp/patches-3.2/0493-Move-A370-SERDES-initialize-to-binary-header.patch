@@ -1,8 +1,6 @@
-diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPex.c b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
-index 0f598e2..82629fa 100755
 --- a/arch/arm/plat-armada/mv_hal/pex/mvPex.c
 +++ b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
-@@ -96,6 +96,11 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+@@ -96,6 +96,11 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX
  		return MV_ERROR;
  	}
  
@@ -14,7 +12,7 @@ index 0f598e2..82629fa 100755
  	/* Check that required PEX type is the one set in reset time */
  	if (pexType != pexMode.pexType) {
  		/* No Link. Shut down the Phy */
-@@ -117,44 +122,11 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+@@ -117,44 +122,11 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX
  		status = MV_REG_READ(PEX_CFG_DIRECT_ACCESS(pexIf, PEX_STATUS_AND_COMMAND));
  		status |= PXSAC_INT_DIS;
  		MV_REG_WRITE(PEX_CFG_DIRECT_ACCESS(pexIf, PEX_STATUS_AND_COMMAND), status);
@@ -60,7 +58,7 @@ index 0f598e2..82629fa 100755
  	}
  #ifdef PCIE_VIRTUAL_BRIDGE_SUPPORT
  	mvPexVrtBrgInit(pexIf);
-@@ -184,7 +156,7 @@ MV_U32 mvPexModeGet(MV_U32 pexIf, MV_PEX_MODE *pexMode)
+@@ -184,7 +156,7 @@ MV_U32 mvPexModeGet(MV_U32 pexIf, MV_PEX
  	if (pexIf >= MV_PEX_MAX_IF)
  		return MV_BAD_PARAM;
  
@@ -69,6 +67,3 @@ index 0f598e2..82629fa 100755
  	pexData = MV_REG_READ(PEX_CTRL_REG(pexIf));
  
  	switch (pexData & PXCR_DEV_TYPE_CTRL_MASK) {
--- 
-1.7.9.5
-

@@ -19,8 +19,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  net/core/datagram.c                                |    2 +-
  10 files changed, 66 insertions(+), 44 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/Makefile.boot b/arch/arm/mach-armadaxp/Makefile.boot
-index c7e75ac..ff0a4b5 100644
 --- a/arch/arm/mach-armadaxp/Makefile.boot
 +++ b/arch/arm/mach-armadaxp/Makefile.boot
 @@ -1,4 +1,4 @@
@@ -29,8 +27,6 @@ index c7e75ac..ff0a4b5 100644
  params_phys-y	:= 0x00000100
  initrd_phys-y	:= 0x00800000
  
-diff --git a/arch/arm/mach-armadaxp/clcd.c b/arch/arm/mach-armadaxp/clcd.c
-index dd0277c..dac86ce 100644
 --- a/arch/arm/mach-armadaxp/clcd.c
 +++ b/arch/arm/mach-armadaxp/clcd.c
 @@ -37,6 +37,8 @@
@@ -42,11 +38,9 @@ index dd0277c..dac86ce 100644
  int lcd_panel;
  module_param(lcd_panel, uint, 0);
  MODULE_PARM_DESC(lcd_panel, "set to 1 to enable LCD panel.");
-diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
-index 6366de1..5bd1785 100644
 --- a/arch/arm/mach-armadaxp/core.c
 +++ b/arch/arm/mach-armadaxp/core.c
-@@ -439,12 +439,12 @@ static struct plat_serial8250_port aurora_uart0_data[] = {
+@@ -439,12 +439,12 @@ static struct plat_serial8250_port auror
  		.mapbase	= (INTER_REGS_PHYS_BASE | MV_UART_REGS_OFFSET(0)),
  		.membase	= (char *)(INTER_REGS_BASE | MV_UART_REGS_OFFSET(0)),
  		.irq		= IRQ_AURORA_UART0,
@@ -61,7 +55,7 @@ index 6366de1..5bd1785 100644
  		.private_data	= (void *) (INTER_REGS_BASE | MV_UART_REGS_OFFSET(0) | 0x7C),
  		.type		= PORT_16550A,
  #endif
-@@ -1342,7 +1342,7 @@ MACHINE_START(ARMADA_XP_DB, "Marvell Armada XP Development Board")
+@@ -1342,7 +1342,7 @@ MACHINE_START(ARMADA_XP_DB, "Marvell Arm
  	/* MAINTAINER("MARVELL") */
  	//.phys_io	= INTER_REGS_PHYS_BASE,
  	//.io_pg_offst	= ((INTER_REGS_BASE) >> 18) & 0xfffc,
@@ -79,8 +73,6 @@ index 6366de1..5bd1785 100644
  	.map_io		= axp_map_io,
  	.init_irq	= axp_init_irq,
  	.timer		= &axp_timer,
-diff --git a/arch/arm/mach-armadaxp/include/mach/debug-macro.S b/arch/arm/mach-armadaxp/include/mach/debug-macro.S
-index ee535f2..2db307c 100644
 --- a/arch/arm/mach-armadaxp/include/mach/debug-macro.S
 +++ b/arch/arm/mach-armadaxp/include/mach/debug-macro.S
 @@ -9,7 +9,7 @@
@@ -92,8 +84,6 @@ index ee535f2..2db307c 100644
  	ldr     \rp, =INTER_REGS_PHYS_BASE
  	ldr	\rv, =INTER_REGS_BASE
  	orr     \rp, \rp, #0x00012000
-diff --git a/arch/arm/mach-armadaxp/include/mach/hardware.h b/arch/arm/mach-armadaxp/include/mach/hardware.h
-index e937269..f7c66e4 100644
 --- a/arch/arm/mach-armadaxp/include/mach/hardware.h
 +++ b/arch/arm/mach-armadaxp/include/mach/hardware.h
 @@ -11,7 +11,7 @@
@@ -105,8 +95,6 @@ index e937269..f7c66e4 100644
  
  #define PCIBIOS_MIN_IO			0x1000
  #define PCIBIOS_MIN_MEM			0x01000000
-diff --git a/arch/arm/mm/proc-sheeva_pj4bv7.S b/arch/arm/mm/proc-sheeva_pj4bv7.S
-index 23ff635..51e6f91 100644
 --- a/arch/arm/mm/proc-sheeva_pj4bv7.S
 +++ b/arch/arm/mm/proc-sheeva_pj4bv7.S
 @@ -109,7 +109,12 @@ ENDPROC(cpu_pj4bv7_do_idle)
@@ -232,8 +220,6 @@ index 23ff635..51e6f91 100644
  
  #else
  #ifdef CONFIG_SMP
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-index 5c78468..7e6303f 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 @@ -35,7 +35,7 @@ disclaimer.
@@ -245,7 +231,7 @@ index 5c78468..7e6303f 100644
  #include "mvOs.h"
  #include "mvDebug.h"
  #include "dbg-trace.h"
-@@ -787,7 +787,7 @@ static const struct net_device_ops mv_eth_netdev_ops = {
+@@ -787,7 +787,7 @@ static const struct net_device_ops mv_et
  	.ndo_open = mv_eth_open,
  	.ndo_stop = mv_eth_stop,
  	.ndo_start_xmit = mv_eth_tx,
@@ -254,7 +240,7 @@ index 5c78468..7e6303f 100644
  	.ndo_set_mac_address = mv_eth_set_mac_addr,
  	.ndo_change_mtu = mv_eth_change_mtu,
  	.ndo_tx_timeout = mv_eth_tx_timeout,
-@@ -2800,7 +2800,7 @@ int mv_eth_tx_tso(struct sk_buff *skb, struct net_device *dev,
+@@ -2800,7 +2800,7 @@ int mv_eth_tx_tso(struct sk_buff *skb, s
  
  		/* Move to next segment */
  		frag_size = skb_frag_ptr->size;
@@ -263,7 +249,7 @@ index 5c78468..7e6303f 100644
  		frag++;
  	}
  	totalDescNum = 0;
-@@ -2862,7 +2862,7 @@ int mv_eth_tx_tso(struct sk_buff *skb, struct net_device *dev,
+@@ -2862,7 +2862,7 @@ int mv_eth_tx_tso(struct sk_buff *skb, s
  
  				/* Move to next segment */
  				frag_size = skb_frag_ptr->size;
@@ -272,7 +258,7 @@ index 5c78468..7e6303f 100644
  				frag++;
  			}
  		}		/* of while data_left > 0 */
-@@ -3086,7 +3086,7 @@ static void mv_eth_tx_frag_process(struct eth_port *pp, struct sk_buff *skb, str
+@@ -3086,7 +3086,7 @@ static void mv_eth_tx_frag_process(struc
  		/* NETA_TX_BM_ENABLE_MASK = 0 */
  		/* NETA_TX_PKT_OFFSET_MASK = 0 */
  		tx_desc->dataSize = frag->size;
@@ -281,8 +267,6 @@ index 5c78468..7e6303f 100644
  						      tx_desc->dataSize);
  
  		if (i == (skb_shinfo(skb)->nr_frags - 1)) {
-diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
-index 3e85584..612ddcb 100644
 --- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
 +++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
 @@ -407,12 +407,6 @@ MV_STATUS mvNetaDefaultsSet(int port)
@@ -307,11 +291,9 @@ index 3e85584..612ddcb 100644
  #else /* MV_CPU_LE */
      /* little endian */
          regVal |= (ETH_RX_NO_DATA_SWAP_MASK | ETH_TX_NO_DATA_SWAP_MASK | ETH_NO_DESC_SWAP_MASK);
-diff --git a/net/bridge/br_fdb.c b/net/bridge/br_fdb.c
-index ec08eb0..7e63781 100644
 --- a/net/bridge/br_fdb.c
 +++ b/net/bridge/br_fdb.c
-@@ -606,7 +606,7 @@ static int fdb_add_entry(struct net_bridge_port *source, const __u8 *addr,
+@@ -606,7 +606,7 @@ static int fdb_add_entry(struct net_brid
  		if (!(flags & NLM_F_CREATE))
  			return -ENOENT;
  
@@ -320,8 +302,6 @@ index ec08eb0..7e63781 100644
  		if (!fdb)
  			return -ENOMEM;
  	} else {
-diff --git a/net/core/datagram.c b/net/core/datagram.c
-index e54d89c..6e56581 100644
 --- a/net/core/datagram.c
 +++ b/net/core/datagram.c
 @@ -163,7 +163,7 @@ next_skb:
@@ -333,6 +313,3 @@ index e54d89c..6e56581 100644
  				void *p = kmap(page) + frag->page_offset + o;
  				memcpy_tokerneliovec(to, p, copy);
  				kunmap(page);
--- 
-1.7.9.5
-

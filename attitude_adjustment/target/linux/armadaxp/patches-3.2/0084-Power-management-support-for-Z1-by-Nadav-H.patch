@@ -11,8 +11,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/plat-armada/cpuidle.c   |    7 +++++--
  4 files changed, 15 insertions(+), 6 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/Kconfig b/arch/arm/mach-armadaxp/Kconfig
-index 5d65643..597082f 100644
 --- a/arch/arm/mach-armadaxp/Kconfig
 +++ b/arch/arm/mach-armadaxp/Kconfig
 @@ -21,8 +21,8 @@ choice
@@ -26,8 +24,6 @@ index 5d65643..597082f 100644
  	select SHEEVA_ERRATA_ARM_CPU_4742
  	select SHEEVA_ERRATA_ARM_CPU_4786 if (ARM_THUMB && VFP)
  #	select SHEEVA_ERRATA_ARM_CPU_5315
-diff --git a/arch/arm/mach-armadaxp/headsmp.S b/arch/arm/mach-armadaxp/headsmp.S
-index 318b254..ac75648 100644
 --- a/arch/arm/mach-armadaxp/headsmp.S
 +++ b/arch/arm/mach-armadaxp/headsmp.S
 @@ -65,7 +65,12 @@ l0_dis_skip:
@@ -44,8 +40,6 @@ index 318b254..ac75648 100644
  	ldr	r7, [r6]
  	cmp	r7, r0
  	bne	pen
-diff --git a/arch/arm/mach-armadaxp/platsmp.c b/arch/arm/mach-armadaxp/platsmp.c
-index aac4314..f2fa59c 100644
 --- a/arch/arm/mach-armadaxp/platsmp.c
 +++ b/arch/arm/mach-armadaxp/platsmp.c
 @@ -86,7 +86,9 @@ static DEFINE_SPINLOCK(boot_lock);
@@ -58,7 +52,7 @@ index aac4314..f2fa59c 100644
  
  	/*
  	 * if any interrupts are already enabled for the primary
-@@ -115,7 +117,6 @@ void __cpuinit platform_secondary_init(unsigned int cpu)
+@@ -115,7 +117,6 @@ void __cpuinit platform_secondary_init(u
  int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
  {
  	unsigned long timeout;
@@ -66,11 +60,9 @@ index aac4314..f2fa59c 100644
  
  	/*
  	 * set synchronisation state between this boot processor
-diff --git a/arch/arm/plat-armada/cpuidle.c b/arch/arm/plat-armada/cpuidle.c
-index b52ba33..7f4d7d6 100644
 --- a/arch/arm/plat-armada/cpuidle.c
 +++ b/arch/arm/plat-armada/cpuidle.c
-@@ -43,6 +43,9 @@ extern unsigned char armadaxp_deep_idle_exit_start;
+@@ -43,6 +43,9 @@ extern unsigned char armadaxp_deep_idle_
  extern unsigned char armadaxp_deep_idle_exit_end;
  #endif
  
@@ -89,7 +81,7 @@ index b52ba33..7f4d7d6 100644
  #endif
  	pr_debug("armadaxp_deepidle: Exiting DEEP IDLE.\n");
  }
-@@ -321,7 +324,6 @@ static int armadaxp_enter_idle(struct cpuidle_device *dev,
+@@ -321,7 +324,6 @@ static int armadaxp_enter_idle(struct cp
  }
  
  #ifdef CONFIG_MV_PMU_PROC
@@ -102,6 +94,3 @@ index b52ba33..7f4d7d6 100644
  
  device_initcall(armadaxp_init_cpuidle);
 +#endif
--- 
-1.7.9.5
-

@@ -9,8 +9,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  net/ipv4/route.c     |   55 +++++++++++++++-----------------------------------
  2 files changed, 24 insertions(+), 52 deletions(-)
 
-diff --git a/net/core/neighbour.c b/net/core/neighbour.c
-index c1d808c..bb356ed 100644
 --- a/net/core/neighbour.c
 +++ b/net/core/neighbour.c
 @@ -2910,34 +2910,29 @@ void neigh_sync(int family)
@@ -20,15 +18,16 @@ index c1d808c..bb356ed 100644
 -	if (tbl->family != family)
 -		continue;
 -	nht = rcu_dereference_bh(tbl->nht);
-+		if (tbl->family != family)
-+			continue;
-+		nht = rcu_dereference_bh(tbl->nht);
- 
+-
 -	for (h = 0; h <= nht->hash_mask; h++) {
 -		for (n = rcu_dereference_bh(nht->hash_buckets[h]); n != NULL;
 -		     n = rcu_dereference_bh(n->next)) {
 -				if (!(n->nfp)) {
 -					if (n->dev == NULL)
++		if (tbl->family != family)
++			continue;
++		nht = rcu_dereference_bh(tbl->nht);
++
 +		for (h = 0; h <= nht->hash_mask; h++) {
 +			for (n = rcu_dereference_bh(nht->hash_buckets[h]); n != NULL;
 +				 n = rcu_dereference_bh(n->next)) {
@@ -56,11 +55,9 @@ index c1d808c..bb356ed 100644
  #endif /* CONFIG_MV_ETH_NFP_FIB_LEARN */
  
  static int __init neigh_init(void)
-diff --git a/net/ipv4/route.c b/net/ipv4/route.c
-index 8c35e76..bc54471 100644
 --- a/net/ipv4/route.c
 +++ b/net/ipv4/route.c
-@@ -700,7 +700,7 @@ static int rt_may_expire(struct rtable *rth, unsigned long tmo1, unsigned long t
+@@ -700,7 +700,7 @@ static int rt_may_expire(struct rtable *
  {
  	unsigned long age;
  	int ret = 0;
@@ -69,7 +66,7 @@ index 8c35e76..bc54471 100644
  	if (atomic_read(&rth->dst.__refcnt))
  		goto out;
  
-@@ -829,52 +829,29 @@ static void rt_do_flush(struct net *net, int process_context)
+@@ -829,52 +829,29 @@ static void rt_do_flush(struct net *net,
  #if defined(CONFIG_MV_ETH_NFP_FIB_LEARN)
  void nfp_fib_sync(void)
  {
@@ -137,6 +134,3 @@ index 8c35e76..bc54471 100644
  /*
   * While freeing expired entries, we compute average chain length
   * and standard deviation, using fixed-point arithmetic.
--- 
-1.7.9.5
-

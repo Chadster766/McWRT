@@ -17,8 +17,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  9 files changed, 322 insertions(+), 19 deletions(-)
  create mode 100755 arch/arm/plat-armada/mv_hal/neta/pnc/mvPncLb.c
 
-diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
-index 650de5d..c9da894 100644
 --- a/arch/arm/mach-armadaxp/Makefile
 +++ b/arch/arm/mach-armadaxp/Makefile
 @@ -153,7 +153,7 @@ ifeq ($(CONFIG_MV_ETH_NETA),y)
@@ -30,8 +28,6 @@ index 650de5d..c9da894 100644
  armadaxp-$(CONFIG_MV_ETH_PNC_WOL)       += $(HAL_ETH_PNC_DIR)/mvPncWol.o
  armadaxp-$(CONFIG_MV_ETH_BM) 	        += $(HAL_ETH_BM_DIR)/mvBm.o
  armadaxp-$(CONFIG_MV_ETH_PMT)	        += $(HAL_ETH_PMT_DIR)/mvPmt.o
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
-index f5e3b51..58ddd89 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
 @@ -240,6 +240,8 @@ extern "C" {
@@ -43,8 +39,6 @@ index f5e3b51..58ddd89 100644
  #endif /* MV88F78X60_A0 */
  #define MV_78130_ETH_MAX_PORT			3
  #define MV_78460_ETH_MAX_PORT			4
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c
-index 7800f47..dd3fe7e 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c
 @@ -52,6 +52,10 @@ static ssize_t tcam_help(char *buf)
@@ -84,7 +78,7 @@ index 7800f47..dd3fe7e 100755
  
  #ifdef MV_ETH_PNC_AGING
  	off += mvOsSPrintf(buf+off, " age_gr_set      - set group <b> of aging counter for tcam entry <a>\n");
-@@ -105,12 +119,10 @@ static ssize_t tcam_show(struct device *dev,
+@@ -105,12 +119,10 @@ static ssize_t tcam_show(struct device *
  	if (!strcmp(name, "t_port")) {
  		tcam_sw_get_port(&te, &v, &m);
  		return mvOsSPrintf(buf, "value:0x%x mask:0x%x\n", v, m);
@@ -99,7 +93,7 @@ index 7800f47..dd3fe7e 100755
  		return tcam_sw_dump(&te, buf);
  	else if (!strcmp(name, "hw_dump"))
  		return tcam_hw_dump(0);
-@@ -130,6 +142,10 @@ static ssize_t tcam_show(struct device *dev,
+@@ -130,6 +142,10 @@ static ssize_t tcam_show(struct device *
  	else if (!strcmp(name, "age_reset"))
  		mvPncAgingReset();
  #endif /* MV_ETH_PNC_AGING */
@@ -110,7 +104,7 @@ index 7800f47..dd3fe7e 100755
  	else if (!strcmp(name, "help"))
  		return tcam_help(buf);
  
-@@ -161,6 +177,14 @@ static ssize_t tcam_store(struct device *dev,
+@@ -161,6 +177,14 @@ static ssize_t tcam_store(struct device
  		tcam_hw_inv_all();
  	else if (!strcmp(name, "hw_hits"))
  		tcam_hw_record(a);
@@ -125,7 +119,7 @@ index 7800f47..dd3fe7e 100755
  #ifdef MV_ETH_PNC_AGING
  	else if (!strcmp(name, "age_clear"))
  		mvPncAgingCntrClear(a);
-@@ -180,8 +204,7 @@ static ssize_t tcam_store(struct device *dev,
+@@ -180,8 +204,7 @@ static ssize_t tcam_store(struct device
  		temp[len-1] = 0;
  		tcam_sw_text(&te, temp);
  		mvOsFree(temp);
@@ -135,7 +129,7 @@ index 7800f47..dd3fe7e 100755
  		tcam_sw_set_port(&te, a, b);
  	else if (!strcmp(name, "t_lookup"))
  		tcam_sw_set_lookup(&te, a);
-@@ -221,6 +244,10 @@ static ssize_t tcam_store(struct device *dev,
+@@ -221,6 +244,10 @@ static ssize_t tcam_store(struct device
  	else if (!strcmp(name, "age_gr_set"))
  		mvPncAgingCntrGroupSet(a, b);
  #endif /* MV_ETH_PNC_AGING */
@@ -146,7 +140,7 @@ index 7800f47..dd3fe7e 100755
  	else {
  		err = 1;
  		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
-@@ -256,6 +283,15 @@ static DEVICE_ATTR(hw_dump,     S_IRUSR, tcam_show, tcam_store);
+@@ -256,6 +283,15 @@ static DEVICE_ATTR(hw_dump,     S_IRUSR,
  static DEVICE_ATTR(hw_dump_all, S_IRUSR, tcam_show, tcam_store);
  static DEVICE_ATTR(hw_regs,     S_IRUSR, tcam_show, tcam_store);
  static DEVICE_ATTR(hw_hits,     S_IRUSR | S_IWUSR, tcam_show, tcam_store);
@@ -187,8 +181,6 @@ index 7800f47..dd3fe7e 100755
      &dev_attr_sw_dump.attr,
      &dev_attr_sw_clear.attr,
      &dev_attr_sw_text.attr,
-diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c
-index 12e799c..f3a3280 100644
 --- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c
 +++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c
 @@ -312,6 +312,10 @@ void mvNetaPncRegs(void)
@@ -202,11 +194,9 @@ index 12e799c..f3a3280 100644
  }
  #endif /* CONFIG_MV_ETH_PNC */
  
-diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
-index 80b6ffd..8edf7c6 100755
 --- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
 +++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
-@@ -99,7 +99,7 @@ static int rxq_ip4_udp = CONFIG_MV_ETH_RXQ_DEF;
+@@ -99,7 +99,7 @@ static int rxq_ip4_udp = CONFIG_MV_ETH_R
  static int rxq_arp 		= CONFIG_MV_ETH_RXQ_DEF;
  
  
@@ -224,7 +214,7 @@ index 80b6ffd..8edf7c6 100755
  int pnc_port_map(int pnc_port)
  {
  	switch (pnc_port) {
-@@ -702,7 +702,7 @@ static void pnc_ip4_flow_next_lookup_set(struct tcam_entry *te)
+@@ -702,7 +702,7 @@ static void pnc_ip4_flow_next_lookup_set
  #ifdef CONFIG_MV_ETH_PNC_L3_FLOW
  	sram_sw_set_next_lookup(te, TCAM_LU_FLOW_IP4);
  #else
@@ -241,7 +231,7 @@ index 80b6ffd..8edf7c6 100755
  	tcam_sw_text(te, "ipv4_eof");
  
  	tcam_hw_write(te, TE_IP4_EOF);
-@@ -895,7 +896,7 @@ static void pnc_ip6_flow_next_lookup_set(struct tcam_entry *te)
+@@ -895,7 +896,7 @@ static void pnc_ip6_flow_next_lookup_set
  #ifdef CONFIG_MV_ETH_PNC_L3_FLOW
  	sram_sw_set_next_lookup(te, TCAM_LU_FLOW_IP6_A);
  #else
@@ -250,7 +240,7 @@ index 80b6ffd..8edf7c6 100755
  #endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
  }
  
-@@ -1159,6 +1160,23 @@ int pnc_ipv4_5_tuples_add(unsigned int tid, unsigned int flow_id,
+@@ -1159,6 +1160,23 @@ int pnc_ipv4_5_tuples_add(unsigned int t
  
  	return 0;
  }
@@ -285,8 +275,6 @@ index 80b6ffd..8edf7c6 100755
  #endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
  
  #ifdef CONFIG_MV_ETH_PNC_WOL
-diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
-index 26509d6..a03b2e4 100755
 --- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
 +++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
 @@ -187,10 +187,12 @@ enum {
@@ -320,7 +308,7 @@ index 26509d6..a03b2e4 100755
  #define FLOWID_EOF_LU_FLOW_IP4		0xFFF8
  #define FLOWID_EOF_LU_FLOW_IP6_A	0xFFFA
  #define FLOWID_EOF_LU_FLOW_IP6_B	0xFFFB
-@@ -343,6 +348,14 @@ void    mvPncAgingCntrGroupSet(int tid, int gr);
+@@ -343,6 +348,14 @@ void    mvPncAgingCntrGroupSet(int tid,
  void    mvPncAgingCounterClear(int tid, int gr);
  #endif /* MV_ETH_PNC_AGING */
  
@@ -335,9 +323,6 @@ index 26509d6..a03b2e4 100755
  #endif /* CONFIG_MV_ETH_PNC */
  
  #endif /*__MV_PNC_H__ */
-diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncLb.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncLb.c
-new file mode 100755
-index 0000000..3c3745e
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncLb.c
 @@ -0,0 +1,161 @@
@@ -502,11 +487,9 @@ index 0000000..3c3745e
 +#endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
 +}
 +#endif /* MV_ETH_PNC_LB */
-diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.c
-index 3b96928..cd7dc1b 100755
 --- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.c
 +++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.c
-@@ -291,6 +291,34 @@ void sram_sw_set_rinfo(struct tcam_entry *te, unsigned int rinfo, unsigned int m
+@@ -291,6 +291,34 @@ void sram_sw_set_rinfo(struct tcam_entry
  }
  
  #ifdef MV_ETH_PNC_NEW
@@ -541,7 +524,7 @@ index 3b96928..cd7dc1b 100755
  void sram_sw_set_rinfo_extra(struct tcam_entry *te, unsigned int ri_extra)
  {
  	unsigned int word, value;
-@@ -411,7 +439,7 @@ static int sram_sw_dump_rxq(struct tcam_entry *te, char *buf)
+@@ -411,7 +439,7 @@ static int sram_sw_dump_rxq(struct tcam_
  	return 0;
  }
  
@@ -550,7 +533,7 @@ index 3b96928..cd7dc1b 100755
  void sram_sw_set_next_lookup_shift(struct tcam_entry *te, unsigned int index)
  {
  	unsigned int word;
-@@ -436,7 +464,7 @@ static int sram_sw_dump_next_lookup_shift(struct tcam_entry *te, char *buf)
+@@ -436,7 +464,7 @@ static int sram_sw_dump_next_lookup_shif
  	return 0;
  }
  
@@ -559,7 +542,7 @@ index 3b96928..cd7dc1b 100755
  void sram_sw_set_lookup_done(struct tcam_entry *te, unsigned int value)
  {
  	unsigned int word;
-@@ -582,6 +610,11 @@ int tcam_sw_dump(struct tcam_entry *te, char *buf)
+@@ -582,6 +610,11 @@ int tcam_sw_dump(struct tcam_entry *te,
  	off += sram_sw_dump_ainfo(te, buf + off);
  	off += sram_sw_dump_shift_update(te, buf + off);
  	off += sram_sw_dump_rxq(te, buf + off);
@@ -571,11 +554,9 @@ index 3b96928..cd7dc1b 100755
  	off += (te->ctrl.flags & TCAM_F_INV) ? mvOsSPrintf(buf + off, " [inv]") : 0;
  	off += mvOsSPrintf(buf + off, "\n       ");
  
-diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.h b/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.h
-index b668fca..a6150f7 100755
 --- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.h
 +++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvTcam.h
-@@ -137,10 +137,26 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -137,10 +137,26 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  
  #define MV_PNC_AGING_LO_THRESH_REG(gr)      (MV_PNC_REG_BASE + 0x2C + ((gr) << 2))
  #define MV_PNC_AGING_HI_THRESH_REG          (MV_PNC_REG_BASE + 0x3C)
@@ -603,7 +584,7 @@ index b668fca..a6150f7 100755
  
  #define MV_PNC_TCAM_ARRAY_SIZE		256
  #define MV_PNC_TOTAL_DATA_SIZE		120
-@@ -206,8 +222,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -206,8 +222,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #define RXQ_BITS				3
  #define RXQ_MASK				((1 << RXQ_BITS) - 1)
  
@@ -628,6 +609,3 @@ index b668fca..a6150f7 100755
  #endif /* MV_ETH_PNC_NEW */
  
  struct tcam_entry *tcam_sw_alloc(unsigned int section);
--- 
-1.7.9.5
-

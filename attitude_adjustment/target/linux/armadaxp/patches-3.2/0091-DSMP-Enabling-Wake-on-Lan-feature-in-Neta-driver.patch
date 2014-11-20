@@ -8,11 +8,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/mach-armadaxp/pm.c |   14 ++++++++------
  1 file changed, 8 insertions(+), 6 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/pm.c b/arch/arm/mach-armadaxp/pm.c
-index 63b98e3..86faefd 100644
 --- a/arch/arm/mach-armadaxp/pm.c
 +++ b/arch/arm/mach-armadaxp/pm.c
-@@ -42,7 +42,8 @@ static int armadaxp_pm_valid(suspend_state_t state)
+@@ -42,7 +42,8 @@ static int armadaxp_pm_valid(suspend_sta
   */
  static int armadaxp_pm_enter(suspend_state_t state)
  {
@@ -22,7 +20,7 @@ index 63b98e3..86faefd 100644
  
  	switch (state)	{
  	case PM_SUSPEND_STANDBY:
-@@ -58,7 +59,8 @@ static int armadaxp_pm_enter(suspend_state_t state)
+@@ -58,7 +59,8 @@ static int armadaxp_pm_enter(suspend_sta
  		reg &= ~0x1;
  		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_IN_DRBL_LOW), reg);
  
@@ -32,7 +30,7 @@ index 63b98e3..86faefd 100644
  		printk(KERN_INFO "Entering Wol Mode (Neta IRQs 8,10,12,14 are enabled now)...\n");
  
  		/* Reenable the NETA IRQ in order to wake from it */
-@@ -77,7 +79,8 @@ static int armadaxp_pm_enter(suspend_state_t state)
+@@ -77,7 +79,8 @@ static int armadaxp_pm_enter(suspend_sta
  		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE3_FIC));
  		reg |= 0x1;
  		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE3_FIC), reg);
@@ -42,7 +40,7 @@ index 63b98e3..86faefd 100644
  		armadaxp_deepidle(SNOOZE);
  
  		/* Enable IPI IRQs - return to original state */
-@@ -89,8 +92,7 @@ static int armadaxp_pm_enter(suspend_state_t state)
+@@ -89,8 +92,7 @@ static int armadaxp_pm_enter(suspend_sta
  		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0));
  		reg &= ~0x1;
  		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0), reg);
@@ -52,7 +50,7 @@ index 63b98e3..86faefd 100644
  		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE0_FIC));
  		reg &= ~0x1;
  		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE0_FIC), reg);
-@@ -108,7 +110,7 @@ static int armadaxp_pm_enter(suspend_state_t state)
+@@ -108,7 +110,7 @@ static int armadaxp_pm_enter(suspend_sta
  		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE3_FIC), reg);
  
  		printk(KERN_INFO "Exiting Wol Mode (Neta IRQs 8,10,12,14 are disabled now)...\n");
@@ -61,6 +59,3 @@ index 63b98e3..86faefd 100644
  		break;
  	default:
  		return -EINVAL;
--- 
-1.7.9.5
-

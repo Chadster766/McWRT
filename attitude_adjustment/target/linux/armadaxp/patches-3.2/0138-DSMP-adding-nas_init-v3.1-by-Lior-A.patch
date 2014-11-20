@@ -8,8 +8,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  tools/nas/nas_init.sh |  139 +++++++++++++++++++++++++++++++++++++++----------
  1 file changed, 112 insertions(+), 27 deletions(-)
 
-diff --git a/tools/nas/nas_init.sh b/tools/nas/nas_init.sh
-index 096a52e..3247017 100755
 --- a/tools/nas/nas_init.sh
 +++ b/tools/nas/nas_init.sh
 @@ -1,8 +1,12 @@
@@ -200,7 +198,7 @@ index 096a52e..3247017 100755
  	    echo '# min receivefile size = 128k'	>>  /etc/smb.conf
  	    echo '# strict allocate = yes'		>>  /etc/smb.conf
  	else
-@@ -700,19 +785,19 @@ if [[ "$ARCH" == "armv6l" || "$ARCH" == "armv7l" ]]; then
+@@ -700,19 +785,19 @@ if [[ "$ARCH" == "armv6l" || "$ARCH" ==
      if [ "$CPU_COUNT" = "4" ]; then
  	set -o verbose
  
@@ -223,7 +221,7 @@ index 096a52e..3247017 100755
  	echo 2 > /proc/irq/55/smp_affinity
  
  	# PCI-E SATA controller
-@@ -723,20 +808,20 @@ if [[ "$ARCH" == "armv6l" || "$ARCH" == "armv7l" ]]; then
+@@ -723,20 +808,20 @@ if [[ "$ARCH" == "armv6l" || "$ARCH" ==
      elif [ "$CPU_COUNT" == "2" ]; then
  	set -o verbose
  
@@ -248,7 +246,7 @@ index 096a52e..3247017 100755
  	echo 2  > /proc/irq/99/smp_affinity
  
  	set +o verbose
-@@ -744,7 +829,7 @@ if [[ "$ARCH" == "armv6l" || "$ARCH" == "armv7l" ]]; then
+@@ -744,7 +829,7 @@ if [[ "$ARCH" == "armv6l" || "$ARCH" ==
  fi
  echo -ne "[Done]\n"
  case "$TOPOLOGY" in
@@ -257,6 +255,3 @@ index 096a52e..3247017 100755
  		#watch "cat /proc/mdstat|grep finish"
  	;;
  esac
--- 
-1.7.9.5
-

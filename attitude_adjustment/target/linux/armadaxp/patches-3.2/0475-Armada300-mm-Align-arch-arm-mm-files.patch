@@ -12,8 +12,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/mm/proc-feroceon.S     |   16 ++++++++++++++++
  3 files changed, 26 insertions(+), 2 deletions(-)
 
-diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
-index c140995..a2c90a2 100644
 --- a/arch/arm/mm/Kconfig
 +++ b/arch/arm/mm/Kconfig
 @@ -1277,3 +1277,11 @@ config ARCH_HAS_BARRIERS
@@ -28,8 +26,6 @@ index c140995..a2c90a2 100644
 +	help
 +	Fixes coherency problems on ARM systems that have
 +	a non-disableable VIVT L1 cache and a PIPT L2 one.
-diff --git a/arch/arm/mm/cache-feroceon-l2.c b/arch/arm/mm/cache-feroceon-l2.c
-index e0b0e7a..daad0a1 100644
 --- a/arch/arm/mm/cache-feroceon-l2.c
 +++ b/arch/arm/mm/cache-feroceon-l2.c
 @@ -129,11 +129,11 @@ static inline void l2_inv_all(void)
@@ -46,8 +42,6 @@ index e0b0e7a..daad0a1 100644
  {
  	unsigned long range_end;
  
-diff --git a/arch/arm/mm/proc-feroceon.S b/arch/arm/mm/proc-feroceon.S
-index 8a6c2f7..c7ee0fe 100644
 --- a/arch/arm/mm/proc-feroceon.S
 +++ b/arch/arm/mm/proc-feroceon.S
 @@ -116,11 +116,27 @@ ENTRY(cpu_feroceon_reset)
@@ -78,6 +72,3 @@ index 8a6c2f7..c7ee0fe 100644
  	mov	pc, lr
  
  /*
--- 
-1.7.9.5
-

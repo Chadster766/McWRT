@@ -14,8 +14,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/plat-armada/error_handling.c             |  157 +++++++++++++++------
  5 files changed, 123 insertions(+), 49 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/include/mach/entry-macro.S b/arch/arm/mach-armadaxp/include/mach/entry-macro.S
-index 3e2ab6e..e0dc611 100755
 --- a/arch/arm/mach-armadaxp/include/mach/entry-macro.S
 +++ b/arch/arm/mach-armadaxp/include/mach/entry-macro.S
 @@ -47,7 +47,7 @@
@@ -27,11 +25,9 @@ index 3e2ab6e..e0dc611 100755
  	beq 	1000f
  
  	@restore tmp - should be optimized!!!!
-diff --git a/arch/arm/mach-armadaxp/irq.c b/arch/arm/mach-armadaxp/irq.c
-index d625871..ee2597f 100644
 --- a/arch/arm/mach-armadaxp/irq.c
 +++ b/arch/arm/mach-armadaxp/irq.c
-@@ -72,10 +72,11 @@ if (cpu > 0) { /*disabled for both cpu */
+@@ -72,10 +72,11 @@ if (cpu > 0) { /*disabled for both cpu *
  #ifdef CONFIG_ARMADAXP_USE_IRQ_INDIRECT_MODE
  void axp_irq_mask(struct irq_data *d)
  {	
@@ -71,8 +67,6 @@ index d625871..ee2597f 100644
  	 if(irq==IRQ_AURORA_MP){
  		for_each_online_cpu(i) {
  			axp_unmask_fabric_interrupt(i);
-diff --git a/arch/arm/plat-armada/Kconfig b/arch/arm/plat-armada/Kconfig
-index 4149d1b..8877dad 100644
 --- a/arch/arm/plat-armada/Kconfig
 +++ b/arch/arm/plat-armada/Kconfig
 @@ -442,7 +442,7 @@ config  MV_CPU_L2_PERF_CNTRS
@@ -84,18 +78,14 @@ index 4149d1b..8877dad 100644
  	bool "Error handling notification support"
          default n
          ---help---
-diff --git a/arch/arm/plat-armada/Makefile b/arch/arm/plat-armada/Makefile
-index 91e4e7c..35cd6aa 100644
 --- a/arch/arm/plat-armada/Makefile
 +++ b/arch/arm/plat-armada/Makefile
-@@ -13,4 +13,4 @@ obj-$(CONFIG_SHEEVA_DEEP_IDLE)		+= cpuidle.o armadaxp_suspend.o
+@@ -13,4 +13,4 @@ obj-$(CONFIG_SHEEVA_DEEP_IDLE)		+= cpuid
  obj-$(CONFIG_HOTPLUG_CPU)               += hotplug.o
  obj-$(CONFIG_ARCH_ARMADA_XP)		+= pmu.o
  obj-$(CONFIG_PCI_MSI)			+= msi.o
 -#obj-$(CONFIG_ERROR_HANDLIG)		+=error_handling.o
 +obj-$(CONFIG_ERROR_HANDLING)		+=error_handling.o
-diff --git a/arch/arm/plat-armada/error_handling.c b/arch/arm/plat-armada/error_handling.c
-index 54f0d9b..b38dd13 100644
 --- a/arch/arm/plat-armada/error_handling.c
 +++ b/arch/arm/plat-armada/error_handling.c
 @@ -23,12 +23,17 @@
@@ -145,7 +135,7 @@ index 54f0d9b..b38dd13 100644
  	u32 mask;
  	/*the place in the casue register
  	are represnted with the error value */
-@@ -69,43 +82,51 @@ static void error_notifier(struct work_struct *work)
+@@ -69,43 +82,51 @@ static void error_notifier(struct work_s
  	struct error_info *temp_error=container_of(work, struct error_info, error_handling_work);
  	nt.mbus_error = temp_error->mbus_error;
  	nt.cause_register = temp_error->cause_register;
@@ -165,16 +155,15 @@ index 54f0d9b..b38dd13 100644
 -pass a reg, mask and an error ID.
 -the mask will be writen to the  register add to enabled
 -the dersired error in the unit level.
--
--the ID will represet the error ID in the Main interrupt
--error casue.
 +this function is a helper function to handle the Mbus unit error without
 +having to modify any of the MBUS unit drivers.
 +
 +how to use:
 +Each driver (or even any other module), should pass a reg offset,a mask, and an error ID.
 +the mask will be writen to the  register offset  to enabled the dersired error in the unit level.
-+
+ 
+-the ID will represet the error ID in the Main interrupt
+-error casue.
 +
 +the ID will represet the error offset ( i.e. bit 0 will be represented as 0) in the Main interrupt
 +error casue ( offset 20A20 in AXP based on table 37 in the Spec).
@@ -253,7 +242,7 @@ index 54f0d9b..b38dd13 100644
  		}
  	}
  		return IRQ_HANDLED;
-@@ -135,25 +170,44 @@ static irqreturn_t armadaxp_mbusunit_error_isr(int irq, void *arg){
+@@ -135,25 +170,44 @@ static irqreturn_t armadaxp_mbusunit_err
  
  static irqreturn_t armadaxp_error_event_isr(int irq, void *arg)
  {
@@ -308,7 +297,7 @@ index 54f0d9b..b38dd13 100644
          return NOTIFY_DONE;
  
  }
-@@ -165,6 +219,9 @@ static struct notifier_block error_handling_block = {
+@@ -165,6 +219,9 @@ static struct notifier_block error_handl
  static int __init errorhandling_notification_setup(void)
  {
  	int err;
@@ -318,7 +307,7 @@ index 54f0d9b..b38dd13 100644
  	/*
  		nothing specal is need to enabling error handling first
  	*/
-@@ -177,7 +234,20 @@ static int __init errorhandling_notification_setup(void)
+@@ -177,7 +234,20 @@ static int __init errorhandling_notifica
  	/*clear the error casue register, and unmask interrupt
  	   to trigger the coherency fabric error interrupt */
  	writel(0x0,INTER_REGS_BASE | COHERENCY_FBRIC_ERROR_CAUSE);
@@ -339,7 +328,7 @@ index 54f0d9b..b38dd13 100644
  
  		/* the MBUS units part of the error handling setup*/
  	INIT_LIST_HEAD(&mbusunit_error_list.list);
-@@ -187,16 +257,19 @@ static int __init errorhandling_notification_setup(void)
+@@ -187,16 +257,19 @@ static int __init errorhandling_notifica
  		 printk("opps: request_irq failed to requestin IRQ# %d, returning now ! \n", IRQ_AURORA_SOC_ERROR);
                  return err;
          }
@@ -363,6 +352,3 @@ index 54f0d9b..b38dd13 100644
  	printk("ARMADA XP error handling module was loaded \n");
          return 0;
  }
--- 
-1.7.9.5
-

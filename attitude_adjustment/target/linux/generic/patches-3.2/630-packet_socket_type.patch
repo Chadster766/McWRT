@@ -34,7 +34,7 @@ Signed-off-by: Felix Fietkau <nbd@openwrt.org>
  };
  
  #define PACKET_FANOUT_MAX	256
-@@ -1383,6 +1384,7 @@ static int packet_rcv_spkt(struct sk_buf
+@@ -1392,6 +1393,7 @@ static int packet_rcv_spkt(struct sk_buf
  {
  	struct sock *sk;
  	struct sockaddr_pkt *spkt;
@@ -42,7 +42,7 @@ Signed-off-by: Felix Fietkau <nbd@openwrt.org>
  
  	/*
  	 *	When we registered the protocol we saved the socket in the data
-@@ -1390,6 +1392,7 @@ static int packet_rcv_spkt(struct sk_buf
+@@ -1399,6 +1401,7 @@ static int packet_rcv_spkt(struct sk_buf
  	 */
  
  	sk = pt->af_packet_priv;
@@ -50,7 +50,7 @@ Signed-off-by: Felix Fietkau <nbd@openwrt.org>
  
  	/*
  	 *	Yank back the headers [hope the device set this
-@@ -1402,7 +1405,7 @@ static int packet_rcv_spkt(struct sk_buf
+@@ -1411,7 +1414,7 @@ static int packet_rcv_spkt(struct sk_buf
  	 *	so that this procedure is noop.
  	 */
  
@@ -59,7 +59,7 @@ Signed-off-by: Felix Fietkau <nbd@openwrt.org>
  		goto out;
  
  	if (!net_eq(dev_net(dev), sock_net(sk)))
-@@ -1595,12 +1598,12 @@ static int packet_rcv(struct sk_buff *sk
+@@ -1604,12 +1607,12 @@ static int packet_rcv(struct sk_buff *sk
  	int skb_len = skb->len;
  	unsigned int snaplen, res;
  
@@ -75,7 +75,7 @@ Signed-off-by: Felix Fietkau <nbd@openwrt.org>
  	if (!net_eq(dev_net(dev), sock_net(sk)))
  		goto drop;
  
-@@ -1719,12 +1722,12 @@ static int tpacket_rcv(struct sk_buff *s
+@@ -1728,12 +1731,12 @@ static int tpacket_rcv(struct sk_buff *s
  	struct timespec ts;
  	struct skb_shared_hwtstamps *shhwtstamps = skb_hwtstamps(skb);
  
@@ -91,7 +91,7 @@ Signed-off-by: Felix Fietkau <nbd@openwrt.org>
  	if (!net_eq(dev_net(dev), sock_net(sk)))
  		goto drop;
  
-@@ -2590,6 +2593,7 @@ static int packet_create(struct net *net
+@@ -2598,6 +2601,7 @@ static int packet_create(struct net *net
  	spin_lock_init(&po->bind_lock);
  	mutex_init(&po->pg_vec_lock);
  	po->prot_hook.func = packet_rcv;
@@ -99,7 +99,7 @@ Signed-off-by: Felix Fietkau <nbd@openwrt.org>
  
  	if (sock->type == SOCK_PACKET)
  		po->prot_hook.func = packet_rcv_spkt;
-@@ -3187,6 +3191,16 @@ packet_setsockopt(struct socket *sock, i
+@@ -3195,6 +3199,16 @@ packet_setsockopt(struct socket *sock, i
  
  		return fanout_add(sk, val & 0xffff, val >> 16);
  	}
@@ -116,7 +116,7 @@ Signed-off-by: Felix Fietkau <nbd@openwrt.org>
  	default:
  		return -ENOPROTOOPT;
  	}
-@@ -3257,6 +3271,13 @@ static int packet_getsockopt(struct sock
+@@ -3265,6 +3279,13 @@ static int packet_getsockopt(struct sock
  
  		data = &val;
  		break;
@@ -130,4 +130,3 @@ Signed-off-by: Felix Fietkau <nbd@openwrt.org>
  	case PACKET_VERSION:
  		if (len > sizeof(int))
  			len = sizeof(int);
- 

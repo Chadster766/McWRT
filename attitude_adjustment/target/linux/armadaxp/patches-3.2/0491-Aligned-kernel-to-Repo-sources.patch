@@ -18,11 +18,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/plat-armada/suspend.c                     |   15 +-
  10 files changed, 201 insertions(+), 238 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
-index de803f4..4b95a53 100644
 --- a/arch/arm/mach-armadaxp/Makefile
 +++ b/arch/arm/mach-armadaxp/Makefile
-@@ -49,7 +49,7 @@ QD_OBJS		= $(HAL_QD_DIR)/src/driver/gtDrvConfig.o $(HAL_QD_DIR)/src/driver/gtDrv
+@@ -49,7 +49,7 @@ QD_OBJS		= $(HAL_QD_DIR)/src/driver/gtDr
                    $(HAL_QD_DIR)/src/msapi/gtSysStatus.o $(HAL_QD_DIR)/src/msapi/gtPortRateCtrl.o\
                    $(HAL_QD_DIR)/src/msapi/gtPortPav.o $(HAL_QD_DIR)/src/msapi/gtVct.o		\
  		  $(HAL_QD_DIR)/src/msapi/gtPIRL2.o $(HAL_QD_DIR)/src/msapi/gtCCPVT.o		\
@@ -31,11 +29,9 @@ index de803f4..4b95a53 100644
  
  LSP_OBJS        = core.o irq.o time.o leds.o sysmap.o export.o clock.o
  
-diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
-index d538dea..8ed93b0 100755
 --- a/arch/arm/mach-armadaxp/core.c
 +++ b/arch/arm/mach-armadaxp/core.c
-@@ -540,6 +540,7 @@ static struct platform_device axp_i2c1 = {
+@@ -540,6 +540,7 @@ static struct platform_device axp_i2c1 =
  };
  #endif
  
@@ -43,7 +39,7 @@ index d538dea..8ed93b0 100755
  void __init armadaxp_i2c0_init(void)
  {
  	if (mvUnitMapIsMine(I2C0) == MV_TRUE)
-@@ -2034,6 +2035,9 @@ MACHINE_START(ARMADA_XP_RD_NAS, "Marvell Armada XP RD NAS Board")
+@@ -2034,6 +2035,9 @@ MACHINE_START(ARMADA_XP_RD_NAS, "Marvell
  	/* reserve memory for LCD */
  	.fixup		= axp_tag_fixup_mem32,
  #endif /* CONFIG_FB_DOVE */
@@ -53,7 +49,7 @@ index d538dea..8ed93b0 100755
  #ifdef CONFIG_MV_AMP_ENABLE
  	.reserve	= axp_reserve_regs_space,
  #endif
-@@ -2143,6 +2147,9 @@ MACHINE_START(ARMADA_XP_RDSRV, "Marvell Armada XP Server Board")
+@@ -2143,6 +2147,9 @@ MACHINE_START(ARMADA_XP_RDSRV, "Marvell
    	.init_irq	= axp_init_irq,
    	.timer		= &axp_timer,
    	.init_machine	= axp_rdsrv_init,
@@ -63,7 +59,7 @@ index d538dea..8ed93b0 100755
  #ifdef CONFIG_MV_AMP_ENABLE
  	.reserve	= axp_reserve_regs_space,
  #endif
-@@ -2214,6 +2221,9 @@ MACHINE_START(ARMADA_XP_FPGA, "Marvell Armada XP FPGA Board")
+@@ -2214,6 +2221,9 @@ MACHINE_START(ARMADA_XP_FPGA, "Marvell A
  	.init_irq	= axp_init_irq,
  	.timer		= &axp_timer,
  	.init_machine	= axp_fpga_init,
@@ -73,8 +69,6 @@ index d538dea..8ed93b0 100755
  #ifdef CONFIG_MV_AMP_ENABLE
  	.reserve	= axp_reserve_regs_space,
  #endif
-diff --git a/arch/arm/mach-armadaxp/include/mach/armadaxp.h b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
-index 184cc35..32d7429 100644
 --- a/arch/arm/mach-armadaxp/include/mach/armadaxp.h
 +++ b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
 @@ -22,10 +22,14 @@
@@ -153,9 +147,7 @@ index 184cc35..32d7429 100644
  #endif
 -#define INTER_REGS_VIRT_BASE	0xFBC00000
 -#define INTER_REGS_BASE			INTER_REGS_VIRT_BASE
-+#define INTER_REGS_VIRT_BASE		0xFBC00000
-+#define INTER_REGS_BASE			INTER_REGS_VIRT_BASE /* For compatibility */
- 
+-
 -#define PEX0_IO_PHYS_BASE		0xF1100000
 -#define PEX0_IO_VIRT_BASE		0xFBE00000
 -#define PEX0_IO_SIZE			_1M
@@ -186,7 +178,9 @@ index 184cc35..32d7429 100644
 -#define PEX9_IO_PHYS_BASE		0xF1A00000
 -#define PEX9_IO_VIRT_BASE		0xFC700000
 -#define PEX9_IO_SIZE			_1M
--
++#define INTER_REGS_VIRT_BASE		0xFBC00000
++#define INTER_REGS_BASE			INTER_REGS_VIRT_BASE /* For compatibility */
+ 
 -#define UART_REGS_BASE			0xF1B00000
 -#define UART_VIRT_BASE			0xFC800000
 +/*
@@ -514,11 +508,9 @@ index 184cc35..32d7429 100644
 -#define AXP_COHER_FABRIC_CTRL_PHYS_REG	(INTER_REGS_PHYS_BASE | 0x20200)
  #endif
 +
-diff --git a/arch/arm/mach-armadaxp/pm.c b/arch/arm/mach-armadaxp/pm.c
-index ce4b44d..88ce8d2 100644
 --- a/arch/arm/mach-armadaxp/pm.c
 +++ b/arch/arm/mach-armadaxp/pm.c
-@@ -54,8 +54,7 @@ static int armadaxp_pm_enter(suspend_state_t state)
+@@ -54,8 +54,7 @@ static int armadaxp_pm_enter(suspend_sta
  		/* Reenable the Uart IRQ in order to wake from it */
  		/* Enable Uart IRQ */
  		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0));
@@ -528,7 +520,7 @@ index ce4b44d..88ce8d2 100644
  		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0), reg);
  
  		/* Disable IPI IRQs */
-@@ -69,19 +68,19 @@ static int armadaxp_pm_enter(suspend_state_t state)
+@@ -69,19 +68,19 @@ static int armadaxp_pm_enter(suspend_sta
  
  		/* Reenable the NETA IRQ in order to wake from it */
  		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE0_FIC));
@@ -552,8 +544,6 @@ index ce4b44d..88ce8d2 100644
  		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE3_FIC), reg);
  #endif /* CONFIG_MV_ETH_PNC_WOL */
  
-diff --git a/arch/arm/plat-armada/cpuidle.c b/arch/arm/plat-armada/cpuidle.c
-index 9d7a312..69fbf93 100644
 --- a/arch/arm/plat-armada/cpuidle.c
 +++ b/arch/arm/plat-armada/cpuidle.c
 @@ -26,10 +26,6 @@
@@ -567,7 +557,7 @@ index 9d7a312..69fbf93 100644
  #ifdef CONFIG_CPU_IDLE
  #if defined CONFIG_ARMADA_DEEP_IDLE_SAVE_WINDOWS_STATE
  static MV_AHB_TO_MBUS_DEC_WIN ahbAddrDecWin[MAX_AHB_TO_MBUS_WINS];
-@@ -87,7 +83,7 @@ void mv_cpuidle_restore_cpu_win_state(void)
+@@ -87,7 +83,7 @@ void mv_cpuidle_restore_cpu_win_state(vo
  
  	/* Save CPU windows state, and enable access for Bootrom	*
  	** according to SoC default address decoding windows.		*/
@@ -576,7 +566,7 @@ index 9d7a312..69fbf93 100644
  		mvAhbToMbusWinSet(i, &ahbAddrDecWin[i]);
  		mvAhbToMbusWinRemap(i, &ahbAddrWinRemap[i]);
  	}
-@@ -100,7 +96,7 @@ void mv_cpuidle_reset_cpu_win_state(void)
+@@ -100,7 +96,7 @@ void mv_cpuidle_reset_cpu_win_state(void
  
  	/* Save CPU windows state, and enable access for Bootrom	*
  	** according to SoC default address decoding windows.		*/
@@ -585,8 +575,6 @@ index 9d7a312..69fbf93 100644
  		mvAhbToMbusWinGet(i, &ahbAddrDecWin[i]);
  		mvAhbToMbusWinRemapGet(i, &ahbAddrWinRemap[i]);
  
-diff --git a/arch/arm/plat-armada/cpuidle.h b/arch/arm/plat-armada/cpuidle.h
-index b1d6229..160ded5 100644
 --- a/arch/arm/plat-armada/cpuidle.h
 +++ b/arch/arm/plat-armada/cpuidle.h
 @@ -11,7 +11,10 @@
@@ -609,8 +597,6 @@ index b1d6229..160ded5 100644
  typedef enum  {
  	DISABLED,
  	WFI,
-diff --git a/arch/arm/plat-armada/hotplug.c b/arch/arm/plat-armada/hotplug.c
-index 3140399..8f9241d 100644
 --- a/arch/arm/plat-armada/hotplug.c
 +++ b/arch/arm/plat-armada/hotplug.c
 @@ -26,8 +26,6 @@
@@ -622,8 +608,6 @@ index 3140399..8f9241d 100644
  static DECLARE_COMPLETION(cpu_killed);
  
  static inline void platform_do_lowpower(unsigned int cpu)
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig
-index a204254..b7b204b 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig
 @@ -5,10 +5,11 @@ config  MV_CESA
@@ -681,8 +665,6 @@ index a204254..b7b204b 100644
  endmenu
  
  
-diff --git a/arch/arm/plat-armada/suspend.c b/arch/arm/plat-armada/suspend.c
-index 8c97a87..f52b280 100644
 --- a/arch/arm/plat-armada/suspend.c
 +++ b/arch/arm/plat-armada/suspend.c
 @@ -33,8 +33,6 @@
@@ -735,6 +717,3 @@ index 8c97a87..f52b280 100644
  	*store_addr++ = BOOTROM_INTER_REGS_PHYS_BASE + 0x200B0;
  	*store_addr++ = 0x0;
  
--- 
-1.7.9.5
-

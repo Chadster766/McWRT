@@ -11,8 +11,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/mach-armadaxp/mv_hal_if/mvSysCesa.c |   17 +++++++++++------
  3 files changed, 18 insertions(+), 8 deletions(-)
 
-diff --git a/arch/arm/configs/armada_xp_defconfig b/arch/arm/configs/armada_xp_defconfig
-index db88347..8b3b350 100644
 --- a/arch/arm/configs/armada_xp_defconfig
 +++ b/arch/arm/configs/armada_xp_defconfig
 @@ -37,8 +37,8 @@ CONFIG_MV_ETH_RX_DESC_PREFETCH=y
@@ -33,11 +31,9 @@ index db88347..8b3b350 100644
 +CONFIG_OCF_CRYPTODEV=y
  CONFIG_CRC_CCITT=y
  CONFIG_LIBCRC32C=y
-diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
-index 62e1a45..7fe3836 100644
 --- a/arch/arm/mach-armadaxp/Makefile
 +++ b/arch/arm/mach-armadaxp/Makefile
-@@ -86,12 +86,15 @@ armadaxp-$(CONFIG_MV_ETH_PMT)	        += $(HAL_ETH_PMT_DIR)/mvPmt.o
+@@ -86,12 +86,15 @@ armadaxp-$(CONFIG_MV_ETH_PMT)	        +=
  armadaxp-$(CONFIG_MV_ETH_HWF)           += $(HAL_ETH_GBE_DIR)/mvHwf.o
  endif
  
@@ -54,11 +50,9 @@ index 62e1a45..7fe3836 100644
  armadaxp-$(CONFIG_MV_INCLUDE_INTEG_SATA)+= $(HAL_IF_DIR)/mvSysSata.o $(HAL_SATA_DIR)/mvSataSoc.o	\
  					   $(HAL_SATA_DIR)/mvSataAddrDec.o
  armadaxp-$(CONFIG_MV_INCLUDE_SPI) 	+= $(HAL_SPI_DIR)/mvSpi.o $(HAL_SPI_DIR)/mvSpiCmnd.o 		\
-diff --git a/arch/arm/mach-armadaxp/mv_hal_if/mvSysCesa.c b/arch/arm/mach-armadaxp/mv_hal_if/mvSysCesa.c
-index 49f6154..3d41db4 100644
 --- a/arch/arm/mach-armadaxp/mv_hal_if/mvSysCesa.c
 +++ b/arch/arm/mach-armadaxp/mv_hal_if/mvSysCesa.c
-@@ -66,7 +66,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -66,7 +66,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #include "mvOs.h"
  #include "ctrlEnv/mvCtrlEnvLib.h"
  #include "boardEnv/mvBoardEnvLib.h"
@@ -67,7 +61,7 @@ index 49f6154..3d41db4 100644
  
  extern u32 mv_crypto_phys_base_get(u8 chan);
  extern u32 mv_crypto_virt_base_get(u8 chan);
-@@ -96,21 +96,26 @@ MV_STATUS mvSysCesaInit(int numOfSession, int queueDepth, void *osHandle)
+@@ -96,21 +96,26 @@ MV_STATUS mvSysCesaInit(int numOfSession
  	if(status == MV_OK) {
  		for(chan = 0; chan < MV_CESA_CHANNELS; chan++) {
  			status = mvCesaIfTdmaWinInit(chan, addrWinMap);
@@ -99,6 +93,3 @@ index 49f6154..3d41db4 100644
  	}
  
  	return status;
--- 
-1.7.9.5
-

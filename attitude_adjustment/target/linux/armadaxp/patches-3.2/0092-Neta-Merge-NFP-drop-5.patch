@@ -13,8 +13,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  include/linux/netfilter/ipt_NFP.h                  |   21 +++++++-
  6 files changed, 88 insertions(+), 4 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
-index 8bc925b..f758bf1 100644
 --- a/arch/arm/mach-armadaxp/Makefile
 +++ b/arch/arm/mach-armadaxp/Makefile
 @@ -35,7 +35,8 @@ endif
@@ -27,11 +25,9 @@ index 8bc925b..f758bf1 100644
  endif
  
  ifdef CONFIG_MV_ETH_NFP_BRIDGE
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-index 37f71fb..b7da532 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-@@ -4289,6 +4289,7 @@ int mv_eth_rxq_vlan_prio_set(int port, int rxq, unsigned char prio)
+@@ -4289,6 +4289,7 @@ int mv_eth_rxq_vlan_prio_set(int port, i
  	else
  		mvOsPrintf("%s: PNC control is disabled\n", __func__);
  #else /* Legacy parser */
@@ -39,11 +35,9 @@ index 37f71fb..b7da532 100755
  #endif /* CONFIG_MV_ETH_PNC */
  
  	return status;
-diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
-index 3999412..267cc33 100644
 --- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
 +++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
-@@ -2000,6 +2000,58 @@ int     mvNetaTosToRxqGet(int port, int tos)
+@@ -2000,6 +2000,58 @@ int     mvNetaTosToRxqGet(int port, int
  
  	return rxq;
  }
@@ -102,11 +96,9 @@ index 3999412..267cc33 100644
  #endif /* CONFIG_MV_ETH_LEGACY_PARSER */
  
  /******************************************************************************/
-diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
-index d0593d5..2765939 100755
 --- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
 +++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
-@@ -654,6 +654,9 @@ MV_STATUS	mvNetaMacAddrGet(int portNo, unsigned char *pAddr);
+@@ -654,6 +654,9 @@ MV_STATUS	mvNetaMacAddrGet(int portNo, u
  MV_STATUS	mvNetaTosToRxqSet(int port, int rxq, int tos);
  int			mvNetaTosToRxqGet(int port, int tos);
  
@@ -116,8 +108,6 @@ index d0593d5..2765939 100755
  MV_STATUS	mvNetaTcpRxq(int port, int rxq);
  MV_STATUS	mvNetaUdpRxq(int port, int rxq);
  MV_STATUS	mvNetaArpRxq(int port, int rxq);
-diff --git a/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
-index 0a90fbe..b248a79 100644
 --- a/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
 +++ b/arch/arm/plat-armada/mv_hal/neta/nfp/mvNfpDefs.h
 @@ -178,6 +178,17 @@ typedef struct {
@@ -146,8 +136,6 @@ index 0a90fbe..b248a79 100644
  } MV_NFP_RESULT;
  
  #define MV_NFP_RES_TXP_VALID       0x0001
-diff --git a/include/linux/netfilter/ipt_NFP.h b/include/linux/netfilter/ipt_NFP.h
-index d4c7ab6..6e0e11d 100644
 --- a/include/linux/netfilter/ipt_NFP.h
 +++ b/include/linux/netfilter/ipt_NFP.h
 @@ -28,6 +28,7 @@
@@ -185,7 +173,7 @@ index d4c7ab6..6e0e11d 100644
  	int			txp;
  	int			mh;
  
-@@ -110,8 +120,15 @@ static inline void nfp_update_tuple_info(struct ipt_nfp_info *dst, struct ipt_nf
+@@ -110,8 +120,15 @@ static inline void nfp_update_tuple_info
  		dst->vpri_map[IPT_NFP_VPRI_MAP_GLOBAL].valid = 1;
  	}
  
@@ -203,6 +191,3 @@ index d4c7ab6..6e0e11d 100644
  
  	if (src->flags & IPT_NFP_F_SET_TXP)
  		dst->txp = src->txp;
--- 
-1.7.9.5
-

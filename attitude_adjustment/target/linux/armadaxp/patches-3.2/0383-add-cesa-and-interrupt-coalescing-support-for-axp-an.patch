@@ -1,8 +1,6 @@
-diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
-index 88ebd74..8f61486 100644
 --- a/arch/arm/mach-armadaxp/Makefile
 +++ b/arch/arm/mach-armadaxp/Makefile
-@@ -86,14 +86,12 @@ armadaxp-$(CONFIG_MV_ETH_PMT)	        += $(HAL_ETH_PMT_DIR)/mvPmt.o
+@@ -86,14 +86,12 @@ armadaxp-$(CONFIG_MV_ETH_PMT)	        +=
  armadaxp-$(CONFIG_MV_ETH_HWF)           += $(HAL_ETH_GBE_DIR)/mvHwf.o
  endif
  
@@ -18,8 +16,6 @@ index 88ebd74..8f61486 100644
  
  armadaxp-$(CONFIG_MV_INCLUDE_INTEG_SATA)+= $(HAL_IF_DIR)/mvSysSata.o $(HAL_SATA_DIR)/mvSataSoc.o	\
  					   $(HAL_SATA_DIR)/mvSataAddrDec.o
-diff --git a/arch/arm/mach-armadaxp/config/mvSysCesaConfig.h b/arch/arm/mach-armadaxp/config/mvSysCesaConfig.h
-index 141e9a4..6004eee 100644
 --- a/arch/arm/mach-armadaxp/config/mvSysCesaConfig.h
 +++ b/arch/arm/mach-armadaxp/config/mvSysCesaConfig.h
 @@ -40,6 +40,18 @@ disclaimer.
@@ -41,11 +37,9 @@ index 141e9a4..6004eee 100644
 +#ifdef CONFIG_MV_CESA_INT_PER_PACKET
 +	#define MV_CESA_INT_PER_PACKET
 +#endif
-diff --git a/arch/arm/mach-armadaxp/mv_hal_if/mvSysCesa.c b/arch/arm/mach-armadaxp/mv_hal_if/mvSysCesa.c
-index 3d41db4..3d0dec5 100644
 --- a/arch/arm/mach-armadaxp/mv_hal_if/mvSysCesa.c
 +++ b/arch/arm/mach-armadaxp/mv_hal_if/mvSysCesa.c
-@@ -66,7 +66,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -66,7 +66,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #include "mvOs.h"
  #include "ctrlEnv/mvCtrlEnvLib.h"
  #include "boardEnv/mvBoardEnvLib.h"
@@ -54,7 +48,7 @@ index 3d41db4..3d0dec5 100644
  
  extern u32 mv_crypto_phys_base_get(u8 chan);
  extern u32 mv_crypto_virt_base_get(u8 chan);
-@@ -113,7 +113,7 @@ MV_STATUS mvSysCesaInit(int numOfSession, int queueDepth, void *osHandle)
+@@ -113,7 +113,7 @@ MV_STATUS mvSysCesaInit(int numOfSession
  		if(status == MV_OK) {
  		halData.ctrlModel = mvCtrlModelGet();
  		halData.ctrlRev = mvCtrlRevGet();
@@ -63,8 +57,6 @@ index 3d41db4..3d0dec5 100644
  					osHandle, &halData);
  	}
  	}
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig
-index 749d3b0..5cf29c9 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig
 @@ -2,48 +2,70 @@ menu "Cesa options"
@@ -156,8 +148,6 @@ index 749d3b0..5cf29c9 100644
  endchoice
  
  endmenu
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Makefile b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Makefile
-index dbd16b7..ba805ad 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Makefile
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Makefile
 @@ -9,6 +9,8 @@ ifeq ($(CONFIG_MV_CESA_OCF),y)
@@ -169,11 +159,9 @@ index dbd16b7..ba805ad 100644
 +obj-$(CONFIG_MV_CESA_TEST) += cesa_test.o
  obj-$(CONFIG_MV_CESA_OCF)  += cesa_ocf_drv.o
  
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_if.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_if.c
-index 330c113..3d15e4f 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_if.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_if.c
-@@ -70,9 +70,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -70,9 +70,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #include <linux/spinlock_types.h>
  
  
@@ -199,7 +187,7 @@ index 330c113..3d15e4f 100644
  
  MV_STATUS mvCesaIfInit(int numOfSession, int queueDepth, void *osHandle, MV_CESA_HAL_DATA *halData)
  {
-@@ -103,8 +95,13 @@ MV_STATUS mvCesaIfInit(int numOfSession, int queueDepth, void *osHandle, MV_CESA
+@@ -103,8 +95,13 @@ MV_STATUS mvCesaIfInit(int numOfSession,
  	/* Init parameters */
  	reqId = 0;
  	resId = 0;
@@ -215,7 +203,7 @@ index 330c113..3d15e4f 100644
  
  	/* Allocate reordered queue for completed results */
  	resQ = (MV_CESA_RESULT *)mvOsMalloc(resQueueDepth * sizeof(MV_CESA_RESULT));
-@@ -122,7 +119,7 @@ MV_STATUS mvCesaIfInit(int numOfSession, int queueDepth, void *osHandle, MV_CESA
+@@ -122,7 +119,7 @@ MV_STATUS mvCesaIfInit(int numOfSession,
  	}
  
  	/* Init shared spinlocks */
@@ -224,7 +212,7 @@ index 330c113..3d15e4f 100644
  	spin_lock_init(&cesaIsrLock);
  
  	/* Per channel init */
-@@ -159,16 +156,25 @@ MV_STATUS mvCesaIfAction(MV_CESA_COMMAND *pCmd)
+@@ -159,16 +156,25 @@ MV_STATUS mvCesaIfAction(MV_CESA_COMMAND
  		}
  
  		/* Any room for the request ? */
@@ -253,7 +241,7 @@ index 330c113..3d15e4f 100644
  	case CESA_FLOW_ASSOC_CHAN_POLICY:
  		for (chan = 0; chan < MV_CESA_CHANNELS; chan++) {
  			if (flowType[chan] == pCmd->flowType) {
-@@ -185,6 +191,14 @@ MV_STATUS mvCesaIfAction(MV_CESA_COMMAND *pCmd)
+@@ -185,6 +191,14 @@ MV_STATUS mvCesaIfAction(MV_CESA_COMMAND
  		break;
  
  	case CESA_SINGLE_CHAN_POLICY:
@@ -268,7 +256,7 @@ index 330c113..3d15e4f 100644
  		break;
  
  	default:
-@@ -195,31 +209,27 @@ MV_STATUS mvCesaIfAction(MV_CESA_COMMAND *pCmd)
+@@ -195,31 +209,27 @@ MV_STATUS mvCesaIfAction(MV_CESA_COMMAND
  	/* Check if we need to handle split packet */
  	if (pCmd->split != MV_CESA_SPLIT_NONE) {
  		if (pCmd->split == MV_CESA_SPLIT_FIRST) {
@@ -310,7 +298,7 @@ index 330c113..3d15e4f 100644
  
  	return status;
  }
-@@ -230,7 +240,13 @@ MV_STATUS mvCesaIfReadyGet(MV_U8 chan, MV_CESA_RESULT *pResult)
+@@ -230,7 +240,13 @@ MV_STATUS mvCesaIfReadyGet(MV_U8 chan, M
  	MV_CESA_RESULT *pCurrResult;
  	MV_ULONG flags;
  
@@ -325,7 +313,7 @@ index 330c113..3d15e4f 100644
  	spin_lock_irqsave(&chanLock[chan], flags);
  
  	/* Are there any pending requests in CESA driver ? */
-@@ -241,7 +257,6 @@ MV_STATUS mvCesaIfReadyGet(MV_U8 chan, MV_CESA_RESULT *pResult)
+@@ -241,7 +257,6 @@ MV_STATUS mvCesaIfReadyGet(MV_U8 chan, M
  
  		spin_lock(&cesaIsrLock);
  		pCurrResult = pEmptyResult;
@@ -333,7 +321,7 @@ index 330c113..3d15e4f 100644
  		spin_unlock(&cesaIsrLock);
  
  		/* Get next result */
-@@ -250,6 +265,10 @@ MV_STATUS mvCesaIfReadyGet(MV_U8 chan, MV_CESA_RESULT *pResult)
+@@ -250,6 +265,10 @@ MV_STATUS mvCesaIfReadyGet(MV_U8 chan, M
  		if (status != MV_OK)
  			break;
  
@@ -344,7 +332,7 @@ index 330c113..3d15e4f 100644
  		/* Handle request according to selected policy */
  		switch (cesaPolicy) {
  		case CESA_WEIGHTED_CHAN_POLICY:
-@@ -261,6 +280,7 @@ MV_STATUS mvCesaIfReadyGet(MV_U8 chan, MV_CESA_RESULT *pResult)
+@@ -261,6 +280,7 @@ MV_STATUS mvCesaIfReadyGet(MV_U8 chan, M
  			/* TBD - handle policy */
  			break;
  
@@ -352,7 +340,7 @@ index 330c113..3d15e4f 100644
  		case CESA_SINGLE_CHAN_POLICY:
  			break;
  
-@@ -271,14 +291,14 @@ MV_STATUS mvCesaIfReadyGet(MV_U8 chan, MV_CESA_RESULT *pResult)
+@@ -271,14 +291,14 @@ MV_STATUS mvCesaIfReadyGet(MV_U8 chan, M
  
  
  		if (pResQ[pCurrResult->reqId] != NULL)
@@ -369,7 +357,7 @@ index 330c113..3d15e4f 100644
  		break;
  #endif
  	}
-@@ -315,14 +335,14 @@ MV_STATUS mvCesaIfPolicySet(MV_CESA_POLICY policy, MV_CESA_FLOW_TYPE flow)
+@@ -315,14 +335,14 @@ MV_STATUS mvCesaIfPolicySet(MV_CESA_POLI
  {
  	MV_U8 chan = 0;
  
@@ -386,7 +374,7 @@ index 330c113..3d15e4f 100644
  			mvOsPrintf("%s: Error, can not support multiple policies\n", __func__);
  			return MV_ERROR;
  		}
-@@ -331,7 +351,7 @@ MV_STATUS mvCesaIfPolicySet(MV_CESA_POLICY policy, MV_CESA_FLOW_TYPE flow)
+@@ -331,7 +351,7 @@ MV_STATUS mvCesaIfPolicySet(MV_CESA_POLI
  	if (policy == CESA_FLOW_ASSOC_CHAN_POLICY) {
  
  		if (flow == CESA_NULL_FLOW_TYPE) {
@@ -395,7 +383,7 @@ index 330c113..3d15e4f 100644
  			mvOsPrintf("%s: Error, bad policy configuration\n", __func__);
  			return MV_ERROR;
  		}
-@@ -343,14 +363,14 @@ MV_STATUS mvCesaIfPolicySet(MV_CESA_POLICY policy, MV_CESA_FLOW_TYPE flow)
+@@ -343,14 +363,14 @@ MV_STATUS mvCesaIfPolicySet(MV_CESA_POLI
  		}
  
  		if (chan == MV_CESA_CHANNELS) {
@@ -412,8 +400,6 @@ index 330c113..3d15e4f 100644
  
  	return MV_OK;
  }
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_ocf_drv.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_ocf_drv.c
-index 15033a2..ec1df9d 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_ocf_drv.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_ocf_drv.c
 @@ -42,7 +42,7 @@ disclaimer.
@@ -425,7 +411,7 @@ index 15033a2..ec1df9d 100644
  #include "mvSysCesaApi.h"
  #include <cryptodev.h>
  #include <uio.h>
-@@ -80,7 +80,8 @@ extern int cesaReqResources[MV_CESA_CHANNELS];
+@@ -80,7 +80,8 @@ extern int cesaReqResources[MV_CESA_CHAN
  /* general defines */
  #define CESA_OCF_MAX_SES 	128
  #define CESA_Q_SIZE	 	64
@@ -451,7 +437,7 @@ index 15033a2..ec1df9d 100644
  
  /* static APIs */
  static int 		cesa_ocf_process	(device_t, struct cryptop *, int);
-@@ -277,7 +279,7 @@ static inline struct cesa_ocf_process* cesa_ocf_alloc(void)
+@@ -277,7 +279,7 @@ static inline struct cesa_ocf_process* c
  
  	cesa_ocf_pool[proc_empty].valid = 1;
  	proc = proc_empty;
@@ -460,7 +446,7 @@ index 15033a2..ec1df9d 100644
  	spin_unlock_irqrestore(&cesa_lock, flags);
  
  	return &cesa_ocf_pool[proc];
-@@ -325,6 +327,9 @@ cesa_ocf_process(device_t dev, struct cryptop *crp, int hint)
+@@ -325,6 +327,9 @@ cesa_ocf_process(device_t dev, struct cr
  			should be available in CESA fifo */
  		if (free_resrc < 2) {
                  	dprintk("%s,%d: ERESTART\n", __FILE__, __LINE__);
@@ -470,7 +456,7 @@ index 15033a2..ec1df9d 100644
                  	return ERESTART;
  		}
  
-@@ -680,7 +685,9 @@ cesa_ocf_process(device_t dev, struct cryptop *crp, int hint)
+@@ -680,7 +685,9 @@ cesa_ocf_process(device_t dev, struct cr
  			cesa_ocf_free(cesa_ocf_cmd);
  		if(cesa_ocf_cmd_wa)
  			cesa_ocf_free(cesa_ocf_cmd_wa);
@@ -481,7 +467,7 @@ index 15033a2..ec1df9d 100644
  		return ERESTART;
  	} 
  	else if((status != MV_NO_MORE) && (status != MV_OK)) {
-@@ -689,12 +696,16 @@ cesa_ocf_process(device_t dev, struct cryptop *crp, int hint)
+@@ -689,12 +696,16 @@ cesa_ocf_process(device_t dev, struct cr
          }
  
  	return 0;
@@ -528,7 +514,7 @@ index 15033a2..ec1df9d 100644
  	return;
  }
  
-@@ -737,44 +752,48 @@ cesa_interrupt_handler(int irq, void *arg)
+@@ -737,44 +752,48 @@ cesa_interrupt_handler(int irq, void *ar
  {
  	MV_CESA_RESULT  	result;
  	MV_STATUS               status;
@@ -701,8 +687,6 @@ index 15033a2..ec1df9d 100644
  #define	REGISTER(alg) \
  	crypto_register(cesa_ocf_id, alg, 0,0)
  	REGISTER(CRYPTO_AES_CBC);
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_test.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_test.c
-index 2e94825..da15d2d 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_test.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_test.c
 @@ -149,6 +149,7 @@ do {					\
@@ -731,7 +715,7 @@ index 2e94825..da15d2d 100644
  static u8 chanId[MV_CESA_CHANNELS];
  static spinlock_t cesaChanLock[MV_CESA_CHANNELS];
  
-@@ -1444,6 +1445,7 @@ static MV_BOOL cesaCheckMbuf(MV_CESA_MBUF *pMbuf, const char *hexString, int off
+@@ -1444,6 +1445,7 @@ static MV_BOOL cesaCheckMbuf(MV_CESA_MBU
  	MV_STATUS status;
  	int size = strlen(hexString) / 2;
  	int checkedSize = 0;
@@ -836,7 +820,7 @@ index 2e94825..da15d2d 100644
  
  #ifdef MV_NETBSD
  		return 0;
-@@ -1861,7 +1872,7 @@ MV_STATUS testCmd(int sid, int iter, MV_CESA_COMMAND *pCmd,
+@@ -1861,7 +1872,7 @@ MV_STATUS testCmd(int sid, int iter, MV_
  	if (cesaInputHexStr == NULL)
  		cesaInputHexStr = cesaPlainHexEbc;
  
@@ -845,7 +829,7 @@ index 2e94825..da15d2d 100644
  		pCmd->pSrc = (MV_CESA_MBUF *) (cesaCmdRing[i].pSrc);
  		if (pIV != NULL) {
  			/* If IV from SA - set IV in Source buffer to zeros */
-@@ -1949,7 +1960,7 @@ MV_STATUS testCmd(int sid, int iter, MV_CESA_COMMAND *pCmd,
+@@ -1949,7 +1960,7 @@ MV_STATUS testCmd(int sid, int iter, MV_
  		pCmd->pReqPrv = (void *)cmdReqId;
  
  		cmdReqId++;
@@ -854,7 +838,7 @@ index 2e94825..da15d2d 100644
  			cmdReqId = 0;
  
  		CESA_TEST_UNLOCK(flags);
-@@ -1964,7 +1975,7 @@ MV_STATUS testCmd(int sid, int iter, MV_CESA_COMMAND *pCmd,
+@@ -1964,7 +1975,7 @@ MV_STATUS testCmd(int sid, int iter, MV_
  			CESA_TEST_UNLOCK(flags);
  			
  			CESA_TEST_WAIT((cesaTestFull == 0), 1000);
@@ -863,7 +847,7 @@ index 2e94825..da15d2d 100644
  			if (cesaTestFull == 1) {
  				mvOsPrintf("CESA Test timeout: i=%d, iter=%d, cesaTestFull=%d\n",
  					   i, iter, cesaTestFull);
-@@ -1999,19 +2010,20 @@ void cesaTestStart(int bufNum, int bufSize)
+@@ -1999,19 +2010,20 @@ void cesaTestStart(int bufNum, int bufSi
  	MV_BUF_INFO *pFragsSrc, *pFragsDst;
  	char *pBuf;
  #ifndef MV_NETBSD
@@ -888,7 +872,7 @@ index 2e94825..da15d2d 100644
  
  	if (bufNum == 0)
  		bufNum = CESA_DEF_BUF_NUM;
-@@ -2046,11 +2058,11 @@ void cesaTestStart(int bufNum, int bufSize)
+@@ -2046,11 +2058,11 @@ void cesaTestStart(int bufNum, int bufSi
  
  	CESA_TEST_WAIT_INIT();
  
@@ -904,7 +888,7 @@ index 2e94825..da15d2d 100644
  
  	if ((pMbufSrc == NULL) || (pFragsSrc == NULL) || (pMbufDst == NULL) || (pFragsDst == NULL)) {
  		mvOsPrintf("testStart: Can't malloc Src and Dst pMbuf and pFrags structures.\n");
-@@ -2058,17 +2070,17 @@ void cesaTestStart(int bufNum, int bufSize)
+@@ -2058,17 +2070,17 @@ void cesaTestStart(int bufNum, int bufSi
  		return;
  	}
  
@@ -927,7 +911,7 @@ index 2e94825..da15d2d 100644
  		pBuf = mvOsIoCachedMalloc(cesaTestOSHandle, bufSize * bufNum * 2,
  					  &cesaReqBufs[i].bufPhysAddr, &cesaReqBufs[i].memHandle);
  		if (pBuf == NULL) {
-@@ -2110,9 +2122,8 @@ void cesaTestStart(int bufNum, int bufSize)
+@@ -2110,9 +2122,8 @@ void cesaTestStart(int bufNum, int bufSi
  
  #ifndef MV_NETBSD
  	numOfSessions = CESA_DEF_SESSION_NUM;
@@ -938,7 +922,7 @@ index 2e94825..da15d2d 100644
  	if (status != MV_OK) {
  		mvOsPrintf("mvCesaInit is Failed: status = 0x%x\n", status);
  		/* !!!! Dima cesaTestCleanup(); */
-@@ -2135,10 +2146,16 @@ void cesaTestStart(int bufNum, int bufSize)
+@@ -2135,10 +2146,16 @@ void cesaTestStart(int bufNum, int bufSi
  	strcat((char *)cesaDataAndMd5digest3, cesaHmacMd5digestHex3);
  	strcat((char *)cesaDataAndSha1digest3, cesaHmacSha1digestHex3);
  
@@ -974,11 +958,9 @@ index 2e94825..da15d2d 100644
  
  #ifdef CESA_TEST_DEBUG
  	{
-diff --git a/arch/arm/plat-armada/mv_hal/cesa/mvCesa.c b/arch/arm/plat-armada/mv_hal/cesa/mvCesa.c
-index 79d76c4..4838b16 100644
 --- a/arch/arm/plat-armada/mv_hal/cesa/mvCesa.c
 +++ b/arch/arm/plat-armada/mv_hal/cesa/mvCesa.c
-@@ -89,6 +89,11 @@ MV_CESA_REQ *pCesaReqFirst[MV_CESA_CHANNELS];
+@@ -89,6 +89,11 @@ MV_CESA_REQ *pCesaReqFirst[MV_CESA_CHANN
  MV_CESA_REQ *pCesaReqLast[MV_CESA_CHANNELS];
  MV_CESA_REQ *pCesaReqEmpty[MV_CESA_CHANNELS];
  MV_CESA_REQ *pCesaReqProcess[MV_CESA_CHANNELS];
@@ -990,7 +972,7 @@ index 79d76c4..4838b16 100644
  int cesaQueueDepth[MV_CESA_CHANNELS];
  int cesaReqResources[MV_CESA_CHANNELS];
  
-@@ -186,6 +191,7 @@ static INLINE void mvCesaReqProcessStart(MV_U8 chan, MV_CESA_REQ *pReq)
+@@ -186,6 +191,7 @@ static INLINE void mvCesaReqProcessStart
  #endif
  
  	cesaStats.startCount++;
@@ -998,7 +980,7 @@ index 79d76c4..4838b16 100644
  
  	if (pReq->fragMode == MV_CESA_FRAG_NONE) {
  		frag = 0;
-@@ -274,6 +280,10 @@ MV_STATUS mvCesaHalInit(int numOfSession, int queueDepth, void *osHandle, MV_CES
+@@ -274,6 +280,10 @@ MV_STATUS mvCesaHalInit(int numOfSession
  		pCesaReqEmpty[chan] = pCesaReqFirst[chan];
  		pCesaReqLast[chan] = pCesaReqFirst[chan] + (queueDepth - 1);
  		pCesaReqProcess[chan] = pCesaReqEmpty[chan];
@@ -1009,7 +991,7 @@ index 79d76c4..4838b16 100644
  		cesaQueueDepth[chan] = queueDepth;
  		cesaReqResources[chan] = queueDepth;
  		cesaLastSid[chan] = -1;
-@@ -319,6 +329,7 @@ MV_STATUS mvCesaHalInit(int numOfSession, int queueDepth, void *osHandle, MV_CES
+@@ -319,6 +329,7 @@ MV_STATUS mvCesaHalInit(int numOfSession
  				return MV_NO_RESOURCE;
  			}
  			memset(pReq->cesaDescBuf.bufVirtPtr, 0, pReq->cesaDescBuf.bufSize);
@@ -1017,7 +999,7 @@ index 79d76c4..4838b16 100644
  			pReq->pCesaDesc = (MV_CESA_DESC *) MV_ALIGN_UP((MV_ULONG) pReq->cesaDescBuf.bufVirtPtr,
  							CPU_D_CACHE_LINE_SIZE);
  
-@@ -372,33 +383,50 @@ MV_STATUS mvCesaHalInit(int numOfSession, int queueDepth, void *osHandle, MV_CES
+@@ -372,33 +383,50 @@ MV_STATUS mvCesaHalInit(int numOfSession
  		MV_REG_WRITE(MV_CESA_TDMA_CURR_DESC_PTR_REG(chan), 0);
  
  		switch ((MV_U16)(ctrlModel & 0xff00)) {
@@ -1075,7 +1057,7 @@ index 79d76c4..4838b16 100644
  		/* Set CESA configuration registers */
  		MV_REG_WRITE(MV_CESA_CFG_REG(chan), configReg);
  	}
-@@ -966,6 +994,7 @@ MV_STATUS mvCesaAction(MV_U8 chan, MV_CESA_COMMAND *pCmd)
+@@ -966,6 +994,7 @@ MV_STATUS mvCesaAction(MV_U8 chan, MV_CE
  	cesaLastSid[chan] = sid;
  
  #ifdef MV_CESA_CHAIN_MODE
@@ -1083,7 +1065,7 @@ index 79d76c4..4838b16 100644
  	/* Are we within chain bounderies and follows the first request ? */
  	if ((chainReqNum[chan] > 0) && (chainReqNum[chan] < MAX_CESA_CHAIN_LENGTH)) {
  		if (chainIndex[chan]) {
-@@ -1011,7 +1040,18 @@ MV_STATUS mvCesaAction(MV_U8 chan, MV_CESA_COMMAND *pCmd)
+@@ -1011,7 +1040,18 @@ MV_STATUS mvCesaAction(MV_U8 chan, MV_CE
  	if ((chainIndex[chan] < MAX_CESA_CHAIN_LENGTH) && (chainReqNum[chan] > cesaStats.maxChainUsage))
  		cesaStats.maxChainUsage = chainReqNum[chan];
  
@@ -1103,7 +1085,7 @@ index 79d76c4..4838b16 100644
  
  	/* Check status of CESA channels and process requests if possible */
  	pReq = pCesaReqProcess[chan];
-@@ -1098,14 +1138,15 @@ MV_STATUS mvCesaReadyGet(MV_U8 chan, MV_CESA_RESULT *pResult)
+@@ -1098,14 +1138,15 @@ MV_STATUS mvCesaReadyGet(MV_U8 chan, MV_
  
  		return MV_EMPTY;
  	}
@@ -1123,7 +1105,7 @@ index 79d76c4..4838b16 100644
  
  	cesaStats.readyCount++;
  
-@@ -1208,17 +1249,22 @@ MV_STATUS mvCesaReadyGet(MV_U8 chan, MV_CESA_RESULT *pResult)
+@@ -1208,17 +1249,22 @@ MV_STATUS mvCesaReadyGet(MV_U8 chan, MV_
  			pReq->pOrgCmd = NULL;
  		}
  	}
@@ -1155,8 +1137,6 @@ index 79d76c4..4838b16 100644
  	return readyStatus;
  }
  
-diff --git a/arch/arm/plat-armada/mv_hal/cesa/mvCesa.h b/arch/arm/plat-armada/mv_hal/cesa/mvCesa.h
-index 6fded48..49e1405 100644
 --- a/arch/arm/plat-armada/mv_hal/cesa/mvCesa.h
 +++ b/arch/arm/plat-armada/mv_hal/cesa/mvCesa.h
 @@ -88,6 +88,22 @@ typedef enum {
@@ -1206,11 +1186,9 @@ index 6fded48..49e1405 100644
  } MV_CESA_REQ;
  
  /* SRAM map */
-diff --git a/arch/arm/plat-armada/mv_hal/cesa/mvCesaAddrDec.c b/arch/arm/plat-armada/mv_hal/cesa/mvCesaAddrDec.c
-index 555b1bc..99c2312 100644
 --- a/arch/arm/plat-armada/mv_hal/cesa/mvCesaAddrDec.c
 +++ b/arch/arm/plat-armada/mv_hal/cesa/mvCesaAddrDec.c
-@@ -179,7 +179,7 @@ static MV_STATUS mvCesaTdmaWinWrite(MV_U8 chan, MV_U32 winNum, MV_UNIT_WIN_INFO
+@@ -179,7 +179,7 @@ static MV_STATUS mvCesaTdmaWinWrite(MV_U
  	if (MV_IS_NOT_ALIGN(pDecWin->addrWin.baseLow, pDecWin->addrWin.size)) {
  		mvOsPrintf("mvCesaTdmaWinSet: Error setting CESA TDMA window %d.\n"
  			   "Address 0x%08x is unaligned to size 0x%x.\n",
@@ -1219,8 +1197,6 @@ index 555b1bc..99c2312 100644
  		return MV_ERROR;
  	}
  
-diff --git a/arch/arm/plat-armada/mv_hal/cesa/mvCesaDebug.c b/arch/arm/plat-armada/mv_hal/cesa/mvCesaDebug.c
-index 1ac973c..39c3eff 100644
 --- a/arch/arm/plat-armada/mv_hal/cesa/mvCesaDebug.c
 +++ b/arch/arm/plat-armada/mv_hal/cesa/mvCesaDebug.c
 @@ -221,6 +221,12 @@ void mvCesaDebugRegs(void)
@@ -1249,9 +1225,6 @@ index 1ac973c..39c3eff 100644
  				if (pReq->fragMode != MV_CESA_FRAG_NONE) {
  					int frag;
  
-diff --git a/arch/arm/plat-armada/mv_hal/cesa/mvCesaIf.c b/arch/arm/plat-armada/mv_hal/cesa/mvCesaIf.c
-deleted file mode 100644
-index af8878c..0000000
 --- a/arch/arm/plat-armada/mv_hal/cesa/mvCesaIf.c
 +++ /dev/null
 @@ -1,307 +0,0 @@
@@ -1562,9 +1535,6 @@ index af8878c..0000000
 -{
 -	return mvCesaDebugMbuf(str, pMbuf, offset, size);
 -}
-diff --git a/arch/arm/plat-armada/mv_hal/cesa/mvCesaIf.h b/arch/arm/plat-armada/mv_hal/cesa/mvCesaIf.h
-deleted file mode 100644
-index a2eda95..0000000
 --- a/arch/arm/plat-armada/mv_hal/cesa/mvCesaIf.h
 +++ /dev/null
 @@ -1,116 +0,0 @@
@@ -1684,8 +1654,6 @@ index a2eda95..0000000
 -#endif
 -
 -#endif /* __mvCesaIf_h__ */
-diff --git a/arch/arm/plat-armada/mv_hal/cesa/mvCesaRegs.h b/arch/arm/plat-armada/mv_hal/cesa/mvCesaRegs.h
-index 7846a41..d6e9c31 100644
 --- a/arch/arm/plat-armada/mv_hal/cesa/mvCesaRegs.h
 +++ b/arch/arm/plat-armada/mv_hal/cesa/mvCesaRegs.h
 @@ -243,8 +243,8 @@ extern "C" {
@@ -1729,9 +1697,6 @@ index 7846a41..d6e9c31 100644
  
  #define MV_CESA_AUTH_DATA_IN_REG(chan)      		(MV_CESA_REGS_BASE(chan) + 0xd38)
  #define MV_CESA_AUTH_BIT_COUNT_LOW_REG(chan)      	(MV_CESA_REGS_BASE(chan) + 0xd20)
-diff --git a/arch/arm/plat-armada/mv_hal/cesa/mvCesaTest.c b/arch/arm/plat-armada/mv_hal/cesa/mvCesaTest.c
-deleted file mode 100644
-index 824d60b..0000000
 --- a/arch/arm/plat-armada/mv_hal/cesa/mvCesaTest.c
 +++ /dev/null
 @@ -1,3026 +0,0 @@
@@ -4761,11 +4726,9 @@ index 824d60b..0000000
 -	}
 -#endif /* CESA_TEST_DEBUG */
 -}
-diff --git a/arch/arm/plat-armada/mv_hal/cesa/mvSHA256.c b/arch/arm/plat-armada/mv_hal/cesa/mvSHA256.c
-index a47dcb8..6d84453 100644
 --- a/arch/arm/plat-armada/mv_hal/cesa/mvSHA256.c
 +++ b/arch/arm/plat-armada/mv_hal/cesa/mvSHA256.c
-@@ -298,7 +298,7 @@ MV_VOID mvSHA256Finish(sha256_context *ctx, MV_U8 *digest)
+@@ -298,7 +298,7 @@ MV_VOID mvSHA256Finish(sha256_context *c
  	PUT_UINT32(ctx->state[7], digest, 28);
  }
  
@@ -4774,8 +4737,6 @@ index a47dcb8..6d84453 100644
  {
  	sha256_context ctx;
  
-diff --git a/arch/arm/plat-armada/mv_hal/cesa/mvSHA256.h b/arch/arm/plat-armada/mv_hal/cesa/mvSHA256.h
-index 489e0e7..ac91708 100644
 --- a/arch/arm/plat-armada/mv_hal/cesa/mvSHA256.h
 +++ b/arch/arm/plat-armada/mv_hal/cesa/mvSHA256.h
 @@ -79,7 +79,7 @@ sha256_context;
@@ -4787,11 +4748,9 @@ index 489e0e7..ac91708 100644
  
  #ifdef __cplusplus
  }
-diff --git a/cesa/openswan/README b/cesa/openswan/README
-index 8f19735..288ed2c 100644
 --- a/cesa/openswan/README
 +++ b/cesa/openswan/README
-@@ -25,7 +25,7 @@ In order to explore the CESA through the OpenSWAN, please follow the next steps:
+@@ -25,7 +25,7 @@ In order to explore the CESA through the
        the following commands:
        - echo 0  > /proc/sys/net/ipv4/conf/eth<x>/rp_filter
        - echo 0  > /proc/sys/net/ipv4/conf/all/rp_filter
@@ -4800,6 +4759,3 @@ index 8f19735..288ed2c 100644
  Reverse Path Filtering(rp_filter): it is a technology that is used on IP routers to try and prevent source address spoofing,
  which is often used for DenialOfService attacks. RPF works by checking the source IP of each packet received on an interface
  against the routing table. If the best route for the source IP address does not use the same interface that the packet was received on the packet is dropped.
--- 
-1.7.9.5
-

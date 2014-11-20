@@ -18,8 +18,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/plat-armada/suspend.c   |    3 +
  6 files changed, 85 insertions(+), 122 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/headsmp.S b/arch/arm/mach-armadaxp/headsmp.S
-index e58dd2d..fc65e70 100644
 --- a/arch/arm/mach-armadaxp/headsmp.S
 +++ b/arch/arm/mach-armadaxp/headsmp.S
 @@ -9,7 +9,9 @@
@@ -91,8 +89,6 @@ index e58dd2d..fc65e70 100644
  #ifndef CONFIG_SHEEVA_ERRATA_ARM_CPU_4948
  l0_disable_flag_addr:
  	.word	l0_disable_flag
-diff --git a/arch/arm/mach-armadaxp/irq.c b/arch/arm/mach-armadaxp/irq.c
-index e914ba0..7ab3f02 100644
 --- a/arch/arm/mach-armadaxp/irq.c
 +++ b/arch/arm/mach-armadaxp/irq.c
 @@ -25,6 +25,7 @@
@@ -103,7 +99,7 @@ index e914ba0..7ab3f02 100644
  
  int max_per_cpu_irq = 28; // not enabled, default.
  static int __init per_cpu_irq_setup(char *__unused)
-@@ -240,12 +241,13 @@ int axp_set_affinity(struct irq_data *d, const struct cpumask *mask_val,bool for
+@@ -240,12 +241,13 @@ int axp_set_affinity(struct irq_data *d,
  #endif /* CONFIG_ARMADAXP_USE_IRQ_INDIRECT_MODE */
  
  #ifdef CONFIG_SMP
@@ -135,8 +131,6 @@ index e914ba0..7ab3f02 100644
  	}
  #endif
  
-diff --git a/arch/arm/mach-armadaxp/platsmp.c b/arch/arm/mach-armadaxp/platsmp.c
-index ce6ec1d..7fc3f42 100644
 --- a/arch/arm/mach-armadaxp/platsmp.c
 +++ b/arch/arm/mach-armadaxp/platsmp.c
 @@ -23,7 +23,7 @@
@@ -148,7 +142,7 @@ index ce6ec1d..7fc3f42 100644
  extern void second_cpu_msi_init(void);
  extern MV_CPU_DEC_WIN *mv_sys_map(void);
  extern unsigned long mv_cpu_count;
-@@ -54,12 +54,6 @@ static inline unsigned int get_sample_at_reset_core_count(void)
+@@ -54,12 +54,6 @@ static inline unsigned int get_sample_at
  	return ((MV_REG_READ(SOC_COHERENCY_FABRIC_CFG_REG) & 0xF) + 1);
  }
  
@@ -161,7 +155,7 @@ index ce6ec1d..7fc3f42 100644
  static unsigned int __init get_core_count(void)
  {
  #ifdef CONFIG_MACH_ARMADA_XP_FPGA
-@@ -80,11 +74,15 @@ void __init set_core_count(unsigned int cpu_count)
+@@ -80,11 +74,15 @@ void __init set_core_count(unsigned int
  	group_cpu_mask = ((1 << cpu_count) - 1) << (hard_smp_processor_id());
  }
  
@@ -179,7 +173,7 @@ index ce6ec1d..7fc3f42 100644
  #ifndef CONFIG_ARMADA_XP_REV_Z1
  #ifdef	CONFIG_SHEEVA_DEEP_IDLE
  	armadaxp_fabric_restore_deepIdle();
-@@ -96,70 +94,43 @@ void __cpuinit platform_secondary_init(unsigned int cpu)
+@@ -96,70 +94,43 @@ void __cpuinit platform_secondary_init(u
  	 * core (e.g. timer irq), then they will not have been enabled
  	 * for us: do so
  	 */
@@ -227,32 +221,35 @@ index ce6ec1d..7fc3f42 100644
 -	flush_cache_all();
 -	pen_release = get_hw_cpu_id(cpu);
 -	flush_cache_all();
-+	cpu = get_hw_cpu_id(cpu);
- 
+-
 -	/* send ipi to wake cpu in case it in offline state */
 -	axp_smp_cross_call(cpumask_of(cpu), 0);
-+	printk("SMP: CPU %d Waking up CPU %d\n", master_cpu_id, cpu);
- 
+-
 -	timeout = jiffies + (10 * HZ);
 -	while (time_before(jiffies, timeout)) {
 -		smp_rmb();
 -		if (pen_release == -1)
 -			break;
-+	/* Set resume control and address */
-+	MV_REG_WRITE(AXP_CPU_RESUME_CTRL_REG, 0x0);
-+	MV_REG_WRITE(AXP_CPU_RESUME_ADDR_REG(cpu),
-+			virt_to_phys(axp_secondary_startup));
++	cpu = get_hw_cpu_id(cpu);
  
 -		dmac_map_area((const void *)&pen_release, 32, DMA_BIDIRECTIONAL);
 -		udelay(10);
 -	}
-+	dsb();
++	printk("SMP: CPU %d Waking up CPU %d\n", master_cpu_id, cpu);
  
 -	/*
 -	 * now the secondary core is starting up let it run its
 -	 * calibrations, then wait for it to finish
 -	 */
 -	spin_unlock(&boot_lock);
++	/* Set resume control and address */
++	MV_REG_WRITE(AXP_CPU_RESUME_CTRL_REG, 0x0);
++	MV_REG_WRITE(AXP_CPU_RESUME_ADDR_REG(cpu),
++			virt_to_phys(axp_secondary_startup));
++
++	dsb();
+ 
+-	return pen_release != -1 ? -ENOSYS : 0;
 +	/* Kick secondary CPUs */
 +	reg = MV_REG_READ(AXP_CPU_RESET_REG(cpu));
 +	reg = reg & ~(1 << AXP_CPU_RESET_OFFS);
@@ -260,8 +257,7 @@ index ce6ec1d..7fc3f42 100644
 +
 +	mb();
 +	udelay(10);
- 
--	return pen_release != -1 ? -ENOSYS : 0;
++
 +	return 0;
  }
  
@@ -327,7 +323,7 @@ index ce6ec1d..7fc3f42 100644
  
  #ifdef CONFIG_MV_AMP_ENABLE
  	mvSemaLock(MV_SEMA_BRIDGE);
-@@ -278,7 +231,7 @@ static void __init initialize_bridge(void)
+@@ -278,7 +231,7 @@ static void __init initialize_bridge(voi
  	reg |= (core_bits << 24);
  	MV_REG_WRITE(SOC_COHERENCY_FABRIC_CFG_REG, reg);
  
@@ -358,7 +354,7 @@ index ce6ec1d..7fc3f42 100644
  }
  
  void __init platform_smp_prepare_cpus(unsigned int max_cpus)
-@@ -370,7 +331,7 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
+@@ -370,7 +331,7 @@ void __init platform_smp_prepare_cpus(un
  	}
  	if (max_cpus > 1) {
  		flush_cache_all();
@@ -368,11 +364,9 @@ index ce6ec1d..7fc3f42 100644
 -	initialize_bridge();
 +	init_coherency();
  }
-diff --git a/arch/arm/mach-armadaxp/time.c b/arch/arm/mach-armadaxp/time.c
-index 97e15ca..fdf089d 100644
 --- a/arch/arm/mach-armadaxp/time.c
 +++ b/arch/arm/mach-armadaxp/time.c
-@@ -159,21 +159,22 @@ static void axp_clkevt_mode(enum clock_event_mode mode, struct clock_event_devic
+@@ -159,21 +159,22 @@ static void axp_clkevt_mode(enum clock_e
  	u32 u;
  	local_irq_save(flags);
  
@@ -400,7 +394,7 @@ index 97e15ca..fdf089d 100644
  #else
  		u |= (LCL_TIMER0_EN | LCL_TIMER0_RELOAD_EN);
  #endif
-@@ -193,7 +194,6 @@ static void axp_clkevt_mode(enum clock_event_mode mode, struct clock_event_devic
+@@ -193,7 +194,6 @@ static void axp_clkevt_mode(enum clock_e
  		MV_REG_WRITE(LCL_TIMER_CAUSE, LCL_INT_TIMER0_CLR);
  	}
  
@@ -408,8 +402,6 @@ index 97e15ca..fdf089d 100644
  	local_irq_restore(flags);
  }
  
-diff --git a/arch/arm/plat-armada/hotplug.c b/arch/arm/plat-armada/hotplug.c
-index 0598c5d..b26110a 100644
 --- a/arch/arm/plat-armada/hotplug.c
 +++ b/arch/arm/plat-armada/hotplug.c
 @@ -27,7 +27,6 @@
@@ -420,7 +412,7 @@ index 0598c5d..b26110a 100644
  
  static DECLARE_COMPLETION(cpu_killed);
  
-@@ -49,14 +48,6 @@ static inline void platform_do_lowpower(unsigned int cpu)
+@@ -49,14 +48,6 @@ static inline void platform_do_lowpower(
  
  		wfi();
  
@@ -435,8 +427,6 @@ index 0598c5d..b26110a 100644
  		/*
  		 * getting here, means that we have come out of WFI without
  		 * having been woken up - this shouldn't happen
-diff --git a/arch/arm/plat-armada/suspend.c b/arch/arm/plat-armada/suspend.c
-index 4917164..d9ba64a 100644
 --- a/arch/arm/plat-armada/suspend.c
 +++ b/arch/arm/plat-armada/suspend.c
 @@ -34,6 +34,7 @@
@@ -456,6 +446,3 @@ index 4917164..d9ba64a 100644
  #if defined(CONFIG_VFP)
  	vfp_restore();
  #endif
--- 
-1.7.9.5
-

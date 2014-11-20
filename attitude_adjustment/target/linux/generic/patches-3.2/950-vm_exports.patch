@@ -1,6 +1,6 @@
 --- a/mm/shmem.c
 +++ b/mm/shmem.c
-@@ -2491,6 +2491,16 @@ EXPORT_SYMBOL_GPL(shmem_truncate_range);
+@@ -2500,6 +2500,16 @@ EXPORT_SYMBOL_GPL(shmem_truncate_range);
  
  /* common code */
  
@@ -17,7 +17,7 @@
  /**
   * shmem_file_setup - get an unlinked file living in tmpfs
   * @name: name for dentry (to be seen in /proc/<pid>/maps
-@@ -2568,11 +2578,8 @@ int shmem_zero_setup(struct vm_area_stru
+@@ -2577,11 +2587,8 @@ int shmem_zero_setup(struct vm_area_stru
  	if (IS_ERR(file))
  		return PTR_ERR(file);
  
@@ -61,7 +61,7 @@
  {
 --- a/kernel/sched.c
 +++ b/kernel/sched.c
-@@ -5101,6 +5101,7 @@ int can_nice(const struct task_struct *p
+@@ -5293,6 +5293,7 @@ int can_nice(const struct task_struct *p
  	return (nice_rlim <= task_rlimit(p, RLIMIT_NICE) ||
  		capable(CAP_SYS_NICE));
  }
@@ -71,7 +71,7 @@
  
 --- a/mm/memory.c
 +++ b/mm/memory.c
-@@ -1385,6 +1385,7 @@ unsigned long zap_page_range(struct vm_a
+@@ -1396,6 +1396,7 @@ unsigned long zap_page_range(struct vm_a
  	tlb_finish_mmu(&tlb, address, end);
  	return end;
  }
@@ -79,7 +79,7 @@
  
  /**
   * zap_vma_ptes - remove ptes mapping the vma
-@@ -3060,6 +3061,7 @@ static inline int check_stack_guard_page
+@@ -3071,6 +3072,7 @@ static inline int check_stack_guard_page
  	}
  	return 0;
  }
@@ -89,7 +89,7 @@
   * We enter with non-exclusive mmap_sem (to exclude vma changes,
 --- a/mm/vmalloc.c
 +++ b/mm/vmalloc.c
-@@ -1232,6 +1232,7 @@ void unmap_kernel_range(unsigned long ad
+@@ -1233,6 +1233,7 @@ void unmap_kernel_range(unsigned long ad
  	vunmap_page_range(addr, end);
  	flush_tlb_kernel_range(addr, end);
  }
@@ -97,7 +97,7 @@
  
  int map_vm_area(struct vm_struct *area, pgprot_t prot, struct page ***pages)
  {
-@@ -1369,6 +1370,7 @@ struct vm_struct *get_vm_area(unsigned l
+@@ -1370,6 +1371,7 @@ struct vm_struct *get_vm_area(unsigned l
  	return __get_vm_area_node(size, 1, flags, VMALLOC_START, VMALLOC_END,
  				-1, GFP_KERNEL, __builtin_return_address(0));
  }

@@ -11,8 +11,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h      |    3 +
  4 files changed, 433 insertions(+), 36 deletions(-)
 
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-index f0698c6..e3f6706 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 @@ -60,7 +60,6 @@ disclaimer.
@@ -23,7 +21,7 @@ index f0698c6..e3f6706 100755
  #ifdef CONFIG_MV_CPU_PERF_CNTRS
  MV_CPU_CNTRS_EVENT	*event0 = NULL;
  MV_CPU_CNTRS_EVENT	*event1 = NULL;
-@@ -236,6 +235,7 @@ void set_cpu_affinity(struct eth_port *pp, MV_U32 cpuAffinity, int group)
+@@ -236,6 +235,7 @@ void set_cpu_affinity(struct eth_port *p
  			cpuCtrl = pp->cpu_config[cpu];
  			cpuCtrl->napi = pp->napiGroup[group];
  			cpuCtrl->napiCpuGroup = group;
@@ -31,7 +29,7 @@ index f0698c6..e3f6706 100755
  			/* set rxq affinity of the target group */
  			mvNetaRxqCpuMaskSet(pp->port, rxqAffinity, cpu);
  		}
-@@ -308,7 +308,9 @@ void set_rxq_affinity(struct eth_port *pp, MV_U32 rxqAffinity, int group)
+@@ -308,7 +308,9 @@ void set_rxq_affinity(struct eth_port *p
  			}
  			tmpRxqAffinity >>= 1;
  	   }
@@ -42,7 +40,7 @@ index f0698c6..e3f6706 100755
     }
  }
  
-@@ -2677,6 +2679,7 @@ int mv_eth_poll(struct napi_struct *napi, int budget)
+@@ -2677,6 +2679,7 @@ int mv_eth_poll(struct napi_struct *napi
  	MV_U32 causeRxTx;
  	struct eth_port *pp = MV_ETH_PRIV(napi->dev);
  
@@ -50,7 +48,7 @@ index f0698c6..e3f6706 100755
  #ifdef CONFIG_MV_ETH_DEBUG_CODE
  	if (pp->flags & MV_ETH_F_DBG_POLL) {
  		printk(KERN_ERR "%s ENTER: port=%d, cpu=%d, mask=0x%x, cause=0x%x\n",
-@@ -2766,6 +2769,7 @@ int mv_eth_poll(struct napi_struct *napi, int budget)
+@@ -2766,6 +2769,7 @@ int mv_eth_poll(struct napi_struct *napi
  		causeRxTx = 0;
  
  		napi_complete(napi);
@@ -58,7 +56,7 @@ index f0698c6..e3f6706 100755
  		STAT_INFO(pp->stats.poll_exit[smp_processor_id()]++);
  
  		local_irq_save(flags);
-@@ -3022,6 +3026,170 @@ static int mv_eth_load_network_interfaces(MV_U32 portMask, MV_U32 cpuMask)
+@@ -3022,6 +3026,170 @@ static int mv_eth_load_network_interface
  }
  
  
@@ -229,7 +227,7 @@ index f0698c6..e3f6706 100755
  /***********************************************************
   * mv_eth_probe --                                         *
   *   main driver initialization. loading the interfaces.   *
-@@ -4068,7 +4236,6 @@ int mv_eth_start_internals(struct eth_port *pp, int mtu)
+@@ -4068,7 +4236,6 @@ int mv_eth_start_internals(struct eth_po
  
  #ifdef CONFIG_MV_ETH_BM_CPU
  	mvNetaBmPoolBufSizeSet(pp->port, pp->pool_long->pool, RX_BUF_SIZE(pp->pool_long->pkt_size));
@@ -237,7 +235,7 @@ index f0698c6..e3f6706 100755
  	if (pp->pool_short == NULL) {
  		int short_pool = mv_eth_bm_config_short_pool_get(pp->port);
  
-@@ -4204,6 +4371,158 @@ int mv_eth_start_internals(struct eth_port *pp, int mtu)
+@@ -4204,6 +4371,158 @@ int mv_eth_start_internals(struct eth_po
  }
  
  /***********************************************************
@@ -396,7 +394,7 @@ index f0698c6..e3f6706 100755
   * mv_eth_stop_internals --                                *
   *   stop port rx/tx activity. free skb's from rx/tx rings.*
   ***********************************************************/
-@@ -4974,14 +5293,19 @@ void mv_eth_port_status_print(unsigned int port)
+@@ -4974,14 +5293,19 @@ void mv_eth_port_status_print(unsigned i
  	printk(KERN_CONT "TXQ: SharedFlag  nfpCounter   cpu_owner\n");
  
  	for (q = 0; q < CONFIG_MV_ETH_TXQ; q++) {
@@ -496,11 +494,9 @@ index f0698c6..e3f6706 100755
  
  static int mv_eth_remove(struct platform_device *pdev)
  {
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
-index c7fe35c..2d0de10 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
-@@ -158,6 +158,7 @@ int mv_eth_skb_recycle(struct sk_buff *skb);
+@@ -158,6 +158,7 @@ int mv_eth_skb_recycle(struct sk_buff *s
  /*
   * Debug statistics
   */
@@ -543,7 +539,7 @@ index c7fe35c..2d0de10 100755
  };
  
  struct eth_netdev {
-@@ -696,6 +704,12 @@ int         mv_eth_check_mtu_valid(struct net_device *dev, int mtu);
+@@ -696,6 +704,12 @@ int         mv_eth_check_mtu_valid(struc
  int         mv_eth_set_mac_addr(struct net_device *dev, void *mac);
  void        mv_eth_set_multicast_list(struct net_device *dev);
  int         mv_eth_open(struct net_device *dev);
@@ -556,7 +552,7 @@ index c7fe35c..2d0de10 100755
  
  int	    mv_eth_cpu_txq_mask_set(int port, int cpu, int txqMask);
  
-@@ -760,7 +774,6 @@ int         mv_eth_ctrl_port_buf_num_set(int port, int long_num, int short_num);
+@@ -760,7 +774,6 @@ int         mv_eth_ctrl_port_buf_num_set
  int         mv_eth_ctrl_pool_size_set(int pool, int pkt_size);
  int         mv_eth_ctrl_set_poll_rx_weight(int port, u32 weight);
  int         mv_eth_shared_set(int port, int txp, int txq, int value);
@@ -564,11 +560,9 @@ index c7fe35c..2d0de10 100755
  void        mv_eth_tx_desc_print(struct neta_tx_desc *desc);
  void        mv_eth_pkt_print(struct eth_pbuf *pkt);
  void        mv_eth_rx_desc_print(struct neta_rx_desc *desc);
-diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
-index bffbc93..1df122f 100755
 --- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
 +++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.c
-@@ -595,7 +595,7 @@ MV_STATUS mvNetaMaxRxSizeSet(int portNo, int maxRxSize)
+@@ -595,7 +595,7 @@ MV_STATUS mvNetaMaxRxSizeSet(int portNo,
  
  	if (!MV_PON_PORT(portNo)) {
  
@@ -577,7 +571,7 @@ index bffbc93..1df122f 100755
  		regVal &= ~NETA_GMAC_MAX_RX_SIZE_MASK;
  		regVal |= (((maxRxSize - MV_ETH_MH_SIZE) / 2) << NETA_GMAC_MAX_RX_SIZE_OFFS);
  		MV_REG_WRITE(NETA_GMAC_CTRL_0_REG(portNo), regVal);
-@@ -2166,6 +2166,7 @@ static void mvNetaDescRingReset(MV_NETA_QUEUE_CTRL *pQueueCtrl)
+@@ -2166,6 +2166,7 @@ static void mvNetaDescRingReset(MV_NETA_
  	pQueueCtrl->nextToProc = 0;
  }
  
@@ -593,7 +587,7 @@ index bffbc93..1df122f 100755
  /* Reset all TXQs */
  void mvNetaTxpReset(int port, int txp)
  {
-@@ -2238,14 +2240,25 @@ MV_NETA_RXQ_CTRL *mvNetaRxqInit(int port, int queue, int descrNum)
+@@ -2238,14 +2240,25 @@ MV_NETA_RXQ_CTRL *mvNetaRxqInit(int port
  
  	mvNetaDescRingReset(pQueueCtrl);
  
@@ -621,7 +615,7 @@ index bffbc93..1df122f 100755
  /*******************************************************************************
  * mvNetaTxqInit - Allocate required memory and initialize TXQ descriptor ring.
  *
-@@ -2292,22 +2305,44 @@ MV_NETA_TXQ_CTRL *mvNetaTxqInit(int port, int txp, int queue, int descrNum)
+@@ -2292,22 +2305,44 @@ MV_NETA_TXQ_CTRL *mvNetaTxqInit(int port
  
  	mvNetaDescRingReset(pQueueCtrl);
  
@@ -674,11 +668,9 @@ index bffbc93..1df122f 100755
  /*******************************************************************************
  * mvNetaRxqDelete - Delete RXQ and free memory allocated for descriptors ring.
  *
-diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
-index 62abac1..35dccc5 100755
 --- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
 +++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
-@@ -624,6 +624,9 @@ MV_NETA_TXQ_CTRL 	*mvNetaTxqInit(int port, int txp, int queue, int descrNum);
+@@ -624,6 +624,9 @@ MV_NETA_TXQ_CTRL 	*mvNetaTxqInit(int por
  MV_NETA_RXQ_CTRL 	*mvNetaRxqInit(int port, int queue, int descrNum);
  void		mvNetaTxqDelete(int port, int txp, int queue);
  void		mvNetaRxqDelete(int port, int queue);
@@ -688,6 +680,3 @@ index 62abac1..35dccc5 100755
  
  void mvNetaRxReset(int port);
  void mvNetaTxpReset(int port, int txp);
--- 
-1.7.9.5
-

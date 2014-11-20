@@ -16,8 +16,6 @@ Subject: [PATCH 032/609] DAMP: adding support for an option to skipp the
  arch/arm/mach-armadaxp/core.c                      |   21 ++++++-
  6 files changed, 101 insertions(+), 16 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
-index 29ca72c..0090672 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
 @@ -2248,6 +2248,64 @@ MV_VOID mvBoardSerdesZ1ASupport(void)
@@ -85,11 +83,9 @@ index 29ca72c..0090672 100644
  * mvBoardSledCpuNumGet - Get board SERDES configuration
  *
  * DESCRIPTION:
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
-index 86e86a7..9411275 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
-@@ -423,6 +423,8 @@ MV_STATUS mvBoardTwsiMuxChannelSet(MV_U8 muxChNum);
+@@ -423,6 +423,8 @@ MV_STATUS mvBoardTwsiMuxChannelSet(MV_U8
  MV_STATUS mvBoardTwsiReadByteThruMux(MV_U8 muxChNum, MV_U8 chNum, MV_TWSI_SLAVE *pTwsiSlave, MV_U8 *data);
  MV_BOARD_MAC_SPEED mvBoardMacSpeedGet(MV_U32 ethPortNum);
  MV_VOID mvBoardSerdesZ1ASupport(void);
@@ -98,11 +94,9 @@ index 86e86a7..9411275 100644
  MV_SERDES_CFG *mvBoardSerdesCfgGet(void);
  MV_BOARD_PEX_INFO *mvBoardPexInfoGet(void);
  MV_STATUS mvBoardConfIdSet(MV_U16 conf);
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
-index 7e297fd..cd86135 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
-@@ -183,11 +183,11 @@ MV_BOARD_MPP_INFO db88f78XX0InfoBoardMppConfigValue[] = {
+@@ -183,11 +183,11 @@ MV_BOARD_MPP_INFO db88f78XX0InfoBoardMpp
  
  MV_SERDES_CFG db88f78XX0InfoBoardSerdesConfigValue[] = {
  	/* Z1B */
@@ -118,7 +112,7 @@ index 7e297fd..cd86135 100644
  };
  
  MV_BOARD_TDM_INFO	db88f78XX0Tdm880[]	= { {1}, {2} };
-@@ -369,11 +369,11 @@ MV_BOARD_MPP_INFO db88f78XX0rev2InfoBoardMppConfigValue[] = {
+@@ -369,11 +369,11 @@ MV_BOARD_MPP_INFO db88f78XX0rev2InfoBoar
  
  MV_SERDES_CFG db88f78XX0rev2InfoBoardSerdesConfigValue[] = { //Faraj: change accordign to DB ==> stays the same
  	/* Z1B */
@@ -134,7 +128,7 @@ index 7e297fd..cd86135 100644
  };
  
  MV_BOARD_TDM_INFO	db88f78XX0rev2Tdm880[]	= { {1}, {2} };
-@@ -498,8 +498,8 @@ MV_BOARD_MPP_INFO rd78460nasInfoBoardMppConfigValue[] = {
+@@ -498,8 +498,8 @@ MV_BOARD_MPP_INFO rd78460nasInfoBoardMpp
  };
  
  MV_SERDES_CFG rd78460nasInfoBoardSerdesConfigValue[] = { //Faraj: change accordign to DB ==> stays the same
@@ -145,7 +139,7 @@ index 7e297fd..cd86135 100644
  
  };
  
-@@ -607,8 +607,8 @@ MV_BOARD_MPP_INFO rd78460InfoBoardMppConfigValue[] = {
+@@ -607,8 +607,8 @@ MV_BOARD_MPP_INFO rd78460InfoBoardMppCon
  };
  
  MV_SERDES_CFG rd78460InfoBoardSerdesConfigValue[] = {
@@ -156,7 +150,7 @@ index 7e297fd..cd86135 100644
  };
  
  MV_BOARD_INFO rd78460Info = {
-@@ -725,7 +725,7 @@ MV_BOARD_MPP_INFO db78X60pcacInfoBoardMppConfigValue[] = {
+@@ -725,7 +725,7 @@ MV_BOARD_MPP_INFO db78X60pcacInfoBoardMp
  };
  
  MV_SERDES_CFG db78X60pcacInfoBoardSerdesConfigValue[] = {
@@ -165,7 +159,7 @@ index 7e297fd..cd86135 100644
  };
  
  
-@@ -846,7 +846,7 @@ MV_BOARD_MPP_INFO fpga88f78XX0InfoBoardMppConfigValue[] = {
+@@ -846,7 +846,7 @@ MV_BOARD_MPP_INFO fpga88f78XX0InfoBoardM
  };
  
  MV_SERDES_CFG fpga88f78XX0InfoBoardSerdesConfigValue[] = {
@@ -174,8 +168,6 @@ index 7e297fd..cd86135 100644
  };
  
  MV_BOARD_TDM_INFO	fpga88f78XX0Tdm880[]	= { {1}, {2} };
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
-index 984effc..183ad32 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
 @@ -1939,7 +1939,6 @@ MV_STATUS mvCtrlSerdesPhyConfig(MV_VOID)
@@ -199,8 +191,6 @@ index 984effc..183ad32 100644
  	/*
  	 * If clock gatting was done in U-boot then we don't want
  	 *to try to access  a HW block that is clock gated
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
-index 13bd343..8025060 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
 @@ -124,6 +124,7 @@ typedef enum {
@@ -211,11 +201,9 @@ index 13bd343..8025060 100644
  	MV_U32	serdesLine0_7;	/* Lines 0 to 7 SERDES MUX one nibble per line */
  	MV_U32	serdesLine8_15;	/* Lines 8 to 15 SERDES MUX one nibble per line */
  	MV_PEX_UNIT_CFG		pex0Mod;
-diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
-index 5bd1785..cbf855a 100644
 --- a/arch/arm/mach-armadaxp/core.c
 +++ b/arch/arm/mach-armadaxp/core.c
-@@ -306,6 +306,7 @@ __setup("sp_enable", spec_prefesth_setup);
+@@ -306,6 +306,7 @@ __setup("sp_enable", spec_prefesth_setup
  #else
  	MV_U32 support_wait_for_interrupt = 0x1;
  #endif
@@ -223,7 +211,7 @@ index 5bd1785..cbf855a 100644
  static int __init noWFI_setup(char *__unused)
  {
       support_wait_for_interrupt = 0;
-@@ -314,6 +315,15 @@ static int __init noWFI_setup(char *__unused)
+@@ -314,6 +315,15 @@ static int __init noWFI_setup(char *__un
  
  __setup("noWFI", noWFI_setup);
  
@@ -271,6 +259,3 @@ index 5bd1785..cbf855a 100644
          /* init the Board environment */
         	mvBoardEnvInit();
  
--- 
-1.7.9.5
-

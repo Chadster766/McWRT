@@ -20,11 +20,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  6 files changed, 142 insertions(+), 2 deletions(-)
  create mode 100644 sound/soc/kirkwood/armada370.c
 
-diff --git a/sound/core/pcm_native.c b/sound/core/pcm_native.c
-index 7ada40e..cfdfe42 100644
 --- a/sound/core/pcm_native.c
 +++ b/sound/core/pcm_native.c
-@@ -3166,7 +3166,7 @@ static const struct vm_operations_struct snd_pcm_vm_ops_data_fault = {
+@@ -3166,7 +3166,7 @@ static const struct vm_operations_struct
  
  #ifndef ARCH_HAS_DMA_MMAP_COHERENT
  /* This should be defined / handled globally! */
@@ -33,8 +31,6 @@ index 7ada40e..cfdfe42 100644
  #define ARCH_HAS_DMA_MMAP_COHERENT
  #endif
  #endif
-diff --git a/sound/soc/Kconfig b/sound/soc/Kconfig
-index 1381db8..88521a3 100644
 --- a/sound/soc/Kconfig
 +++ b/sound/soc/Kconfig
 @@ -61,6 +61,16 @@ source "sound/soc/sh/Kconfig"
@@ -54,8 +50,6 @@ index 1381db8..88521a3 100644
  # Supported codecs
  source "sound/soc/codecs/Kconfig"
  
-diff --git a/sound/soc/Makefile b/sound/soc/Makefile
-index 9ea8ac8..c84c62d 100644
 --- a/sound/soc/Makefile
 +++ b/sound/soc/Makefile
 @@ -22,3 +22,4 @@ obj-$(CONFIG_SND_SOC)	+= s6000/
@@ -63,8 +57,6 @@ index 9ea8ac8..c84c62d 100644
  obj-$(CONFIG_SND_SOC)	+= tegra/
  obj-$(CONFIG_SND_SOC)	+= txx9/
 +obj-$(CONFIG_SND_MRVL_AUDIO)  += ../../arch/arm/plat-armada/mv_drivers_lsp/mv_audio_soc/
-diff --git a/sound/soc/kirkwood/Kconfig b/sound/soc/kirkwood/Kconfig
-index c62d715..0d685f4 100644
 --- a/sound/soc/kirkwood/Kconfig
 +++ b/sound/soc/kirkwood/Kconfig
 @@ -1,6 +1,6 @@
@@ -87,8 +79,6 @@ index c62d715..0d685f4 100644
 +        help
 +          Say Y if you want to add support for SoC audio on
 +          Armada370 DB.
-diff --git a/sound/soc/kirkwood/Makefile b/sound/soc/kirkwood/Makefile
-index 3e62ae9..0f53471 100644
 --- a/sound/soc/kirkwood/Makefile
 +++ b/sound/soc/kirkwood/Makefile
 @@ -1,5 +1,6 @@
@@ -103,9 +93,6 @@ index 3e62ae9..0f53471 100644
  obj-$(CONFIG_SND_KIRKWOOD_SOC_OPENRD) += snd-soc-openrd.o
  obj-$(CONFIG_SND_KIRKWOOD_SOC_T5325) += snd-soc-t5325.o
 +obj-$(CONFIG_SND_ARMADA370_SOC) += snd-soc-a370.o
-diff --git a/sound/soc/kirkwood/armada370.c b/sound/soc/kirkwood/armada370.c
-new file mode 100644
-index 0000000..1346bd9
 --- /dev/null
 +++ b/sound/soc/kirkwood/armada370.c
 @@ -0,0 +1,119 @@
@@ -228,6 +215,3 @@ index 0000000..1346bd9
 +MODULE_DESCRIPTION("ALSA SoC for Armada-370");
 +MODULE_LICENSE("GPL");
 +MODULE_ALIAS("platform:soc-audio");
--- 
-1.7.9.5
-

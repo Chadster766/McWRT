@@ -44,7 +44,7 @@
  	unsigned int coff, matchoff, matchlen;
  	enum sip_header_types hdr;
  	union nf_inet_addr addr;
-@@ -229,6 +232,20 @@ next:
+@@ -230,6 +233,20 @@ next:
  	    !map_sip_addr(skb, dataoff, dptr, datalen, SIP_HDR_TO))
  		return NF_DROP;
  
@@ -65,7 +65,7 @@
  	return NF_ACCEPT;
  }
  
-@@ -280,8 +297,10 @@ static unsigned int ip_nat_sip_expect(st
+@@ -281,8 +298,10 @@ static unsigned int ip_nat_sip_expect(st
  	enum ip_conntrack_info ctinfo;
  	struct nf_conn *ct = nf_ct_get(skb, &ctinfo);
  	enum ip_conntrack_dir dir = CTINFO2DIR(ctinfo);
@@ -76,7 +76,7 @@
  	char buffer[sizeof("nnn.nnn.nnn.nnn:nnnnn")];
  	unsigned buflen;
  
-@@ -294,8 +313,9 @@ static unsigned int ip_nat_sip_expect(st
+@@ -295,8 +314,9 @@ static unsigned int ip_nat_sip_expect(st
  	/* If the signalling port matches the connection's source port in the
  	 * original direction, try to use the destination port in the opposite
  	 * direction. */

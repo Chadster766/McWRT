@@ -15,8 +15,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/mm/cache-aurora-l2.c                      |   44 +-------------------
  6 files changed, 34 insertions(+), 108 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
-index 0f7843e..264d4f1 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
 @@ -112,38 +112,3 @@ MV_BOOL mvSemaUnlock(MV_32 num)
@@ -59,11 +57,9 @@ index 0f7843e..264d4f1 100644
 -	mvSemaUnlock(MV_SEMA_BARRIER(myCpuId));
 -}
 \ No newline at end of file
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h
-index 8b9f09d..e63d590 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h
-@@ -64,6 +64,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -64,6 +64,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #ifndef mvsemaphore_h
  #define mvsemaphore_h
  
@@ -75,7 +71,7 @@ index 8b9f09d..e63d590 100644
  #define MV_SEMA_REG_BASE	(0x20500)
  #define MV_MAX_SEMA 	    	128
  #define MV_SEMA_SMI 		50
-@@ -75,11 +80,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -75,11 +80,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #define MV_SEMA_IRQ 		4
  #define MV_SEMA_CLOCK		5
  #define MV_SEMA_L2		6
@@ -89,8 +85,6 @@ index 8b9f09d..e63d590 100644
  MV_BOOL mvSemaLock(MV_32 num);
  MV_BOOL mvSemaTryLock(MV_32 num);
  MV_BOOL mvSemaUnlock(MV_32 num);
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.c
-index 8500a1f..47ca278 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.c
 @@ -102,7 +102,7 @@ static MV_RES_MAP mv_res_table[] = {
@@ -102,7 +96,7 @@ index 8500a1f..47ca278 100644
  {
  	return mv_rsrc_limited;
  }
-@@ -120,20 +120,16 @@ MV_BOOL mvUnitMapIsMine(MV_SOC_UNIT unitIdx)
+@@ -120,20 +120,16 @@ MV_BOOL mvUnitMapIsMine(MV_SOC_UNIT unit
  MV_BOOL mvUnitMapIsPexMine(int pciIf)
  {
  	MV_SOC_UNIT unitIdx;
@@ -141,7 +135,7 @@ index 8500a1f..47ca278 100644
  	mv_res_table[unitIdx].isMine = 1;
  }
  
-@@ -153,7 +147,7 @@ MV_BOOL mvUnitMapSetup(char* cmdLine, STRSTR_FUNCPTR strstr_func)
+@@ -153,7 +147,7 @@ MV_BOOL mvUnitMapSetup(char* cmdLine, ST
  {
  	int unitIdx;
  	char* match;
@@ -150,7 +144,7 @@ index 8500a1f..47ca278 100644
  	for (unitIdx = 0; mv_res_table[unitIdx].isMine != (-1); unitIdx++) {
  		char *unitName = mv_res_table[unitIdx].unitName;
  		int len;
-@@ -162,7 +156,6 @@ MV_BOOL mvUnitMapSetup(char* cmdLine, STRSTR_FUNCPTR strstr_func)
+@@ -162,7 +156,6 @@ MV_BOOL mvUnitMapSetup(char* cmdLine, ST
  		/*Look for start delimiter*/
  		if (match > cmdLine) {
  			if (match[-1] != ' ' && match[-1] != ':') {
@@ -158,7 +152,7 @@ index 8500a1f..47ca278 100644
  				continue;
  			}
  		}
-@@ -171,7 +164,6 @@ MV_BOOL mvUnitMapSetup(char* cmdLine, STRSTR_FUNCPTR strstr_func)
+@@ -171,7 +164,6 @@ MV_BOOL mvUnitMapSetup(char* cmdLine, ST
  		len = unitName - mv_res_table[unitIdx].unitName - 1;
  		/*Look for end delimiter*/
  		if (match[len] != ' ' && match[len] != ':' && match[len] != '\0') {
@@ -166,7 +160,7 @@ index 8500a1f..47ca278 100644
  			continue;
  		}
  		mvUnitMapSetMine(unitIdx);
-@@ -253,14 +245,13 @@ MV_U32 mvSocUnitMapFillFlagFormTable(void)
+@@ -253,14 +245,13 @@ MV_U32 mvSocUnitMapFillFlagFormTable(voi
  }*/
  MV_VOID mvUnitMapSetAllMine()
  {
@@ -190,11 +184,9 @@ index 8500a1f..47ca278 100644
 -}
 \ No newline at end of file
 +}
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.h
-index 87ffb6b..ab101e2 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.h
-@@ -64,6 +64,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -64,6 +64,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #ifndef mvUnitMap_h
  #define mvUnitMap_h
  
@@ -238,8 +230,6 @@ index 87ffb6b..ab101e2 100644
  
 -#endif //mvUnitMap_h
 +#endif /* mvUnitMap_h */
-diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
-index 7a558f7..28b89ef 100755
 --- a/arch/arm/mach-armadaxp/core.c
 +++ b/arch/arm/mach-armadaxp/core.c
 @@ -1077,7 +1077,7 @@ void print_board_info(void)
@@ -259,11 +249,9 @@ index 7a558f7..28b89ef 100755
  	/* Select appropriate Board ID for Machine */
  #ifdef CONFIG_ARMADA_XP_REV_A0
  	gBoardId = DB_88F78XX0_BP_REV2_ID;
-diff --git a/arch/arm/mm/cache-aurora-l2.c b/arch/arm/mm/cache-aurora-l2.c
-index b6297c0..3e4673d 100644
 --- a/arch/arm/mm/cache-aurora-l2.c
 +++ b/arch/arm/mm/cache-aurora-l2.c
-@@ -529,34 +529,6 @@ static void __init enable_cache(u32 mask)
+@@ -529,34 +529,6 @@ static void __init enable_cache(u32 mask
  	set_cr(cr1 | mask);
  }
  
@@ -324,7 +312,7 @@ index b6297c0..3e4673d 100644
  		enable_cache(mask);
  	}
  }
-@@ -734,9 +692,9 @@ int __init aurora_l2_init(void __iomem *base)
+@@ -734,9 +692,9 @@ int __init aurora_l2_init(void __iomem *
  
  		/* 6. Enable L2 cache
  		*/
@@ -335,6 +323,3 @@ index b6297c0..3e4673d 100644
  	auroraL2_enable = 1;
  
  	return 0;
--- 
-1.7.9.5
-

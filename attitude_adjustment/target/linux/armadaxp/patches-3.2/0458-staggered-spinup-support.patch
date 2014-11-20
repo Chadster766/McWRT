@@ -25,9 +25,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  create mode 100644 drivers/scsi/scsi_spinup.c
  create mode 100644 include/scsi/scsi_spinup.h
 
-diff --git a/Documentation/scsi/staggered_spinup.txt b/Documentation/scsi/staggered_spinup.txt
-new file mode 100644
-index 0000000..46cbf21
 --- /dev/null
 +++ b/Documentation/scsi/staggered_spinup.txt
 @@ -0,0 +1,26 @@
@@ -57,11 +54,9 @@ index 0000000..46cbf21
 +
 +EXPERIMANTAL kernel config:
 +CONFIG_MV_DISKS_POWERUP_TO_STANDBY – on boot initialization all hard drives will assume to be in standby.
-diff --git a/drivers/ata/sata_mv.c b/drivers/ata/sata_mv.c
-index 3f5b612..2bb11cc 100644
 --- a/drivers/ata/sata_mv.c
 +++ b/drivers/ata/sata_mv.c
-@@ -654,6 +654,7 @@ static struct scsi_host_template mv5_sht = {
+@@ -654,6 +654,7 @@ static struct scsi_host_template mv5_sht
  	ATA_BASE_SHT(DRV_NAME),
  	.sg_tablesize		= MV_MAX_SG_CT / 2,
  	.dma_boundary		= MV_DMA_BOUNDARY,
@@ -69,7 +64,7 @@ index 3f5b612..2bb11cc 100644
  };
  
  static struct scsi_host_template mv6_sht = {
-@@ -661,6 +662,7 @@ static struct scsi_host_template mv6_sht = {
+@@ -661,6 +662,7 @@ static struct scsi_host_template mv6_sht
  	.can_queue		= MV_MAX_Q_DEPTH - 1,
  	.sg_tablesize		= MV_MAX_SG_CT / 2,
  	.dma_boundary		= MV_DMA_BOUNDARY,
@@ -77,8 +72,6 @@ index 3f5b612..2bb11cc 100644
  };
  
  static struct ata_port_operations mv5_ops = {
-diff --git a/drivers/scsi/Kconfig b/drivers/scsi/Kconfig
-index f94ecf1..81a4fd1 100644
 --- a/drivers/scsi/Kconfig
 +++ b/drivers/scsi/Kconfig
 @@ -280,6 +280,24 @@ config SCSI_WAIT_SCAN
@@ -106,11 +99,9 @@ index f94ecf1..81a4fd1 100644
  menu "SCSI Transports"
  	depends on SCSI
  
-diff --git a/drivers/scsi/Makefile b/drivers/scsi/Makefile
-index 8c84a4e..da1ff4c 100644
 --- a/drivers/scsi/Makefile
 +++ b/drivers/scsi/Makefile
-@@ -166,6 +166,7 @@ scsi_mod-y			+= scsi.o hosts.o scsi_ioctl.o constants.o \
+@@ -166,6 +166,7 @@ scsi_mod-y			+= scsi.o hosts.o scsi_ioct
  scsi_mod-$(CONFIG_SCSI_DMA)	+= scsi_lib_dma.o
  scsi_mod-y			+= scsi_scan.o scsi_sysfs.o scsi_devinfo.o
  scsi_mod-$(CONFIG_SCSI_NETLINK)	+= scsi_netlink.o
@@ -118,8 +109,6 @@ index 8c84a4e..da1ff4c 100644
  scsi_mod-$(CONFIG_SYSCTL)	+= scsi_sysctl.o
  scsi_mod-$(CONFIG_SCSI_PROC_FS)	+= scsi_proc.o
  scsi_mod-y			+= scsi_trace.o
-diff --git a/drivers/scsi/scsi.c b/drivers/scsi/scsi.c
-index 831db24..a09bac6 100644
 --- a/drivers/scsi/scsi.c
 +++ b/drivers/scsi/scsi.c
 @@ -63,6 +63,10 @@
@@ -133,7 +122,7 @@ index 831db24..a09bac6 100644
  
  #include "scsi_priv.h"
  #include "scsi_logging.h"
-@@ -762,6 +766,7 @@ int scsi_dispatch_cmd(struct scsi_cmnd *cmd)
+@@ -762,6 +766,7 @@ int scsi_dispatch_cmd(struct scsi_cmnd *
  	SCSI_LOG_MLQUEUE(3, printk("leaving scsi_dispatch_cmnd()\n"));
  	return rtn;
  }
@@ -141,7 +130,7 @@ index 831db24..a09bac6 100644
  
  /**
   * scsi_done - Enqueue the finished SCSI command into the done queue.
-@@ -778,6 +783,36 @@ int scsi_dispatch_cmd(struct scsi_cmnd *cmd)
+@@ -778,6 +783,36 @@ int scsi_dispatch_cmd(struct scsi_cmnd *
   */
  static void scsi_done(struct scsi_cmnd *cmd)
  {
@@ -219,8 +208,6 @@ index 831db24..a09bac6 100644
  	error = scsi_init_queue();
  	if (error)
  		return error;
-diff --git a/drivers/scsi/scsi_lib.c b/drivers/scsi/scsi_lib.c
-index 6c4b620..4db9b40 100644
 --- a/drivers/scsi/scsi_lib.c
 +++ b/drivers/scsi/scsi_lib.c
 @@ -32,7 +32,10 @@
@@ -235,7 +222,7 @@ index 6c4b620..4db9b40 100644
  #define SG_MEMPOOL_NR		ARRAY_SIZE(scsi_sg_pools)
  #define SG_MEMPOOL_SIZE		2
  
-@@ -1548,6 +1551,114 @@ static void scsi_request_fn(struct request_queue *q)
+@@ -1548,6 +1551,114 @@ static void scsi_request_fn(struct reque
  		}
  		spin_lock(shost->host_lock);
  
@@ -350,11 +337,9 @@ index 6c4b620..4db9b40 100644
  		/*
  		 * We hit this when the driver is using a host wide
  		 * tag map. For device level tag maps the queue_depth check
-diff --git a/drivers/scsi/scsi_priv.h b/drivers/scsi/scsi_priv.h
-index d58adca..4462def 100644
 --- a/drivers/scsi/scsi_priv.h
 +++ b/drivers/scsi/scsi_priv.h
-@@ -147,6 +147,50 @@ static inline void scsi_netlink_init(void) {}
+@@ -147,6 +147,50 @@ static inline void scsi_netlink_init(voi
  static inline void scsi_netlink_exit(void) {}
  #endif
  
@@ -405,8 +390,6 @@ index d58adca..4462def 100644
  /* scsi_pm.c */
  #ifdef CONFIG_PM
  extern const struct dev_pm_ops scsi_bus_pm_ops;
-diff --git a/drivers/scsi/scsi_scan.c b/drivers/scsi/scsi_scan.c
-index c6c80c9..6bfdf5e 100644
 --- a/drivers/scsi/scsi_scan.c
 +++ b/drivers/scsi/scsi_scan.c
 @@ -47,6 +47,8 @@
@@ -418,7 +401,7 @@ index c6c80c9..6bfdf5e 100644
  #define ALLOC_FAILURE_MSG	KERN_ERR "%s: Allocation failure during" \
  	" SCSI scanning, some SCSI devices might not be configured\n"
  
-@@ -235,6 +237,7 @@ static void scsi_unlock_floptical(struct scsi_device *sdev,
+@@ -235,6 +237,7 @@ static void scsi_unlock_floptical(struct
   * Return value:
   *     scsi_Device pointer, or NULL on failure.
   **/
@@ -426,7 +409,7 @@ index c6c80c9..6bfdf5e 100644
  static struct scsi_device *scsi_alloc_sdev(struct scsi_target *starget,
  					   unsigned int lun, void *hostdata)
  {
-@@ -258,6 +261,21 @@ static struct scsi_device *scsi_alloc_sdev(struct scsi_target *starget,
+@@ -258,6 +261,21 @@ static struct scsi_device *scsi_alloc_sd
  	sdev->lun = lun;
  	sdev->channel = starget->channel;
  	sdev->sdev_state = SDEV_CREATED;
@@ -448,9 +431,6 @@ index c6c80c9..6bfdf5e 100644
  	INIT_LIST_HEAD(&sdev->siblings);
  	INIT_LIST_HEAD(&sdev->same_target_siblings);
  	INIT_LIST_HEAD(&sdev->cmd_list);
-diff --git a/drivers/scsi/scsi_spinup.c b/drivers/scsi/scsi_spinup.c
-new file mode 100644
-index 0000000..24dfba9
 --- /dev/null
 +++ b/drivers/scsi/scsi_spinup.c
 @@ -0,0 +1,374 @@
@@ -828,11 +808,9 @@ index 0000000..24dfba9
 +	//printk("[EOD]\n");
 +	return 0;
 +}
-diff --git a/drivers/scsi/scsi_sysfs.c b/drivers/scsi/scsi_sysfs.c
-index 72ca515..37fc76a 100644
 --- a/drivers/scsi/scsi_sysfs.c
 +++ b/drivers/scsi/scsi_sysfs.c
-@@ -949,10 +949,30 @@ int scsi_sysfs_add_sdev(struct scsi_device *sdev)
+@@ -949,10 +949,30 @@ int scsi_sysfs_add_sdev(struct scsi_devi
  	return error;
  }
  
@@ -863,8 +841,6 @@ index 72ca515..37fc76a 100644
  	if (sdev->is_visible) {
  		if (scsi_device_set_state(sdev, SDEV_CANCEL) != 0)
  			return;
-diff --git a/include/scsi/scsi_device.h b/include/scsi/scsi_device.h
-index 5591ed5..fd54471 100644
 --- a/include/scsi/scsi_device.h
 +++ b/include/scsi/scsi_device.h
 @@ -9,6 +9,10 @@
@@ -894,8 +870,6 @@ index 5591ed5..fd54471 100644
  	unsigned long		sdev_data[0];
  } __attribute__((aligned(sizeof(unsigned long))));
  
-diff --git a/include/scsi/scsi_host.h b/include/scsi/scsi_host.h
-index 50266c9..31d28a6 100644
 --- a/include/scsi/scsi_host.h
 +++ b/include/scsi/scsi_host.h
 @@ -53,6 +53,11 @@ struct scsi_host_template {
@@ -910,9 +884,6 @@ index 50266c9..31d28a6 100644
  	/*
  	 * Used to initialize old-style drivers.  For new-style drivers
  	 * just perform all work in your module initialization function.
-diff --git a/include/scsi/scsi_spinup.h b/include/scsi/scsi_spinup.h
-new file mode 100644
-index 0000000..340ba57
 --- /dev/null
 +++ b/include/scsi/scsi_spinup.h
 @@ -0,0 +1,42 @@
@@ -958,6 +929,3 @@ index 0000000..340ba57
 +};
 +
 +#endif /* SCSI_SPINUP_H */
--- 
-1.7.9.5
-

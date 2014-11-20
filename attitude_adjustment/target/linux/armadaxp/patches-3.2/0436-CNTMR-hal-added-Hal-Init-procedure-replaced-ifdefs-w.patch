@@ -12,11 +12,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h |    8 ++++
  2 files changed, 38 insertions(+), 34 deletions(-)
 
-diff --git a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
-index bd2b709..d0521a5 100755
 --- a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
 +++ b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
-@@ -81,12 +81,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -81,12 +81,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  
  #define TIMER_GLOBAL_BIT(timer)		((timer == MAX_GLOBAL_TIMER) ? (1<<31) : (1 << (timer * 8)))
  
@@ -35,7 +33,7 @@ index bd2b709..d0521a5 100755
  /*******************************************************************************
  * mvCntmrLoad -
  *
-@@ -206,31 +210,25 @@ MV_STATUS mvCntmrCtrlSet(MV_U32 countNum, MV_CNTMR_CTRL *pCtrl)
+@@ -206,31 +210,25 @@ MV_STATUS mvCntmrCtrlSet(MV_U32 countNum
  
  	/* read control register */
  	cntmrCtrl = MV_REG_READ(CNTMR_CTRL_REG(countNum));
@@ -62,11 +60,12 @@ index bd2b709..d0521a5 100755
  	else			/* no auto mode */
  		cntmrCtrl &= ~(CTCR_ARM_TIMER_AUTO_EN(countNum));
 -#endif
+-
  
 +	if (cntmrHalData.ctrlFamily==MV_78XX0) {
 +		cntmrCtrl &= ~(CTCR_ARM_TIMER_RATIO_MASK(countNum));
 +		cntmrCtrl |= (pCtrl->Ratio & 0x7) << (CTCR_ARM_TIMER_RATIO_OFFS(countNum));
- 
++
 +		if (pCtrl->enable_25Mhz)	/* 25Mhz enable */
 +			cntmrCtrl |= (CTCR_ARM_TIMER_25MhzFRQ_EN(countNum));
 +		else
@@ -75,7 +74,7 @@ index bd2b709..d0521a5 100755
  
  	MV_REG_WRITE(CNTMR_CTRL_REG(countNum), cntmrCtrl);
  
-@@ -277,11 +275,11 @@ MV_STATUS mvCntmrCtrlGet(MV_U32 countNum, MV_CNTMR_CTRL *pCtrl)
+@@ -277,11 +275,11 @@ MV_STATUS mvCntmrCtrlGet(MV_U32 countNum
  		pCtrl->autoEnable = MV_TRUE;
  	else
  		pCtrl->autoEnable = MV_FALSE;
@@ -92,7 +91,7 @@ index bd2b709..d0521a5 100755
  	return MV_OK;
  }
  
-@@ -447,17 +445,15 @@ MV_STATUS mvCntmrIntClear(MV_U32 cntmrNum)
+@@ -447,17 +445,15 @@ MV_STATUS mvCntmrIntClear(MV_U32 cntmrNu
  *******************************************************************************/
  MV_U32 mvCntmrFrqGet(MV_U32 cntmrNum)
  {
@@ -121,8 +120,6 @@ index bd2b709..d0521a5 100755
 +	}
 +	return mvCpuL2ClkGet();
  }
-diff --git a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h
-index 899d09f..203ca9a 100755
 --- a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h
 +++ b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h
 @@ -75,6 +75,12 @@ extern "C" {
@@ -147,6 +144,3 @@ index 899d09f..203ca9a 100755
  /* Load an init Value to a given counter/timer */
  	MV_STATUS mvCntmrLoad(MV_U32 countNum, MV_U32 value);
  
--- 
-1.7.9.5
-

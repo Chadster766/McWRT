@@ -16,8 +16,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/mach-armadaxp/sysmap.c                    |   28 +++++------
  6 files changed, 119 insertions(+), 21 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
-index 264d4f1..d71df4e 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
 @@ -112,3 +112,13 @@ MV_BOOL mvSemaUnlock(MV_32 num)
@@ -34,11 +32,9 @@ index 264d4f1..d71df4e 100644
 +{
 +	return MV_REG_WRITE(MV_AMP_GLOBAL_REG(regId), value);
 +}
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h
-index e63d590..c5bf5ca 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h
-@@ -69,6 +69,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -69,6 +69,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #include "config.h"
  #endif
  
@@ -48,7 +44,7 @@ index e63d590..c5bf5ca 100644
  #define MV_SEMA_REG_BASE	(0x20500)
  #define MV_MAX_SEMA 	    	128
  #define MV_SEMA_SMI 		50
-@@ -81,6 +84,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -81,6 +84,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #define MV_SEMA_CLOCK		5
  #define MV_SEMA_L2		6
  #define MV_SEMA_TWSI		7
@@ -56,7 +52,7 @@ index e63d590..c5bf5ca 100644
  
  #define MV_SEMA_BARRIER(cpu)	(50 + cpu)
  
-@@ -88,7 +92,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -88,7 +92,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  MV_BOOL mvSemaLock(MV_32 num);
  MV_BOOL mvSemaTryLock(MV_32 num);
  MV_BOOL mvSemaUnlock(MV_32 num);
@@ -66,11 +62,9 @@ index e63d590..c5bf5ca 100644
  
  /* Turn on HW semapores only if AMP is enabled */
  #ifndef CONFIG_MV_AMP_ENABLE
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
-index 248feb8..9e5c6e7 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
-@@ -87,6 +87,50 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -87,6 +87,50 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  static MV_BOOL cpuTargetWinOverlap(MV_TARGET target, MV_ADDR_WIN *pAddrWin);
  
  MV_TARGET sampleAtResetTargetArray[] = BOOT_TARGETS_NAME_ARRAY;
@@ -121,8 +115,6 @@ index 248feb8..9e5c6e7 100644
  /*******************************************************************************
  * mvCpuIfInitForCpu - Initialize Controller CPU interface
  *
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.h
-index 2fcc208..41ff25c 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.h
 @@ -95,6 +95,7 @@ typedef struct _mvCpuIfDecWin {
@@ -133,8 +125,6 @@ index 2fcc208..41ff25c 100644
  MV_STATUS mvCpuIfDramInit(MV_VOID);
  MV_STATUS mvCpuIfTargetWinSet(MV_TARGET target, MV_CPU_DEC_WIN *pAddrDecWin);
  MV_STATUS mvCpuIfTargetWinGet(MV_TARGET target, MV_CPU_DEC_WIN *pAddrDecWin);
-diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
-index 28b89ef..33d4698 100755
 --- a/arch/arm/mach-armadaxp/core.c
 +++ b/arch/arm/mach-armadaxp/core.c
 @@ -53,6 +53,7 @@
@@ -154,7 +144,7 @@ index 28b89ef..33d4698 100755
  #include <linux/mv643xx_i2c.h>
  #include "ctrlEnv/mvCtrlEnvSpec.h"
  #include "ctrlEnv/mvCtrlEnvRegs.h"
-@@ -148,7 +149,7 @@ struct mbus_dram_target_info armadaxp_mbus_dram_info;
+@@ -148,7 +149,7 @@ struct mbus_dram_target_info armadaxp_mb
  /*********************************************************************************/
  #ifdef MV_INCLUDE_EARLY_PRINTK
  #define MV_UART0_LSR 	(*(volatile unsigned char *)(INTER_REGS_BASE + 0x12000 + 0x14))
@@ -163,7 +153,7 @@ index 28b89ef..33d4698 100755
  #define MV_UART1_LSR    (*(volatile unsigned char *)(INTER_REGS_BASE + 0x12100 + 0x14))
  #define MV_UART1_THR    (*(volatile unsigned char *)(INTER_REGS_BASE + 0x12100 + 0x0 ))
  #define MV_SERIAL_BASE 	((unsigned char *)(INTER_REGS_BASE + 0x12000 + 0x0 ))
-@@ -160,7 +161,7 @@ struct mbus_dram_target_info armadaxp_mbus_dram_info;
+@@ -160,7 +161,7 @@ struct mbus_dram_target_info armadaxp_mb
  static void putstr(const char *s)
  {
  	unsigned int model;
@@ -243,8 +233,6 @@ index 28b89ef..33d4698 100755
  		printk( "Cpu Interface initialization failed.\n" );
  		return;
  	}
-diff --git a/arch/arm/mach-armadaxp/sysmap.c b/arch/arm/mach-armadaxp/sysmap.c
-index e51ae53..eecef4e 100644
 --- a/arch/arm/mach-armadaxp/sysmap.c
 +++ b/arch/arm/mach-armadaxp/sysmap.c
 @@ -59,10 +59,10 @@ struct map_desc  MEM_TABLE[] =	{
@@ -295,6 +283,3 @@ index e51ae53..eecef4e 100644
  };
  
  
--- 
-1.7.9.5
-

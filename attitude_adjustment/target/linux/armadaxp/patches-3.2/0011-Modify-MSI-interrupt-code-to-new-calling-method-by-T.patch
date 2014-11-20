@@ -9,8 +9,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/plat-armada/msi.c |   27 ++++++++++++++-------------
  1 file changed, 14 insertions(+), 13 deletions(-)
 
-diff --git a/arch/arm/plat-armada/msi.c b/arch/arm/plat-armada/msi.c
-index 100c757..b74b5d1 100644
 --- a/arch/arm/plat-armada/msi.c
 +++ b/arch/arm/plat-armada/msi.c
 @@ -40,7 +40,7 @@ void __init armada_msi_init(void)
@@ -22,7 +20,7 @@ index 100c757..b74b5d1 100644
  
  	/* Unmask private doorbells 16-31 */
  	temp = MV_REG_READ(AXP_IN_DRBEL_MSK) | (0xFFFF0000);
-@@ -82,15 +82,16 @@ void arch_teardown_msi_irq(unsigned int irq)
+@@ -82,15 +82,16 @@ void arch_teardown_msi_irq(unsigned int
  	destroy_irq(irq);
  }
  
@@ -41,7 +39,7 @@ index 100c757..b74b5d1 100644
  	int msi_irq;
  	int i;
  	
-@@ -103,7 +104,7 @@ int armada_msi_set_affinity(unsigned int irq, const struct cpumask *mask_val)
+@@ -103,7 +104,7 @@ int armada_msi_set_affinity(unsigned int
  		msg.data |= (0x1 << (AXP_SW_TRIG_IRQ_CPU_TARGET_OFFS + i));
  
  	write_msi_msg(irq, &msg);
@@ -72,7 +70,7 @@ index 100c757..b74b5d1 100644
  #endif
  };
  
-@@ -139,7 +140,7 @@ int arch_setup_msi_irq(struct pci_dev *pdev, struct msi_desc *desc)
+@@ -139,7 +140,7 @@ int arch_setup_msi_irq(struct pci_dev *p
  		return irq;
  
  	msi_irq = irq - IRQ_AURORA_MSI_START;
@@ -81,7 +79,7 @@ index 100c757..b74b5d1 100644
  
  	msg.address_hi = 0x0;
  	msg.address_lo = AXP_SW_TRIG_IRQ_PHYS;
-@@ -147,7 +148,7 @@ int arch_setup_msi_irq(struct pci_dev *pdev, struct msi_desc *desc)
+@@ -147,7 +148,7 @@ int arch_setup_msi_irq(struct pci_dev *p
  			((msi_irq + NR_PRIVATE_MSI_GROUP) & AXP_SW_TRIG_IRQ_INITID_MASK);
  
  	write_msi_msg(irq, &msg);
@@ -90,6 +88,3 @@ index 100c757..b74b5d1 100644
  
  	return 0;
  }
--- 
-1.7.9.5
-

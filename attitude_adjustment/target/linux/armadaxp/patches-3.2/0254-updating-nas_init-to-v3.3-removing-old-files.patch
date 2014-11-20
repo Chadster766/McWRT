@@ -18,9 +18,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  delete mode 100755 tools/nas/bond_4link_setup.sh
  delete mode 100755 tools/nas/set_aff.sh
 
-diff --git a/tools/nas/aff_78260.sh b/tools/nas/aff_78260.sh
-deleted file mode 100755
-index 7962ca7..0000000
 --- a/tools/nas/aff_78260.sh
 +++ /dev/null
 @@ -1,10 +0,0 @@
@@ -34,9 +31,6 @@ index 7962ca7..0000000
 -./set_aff.sh 61 2
 -#./set_aff.sh 12 4
 -#./set_aff.sh 14 8
-diff --git a/tools/nas/aff_78460.sh b/tools/nas/aff_78460.sh
-deleted file mode 100755
-index 2302a76..0000000
 --- a/tools/nas/aff_78460.sh
 +++ /dev/null
 @@ -1,9 +0,0 @@
@@ -49,9 +43,6 @@ index 2302a76..0000000
 -./set_aff.sh 10 2
 -./set_aff.sh 12 4
 -./set_aff.sh 14 8
-diff --git a/tools/nas/bond_2link_setup.sh b/tools/nas/bond_2link_setup.sh
-deleted file mode 100755
-index 1fa1104..0000000
 --- a/tools/nas/bond_2link_setup.sh
 +++ /dev/null
 @@ -1,23 +0,0 @@
@@ -78,9 +69,6 @@ index 1fa1104..0000000
 -#echo +eth3 > /sys/class/net/bond0/bonding/slaves
 -
 -#echo 2 > proc/irq/smp_affinity
-diff --git a/tools/nas/bond_4link_setup.sh b/tools/nas/bond_4link_setup.sh
-deleted file mode 100755
-index e990704..0000000
 --- a/tools/nas/bond_4link_setup.sh
 +++ /dev/null
 @@ -1,22 +0,0 @@
@@ -106,8 +94,6 @@ index e990704..0000000
 -#echo +eth3 > /sys/class/net/bond0/bonding/slaves
 -
 -#echo 2 > proc/irq/smp_affinity
-diff --git a/tools/nas/nas_init.sh b/tools/nas/nas_init.sh
-index 3a06c63..2d21675 100755
 --- a/tools/nas/nas_init.sh
 +++ b/tools/nas/nas_init.sh
 @@ -1,8 +1,17 @@
@@ -257,7 +243,7 @@ index 3a06c63..2d21675 100755
      mkfs.ext3 ${ROOTFS_DEVICE}
      mount ${ROOTFS_DEVICE} $MNT_DIR
      cd $MNT_DIR
-@@ -372,8 +395,8 @@ elif [[ "$ARCH" == "armv6l" || "$ARCH" == "armv7l" ]]; then
+@@ -372,8 +395,8 @@ elif [[ "$ARCH" == "armv6l" || "$ARCH" =
      set -o verbose
      echo 1 > /sys/devices/platform/neta/gbe/skb
      for (( j=0; j<$LINK_NUM; j++ )); do
@@ -268,7 +254,7 @@ index 3a06c63..2d21675 100755
  
  	# following offload lower NAS BM, we do not use it
  	#ethtool  --offload eth$j gro on
-@@ -382,7 +405,7 @@ elif [[ "$ARCH" == "armv6l" || "$ARCH" == "armv7l" ]]; then
+@@ -382,7 +405,7 @@ elif [[ "$ARCH" == "armv6l" || "$ARCH" =
  	for (( i=0; i<=$NETQ; i++ )); do
  	    echo "$j $i 100" > /sys/devices/platform/neta/gbe/rxq_time_coal
  	done
@@ -415,7 +401,7 @@ index 3a06c63..2d21675 100755
  	mount -t btrfs $PARTITIONS $MNT_DIR -o noatime
      else
  	if [ "$MKFS" == "yes" ]; then
-@@ -788,7 +813,7 @@ echo -ne " * Setting up affinity:        "
+@@ -788,7 +813,7 @@ echo -ne " * Setting up affinity:
  if [[ "$ARCH" == "armv6l" || "$ARCH" == "armv7l" ]]; then
      if [ "$CPU_COUNT" = "4" ]; then
  	set -o verbose
@@ -424,7 +410,7 @@ index 3a06c63..2d21675 100755
  	# XOR Engines
  	echo 1 > /proc/irq/51/smp_affinity
  	echo 2 > /proc/irq/52/smp_affinity
-@@ -800,7 +825,7 @@ if [[ "$ARCH" == "armv6l" || "$ARCH" == "armv7l" ]]; then
+@@ -800,7 +825,7 @@ if [[ "$ARCH" == "armv6l" || "$ARCH" ==
  	echo 2 > /proc/irq/10/smp_affinity
  	echo 4 > /proc/irq/12/smp_affinity
  	echo 8 > /proc/irq/14/smp_affinity
@@ -433,7 +419,7 @@ index 3a06c63..2d21675 100755
  	# SATA
  	echo 2 > /proc/irq/55/smp_affinity
  
-@@ -811,7 +836,7 @@ if [[ "$ARCH" == "armv6l" || "$ARCH" == "armv7l" ]]; then
+@@ -811,7 +836,7 @@ if [[ "$ARCH" == "armv6l" || "$ARCH" ==
  	set +o verbose
      elif [ "$CPU_COUNT" == "2" ]; then
  	set -o verbose
@@ -442,7 +428,7 @@ index 3a06c63..2d21675 100755
  	# XOR Engines
  	echo 1 > /proc/irq/51/smp_affinity
  	echo 2 > /proc/irq/52/smp_affinity
-@@ -821,13 +846,13 @@ if [[ "$ARCH" == "armv6l" || "$ARCH" == "armv7l" ]]; then
+@@ -821,13 +846,13 @@ if [[ "$ARCH" == "armv6l" || "$ARCH" ==
  	# ETH
  	echo 1 > /proc/irq/8/smp_affinity
  	echo 2 > /proc/irq/10/smp_affinity
@@ -459,13 +445,7 @@ index 3a06c63..2d21675 100755
  	set +o verbose
      fi
  fi
-diff --git a/tools/nas/set_aff.sh b/tools/nas/set_aff.sh
-deleted file mode 100755
-index e54e7cd..0000000
 --- a/tools/nas/set_aff.sh
 +++ /dev/null
 @@ -1 +0,0 @@
 -echo $2 > /proc/irq/$1/smp_affinity
--- 
-1.7.9.5
-

@@ -27,11 +27,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/mm/proc-v7.S |   10 ++++------
  2 files changed, 10 insertions(+), 11 deletions(-)
 
-diff --git a/arch/arm/mm/context.c b/arch/arm/mm/context.c
-index 93aac06..aa2d04c 100644
 --- a/arch/arm/mm/context.c
 +++ b/arch/arm/mm/context.c
-@@ -24,9 +24,7 @@ DEFINE_PER_CPU(struct mm_struct *, current_mm);
+@@ -24,9 +24,7 @@ DEFINE_PER_CPU(struct mm_struct *, curre
  
  /*
   * We fork()ed a process, and we need a new context for the child
@@ -42,7 +40,7 @@ index 93aac06..aa2d04c 100644
   */
  void __init_new_context(struct task_struct *tsk, struct mm_struct *mm)
  {
-@@ -36,8 +34,11 @@ void __init_new_context(struct task_struct *tsk, struct mm_struct *mm)
+@@ -36,8 +34,11 @@ void __init_new_context(struct task_stru
  
  static void flush_context(void)
  {
@@ -56,8 +54,6 @@ index 93aac06..aa2d04c 100644
  	isb();
  	local_flush_tlb_all();
  	if (icache_is_vivt_asid_tagged()) {
-diff --git a/arch/arm/mm/proc-v7.S b/arch/arm/mm/proc-v7.S
-index 785365e..ea5085b 100644
 --- a/arch/arm/mm/proc-v7.S
 +++ b/arch/arm/mm/proc-v7.S
 @@ -116,18 +116,16 @@ ENTRY(cpu_v7_switch_mm)
@@ -83,6 +79,3 @@ index 785365e..ea5085b 100644
  #endif
  	mov	pc, lr
  ENDPROC(cpu_v7_switch_mm)
--- 
-1.7.9.5
-

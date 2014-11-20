@@ -16,13 +16,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h
  mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/cntmr/mvCntmrRegs.h
 
-diff --git a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
-old mode 100644
-new mode 100755
-index bcaac2c..270c89b
 --- a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
 +++ b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
-@@ -79,24 +79,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -79,24 +79,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  
  #define CNTMR_EVENTS_STATUS_REG_GLOBAL	(MV_CNTMR_REGS_OFFSET + 4)
  
@@ -50,7 +46,7 @@ index bcaac2c..270c89b
  
  /*******************************************************************************
  * mvCntmrLoad -
-@@ -197,25 +186,32 @@ MV_STATUS mvCntmrCtrlSet(MV_U32 countNum, MV_CNTMR_CTRL *pCtrl)
+@@ -197,25 +186,32 @@ MV_STATUS mvCntmrCtrlSet(MV_U32 countNum
  
  	/* read control register */
  	cntmrCtrl = MV_REG_READ(CNTMR_CTRL_REG(countNum));
@@ -87,7 +83,7 @@ index bcaac2c..270c89b
  	MV_REG_WRITE(CNTMR_CTRL_REG(countNum), cntmrCtrl);
  
  	return MV_OK;
-@@ -261,14 +257,11 @@ MV_STATUS mvCntmrCtrlGet(MV_U32 countNum, MV_CNTMR_CTRL *pCtrl)
+@@ -261,14 +257,11 @@ MV_STATUS mvCntmrCtrlGet(MV_U32 countNum
  		pCtrl->autoEnable = MV_TRUE;
  	else
  		pCtrl->autoEnable = MV_FALSE;
@@ -103,7 +99,7 @@ index bcaac2c..270c89b
  	return MV_OK;
  }
  
-@@ -410,11 +403,9 @@ MV_STATUS mvCntmrIntClear(MV_U32 cntmrNum)
+@@ -410,11 +403,9 @@ MV_STATUS mvCntmrIntClear(MV_U32 cntmrNu
  		/* Reset cause bit to acknowledge interrupt */
  		MV_REG_WRITE(CNTMR_EVENTS_STATUS_REG_GLOBAL, ~(TIMER_GLOBAL_BIT(cntmrNum)));
  	} else {
@@ -117,7 +113,7 @@ index bcaac2c..270c89b
  	}
  	return MV_OK;
  }
-@@ -436,7 +427,7 @@ MV_STATUS mvCntmrIntClear(MV_U32 cntmrNum)
+@@ -436,7 +427,7 @@ MV_STATUS mvCntmrIntClear(MV_U32 cntmrNu
  *******************************************************************************/
  MV_U32 mvCntmrFrqGet(MV_U32 cntmrNum)
  {
@@ -126,10 +122,6 @@ index bcaac2c..270c89b
                  if (INVALID_CNTMR(cntmrNum))
                                  return MV_ERROR;
                  {
-diff --git a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h
-old mode 100644
-new mode 100755
-index 8ce5fd7..c9fd581
 --- a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h
 +++ b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h
 @@ -85,17 +85,6 @@ extern "C" {
@@ -163,10 +155,6 @@ index 8ce5fd7..c9fd581
  	} MV_CNTMR_CTRL;
  
  /* Functions */
-diff --git a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmrRegs.h b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmrRegs.h
-old mode 100644
-new mode 100755
-index 0d3f2f3..b72b491
 --- a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmrRegs.h
 +++ b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmrRegs.h
 @@ -84,44 +84,12 @@ extern "C" {
@@ -240,6 +228,3 @@ index 0d3f2f3..b72b491
  
  #define CTCR_ARM_TIMER_AUTO_MASK(cntr)	(1 << CTCR_ARM_TIMER_EN_OFFS(cntr))
  #define CTCR_ARM_TIMER_AUTO_EN(cntr)	(1 << CTCR_ARM_TIMER_AUTO_OFFS(cntr))
--- 
-1.7.9.5
-

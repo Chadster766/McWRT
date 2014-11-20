@@ -11,8 +11,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/mach-armadaxp/core.c                      |   22 ++--
  4 files changed, 172 insertions(+), 50 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
-index d300b66..169716a 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
 @@ -161,16 +161,7 @@ MV_VOID mvBoardEnvInit(MV_VOID)
@@ -48,7 +46,7 @@ index d300b66..169716a 100644
  /*******************************************************************************
  * mvBoardNameGet - Get Board name
  *
-@@ -252,7 +241,6 @@ MV_STATUS mvBoardNameGet(char *pNameBuff)
+@@ -252,7 +241,6 @@ MV_STATUS mvBoardNameGet(char *pNameBuff
  
  	return MV_OK;
  }
@@ -56,7 +54,7 @@ index d300b66..169716a 100644
  /*******************************************************************************
  * mvBoardIsPortInSgmii -
  *
-@@ -288,11 +276,13 @@ MV_BOOL mvBoardIsPortInSgmii(MV_U32 ethPortNum)
+@@ -288,11 +276,13 @@ MV_BOOL mvBoardIsPortInSgmii(MV_U32 ethP
  			return MV_TRUE;
  		break;
  	case RD_78460_SERVER_ID:
@@ -70,7 +68,7 @@ index d300b66..169716a 100644
  	case DB_78X60_PCAC_REV2_ID:
  		return MV_TRUE;
  		break;
-@@ -304,7 +294,6 @@ MV_BOOL mvBoardIsPortInSgmii(MV_U32 ethPortNum)
+@@ -304,7 +294,6 @@ MV_BOOL mvBoardIsPortInSgmii(MV_U32 ethP
  
  	return MV_FALSE;
  }
@@ -78,7 +76,7 @@ index d300b66..169716a 100644
  /*******************************************************************************
  * mvBoardIsPortInSgmii -
  *
-@@ -327,7 +316,7 @@ MV_BOOL mvBoardIsPortInGmii(MV_U32 ethPortNum)
+@@ -327,7 +316,7 @@ MV_BOOL mvBoardIsPortInGmii(MV_U32 ethPo
  {
  	if (mvBoardIsGMIIModuleConnected() && (ethPortNum ==0))
  		return MV_TRUE;
@@ -87,7 +85,7 @@ index d300b66..169716a 100644
  		return MV_FALSE;
  }
  
-@@ -418,7 +407,6 @@ MV_BOARD_MAC_SPEED mvBoardMacSpeedGet(MV_U32 ethPortNum)
+@@ -418,7 +407,6 @@ MV_BOARD_MAC_SPEED mvBoardMacSpeedGet(MV
  		if (mvBoardIsSwitchModuleConnected())
  			return BOARD_MAC_SPEED_1000M;
  	}
@@ -95,7 +93,7 @@ index d300b66..169716a 100644
  	return BOARD_INFO(boardId)->pBoardMacInfo[ethPortNum].boardMacSpeed;
  }
  
-@@ -984,7 +972,9 @@ MV_VOID mvBoardOtherModuleTypePrint(MV_VOID)
+@@ -984,7 +972,9 @@ MV_VOID mvBoardOtherModuleTypePrint(MV_V
  	/* Pex Module */
  	if (mvBoardIsPexModuleConnected())
  		mvOsOutput("       PEX module.\n");
@@ -106,7 +104,7 @@ index d300b66..169716a 100644
  	/* LVDS Module */
  	if (mvBoardIsLvdsModuleConnected())
  		mvOsOutput("       LVDS module.\n");
-@@ -1022,7 +1012,7 @@ MV_BOOL mvBoardIsGbEPortConnected(MV_U32 ethPortNum)
+@@ -1022,7 +1012,7 @@ MV_BOOL mvBoardIsGbEPortConnected(MV_U32
  			return MV_FALSE;
  		break;
  	case 2:
@@ -141,7 +139,7 @@ index d300b66..169716a 100644
  	sar1 = mvBoardTwsiSatRGet(3, 0);
  	if ((MV_8)MV_ERROR == (MV_8)sar1)
  		return MV_ERROR;
-@@ -1576,6 +1571,7 @@ MV_STATUS mvBoardFabFreqSet(MV_U8 freqVal)
+@@ -1576,6 +1571,7 @@ MV_STATUS mvBoardFabFreqSet(MV_U8 freqVa
  		DB1(mvOsPrintf("Board: Write FreqOpt S@R fail\n"));
  		return MV_ERROR;
  	}
@@ -149,7 +147,7 @@ index d300b66..169716a 100644
  	sar0 = mvBoardTwsiSatRGet(3, 0);
  	if ((MV_8)MV_ERROR == (MV_8)sar0)
  		return MV_ERROR;
-@@ -1586,6 +1582,7 @@ MV_STATUS mvBoardFabFreqSet(MV_U8 freqVal)
+@@ -1586,6 +1582,7 @@ MV_STATUS mvBoardFabFreqSet(MV_U8 freqVa
  		DB1(mvOsPrintf("Board: Write FreqOpt S@R fail\n"));
  		return MV_ERROR;
  	}
@@ -165,7 +163,7 @@ index d300b66..169716a 100644
  	return (  ((sarMsb & 0x1) << 3) | ((sar & 0x1C) >> 2));
  }
  
-@@ -1692,6 +1690,17 @@ MV_STATUS mvBoardCpuFreqSet(MV_U8 freqVal)
+@@ -1692,6 +1690,17 @@ MV_STATUS mvBoardCpuFreqSet(MV_U8 freqVa
  		return MV_ERROR;
  	}
  
@@ -207,7 +205,7 @@ index d300b66..169716a 100644
  /*******************************************************************************/
  MV_STATUS mvBoardBootDevWidthSet(MV_U8 val)
  {
-@@ -1759,7 +1765,6 @@ MV_STATUS mvBoardBootDevWidthSet(MV_U8 val)
+@@ -1759,7 +1765,6 @@ MV_STATUS mvBoardBootDevWidthSet(MV_U8 v
  	DB(mvOsPrintf("Board: Write BootDevWidth S@R succeeded\n"));
  	return MV_OK;
  }
@@ -223,7 +221,7 @@ index d300b66..169716a 100644
  /*******************************************************************************/
  #ifdef MV88F78X60_Z1
  MV_STATUS mvBoardCpu0CoreModeSet(MV_U8 val)
-@@ -1806,7 +1810,6 @@ MV_STATUS mvBoardCpu0EndianessSet(MV_U8 val)
+@@ -1806,7 +1810,6 @@ MV_STATUS mvBoardCpu0EndianessSet(MV_U8
  	DB(mvOsPrintf("Board: Write Cpu0CoreMode S@R succeeded\n"));
  	return MV_OK;
  }
@@ -255,7 +253,7 @@ index d300b66..169716a 100644
  /*******************************************************************************/
  MV_STATUS mvBoardCpuCoresNumSet(MV_U8 val)
  {
-@@ -1879,7 +1879,6 @@ MV_STATUS mvBoardCpuCoresNumSet(MV_U8 val)
+@@ -1879,7 +1879,6 @@ MV_STATUS mvBoardCpuCoresNumSet(MV_U8 va
  	DB(mvOsPrintf("Board: Write CpuCoreNum S@R succeeded\n"));
  	return MV_OK;
  }
@@ -263,7 +261,7 @@ index d300b66..169716a 100644
  /*******************************************************************************/
  MV_STATUS mvBoardConfIdSet(MV_U16 conf)
  {
-@@ -1922,32 +1921,38 @@ MV_STATUS mvBoardPexCapabilitySet(MV_U16 conf)
+@@ -1922,32 +1921,38 @@ MV_STATUS mvBoardPexCapabilitySet(MV_U16
  	DB(mvOsPrintf("Board: Write confID S@R succeeded\n"));
  	return MV_OK;
  }
@@ -336,7 +334,7 @@ index d300b66..169716a 100644
  	if (MV_OK != mvBoardTwsiSatRSet(3, 1, sar)) {
  		DB(mvOsPrintf("Board: Write confID S@R fail\n"));
  		return MV_ERROR;
-@@ -2016,8 +2020,10 @@ MV_STATUS mvBoardDramBusWidthSet(MV_U16 conf)
+@@ -2016,8 +2020,10 @@ MV_STATUS mvBoardDramBusWidthSet(MV_U16
  	sar = mvBoardTwsiSatRGet(3, 1);
  	if ((MV_8)MV_ERROR == (MV_8)sar)
  		return MV_ERROR;
@@ -411,7 +409,7 @@ index d300b66..169716a 100644
  		/* LVDS (LCD) module */
  		twsiSlave.slaveAddr.address = MV_BOARD_LVDS_MODULE_ADDR;
  		twsiSlave.slaveAddr.type = MV_BOARD_LVDS_MODULE_ADDR_TYPE;
-@@ -2213,6 +2245,33 @@ MV_BOOL mvBoardIsPexModuleConnected(void)
+@@ -2213,6 +2245,33 @@ MV_BOOL mvBoardIsPexModuleConnected(void
  
  	return MV_FALSE;
  }
@@ -461,7 +459,7 @@ index d300b66..169716a 100644
  		if (mvBoardSledCpuNumGet() > 0)
  			serdesCfg = 1;
  		break;
-@@ -2597,10 +2657,12 @@ MV_BOARD_PEX_INFO *mvBoardPexInfoGet(void)
+@@ -2597,10 +2657,12 @@ MV_BOARD_PEX_INFO *mvBoardPexInfoGet(voi
  	switch (boardId) {
  	case DB_88F78XX0_BP_ID:
  	case RD_78460_SERVER_ID:
@@ -474,8 +472,6 @@ index d300b66..169716a 100644
  	case DB_78X60_AMC_ID:
  	case DB_78X60_PCAC_REV2_ID:
  		return &BOARD_INFO(boardId)->boardPexInfo;
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
-index 566d283..fd3611c 100755
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
 @@ -106,6 +106,10 @@ extern "C" {
@@ -497,7 +493,7 @@ index 566d283..fd3611c 100755
  	MV_BOARD_UNKNOWN = 0x80000000
  } MV_BOARD_OTHER_TYPE_CLASS;
  
-@@ -414,10 +419,12 @@ MV_STATUS mvBoardDramEccSet(MV_U16 conf);
+@@ -414,10 +419,12 @@ MV_STATUS mvBoardDramEccSet(MV_U16 conf)
  MV_U16 mvBoardDramEccGet(MV_VOID);
  MV_STATUS mvBoardDramBusWidthSet(MV_U16 conf);
  MV_U16 mvBoardDramBusWidthGet(MV_VOID);
@@ -511,11 +507,9 @@ index 566d283..fd3611c 100755
  MV_BOOL mvBoardIsSwitchModuleConnected(void);
  MV_BOOL mvBoardIsLvdsModuleConnected(void);
  MV_BOOL mvBoardIsLcdDviModuleConnected(void);
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
-index b1ecfda..c2eabfa 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
-@@ -97,7 +97,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -97,7 +97,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #define RD_78460_NAS_ID                         (DB_88F78XX0_BP_REV2_ID + 1)
  #define DB_78X60_AMC_ID				(RD_78460_NAS_ID + 1)
  #define DB_78X60_PCAC_REV2_ID			(DB_78X60_AMC_ID + 1)
@@ -582,8 +576,6 @@ index b1ecfda..c2eabfa 100644
  
  /********************/
  /* DB-88F78XX0-PCAC */
-diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
-index 023a86f..eecdcb5 100755
 --- a/arch/arm/mach-armadaxp/core.c
 +++ b/arch/arm/mach-armadaxp/core.c
 @@ -1765,7 +1765,11 @@ static void __init axp_rdsrv_init(void)
@@ -591,9 +583,9 @@ index 023a86f..eecdcb5 100755
  
  	/* Select appropriate Board ID for Machine */
 +#if defined(CONFIG_ARMADA_XP_REV_A0) || defined(CONFIG_ARMADA_XP_REV_B0)
-+	gBoardId = RD_78460_SERVER_ID;
-+#else
  	gBoardId = RD_78460_SERVER_ID;
++#else
++	gBoardId = RD_78460_SERVER_ID;
 +#endif
  	/* Bypass serdes reconfiguration since already done at bootloader */
          mvBoardSerdesConfigurationEnableSet(MV_FALSE);
@@ -623,6 +615,3 @@ index 023a86f..eecdcb5 100755
  
  /*****************************************************************************
   * FPGA BOARD: Main Initialization
--- 
-1.7.9.5
-

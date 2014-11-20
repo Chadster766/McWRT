@@ -11,11 +11,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  .../armada_xp_family/ctrlEnv/mvCtrlEnvLib.c        |  427 ++------------------
  3 files changed, 39 insertions(+), 398 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
-index 4b74008..d300b66 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
-@@ -414,6 +414,11 @@ MV_BOARD_MAC_SPEED mvBoardMacSpeedGet(MV_U32 ethPortNum)
+@@ -414,6 +414,11 @@ MV_BOARD_MAC_SPEED mvBoardMacSpeedGet(MV
  		return MV_ERROR;
  	}
  
@@ -27,8 +25,6 @@ index 4b74008..d300b66 100644
  	return BOARD_INFO(boardId)->pBoardMacInfo[ethPortNum].boardMacSpeed;
  }
  
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
-index 6b6cb67..b95fcc1 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
 @@ -455,6 +455,7 @@ MV_BOARD_INFO db88f78XX0rev2Info = {
@@ -39,7 +35,7 @@ index 6b6cb67..b95fcc1 100644
  	{BOARD_MAC_SPEED_AUTO, 0x10,0x0},
  	{BOARD_MAC_SPEED_AUTO, 0x11,0x0},
  	{BOARD_MAC_SPEED_AUTO, 0x12,0x0},
-@@ -496,7 +497,7 @@ MV_BOARD_MPP_INFO rd78460nasInfoBoardMppConfigValue[] = {
+@@ -496,7 +497,7 @@ MV_BOARD_MPP_INFO rd78460nasInfoBoardMpp
  
  MV_SERDES_CFG rd78460nasInfoBoardSerdesConfigValue[] = {
  	{MV_TRUE, 0x00223001, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED,PEX_BUS_MODE_X4, PEX_BUS_MODE_X4, 0x00000030},	/* Default */
@@ -48,7 +44,7 @@ index 6b6cb67..b95fcc1 100644
  };
  
  MV_BOARD_INFO rd78460nasInfo = {
-@@ -1071,7 +1072,7 @@ MV_BOARD_MPP_INFO db78X60amcInfoBoardMppConfigValue[] = {
+@@ -1071,7 +1072,7 @@ MV_BOARD_MPP_INFO db78X60amcInfoBoardMpp
  };
  
  MV_SERDES_CFG db78X60amcInfoBoardSerdesConfigValue[] = {
@@ -57,11 +53,9 @@ index 6b6cb67..b95fcc1 100644
  };
  
  
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
-index b031681..d56edaf 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
-@@ -123,12 +123,12 @@ MV_BIOS_MODE bios_modes[BIOS_MODES_NUM] = {
+@@ -123,12 +123,12 @@ MV_BIOS_MODE bios_modes[BIOS_MODES_NUM]
  #else
  /*DBConf ConfID Code L2Size CPUFreq CpuFreqMode FabricFreq FabricFreqMode CPU1/2/3Enable cpuEndianess dramBusWidth BootSRC BootWidth */
  /*	                       0x4d/[1:0]  0x4d/[4:2]  0x4e[0]      0x4e/[4:1]  	0x4f[0]   0x4f/[2:1]      0x4f/[3]   	  */
@@ -255,10 +249,10 @@ index b031681..d56edaf 100644
 -				pRegVal[4]  = 0x7;
 -				pRegVal[5]  = 0x667;
 -				pRegVal[6]  = 0xcd5c;
--
+ 
 -			}
--		}
--
+ 		}
+ 
 -	} /* for each serdes lane*/
 -	/* QSGMII enable */
 -	for (serdesLineNum = 0; serdesLineNum < maxSerdesLines; serdesLineNum++) {
@@ -266,21 +260,21 @@ index b031681..d56edaf 100644
 -			serdesLineCfg = (pSerdesInfo->serdesLine0_7 >> (serdesLineNum << 2)) & 0xF;
 -		else
 -			serdesLineCfg = (pSerdesInfo->serdesLine8_15 >> ((serdesLineNum - 8) << 2)) & 0xF;
- 
+-
 -		if (serdesLineCfg == serdesCfg[serdesLineNum][SERDES_UNIT_QSGMII]) {
 -			/* QSGMII Active bit set to true */
 -			tmp = MV_REG_READ(QSGMII_CONTROL_1_REG);
 -			tmp |= BIT30;
 -			MV_REG_WRITE(QSGMII_CONTROL_1_REG,  tmp);
- 		}
--	}
+-		}
+ 	}
  
 -
 -	if(mvBoardIsSerdesConfigurationEnabled() == MV_FALSE){
 -		mvOsPrintf("skipping Serdes configuration phase, assume bootloader did this work already !!!\n");
 -		return MV_OK;
- 	}
- 
+-	}
+-
 -	/*
 -	 * If clock gatting was done in U-boot then we don't want
 -	 *to try to access  a HW block that is clock gated
@@ -556,6 +550,3 @@ index b031681..d56edaf 100644
  	return status;
  err_cfg:
  	DB(mvOsPrintf("%s: Wrong CFG (%#x) for SERDES line %d.\n",
--- 
-1.7.9.5
-

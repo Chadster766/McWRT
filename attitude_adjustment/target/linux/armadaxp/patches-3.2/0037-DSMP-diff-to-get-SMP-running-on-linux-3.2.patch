@@ -18,8 +18,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  drivers/tty/serial/Kconfig                        |    2 +-
  11 files changed, 554 insertions(+), 501 deletions(-)
 
-diff --git a/arch/arm/configs/armada_xp_defconfig b/arch/arm/configs/armada_xp_defconfig
-index 04264c8..8591bf6 100644
 --- a/arch/arm/configs/armada_xp_defconfig
 +++ b/arch/arm/configs/armada_xp_defconfig
 @@ -1,6 +1,6 @@
@@ -166,7 +164,7 @@ index 04264c8..8591bf6 100644
  # CONFIG_GPIO_PCA953X is not set
  CONFIG_ARCH_SUPPORTS_BIG_ENDIAN=y
  CONFIG_MV_HAL_RULES_PATH="arch/arm/mach-armadaxp/mv_hal_support/mvRules.mk"
-@@ -253,8 +259,8 @@ CONFIG_MV_HAL_RULES_PATH="arch/arm/mach-armadaxp/mv_hal_support/mvRules.mk"
+@@ -253,8 +259,8 @@ CONFIG_MV_HAL_RULES_PATH="arch/arm/mach-
  # Marvell Armada Options
  #
  CONFIG_ARMADA_XP=y
@@ -1153,8 +1151,6 @@ index 04264c8..8591bf6 100644
  CONFIG_NLATTR=y
  # CONFIG_AVERAGE is not set
 +# CONFIG_CORDIC is not set
-diff --git a/arch/arm/kernel/smp.c b/arch/arm/kernel/smp.c
-index 8767598..4c18757 100644
 --- a/arch/arm/kernel/smp.c
 +++ b/arch/arm/kernel/smp.c
 @@ -535,7 +535,6 @@ void __cpuinit percpu_timer_setup(void)
@@ -1175,7 +1171,7 @@ index 8767598..4c18757 100644
  /*
   * not supported here
   */
-@@ -680,6 +682,7 @@ void flush_cache_user_range(struct vm_area_struct *vma,
+@@ -680,6 +682,7 @@ void flush_cache_user_range(struct vm_ar
  	} else
  		local_flush_cache_user_range(vma, start, end);
  }
@@ -1183,11 +1179,9 @@ index 8767598..4c18757 100644
  int setup_profiling_timer(unsigned int multiplier)
  {
  	return -EINVAL;
-diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
-index 7322744..2080a2f 100644
 --- a/arch/arm/mach-armadaxp/core.c
 +++ b/arch/arm/mach-armadaxp/core.c
-@@ -437,21 +437,9 @@ static struct platform_device axp_i2c1 = {
+@@ -437,21 +437,9 @@ static struct platform_device axp_i2c1 =
   **********/
  static struct plat_serial8250_port aurora_uart0_data[] = {
  	{
@@ -1210,7 +1204,7 @@ index 7322744..2080a2f 100644
  	},
  };
  
-@@ -468,7 +456,7 @@ static struct resource aurora_uart0_resources[] = {
+@@ -468,7 +456,7 @@ static struct resource aurora_uart0_reso
  };
  
  static struct platform_device aurora_uart0 = {
@@ -1219,8 +1213,6 @@ index 7322744..2080a2f 100644
  	.id			= 0,
  	.dev			= {
  		.platform_data	= aurora_uart0_data,
-diff --git a/arch/arm/mach-armadaxp/headsmp.S b/arch/arm/mach-armadaxp/headsmp.S
-index 139281a..4fbd61c 100644
 --- a/arch/arm/mach-armadaxp/headsmp.S
 +++ b/arch/arm/mach-armadaxp/headsmp.S
 @@ -8,6 +8,7 @@
@@ -1231,8 +1223,6 @@ index 139281a..4fbd61c 100644
  
  	__INIT
  
-diff --git a/arch/arm/mach-armadaxp/include/mach/entry-macro.S b/arch/arm/mach-armadaxp/include/mach/entry-macro.S
-index e3eb156..e74c8f2 100644
 --- a/arch/arm/mach-armadaxp/include/mach/entry-macro.S
 +++ b/arch/arm/mach-armadaxp/include/mach/entry-macro.S
 @@ -48,9 +48,9 @@
@@ -1247,8 +1237,6 @@ index e3eb156..e74c8f2 100644
  	beq 	1000f
  
  	@restore tmp - should be optimized!!!!
-diff --git a/arch/arm/mach-armadaxp/include/mach/irqs.h b/arch/arm/mach-armadaxp/include/mach/irqs.h
-index 6d281c5..fc441e6 100644
 --- a/arch/arm/mach-armadaxp/include/mach/irqs.h
 +++ b/arch/arm/mach-armadaxp/include/mach/irqs.h
 @@ -137,6 +137,7 @@
@@ -1259,8 +1247,6 @@ index 6d281c5..fc441e6 100644
  /*
   * AURORA General Purpose Pins
   */
-diff --git a/arch/arm/mach-armadaxp/irq.c b/arch/arm/mach-armadaxp/irq.c
-index e07c4c2..223dcf6 100644
 --- a/arch/arm/mach-armadaxp/irq.c
 +++ b/arch/arm/mach-armadaxp/irq.c
 @@ -1,10 +1,10 @@
@@ -1280,7 +1266,7 @@ index e07c4c2..223dcf6 100644
  
  #include <linux/kernel.h>
  #include <linux/init.h>
-@@ -27,189 +27,189 @@ static DEFINE_SPINLOCK(irq_controller_lock);
+@@ -27,189 +27,189 @@ static DEFINE_SPINLOCK(irq_controller_lo
  int max_per_cpu_irq = 28; // not enabled, default.
  static int __init per_cpu_irq_setup(char *__unused)
  {
@@ -1402,8 +1388,6 @@ index e07c4c2..223dcf6 100644
 -	temp |= *cpus_addr(*mask_val);
 -	MV_REG_WRITE(addr, temp);
 -	spin_unlock(&irq_controller_lock);
--
--	return 0;
 +MV_U32 addr, temp;
 +u32 irq=d->irq;
 +addr = (CPU_INT_SOURCE_CONTROL_REG(irq));
@@ -1416,7 +1400,8 @@ index e07c4c2..223dcf6 100644
 +temp |= *cpus_addr(*mask_val);
 +MV_REG_WRITE(addr, temp);
 +spin_unlock(&irq_controller_lock);
-+
+ 
+-	return 0;
 +return 0;
  }
  #endif
@@ -1471,15 +1456,7 @@ index e07c4c2..223dcf6 100644
 +		addr = CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_IN_DRBL_HIGH);
 +} else
 +	addr = CPU_INT_SOURCE_CONTROL_REG(irq);
- 
--	if (irq <= max_per_cpu_irq) // per CPU
--		temp &= ~(1 << smp_processor_id());
--	/* for GPIO IRQs , don't disable INTS , they will be disabled in the units mask */
--	else if (irq < IRQ_MAIN_INTS_NUM)
--		temp &= ~0xf;
--	
--	MV_REG_WRITE(addr, temp);
--	spin_unlock(&irq_controller_lock);
++
 +spin_lock(&irq_controller_lock);
 +temp = MV_REG_READ(addr);
 +
@@ -1494,7 +1471,15 @@ index e07c4c2..223dcf6 100644
 +/* for GPIO IRQs , don't disable INTS , they will be disabled in the units mask */
 +else if (irq < IRQ_MAIN_INTS_NUM)
 +	temp &= ~0xf;
-+
+ 
+-	if (irq <= max_per_cpu_irq) // per CPU
+-		temp &= ~(1 << smp_processor_id());
+-	/* for GPIO IRQs , don't disable INTS , they will be disabled in the units mask */
+-	else if (irq < IRQ_MAIN_INTS_NUM)
+-		temp &= ~0xf;
+-	
+-	MV_REG_WRITE(addr, temp);
+-	spin_unlock(&irq_controller_lock);
 +MV_REG_WRITE(addr, temp);
 +spin_unlock(&irq_controller_lock);
  }
@@ -1596,7 +1581,7 @@ index e07c4c2..223dcf6 100644
  }
  #endif
  #endif /* CONFIG_ARMADAXP_USE_IRQ_INDIRECT_MODE */
-@@ -218,60 +218,70 @@ int axp_set_affinity(struct irq_data *d, const struct cpumask *mask_val,bool for
+@@ -218,60 +218,70 @@ int axp_set_affinity(struct irq_data *d,
  void second_cpu_init(void)
  {
  
@@ -1701,8 +1686,6 @@ index e07c4c2..223dcf6 100644
  		set_irq_flags(irq, IRQF_VALID);
  	}
  
-diff --git a/arch/arm/mach-armadaxp/time.c b/arch/arm/mach-armadaxp/time.c
-index ff364ea..74e58d7 100644
 --- a/arch/arm/mach-armadaxp/time.c
 +++ b/arch/arm/mach-armadaxp/time.c
 @@ -23,7 +23,6 @@
@@ -1722,7 +1705,7 @@ index ff364ea..74e58d7 100644
  #endif
  
  extern void axp_irq_mask(struct irq_data *d);
-@@ -160,7 +159,6 @@ static void axp_clkevt_mode(enum clock_event_mode mode, struct clock_event_devic
+@@ -160,7 +159,6 @@ static void axp_clkevt_mode(enum clock_e
  {
  	unsigned long flags;
  	u32 u;
@@ -1730,7 +1713,7 @@ index ff364ea..74e58d7 100644
  	local_irq_save(flags);
  
  	if (mode == CLOCK_EVT_MODE_PERIODIC) {
-@@ -214,7 +212,8 @@ static irqreturn_t axp_timer_interrupt(int irq, void *dev_id)
+@@ -214,7 +212,8 @@ static irqreturn_t axp_timer_interrupt(i
  static struct irqaction axp_timer_irq = {
  	.name		= "axp_tick",
  	.flags		= IRQF_DISABLED | IRQF_TIMER,
@@ -1789,7 +1772,7 @@ index ff364ea..74e58d7 100644
  {
  #if !defined (CONFIG_ARMADA_XP_REV_Z1) || defined (CONFIG_MACH_ARMADA_XP_FPGA)
  	/* FPGA hardcoded to 25Mhz and in DSMP-A0 the referance clock for the timers is 25MHz */
-@@ -331,16 +343,38 @@ int __cpuinit local_timer_setup(struct clock_event_device *clk)
+@@ -331,16 +343,38 @@ int __cpuinit local_timer_setup(struct c
  #endif
  	static cpu0_flag=0;
  	int cpu = smp_processor_id();
@@ -1828,7 +1811,7 @@ index ff364ea..74e58d7 100644
  	return 0;
  }
  
-@@ -348,11 +382,10 @@ int __cpuinit local_timer_setup(struct clock_event_device *clk)
+@@ -348,11 +382,10 @@ int __cpuinit local_timer_setup(struct c
  /*
   * take a local timer down
   */
@@ -1841,8 +1824,6 @@ index ff364ea..74e58d7 100644
  	local_irq_save(flags);
  
  	/* Disable timer */
-diff --git a/arch/arm/plat-armada/cpuidle.c b/arch/arm/plat-armada/cpuidle.c
-index 46547e7..ac26905 100644
 --- a/arch/arm/plat-armada/cpuidle.c
 +++ b/arch/arm/plat-armada/cpuidle.c
 @@ -24,6 +24,8 @@
@@ -1881,7 +1862,7 @@ index 46547e7..ac26905 100644
  {
  	struct timeval before, after;
  	int idle_time;
-@@ -170,7 +173,7 @@ static int armadaxp_enter_idle(struct cpuidle_device *dev,
+@@ -170,7 +173,7 @@ static int armadaxp_enter_idle(struct cp
  	local_irq_disable();
  	local_fiq_disable();
  	do_gettimeofday(&before);
@@ -1890,7 +1871,7 @@ index 46547e7..ac26905 100644
  #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_BTS61
  		armadaxp_smp_wfi();
  #else
-@@ -179,7 +182,7 @@ static int armadaxp_enter_idle(struct cpuidle_device *dev,
+@@ -179,7 +182,7 @@ static int armadaxp_enter_idle(struct cp
  #endif
  
  	}
@@ -1899,7 +1880,7 @@ index 46547e7..ac26905 100644
  		/* Deep Idle */
  		armadaxp_deepidle();
  	}
-@@ -189,11 +192,13 @@ static int armadaxp_enter_idle(struct cpuidle_device *dev,
+@@ -189,11 +192,13 @@ static int armadaxp_enter_idle(struct cp
  	idle_time = (after.tv_sec - before.tv_sec) * USEC_PER_SEC +
  			(after.tv_usec - before.tv_usec);
  #if 0
@@ -1977,11 +1958,9 @@ index 46547e7..ac26905 100644
  		if (cpuidle_register_device(device)) {
  			printk(KERN_ERR "armadaxp_init_cpuidle: Failed registering\n");
  			return -EIO;
-diff --git a/drivers/tty/serial/8250_dw.c b/drivers/tty/serial/8250_dw.c
-index bf1fba6..5cd7d2f 100644
 --- a/drivers/tty/serial/8250_dw.c
 +++ b/drivers/tty/serial/8250_dw.c
-@@ -89,6 +89,9 @@ static int dw8250_handle_irq(struct uart_port *p)
+@@ -89,6 +89,9 @@ static int dw8250_handle_irq(struct uart
  
  static int __devinit dw8250_probe(struct platform_device *pdev)
  {
@@ -1991,7 +1970,7 @@ index bf1fba6..5cd7d2f 100644
  	struct uart_port port = {};
  	struct resource *regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
  	struct resource *irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-@@ -118,6 +121,7 @@ static int __devinit dw8250_probe(struct platform_device *pdev)
+@@ -118,6 +121,7 @@ static int __devinit dw8250_probe(struct
  	port.iotype = UPIO_MEM;
  	port.serial_in = dw8250_serial_in;
  	port.serial_out = dw8250_serial_out;
@@ -1999,7 +1978,7 @@ index bf1fba6..5cd7d2f 100644
  	if (!of_property_read_u32(np, "reg-io-width", &val)) {
  		switch (val) {
  		case 1:
-@@ -142,7 +146,13 @@ static int __devinit dw8250_probe(struct platform_device *pdev)
+@@ -142,7 +146,13 @@ static int __devinit dw8250_probe(struct
  		return -EINVAL;
  	}
  	port.uartclk = val;
@@ -2014,8 +1993,6 @@ index bf1fba6..5cd7d2f 100644
  	data->line = serial8250_register_port(&port);
  	if (data->line < 0)
  		return data->line;
-diff --git a/drivers/tty/serial/Kconfig b/drivers/tty/serial/Kconfig
-index 925a1e5..ef18f08 100644
 --- a/drivers/tty/serial/Kconfig
 +++ b/drivers/tty/serial/Kconfig
 @@ -269,7 +269,7 @@ config SERIAL_8250_RM9K
@@ -2027,6 +2004,3 @@ index 925a1e5..ef18f08 100644
  	help
  	  Selecting this option will enable handling of the extra features
  	  present in the Synopsys DesignWare APB UART.
--- 
-1.7.9.5
-

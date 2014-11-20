@@ -11,10 +11,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
  mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
 
-diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
-old mode 100644
-new mode 100755
-index c07bdcd..e6a8e20
 --- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
 +++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
 @@ -699,11 +699,11 @@ static int pnc_etype_init(void)
@@ -45,7 +41,7 @@ index c07bdcd..e6a8e20
  }
  
  /* IPv6 - detect TCP */
-@@ -1021,10 +1021,10 @@ int pnc_ipv6_2_tuples_add(unsigned int tid1, unsigned int tid2, unsigned int flo
+@@ -1021,10 +1021,10 @@ int pnc_ipv6_2_tuples_add(unsigned int t
  	struct tcam_entry   *te;
  	int                 i;
  
@@ -58,7 +54,7 @@ index c07bdcd..e6a8e20
  		ERR_ON_OOR(2);
  
  	te = tcam_sw_alloc(TCAM_LU_FLOW_IP6_A);
-@@ -1057,7 +1057,7 @@ int pnc_ipv6_2_tuples_add(unsigned int tid1, unsigned int tid2, unsigned int flo
+@@ -1057,7 +1057,7 @@ int pnc_ipv6_2_tuples_add(unsigned int t
  		sram_sw_set_rxq(te, rxq, 0);
  	}
  
@@ -67,7 +63,7 @@ index c07bdcd..e6a8e20
  
  	tcam_sw_set_ainfo(te, unique, AI_MASK);
  	tcam_sw_text(te, "ipv6_2t_B");
-@@ -1117,10 +1117,10 @@ int pnc_ipv4_5_tuples_add(unsigned int tid, unsigned int flow_id,
+@@ -1117,10 +1117,10 @@ int pnc_ipv4_5_tuples_add(unsigned int t
  	PNC_DBG("%s [%d] flow=%d " MV_IPQUAD_FMT "->" MV_IPQUAD_FMT ", ports=0x%x, proto=%d\n",
  		__func__, tid, flow_id, MV_IPQUAD(((MV_U8 *)&sip)), MV_IPQUAD(((MV_U8 *)&dip)), ports, proto);
  
@@ -80,7 +76,7 @@ index c07bdcd..e6a8e20
  		ERR_ON_OOR(1);
  
  	/* sanity check */
-@@ -1147,7 +1147,7 @@ int pnc_ipv4_5_tuples_add(unsigned int tid, unsigned int flow_id,
+@@ -1147,7 +1147,7 @@ int pnc_ipv4_5_tuples_add(unsigned int t
  	sram_sw_set_lookup_done(te, 1);
  	sram_sw_set_flowid(te, flow_id, FLOWID_CTRL_FULL_MASK);
  	sram_sw_set_rxq(te, rxq, 0);
@@ -89,7 +85,7 @@ index c07bdcd..e6a8e20
  	tcam_sw_text(te, "ipv4_5t");
  
  	tcam_hw_write(te, tid);
-@@ -1159,7 +1159,7 @@ int pnc_ipv4_5_tuples_add(unsigned int tid, unsigned int flow_id,
+@@ -1159,7 +1159,7 @@ int pnc_ipv4_5_tuples_add(unsigned int t
  
  	return 0;
  }
@@ -112,13 +108,9 @@ index c07bdcd..e6a8e20
  
  #ifdef CONFIG_MV_ETH_PNC_WOL
  	mv_pnc_wol_init();
-diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
-old mode 100644
-new mode 100755
-index 7ad23f3..26509d6
 --- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
 +++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
-@@ -106,13 +106,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -106,13 +106,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #define RI_MCAST_PNC_OTHER  (3 << RI_MCAST_OFFS)
  #define RI_MCAST_PNC_ONLY   (4 << RI_MCAST_OFFS)
  
@@ -157,6 +149,3 @@ index 7ad23f3..26509d6
  
  #ifdef CONFIG_MV_ETH_PNC_WOL
  	TCAM_LU_WOL,
--- 
-1.7.9.5
-

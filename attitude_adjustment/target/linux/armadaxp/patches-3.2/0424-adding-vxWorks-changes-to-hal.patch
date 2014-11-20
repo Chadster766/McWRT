@@ -30,8 +30,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/xor/mvXor.c
  mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/xor/mvXor.h
 
-diff --git a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
-index 270c89b..bd2b709 100755
 --- a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
 +++ b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
 @@ -137,6 +137,26 @@ MV_U32 mvCntmrRead(MV_U32 countNum)
@@ -61,8 +59,6 @@ index 270c89b..bd2b709 100755
  
  /*******************************************************************************
  * mvCntmrWrite -
-diff --git a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h
-index c9fd581..899d09f 100755
 --- a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h
 +++ b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.h
 @@ -119,6 +119,9 @@ extern "C" {
@@ -75,8 +71,6 @@ index c9fd581..899d09f 100755
  /* Write a value of the given Counter/Timer */
  	void mvCntmrWrite(MV_U32 countNum, MV_U32 countVal);
  
-diff --git a/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.c b/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.c
-index ad8be88..5b537a7 100755
 --- a/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.c
 +++ b/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIf.c
 @@ -154,8 +154,8 @@ MV_U32 mvDramIfHwSizeGet(MV_VOID)
@@ -90,10 +84,6 @@ index ad8be88..5b537a7 100755
  	/* Dram size alignment fix*/
  	return totalSize;
  }
-diff --git a/arch/arm/plat-armada/mv_hal/idma/mvIdma.c b/arch/arm/plat-armada/mv_hal/idma/mvIdma.c
-old mode 100644
-new mode 100755
-index cbae167..a4f5e83
 --- a/arch/arm/plat-armada/mv_hal/idma/mvIdma.c
 +++ b/arch/arm/plat-armada/mv_hal/idma/mvIdma.c
 @@ -333,10 +333,38 @@ MV_STATE mvDmaStateGet(MV_U32 chan)
@@ -136,10 +126,6 @@ index cbae167..a4f5e83
  *       Paused can be set only if channel is active.
  *       Start can be set only if channel is idle.
  *       Restart can be set only if channel is paused.
-diff --git a/arch/arm/plat-armada/mv_hal/idma/mvIdma.h b/arch/arm/plat-armada/mv_hal/idma/mvIdma.h
-old mode 100644
-new mode 100755
-index 69beb04..9342c09
 --- a/arch/arm/plat-armada/mv_hal/idma/mvIdma.h
 +++ b/arch/arm/plat-armada/mv_hal/idma/mvIdma.h
 @@ -101,7 +101,6 @@ typedef struct _mvDmaDesc {
@@ -150,7 +136,7 @@ index 69beb04..9342c09
  /* mvIdma.h API list */
  MV_VOID mvDmaHalInit(MV_U32);
  MV_STATUS mvDmaCtrlLowSet(MV_U32 chan, MV_U32 ctrlWord);
-@@ -109,9 +108,11 @@ MV_STATUS mvDmaCtrlHighSet(MV_U32 chan, MV_U32 ctrlWord);
+@@ -109,9 +108,11 @@ MV_STATUS mvDmaCtrlHighSet(MV_U32 chan,
  MV_STATUS mvDmaTransfer(MV_U32 chan, MV_U32 phySrc, MV_U32 phyDst, MV_U32 size, MV_U32 phyNextDescPtr);
  MV_STATUS mvDmaMemInit(MV_U32 chan, MV_U32 ptrnPtr, MV_U32 startPtr, MV_U32 size);
  MV_STATE  mvDmaStateGet(MV_U32 chan);
@@ -162,9 +148,6 @@ index 69beb04..9342c09
  
  #endif /* __INCmvIdmah */
  
-diff --git a/arch/arm/plat-armada/mv_hal/idma/mvIdmaAddrDec.c b/arch/arm/plat-armada/mv_hal/idma/mvIdmaAddrDec.c
-new file mode 100755
-index 0000000..f63f5bb
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_hal/idma/mvIdmaAddrDec.c
 @@ -0,0 +1,270 @@
@@ -438,13 +421,9 @@ index 0000000..f63f5bb
 +
 +	return MV_OK;
 +}
-diff --git a/arch/arm/plat-armada/mv_hal/idma/mvIdmaRegs.h b/arch/arm/plat-armada/mv_hal/idma/mvIdmaRegs.h
-old mode 100644
-new mode 100755
-index 8dc6488..91a452a
 --- a/arch/arm/plat-armada/mv_hal/idma/mvIdmaRegs.h
 +++ b/arch/arm/plat-armada/mv_hal/idma/mvIdmaRegs.h
-@@ -62,29 +62,35 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -62,29 +62,35 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  
  *******************************************************************************/
  
@@ -456,13 +435,7 @@ index 8dc6488..91a452a
  
  /* defines */
  
-+/* IDMA channel rgisters */
-+#define IDMA_BYTE_COUNT_REG(chan)          	(MV_IDMA_REGS_BASE + 0x0 + ((chan) * 4))
-+#define IDMA_SRC_ADDR_REG(chan)            	(MV_IDMA_REGS_BASE + 0x10 + ((chan) * 4))
-+#define IDMA_DST_ADDR_REG(chan)            	(MV_IDMA_REGS_BASE + 0x20 + ((chan) * 4))
-+#define IDMA_NEXT_DESC_PTR_REG(chan)       	(MV_IDMA_REGS_BASE + 0x30 + ((chan) * 4))
-+#define IDMA_CURR_DESC_PTR_REG(chan)	   	(MV_IDMA_REGS_BASE + 0x70 + ((chan) * 4))
- 
+-
 -/* IDMA channel rgisters       												*/
 -#define IDMA_BYTE_COUNT_REG(chan)          	(IDMA_UNIT_BASE + 0x0 + ((chan) * 4))
 -#define IDMA_SRC_ADDR_REG(chan)            	(IDMA_UNIT_BASE + 0x10 + ((chan) * 4))
@@ -473,6 +446,13 @@ index 8dc6488..91a452a
 -/* IDMA Channel Control														*/
 -#define IDMA_CTRL_LOW_REG(chan)			(IDMA_UNIT_BASE + 0x40 + ((chan) * 4))
 -#define IDMA_CTRL_HIGH_REG(chan)		(IDMA_UNIT_BASE + 0x80 + ((chan) * 4))
++/* IDMA channel rgisters */
++#define IDMA_BYTE_COUNT_REG(chan)          	(MV_IDMA_REGS_BASE + 0x0 + ((chan) * 4))
++#define IDMA_SRC_ADDR_REG(chan)            	(MV_IDMA_REGS_BASE + 0x10 + ((chan) * 4))
++#define IDMA_DST_ADDR_REG(chan)            	(MV_IDMA_REGS_BASE + 0x20 + ((chan) * 4))
++#define IDMA_NEXT_DESC_PTR_REG(chan)       	(MV_IDMA_REGS_BASE + 0x30 + ((chan) * 4))
++#define IDMA_CURR_DESC_PTR_REG(chan)	   	(MV_IDMA_REGS_BASE + 0x70 + ((chan) * 4))
++
 +/* IDMA Channel Control	*/
 +#define IDMA_CTRL_LOW_REG(chan)			(MV_IDMA_REGS_BASE + 0x40 + ((chan) * 4))
 +#define IDMA_CTRL_HIGH_REG(chan)		(MV_IDMA_REGS_BASE + 0x80 + ((chan) * 4))
@@ -494,11 +474,9 @@ index 8dc6488..91a452a
  
  
  /* DMA register fileds */
-diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPex.c b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
-index e489c18..d90a297 100755
 --- a/arch/arm/plat-armada/mv_hal/pex/mvPex.c
 +++ b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
-@@ -86,7 +86,7 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+@@ -86,7 +86,7 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX
  	MV_PEX_MODE pexMode;
  	MV_U32 regVal;
  	MV_U32 status;
@@ -507,11 +485,9 @@ index e489c18..d90a297 100755
  
  	mvOsMemcpy(&pexHalData[pexIf], halData, sizeof(MV_PEX_HAL_DATA));
  	ctrlModel = pexHalData[pexIf].ctrlModel;
-diff --git a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c
-index 66e3312..4502bd7 100755
 --- a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c
 +++ b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c
-@@ -115,7 +115,7 @@ extern void dumpAtaDeviceRegisters(MV_SATA_ADAPTER *pAdapter,
+@@ -115,7 +115,7 @@ extern void dumpAtaDeviceRegisters(MV_SA
  
  extern MV_BOOLEAN _doSoftReset(MV_SATA_CHANNEL *pSataChannel);
  
@@ -520,7 +496,7 @@ index 66e3312..4502bd7 100755
  
  extern MV_BOOLEAN executeNonUDMACommand(MV_SATA_ADAPTER *pAdapter,
  					MV_U8 channelIndex,
-@@ -389,10 +389,6 @@ static void checkIogBit(MV_SATA_ADAPTER *pAdapter, MV_U8 bitOffset, MV_U8 value)
+@@ -389,10 +389,6 @@ static void checkIogBit(MV_SATA_ADAPTER
  static MV_BOOLEAN iogReset(MV_SATA_ADAPTER *pAdapter);
  #endif
  
@@ -531,13 +507,9 @@ index 66e3312..4502bd7 100755
  
  #define getEdmaRegOffset(x) edmaRegOffst[(x)]
  
-diff --git a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.c b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.c
-old mode 100644
-new mode 100755
-index 2668aca..3aeeb78
 --- a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.c
 +++ b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.c
-@@ -65,10 +65,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -65,10 +65,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #include "mvSataSoc.h"
  #include "mvRegs.h"
  
@@ -548,10 +520,6 @@ index 2668aca..3aeeb78
  
  #define getEdmaRegOffset(x) edmaRegOffst[(x)]
  
-diff --git a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.h b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.h
-old mode 100644
-new mode 100755
-index aba2058..b57159c
 --- a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.h
 +++ b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.h
 @@ -75,6 +75,12 @@ extern "C"			/*{ */
@@ -567,13 +535,9 @@ index aba2058..b57159c
  #ifdef __cplusplus
  
  /*}*/
-diff --git a/arch/arm/plat-armada/mv_hal/xor/mvXor.c b/arch/arm/plat-armada/mv_hal/xor/mvXor.c
-old mode 100644
-new mode 100755
-index 4c3a638..aade40e
 --- a/arch/arm/plat-armada/mv_hal/xor/mvXor.c
 +++ b/arch/arm/plat-armada/mv_hal/xor/mvXor.c
-@@ -62,6 +62,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -62,6 +62,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #include "mvCommon.h"
  #include "mvOs.h"
  #include "ctrlEnv/mvCtrlEnvSpec.h"
@@ -592,7 +556,7 @@ index 4c3a638..aade40e
  		mvXorCommandSet(i, MV_STOP);
  		mvXorCtrlSet(i, (1 << XEXCR_REG_ACC_PROTECT_OFFS) |
  			     (4 << XEXCR_DST_BURST_LIMIT_OFFS) | (4 << XEXCR_SRC_BURST_LIMIT_OFFS)
-@@ -577,3 +582,16 @@ MV_STATUS mvXorOverrideSet(MV_U32 chan, MV_XOR_OVERRIDE_TARGET target, MV_U32 wi
+@@ -577,3 +582,16 @@ MV_STATUS mvXorOverrideSet(MV_U32 chan,
  	MV_REG_WRITE(XOR_OVERRIDE_CTRL_REG(chan), temp);
  	return MV_OK;
  }
@@ -609,10 +573,6 @@ index 4c3a638..aade40e
 +    temp |= srcBurstLimit << XEXCR_SRC_BURST_LIMIT_OFFS;
 +    MV_REG_WRITE(XOR_CONFIG_REG(XOR_UNIT(chan),XOR_CHAN(chan)), temp);
 +}
-diff --git a/arch/arm/plat-armada/mv_hal/xor/mvXor.h b/arch/arm/plat-armada/mv_hal/xor/mvXor.h
-old mode 100644
-new mode 100755
-index 75e1fdb..6bde57f
 --- a/arch/arm/plat-armada/mv_hal/xor/mvXor.h
 +++ b/arch/arm/plat-armada/mv_hal/xor/mvXor.h
 @@ -93,6 +93,12 @@ extern "C" {
@@ -645,6 +605,3 @@ index 75e1fdb..6bde57f
  
  	MV_STATUS mvXorWinInit(MV_UNIT_WIN_INFO *addrWinMap);
  	MV_STATUS mvXorTargetWinWrite(MV_U32 unit, MV_U32 winNum,
--- 
-1.7.9.5
-

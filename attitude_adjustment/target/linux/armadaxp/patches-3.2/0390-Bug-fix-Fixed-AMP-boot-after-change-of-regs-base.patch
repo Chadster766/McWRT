@@ -21,8 +21,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/mach-armadaxp/include/mach/armadaxp.h |   30 ++++++++++++++++--------
  3 files changed, 48 insertions(+), 11 deletions(-)
 
-diff --git a/arch/arm/boot/compressed/head.S b/arch/arm/boot/compressed/head.S
-index ce9a3b6..2d2b096 100644
 --- a/arch/arm/boot/compressed/head.S
 +++ b/arch/arm/boot/compressed/head.S
 @@ -139,7 +139,12 @@ start:
@@ -39,8 +37,6 @@ index ce9a3b6..2d2b096 100644
  		/* Update Internal Regs offset in case UBoot is configured
  		** to use a different base address.
  		*/
-diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
-index 4ecc300..4433fcb 100755
 --- a/arch/arm/mach-armadaxp/core.c
 +++ b/arch/arm/mach-armadaxp/core.c
 @@ -1681,6 +1681,13 @@ static void __init axp_db_init(void)
@@ -57,7 +53,7 @@ index 4ecc300..4433fcb 100755
  #ifdef CONFIG_FB_DOVE
  /*
   * This fixup function is used to reserve memory for the LCD engine
-@@ -1765,6 +1772,9 @@ MACHINE_START(ARMADA_XP_DB, "Marvell Armada XP Development Board")
+@@ -1765,6 +1772,9 @@ MACHINE_START(ARMADA_XP_DB, "Marvell Arm
  #ifdef CONFIG_SUSPEND
  	.reserve	= reserve_training_mem,
  #endif /* CONFIG_SUSPEND */
@@ -67,7 +63,7 @@ index 4ecc300..4433fcb 100755
  MACHINE_END
  
  /*****************************************************************************
-@@ -1907,6 +1917,9 @@ MACHINE_START(ARMADA_XP_GP, "Marvell Armada XP GP Board")
+@@ -1907,6 +1917,9 @@ MACHINE_START(ARMADA_XP_GP, "Marvell Arm
  #ifdef CONFIG_SUSPEND
  	.reserve	= reserve_training_mem,
  #endif /* CONFIG_SUSPEND */
@@ -77,7 +73,7 @@ index 4ecc300..4433fcb 100755
  MACHINE_END
  
  /*****************************************************************************
-@@ -2043,6 +2056,9 @@ MACHINE_START(ARMADA_XP_RD_NAS, "Marvell Armada XP RD NAS Board")
+@@ -2043,6 +2056,9 @@ MACHINE_START(ARMADA_XP_RD_NAS, "Marvell
  	/* reserve memory for LCD */
  	.fixup		= axp_tag_fixup_mem32,
  #endif /* CONFIG_FB_DOVE */
@@ -87,7 +83,7 @@ index 4ecc300..4433fcb 100755
  MACHINE_END
  
  
-@@ -2151,6 +2167,9 @@ MACHINE_START(ARMADA_XP_RDSRV, "Marvell Armada XP Server Board")
+@@ -2151,6 +2167,9 @@ MACHINE_START(ARMADA_XP_RDSRV, "Marvell
    	.init_irq	= axp_init_irq,
    	.timer		= &axp_timer,
    	.init_machine	= axp_rdsrv_init,
@@ -97,7 +93,7 @@ index 4ecc300..4433fcb 100755
    MACHINE_END
  
  /*****************************************************************************
-@@ -2221,4 +2240,7 @@ MACHINE_START(ARMADA_XP_FPGA, "Marvell Armada XP FPGA Board")
+@@ -2221,4 +2240,7 @@ MACHINE_START(ARMADA_XP_FPGA, "Marvell A
  	.init_irq	= axp_init_irq,
  	.timer		= &axp_timer,
  	.init_machine	= axp_fpga_init,
@@ -105,8 +101,6 @@ index 4ecc300..4433fcb 100755
 +	.reserve	= axp_reserve_regs_space,
 +#endif
  MACHINE_END
-diff --git a/arch/arm/mach-armadaxp/include/mach/armadaxp.h b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
-index 6d79d21..184cc35 100644
 --- a/arch/arm/mach-armadaxp/include/mach/armadaxp.h
 +++ b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
 @@ -100,15 +100,17 @@
@@ -154,6 +148,3 @@ index 6d79d21..184cc35 100644
  
  #define PEX0_IO_PHYS_BASE		0xF1100000
  #define PEX0_IO_VIRT_BASE		0xFBC00000
--- 
-1.7.9.5
-

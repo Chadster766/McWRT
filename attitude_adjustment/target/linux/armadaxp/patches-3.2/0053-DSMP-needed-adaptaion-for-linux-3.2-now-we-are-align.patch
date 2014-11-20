@@ -13,8 +13,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  4 files changed, 10 insertions(+), 7 deletions(-)
  mode change 100644 => 100755 arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
 
-diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
-index 0898973..422ce8d 100755
 --- a/arch/arm/mach-armadaxp/core.c
 +++ b/arch/arm/mach-armadaxp/core.c
 @@ -44,6 +44,7 @@
@@ -36,8 +34,6 @@ index 0898973..422ce8d 100755
  	.map_io		= axp_map_io,
  	.init_irq	= axp_init_irq,
  	.timer		= &axp_timer,
-diff --git a/arch/arm/mach-armadaxp/include/mach/armadaxp.h b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
-index bafc076..401718c 100644
 --- a/arch/arm/mach-armadaxp/include/mach/armadaxp.h
 +++ b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
 @@ -219,4 +219,5 @@
@@ -46,8 +42,6 @@ index bafc076..401718c 100644
  #define AXP_L2_MNTNC_STAT_REG		(INTER_REGS_BASE | 0x8704)
 +#define AXP_SNOOP_FILTER_PHYS_REG	(INTER_REGS_PHYS_BASE | 0x21020)
  #endif
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-index 81e6dc2..0e5f230 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 @@ -36,7 +36,7 @@ disclaimer.
@@ -59,7 +53,7 @@ index 81e6dc2..0e5f230 100644
  #include "mvOs.h"
  #include "mvDebug.h"
  #include "dbg-trace.h"
-@@ -764,7 +764,8 @@ static const struct net_device_ops mv_eth_netdev_ops = {
+@@ -764,7 +764,8 @@ static const struct net_device_ops mv_et
  	.ndo_open = mv_eth_open,
  	.ndo_stop = mv_eth_stop,
  	.ndo_start_xmit = mv_eth_tx,
@@ -69,7 +63,7 @@ index 81e6dc2..0e5f230 100644
  	.ndo_set_mac_address = mv_eth_set_mac_addr,
  	.ndo_change_mtu = mv_eth_change_mtu,
  	.ndo_tx_timeout = mv_eth_tx_timeout,
-@@ -2099,7 +2100,7 @@ static void mv_eth_tx_frag_process(struct eth_port *pp, struct sk_buff *skb, str
+@@ -2099,7 +2100,7 @@ static void mv_eth_tx_frag_process(struc
  		/* NETA_TX_BM_ENABLE_MASK = 0 */
  		/* NETA_TX_PKT_OFFSET_MASK = 0 */
  		tx_desc->dataSize = frag->size;
@@ -78,7 +72,7 @@ index 81e6dc2..0e5f230 100644
  						      tx_desc->dataSize);
  
  		if (i == (skb_shinfo(skb)->nr_frags - 1)) {
-@@ -2829,7 +2830,7 @@ static int mv_eth_probe(struct platform_device *pdev)
+@@ -2829,7 +2830,7 @@ static int mv_eth_probe(struct platform_
  #endif
  
  	if (!mv_eth_initialized) {
@@ -87,10 +81,6 @@ index 81e6dc2..0e5f230 100644
  
  		mv_eth_ports_num = mvCtrlEthMaxPortGet();
  		if (mv_eth_ports_num > CONFIG_MV_ETH_PORTS_NUM)
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
-old mode 100644
-new mode 100755
-index d4e8a0e..ec041fa
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
 @@ -332,6 +332,8 @@ struct eth_port {
@@ -102,6 +92,3 @@ index d4e8a0e..ec041fa
  };
  
  struct eth_netdev {
--- 
-1.7.9.5
-

@@ -13,8 +13,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/tools/mach-types                          |    1 +
  6 files changed, 639 insertions(+), 32 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/Kconfig b/arch/arm/mach-armadaxp/Kconfig
-index a51d0ff..2a8f51c 100644
 --- a/arch/arm/mach-armadaxp/Kconfig
 +++ b/arch/arm/mach-armadaxp/Kconfig
 @@ -66,6 +66,11 @@ config MACH_ARMADA_XP_DB
@@ -29,11 +27,9 @@ index a51d0ff..2a8f51c 100644
  config MACH_ARMADA_XP_RDSRV
  	bool "Marvell Armada XP Server Board"
  	default y
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
-index 169716a..c52b9ba 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
-@@ -281,6 +281,7 @@ MV_BOOL mvBoardIsPortInSgmii(MV_U32 ethPortNum)
+@@ -281,6 +281,7 @@ MV_BOOL mvBoardIsPortInSgmii(MV_U32 ethP
  			return MV_TRUE;
  		break;
  	case DB_78X60_PCAC_ID:
@@ -154,15 +150,16 @@ index 169716a..c52b9ba 100644
 -	sar = mvBoardTwsiSatRGet(2, 0);
 -	if ((MV_8)MV_ERROR == (MV_8)sar)
 -		return MV_ERROR;
-+		sar = mvBoardTwsiSatRGet(2, 0);
-+		if ((MV_8)MV_ERROR == (MV_8)sar)
-+			return MV_ERROR;
- 
+-
 -	sar &= ~(0x1);
 -	sar |= ( (freqVal >> 3) & 0x1);
 -	if (MV_OK != mvBoardTwsiSatRSet(2, 0, sar)) {
 -		DB1(mvOsPrintf("Board: Write CpuFreq S@R fail\n"));
 -		return MV_ERROR;
++		sar = mvBoardTwsiSatRGet(2, 0);
++		if ((MV_8)MV_ERROR == (MV_8)sar)
++			return MV_ERROR;
++
 +		sar &= ~(0x1);
 +		sar |= ( (freqVal >> 3) & 0x1);
 +		if (MV_OK != mvBoardTwsiSatRSet(2, 0, sar)) {
@@ -241,7 +238,7 @@ index 169716a..c52b9ba 100644
  	if (MV_OK != mvBoardTwsiSatRSet(0, 0, sar)) {
  		DB1(mvOsPrintf("Board: Write BootDevWidth S@R fail\n"));
  		return MV_ERROR;
-@@ -1814,6 +1865,13 @@ MV_STATUS mvBoardCpu0EndianessSet(MV_U8 val)
+@@ -1814,6 +1865,13 @@ MV_STATUS mvBoardCpu0EndianessSet(MV_U8
  MV_U8 mvBoardL2SizeGet(MV_VOID)
  {
  	MV_U8 sar;
@@ -282,7 +279,7 @@ index 169716a..c52b9ba 100644
  	case RD_78460_CUSTOMER_ID:
  	case DB_78X60_AMC_ID:
  	case DB_78X60_PCAC_REV2_ID:
-@@ -2662,6 +2733,7 @@ MV_BOARD_PEX_INFO *mvBoardPexInfoGet(void)
+@@ -2662,6 +2733,7 @@ MV_BOARD_PEX_INFO *mvBoardPexInfoGet(voi
  	case FPGA_88F78XX0_ID:
  	case DB_88F78XX0_BP_REV2_ID:
  	case RD_78460_NAS_ID:
@@ -290,8 +287,6 @@ index 169716a..c52b9ba 100644
  	case RD_78460_CUSTOMER_ID:
  	case DB_78X60_AMC_ID:
  	case DB_78X60_PCAC_REV2_ID:
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
-index b95fcc1..c1030cc 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
 @@ -661,6 +661,106 @@ MV_BOARD_INFO rd78460Info = {
@@ -662,11 +657,9 @@ index b95fcc1..c1030cc 100644
 +	&rd78460gpInfo,
 +	&rd78460customerInfo
  };
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
-index c2eabfa..12e7c50 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
-@@ -93,12 +93,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -93,12 +93,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #define RD_78460_SERVER_ID			(DB_88F78XX0_BP_ID + 1)
  #define DB_78X60_PCAC_ID			(RD_78460_SERVER_ID + 1)
  #define FPGA_88F78XX0_ID			(DB_78X60_PCAC_ID + 1)
@@ -735,11 +728,9 @@ index c2eabfa..12e7c50 100644
  /**********************/
  /* DB-AXP-CUSTOMER         */
  /**********************/
-diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
-index 24acb3e..de53827 100755
 --- a/arch/arm/mach-armadaxp/core.c
 +++ b/arch/arm/mach-armadaxp/core.c
-@@ -1647,6 +1647,144 @@ MACHINE_START(ARMADA_XP_DB, "Marvell Armada XP Development Board")
+@@ -1647,6 +1647,144 @@ MACHINE_START(ARMADA_XP_DB, "Marvell Arm
  MACHINE_END
  
  /*****************************************************************************
@@ -884,8 +875,6 @@ index 24acb3e..de53827 100755
   * RD NAS BOARD
   ****************************************************************************/
  static void __init axp_rd_nas_init(void)
-diff --git a/arch/arm/tools/mach-types b/arch/arm/tools/mach-types
-index 66ed848..2b3987a 100644
 --- a/arch/arm/tools/mach-types
 +++ b/arch/arm/tools/mach-types
 @@ -3002,6 +3002,7 @@ remus			MACH_REMUS		REMUS			3031
@@ -896,6 +885,3 @@ index 66ed848..2b3987a 100644
  armada_xp_db		MACH_ARMADA_XP_DB	ARMADA_XP_DB		3036
  armada_xp_rd_nas	MACH_ARMADA_XP_RD_NAS	ARMADA_XP_RD_NAS	3500
  armada_xp_rdsrv         MACH_ARMADA_XP_RDSRV    ARMADA_XP_RDSRV         3037
--- 
-1.7.9.5
-

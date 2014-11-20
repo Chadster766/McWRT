@@ -13,11 +13,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/plat-armada/mv_hal/nfc/mvNfc.h        |    6 ++---
  4 files changed, 12 insertions(+), 28 deletions(-)
 
-diff --git a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
-index 614e7d6..fc21ba0 100755
 --- a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
 +++ b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
-@@ -1779,6 +1779,7 @@ MV_VOID mvEth1540A1PhyBasicInit(MV_U32 ethPortNum, MV_BOOL eeeEnable)
+@@ -1779,6 +1779,7 @@ MV_VOID mvEth1540A1PhyBasicInit(MV_U32 e
  	mvOsDelay(100);
  }
  
@@ -25,8 +23,6 @@ index 614e7d6..fc21ba0 100755
  MV_VOID mvEth1540A0PhyBasicInit(MV_U32 ethPortNum, MV_BOOL eeeEnable)
  {
  	int i = ethphyHalData.phyAddr[ethPortNum];
-diff --git a/arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h b/arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h
-index 72c4ead..ea223c8 100755
 --- a/arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h
 +++ b/arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h
 @@ -153,10 +153,12 @@ extern "C" {
@@ -43,11 +39,9 @@ index 72c4ead..ea223c8 100755
  #define GPP_FUNC_SELECT_REG			(MV_GPP_REGS_BASE(0) + 0x40)
  
  /* Relevant for MV78XX0 */
-diff --git a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
-index 3058b69..d780c6d 100644
 --- a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
 +++ b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.c
-@@ -67,7 +67,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -67,7 +67,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #include "ctrlEnv/mvCtrlEnvSpec.h"
  #include "mvSysNfcConfig.h"
  #include "mvNfcRegs.h"
@@ -56,7 +50,7 @@ index 3058b69..d780c6d 100644
  #include "pdma/mvPdma.h"
  #include "pdma/mvPdmaRegs.h"
  #endif
-@@ -666,24 +666,17 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo, MV_NFC_CTRL *nfcCtrl)
+@@ -666,24 +666,17 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo
  	/* Write registers before device detection */
  	MV_REG_WRITE(NFC_CONTROL_REG, ctrl_reg);
  
@@ -82,7 +76,7 @@ index 3058b69..d780c6d 100644
  
  	/* Look for device ID in knwon device table */
  	for (i = 0; i < (sizeof(flashDeviceInfo) / sizeof(MV_NFC_FLASH_INFO)); i++) {
-@@ -699,10 +692,7 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo, MV_NFC_CTRL *nfcCtrl)
+@@ -699,10 +692,7 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo
  	if (flashDeviceInfo[i].flags & NFC_FLAGS_ONFI_MODE_3_SET) {
  		ret = mvNfcDeviceModeSet(nfcCtrl, MV_NFC_ONFI_MODE_3);
  		if (ret != MV_OK)
@@ -93,7 +87,7 @@ index 3058b69..d780c6d 100644
  	}
  
  	/* Critical Initialization done. Raise NFC clock if needed */
-@@ -720,10 +710,7 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo, MV_NFC_CTRL *nfcCtrl)
+@@ -720,10 +710,7 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo
  	/* calculate Timing parameters */
  	ret = mvNfcTimingSet(nand_clock, &flashDeviceInfo[i]);
  	if (ret != MV_OK)
@@ -104,7 +98,7 @@ index 3058b69..d780c6d 100644
  
  	/* Configure the control register based on the device detected */
  	ctrl_reg = MV_REG_READ(NFC_CONTROL_REG);
-@@ -792,7 +779,7 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo, MV_NFC_CTRL *nfcCtrl)
+@@ -792,7 +779,7 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo
  	/* Write the updated control register */
  	MV_REG_WRITE(NFC_CONTROL_REG, ctrl_reg);
  
@@ -113,7 +107,7 @@ index 3058b69..d780c6d 100644
  	/* DMA resource allocation */
  	if (nfcInfo->ioMode == MV_NFC_PDMA_ACCESS) {
  		/* Allocate command buffer */
-@@ -855,7 +842,7 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo, MV_NFC_CTRL *nfcCtrl)
+@@ -855,7 +842,7 @@ MV_STATUS mvNfcInit(MV_NFC_INFO *nfcInfo
  	nfcCtrl->ifMode = nfcInfo->ifMode;
  	nfcCtrl->currCs = MV_NFC_CS_NONE;
  	nfcCtrl->regsPhysAddr = nfcInfo->regsPhysAddr;
@@ -122,7 +116,7 @@ index 3058b69..d780c6d 100644
  	nfcCtrl->dataPdmaIntMask = nfcInfo->dataPdmaIntMask;
  	nfcCtrl->cmdPdmaIntMask = nfcInfo->cmdPdmaIntMask;
  #endif
-@@ -2508,7 +2495,7 @@ static MV_STATUS mvNfcDeviceModeSet(MV_NFC_CTRL *nfcCtrl, MV_NFC_ONFI_MODE mode)
+@@ -2508,7 +2495,7 @@ static MV_STATUS mvNfcDeviceModeSet(MV_N
  }
  
  
@@ -153,8 +147,6 @@ index 3058b69..d780c6d 100644
  
  	/* Wait for ND_RUN bit to get cleared. */
  	while (timeout > 0) {
-diff --git a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.h b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.h
-index dbb318a..5d7e9e5 100644
 --- a/arch/arm/plat-armada/mv_hal/nfc/mvNfc.h
 +++ b/arch/arm/plat-armada/mv_hal/nfc/mvNfc.h
 @@ -254,7 +254,7 @@ typedef struct {
@@ -184,6 +176,3 @@ index dbb318a..5d7e9e5 100644
  	MV_U32		dataPdmaIntMask;
  	MV_U32		cmdPdmaIntMask;
  #endif
--- 
-1.7.9.5
-

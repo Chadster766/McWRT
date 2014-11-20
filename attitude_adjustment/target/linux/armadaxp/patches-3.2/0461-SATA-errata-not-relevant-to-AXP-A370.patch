@@ -11,11 +11,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  .../plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.c |    6 ++++--
  2 files changed, 22 insertions(+), 2 deletions(-)
 
-diff --git a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c
-index af725d7..6e3af2a 100755
 --- a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c
 +++ b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.c
-@@ -2948,11 +2948,15 @@ static void _establishSataComm(MV_SATA_ADAPTER *pAdapter, MV_U8 channelIndex)
+@@ -2948,11 +2948,15 @@ static void _establishSataComm(MV_SATA_A
  			/* force Sata speed to Gen1 */
  			regVal = MV_REG_READ_DWORD(pAdapter->adapterIoBaseAddress,
  						   getEdmaRegOffset(channelIndex) + MV_SATA_II_SATA_CONFIG_REG_OFFSET);
@@ -31,7 +29,7 @@ index af725d7..6e3af2a 100755
  			regVal &= ~MV_BIT7;	/* Disable GEn II */
  			MV_REG_WRITE_DWORD(pAdapter->adapterIoBaseAddress,
  					   getEdmaRegOffset(channelIndex) + MV_SATA_II_SATA_CONFIG_REG_OFFSET, regVal);
-@@ -6062,11 +6066,14 @@ MV_BOOLEAN mvSataChannelPhyShutdown(MV_SATA_ADAPTER *pAdapter, MV_U8 channelInde
+@@ -6062,11 +6066,14 @@ MV_BOOLEAN mvSataChannelPhyShutdown(MV_S
  	if (pAdapter->sataAdapterGeneration >= MV_SATA_GEN_II) {
  		regVal = MV_REG_READ_DWORD(pAdapter->adapterIoBaseAddress,
  					   getEdmaRegOffset(channelIndex) + MV_SATA_II_SATA_CONFIG_REG_OFFSET);
@@ -46,7 +44,7 @@ index af725d7..6e3af2a 100755
  
  		regVal |= MV_BIT9;
  		MV_REG_WRITE_DWORD(pAdapter->adapterIoBaseAddress,
-@@ -6115,11 +6122,14 @@ MV_BOOLEAN mvSataChannelPhyPowerOn(MV_SATA_ADAPTER *pAdapter, MV_U8 channelIndex
+@@ -6115,11 +6122,14 @@ MV_BOOLEAN mvSataChannelPhyPowerOn(MV_SA
  	if (pAdapter->sataAdapterGeneration >= MV_SATA_GEN_II) {
  		regVal = MV_REG_READ_DWORD(pAdapter->adapterIoBaseAddress,
  					   getEdmaRegOffset(channelIndex) + MV_SATA_II_SATA_CONFIG_REG_OFFSET);
@@ -61,7 +59,7 @@ index af725d7..6e3af2a 100755
  
  		regVal &= ~(MV_BIT9);
  		MV_REG_WRITE_DWORD(pAdapter->adapterIoBaseAddress,
-@@ -6968,10 +6978,12 @@ MV_BOOLEAN mvSataSetInterfaceSpeed(MV_SATA_ADAPTER *pAdapter, MV_U8 channelIndex
+@@ -6968,10 +6978,12 @@ MV_BOOLEAN mvSataSetInterfaceSpeed(MV_SA
  				LPRegVal &= ~(0xFF << 5);
  			}
  
@@ -74,7 +72,7 @@ index af725d7..6e3af2a 100755
  
  			if ((pAdapter->limitInterfaceSpeed[channelIndex] == MV_TRUE) &&
  			    (pAdapter->ifSpeed[channelIndex] == MV_SATA_IF_SPEED_1_5_GBPS)) {
-@@ -7293,11 +7305,14 @@ MV_BOOLEAN mvSataC2CInit(MV_SATA_ADAPTER *pAdapter,
+@@ -7293,11 +7305,14 @@ MV_BOOLEAN mvSataC2CInit(MV_SATA_ADAPTER
  	regVal = MV_REG_READ_DWORD(ioBaseAddr, pSataChannel->eDmaRegsOffset + MV_SATA_II_SATA_CONFIG_REG_OFFSET);
  	/* Enable communication mode */
  	regVal |= MV_BIT11;
@@ -89,7 +87,7 @@ index af725d7..6e3af2a 100755
  
  	if (mvSataC2CMode == MV_SATA_C2C_MODE_INITIATOR)
  		regVal |= MV_BIT10;	/* Initiator */
-@@ -7374,11 +7389,14 @@ MV_BOOLEAN mvSataC2CStop(MV_SATA_ADAPTER *pAdapter, MV_U8 channelIndex)
+@@ -7374,11 +7389,14 @@ MV_BOOLEAN mvSataC2CStop(MV_SATA_ADAPTER
  
  	regVal = MV_REG_READ_DWORD(ioBaseAddr, pSataChannel->eDmaRegsOffset + MV_SATA_II_SATA_CONFIG_REG_OFFSET);
  	regVal &= ~MV_BIT11;	/* Disable communication mode */
@@ -104,8 +102,6 @@ index af725d7..6e3af2a 100755
  
  	MV_REG_WRITE_DWORD(ioBaseAddr, pSataChannel->eDmaRegsOffset + MV_SATA_II_SATA_CONFIG_REG_OFFSET, regVal);
  	MV_REG_READ_DWORD(ioBaseAddr, pSataChannel->eDmaRegsOffset + MV_SATA_II_SATA_CONFIG_REG_OFFSET);
-diff --git a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.c b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.c
-index d6dc9ef..88b70ca 100755
 --- a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.c
 +++ b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSataSoc.c
 @@ -79,12 +79,13 @@ MV_BOOL mvSataPhyShutdown(MV_U8 port)
@@ -138,6 +134,3 @@ index d6dc9ef..88b70ca 100755
  	regVal &= ~(BIT9);
  	MV_REG_WRITE(adapterIoBaseAddress + getEdmaRegOffsetSataSoc(port) + MV_SATA_II_SATA_CONFIG_REG_OFFSET, regVal);
  	return MV_TRUE;
--- 
-1.7.9.5
-

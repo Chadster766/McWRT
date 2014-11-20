@@ -21,11 +21,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  drivers/usb/core/quirks.c |   11 +++++++++++
  2 files changed, 16 insertions(+)
 
-diff --git a/drivers/usb/core/driver.c b/drivers/usb/core/driver.c
-index c77f0d6..43aee7e 100644
 --- a/drivers/usb/core/driver.c
 +++ b/drivers/usb/core/driver.c
-@@ -1337,6 +1337,11 @@ int usb_resume(struct device *dev, pm_message_t msg)
+@@ -1337,6 +1337,11 @@ int usb_resume(struct device *dev, pm_me
  	 * Unbind the interfaces that will need rebinding later.
  	 */
  	} else {
@@ -37,11 +35,9 @@ index c77f0d6..43aee7e 100644
  		status = usb_resume_both(udev, msg);
  		if (status == 0) {
  			pm_runtime_disable(dev);
-diff --git a/drivers/usb/core/quirks.c b/drivers/usb/core/quirks.c
-index 8b2a9d8..249c870 100644
 --- a/drivers/usb/core/quirks.c
 +++ b/drivers/usb/core/quirks.c
-@@ -186,6 +186,17 @@ void usb_detect_quirks(struct usb_device *udev)
+@@ -186,6 +186,17 @@ void usb_detect_quirks(struct usb_device
  		dev_dbg(&udev->dev, "USB quirks for this device: %x\n",
  				udev->quirks);
  
@@ -59,6 +55,3 @@ index 8b2a9d8..249c870 100644
  	/* For the present, all devices default to USB-PERSIST enabled */
  #if 0		/* was: #ifdef CONFIG_PM */
  	/* Hubs are automatically enabled for USB-PERSIST */
--- 
-1.7.9.5
-

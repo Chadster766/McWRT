@@ -18,11 +18,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  include/linux/serial_core.h      |    2 +-
  4 files changed, 24 insertions(+), 10 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
-index 85fe103..c096d84 100755
 --- a/arch/arm/mach-armadaxp/core.c
 +++ b/arch/arm/mach-armadaxp/core.c
-@@ -552,9 +552,16 @@ static struct platform_device axp_i2c1 = {
+@@ -552,9 +552,16 @@ static struct platform_device axp_i2c1 =
   **********/
  static struct plat_serial8250_port aurora_uart0_data[] = {
  	{
@@ -40,7 +38,7 @@ index 85fe103..c096d84 100755
  	},
  };
  
-@@ -571,7 +578,7 @@ static struct resource aurora_uart0_resources[] = {
+@@ -571,7 +578,7 @@ static struct resource aurora_uart0_reso
  };
  
  static struct platform_device aurora_uart0 = {
@@ -49,7 +47,7 @@ index 85fe103..c096d84 100755
  	.id			= 0,
  	.dev			= {
  		.platform_data	= aurora_uart0_data,
-@@ -583,11 +590,18 @@ static struct platform_device aurora_uart0 = {
+@@ -583,11 +590,18 @@ static struct platform_device aurora_uar
  /**********
   * UART-1 *
   **********/
@@ -70,7 +68,7 @@ index 85fe103..c096d84 100755
  	},
  };
  
-@@ -604,7 +618,7 @@ static struct resource aurora_uart1_resources[] = {
+@@ -604,7 +618,7 @@ static struct resource aurora_uart1_reso
  };
  
  static struct platform_device aurora_uart1 = {
@@ -79,11 +77,9 @@ index 85fe103..c096d84 100755
  	.id			= 0,
  	.dev			= {
  		.platform_data	= aurora_uart1_data,
-diff --git a/drivers/tty/serial/8250.c b/drivers/tty/serial/8250.c
-index 46b004d..3d29593 100644
 --- a/drivers/tty/serial/8250.c
 +++ b/drivers/tty/serial/8250.c
-@@ -1624,13 +1624,13 @@ static irqreturn_t serial8250_interrupt(int irq, void *dev_id)
+@@ -1624,13 +1624,13 @@ static irqreturn_t serial8250_interrupt(
  		up = list_entry(l, struct uart_8250_port, list);
  		port = &up->port;
  
@@ -99,11 +95,9 @@ index 46b004d..3d29593 100644
  
  		iir = serial_in(up, UART_IIR);
  		if (!(iir & UART_IIR_NO_INT)) {
-diff --git a/drivers/tty/serial/serial_core.c b/drivers/tty/serial/serial_core.c
-index 9f4fcf2..ca87ea1 100644
 --- a/drivers/tty/serial/serial_core.c
 +++ b/drivers/tty/serial/serial_core.c
-@@ -2062,7 +2062,7 @@ uart_report_port(struct uart_driver *drv, struct uart_port *port)
+@@ -2062,7 +2062,7 @@ uart_report_port(struct uart_driver *drv
  	case UPIO_MEM32:
  	case UPIO_AU:
  	case UPIO_TSI:
@@ -112,7 +106,7 @@ index 9f4fcf2..ca87ea1 100644
  	case UPIO_DWAPB:
  #endif
  		snprintf(address, sizeof(address),
-@@ -2478,7 +2478,7 @@ int uart_match_port(struct uart_port *port1, struct uart_port *port2)
+@@ -2478,7 +2478,7 @@ int uart_match_port(struct uart_port *po
  	case UPIO_MEM32:
  	case UPIO_AU:
  	case UPIO_TSI:
@@ -121,8 +115,6 @@ index 9f4fcf2..ca87ea1 100644
  	case UPIO_DWAPB:
  #endif
  		return (port1->mapbase == port2->mapbase);
-diff --git a/include/linux/serial_core.h b/include/linux/serial_core.h
-index 0914cfb..1975ede 100644
 --- a/include/linux/serial_core.h
 +++ b/include/linux/serial_core.h
 @@ -320,7 +320,7 @@ struct uart_port {
@@ -134,6 +126,3 @@ index 0914cfb..1975ede 100644
  #define UPIO_DWAPB		(6)
  #define UPIO_DWAPB32		(7)
  #endif
--- 
-1.7.9.5
-

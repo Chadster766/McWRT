@@ -11,11 +11,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/plat-armada/mv_hal/pex/mvPex.c |  141 +++++++------------------------
  1 file changed, 31 insertions(+), 110 deletions(-)
 
-diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPex.c b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
-index 05dd51a..7fecd05 100755
 --- a/arch/arm/plat-armada/mv_hal/pex/mvPex.c
 +++ b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
-@@ -88,111 +88,7 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+@@ -88,111 +88,7 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX
  	MV_U16 ctrlModel, phyRegVal = 0;
  
  	mvOsMemcpy(&pexHalData[pexIf], halData, sizeof(MV_PEX_HAL_DATA));
@@ -127,7 +125,7 @@ index 05dd51a..7fecd05 100755
  
  	if (mvPexModeGet(pexIf, &pexMode) != MV_OK) {
  		mvOsPrintf("PEX init ERR. mvPexModeGet failed (pexType=%d)\n", pexMode.pexType);
-@@ -220,12 +116,37 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+@@ -220,12 +116,37 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX
  		status = MV_REG_READ(PEX_CFG_DIRECT_ACCESS(pexIf, PEX_STATUS_AND_COMMAND));
  		status |= PXSAC_INT_DIS;
  		MV_REG_WRITE(PEX_CFG_DIRECT_ACCESS(pexIf, PEX_STATUS_AND_COMMAND), status);
@@ -171,6 +169,3 @@ index 05dd51a..7fecd05 100755
  	}
  	/* now wait 1ms to be sure the link is valid */
  	mvOsDelay(1);
--- 
-1.7.9.5
-

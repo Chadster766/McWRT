@@ -25,11 +25,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  create mode 100644 net/dsa/mv88e6171R.c
  create mode 100644 sound/soc/kirkwood/kirkwood-db88f6281-bp.c
 
-diff --git a/drivers/ata/libata-pmp.c b/drivers/ata/libata-pmp.c
-index ace7628..f212bf6 100644
 --- a/drivers/ata/libata-pmp.c
 +++ b/drivers/ata/libata-pmp.c
-@@ -446,6 +446,13 @@ static void sata_pmp_quirks(struct ata_port *ap)
+@@ -446,6 +446,13 @@ static void sata_pmp_quirks(struct ata_p
  		 * otherwise.  Don't try hard to recover it.
  		 */
  		ap->pmp_link[ap->nr_pmp_links - 1].flags |= ATA_LFLAG_NO_RETRY;
@@ -43,11 +41,9 @@ index ace7628..f212bf6 100644
  	} else if (vendor == 0x197b && devid == 0x2352) {
  		/* chip found in Thermaltake BlackX Duet, jmicron JMB350? */
  		ata_for_each_link(link, ap, EDGE) {
-diff --git a/drivers/dma/mv_xor.c b/drivers/dma/mv_xor.c
-index 159d099..a7092e0 100644
 --- a/drivers/dma/mv_xor.c
 +++ b/drivers/dma/mv_xor.c
-@@ -33,7 +33,9 @@ static void mv_xor_issue_pending(struct dma_chan *chan);
+@@ -33,7 +33,9 @@ static void mv_xor_issue_pending(struct
  unsigned int dummy1[MV_XOR_MIN_BYTE_COUNT];
  unsigned int dummy2[MV_XOR_MIN_BYTE_COUNT];
  dma_addr_t dummy1_addr, dummy2_addr;
@@ -57,8 +53,6 @@ index 159d099..a7092e0 100644
  
  #define to_mv_xor_chan(chan)		\
  	container_of(chan, struct mv_xor_chan, common)
-diff --git a/drivers/mtd/nand/Kconfig b/drivers/mtd/nand/Kconfig
-index cce7b70..817f99f 100644
 --- a/drivers/mtd/nand/Kconfig
 +++ b/drivers/mtd/nand/Kconfig
 @@ -453,6 +453,12 @@ config MTD_NAND_ORION
@@ -74,8 +68,6 @@ index cce7b70..817f99f 100644
  config MTD_NAND_FSL_ELBC
  	tristate "NAND support for Freescale eLBC controllers"
  	depends on PPC_OF
-diff --git a/drivers/mtd/nand/orion_nand.c b/drivers/mtd/nand/orion_nand.c
-index 29f505a..f6dd4fa 100644
 --- a/drivers/mtd/nand/orion_nand.c
 +++ b/drivers/mtd/nand/orion_nand.c
 @@ -21,6 +21,529 @@
@@ -608,7 +600,7 @@ index 29f505a..f6dd4fa 100644
  static void orion_nand_cmd_ctrl(struct mtd_info *mtd, int cmd, unsigned int ctrl)
  {
  	struct nand_chip *nc = mtd->priv;
-@@ -112,6 +635,22 @@ static int __init orion_nand_probe(struct platform_device *pdev)
+@@ -112,6 +635,22 @@ static int __init orion_nand_probe(struc
  	nc->read_buf = orion_nand_read_buf;
  	nc->ecc.mode = NAND_ECC_SOFT;
  
@@ -631,8 +623,6 @@ index 29f505a..f6dd4fa 100644
  	if (board->chip_delay)
  		nc->chip_delay = board->chip_delay;
  
-diff --git a/drivers/net/ethernet/marvell/Kconfig b/drivers/net/ethernet/marvell/Kconfig
-index 0029934..1a51360 100644
 --- a/drivers/net/ethernet/marvell/Kconfig
 +++ b/drivers/net/ethernet/marvell/Kconfig
 @@ -20,7 +20,7 @@ if NET_VENDOR_MARVELL
@@ -644,11 +634,9 @@ index 0029934..1a51360 100644
  	select INET_LRO
  	select PHYLIB
  	---help---
-diff --git a/drivers/net/phy/marvell.c b/drivers/net/phy/marvell.c
-index e8b9c53..9ab529f 100644
 --- a/drivers/net/phy/marvell.c
 +++ b/drivers/net/phy/marvell.c
-@@ -271,7 +271,7 @@ static int marvell_of_reg_init(struct phy_device *phydev)
+@@ -271,7 +271,7 @@ static int marvell_of_reg_init(struct ph
  
  static int m88e1121_config_aneg(struct phy_device *phydev)
  {
@@ -657,7 +645,7 @@ index e8b9c53..9ab529f 100644
  
  	oldpage = phy_read(phydev, MII_MARVELL_PHY_PAGE);
  
-@@ -315,7 +315,11 @@ static int m88e1121_config_aneg(struct phy_device *phydev)
+@@ -315,7 +315,11 @@ static int m88e1121_config_aneg(struct p
  	oldpage = phy_read(phydev, MII_MARVELL_PHY_PAGE);
  
  	phy_write(phydev, MII_MARVELL_PHY_PAGE, MII_88E1121_PHY_LED_PAGE);
@@ -670,8 +658,6 @@ index e8b9c53..9ab529f 100644
  	phy_write(phydev, MII_MARVELL_PHY_PAGE, oldpage);
  
  	err = genphy_config_aneg(phydev);
-diff --git a/drivers/scsi/thor/core/thor/core_exp.c b/drivers/scsi/thor/core/thor/core_exp.c
-index 76b6dc9..3fc66e1 100644
 --- a/drivers/scsi/thor/core/thor/core_exp.c
 +++ b/drivers/scsi/thor/core/thor/core_exp.c
 @@ -3908,6 +3908,9 @@ void SATA_PortHandleInterrupt(
@@ -684,8 +670,6 @@ index 76b6dc9..3fc66e1 100644
  		return;
  	}
  
-diff --git a/drivers/scsi/thor/core/thor/core_init.c b/drivers/scsi/thor/core/thor/core_init.c
-index 68f71de..ed39527 100644
 --- a/drivers/scsi/thor/core/thor/core_init.c
 +++ b/drivers/scsi/thor/core/thor/core_init.c
 @@ -1208,6 +1208,20 @@ void PATA_PortReset(
@@ -709,8 +693,6 @@ index 68f71de..ed39527 100644
  	/* If we already reached the max number of devices supported,
  	   disregard the rest */
  	if( pCore->Total_Device_Count >= MAX_DEVICE_SUPPORTED )
-diff --git a/net/dsa/Kconfig b/net/dsa/Kconfig
-index c53ded2..a7e4c0b 100644
 --- a/net/dsa/Kconfig
 +++ b/net/dsa/Kconfig
 @@ -57,4 +57,12 @@ config NET_DSA_MV88E6123_61_65
@@ -726,11 +708,9 @@ index c53ded2..a7e4c0b 100644
 +	  ethernet switch chips.
 +
  endif
-diff --git a/net/dsa/Makefile b/net/dsa/Makefile
-index 2374faf..83efec4 100644
 --- a/net/dsa/Makefile
 +++ b/net/dsa/Makefile
-@@ -5,6 +5,7 @@ obj-$(CONFIG_NET_DSA_TAG_TRAILER) += tag_trailer.o
+@@ -5,6 +5,7 @@ obj-$(CONFIG_NET_DSA_TAG_TRAILER) += tag
  
  # switch drivers
  obj-$(CONFIG_NET_DSA_MV88E6XXX) += mv88e6xxx.o
@@ -738,9 +718,6 @@ index 2374faf..83efec4 100644
  obj-$(CONFIG_NET_DSA_MV88E6060) += mv88e6060.o
  obj-$(CONFIG_NET_DSA_MV88E6123_61_65) += mv88e6123_61_65.o
  obj-$(CONFIG_NET_DSA_MV88E6131) += mv88e6131.o
-diff --git a/net/dsa/mv88e6171R.c b/net/dsa/mv88e6171R.c
-new file mode 100644
-index 0000000..aa6ab90
 --- /dev/null
 +++ b/net/dsa/mv88e6171R.c
 @@ -0,0 +1,442 @@
@@ -1186,8 +1163,6 @@ index 0000000..aa6ab90
 +	unregister_switch_driver(&mv88e6171R_switch_driver);
 +}
 +module_exit(mv88e6171R_cleanup);
-diff --git a/sound/soc/kirkwood/Kconfig b/sound/soc/kirkwood/Kconfig
-index 0d685f4..6541d80 100644
 --- a/sound/soc/kirkwood/Kconfig
 +++ b/sound/soc/kirkwood/Kconfig
 @@ -19,6 +19,16 @@ config SND_KIRKWOOD_SOC_OPENRD
@@ -1207,11 +1182,9 @@ index 0d685f4..6541d80 100644
  config SND_KIRKWOOD_SOC_T5325
  	tristate "SoC Audio support for HP t5325"
  	depends on SND_KIRKWOOD_SOC && MACH_T5325 && I2C
-diff --git a/sound/soc/kirkwood/Makefile b/sound/soc/kirkwood/Makefile
-index 0f53471..527fb3a 100644
 --- a/sound/soc/kirkwood/Makefile
 +++ b/sound/soc/kirkwood/Makefile
-@@ -6,8 +6,10 @@ obj-$(CONFIG_SND_KIRKWOOD_SOC) += snd-soc-kirkwood.o
+@@ -6,8 +6,10 @@ obj-$(CONFIG_SND_KIRKWOOD_SOC) += snd-so
  obj-$(CONFIG_SND_KIRKWOOD_SOC_I2S) += snd-soc-kirkwood-i2s.o
  
  snd-soc-openrd-objs := kirkwood-openrd.o
@@ -1222,9 +1195,6 @@ index 0f53471..527fb3a 100644
 +obj-$(CONFIG_SND_KIRKWOOD_SOC_DB88F6281_BP) += snd-soc-db88f6281-bp.o
  obj-$(CONFIG_SND_KIRKWOOD_SOC_T5325) += snd-soc-t5325.o
  obj-$(CONFIG_SND_ARMADA370_SOC) += snd-soc-a370.o
-diff --git a/sound/soc/kirkwood/kirkwood-db88f6281-bp.c b/sound/soc/kirkwood/kirkwood-db88f6281-bp.c
-new file mode 100644
-index 0000000..4a3d2e5
 --- /dev/null
 +++ b/sound/soc/kirkwood/kirkwood-db88f6281-bp.c
 @@ -0,0 +1,120 @@
@@ -1348,6 +1318,3 @@ index 0000000..4a3d2e5
 +MODULE_DESCRIPTION("ALSA SoC OpenRD Client");
 +MODULE_LICENSE("GPL");
 +MODULE_ALIAS("platform:soc-audio");
--- 
-1.7.9.5
-

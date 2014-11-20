@@ -20,8 +20,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  6 files changed, 281 insertions(+), 2 deletions(-)
  create mode 100644 arch/arm/plat-armada/suspend.c
 
-diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
-index feacf05..2024b5d 100755
 --- a/arch/arm/mach-armadaxp/core.c
 +++ b/arch/arm/mach-armadaxp/core.c
 @@ -106,6 +106,7 @@ extern unsigned int irq_int_type[];
@@ -32,7 +30,7 @@ index feacf05..2024b5d 100755
  extern MV_CPU_DEC_WIN* mv_sys_map(void);
  #if defined(CONFIG_MV_INCLUDE_CESA)
  extern u32 mv_crypto_virt_base_get(u8 chan);
-@@ -216,7 +217,9 @@ static int __init parse_tag_mv_uboot(const struct tag *tag)
+@@ -216,7 +217,9 @@ static int __init parse_tag_mv_uboot(con
  
  	printk("Using UBoot passing parameters structure\n");
  	mvUbootVer = read_tag(tag->u.mv_uboot.uboot_version);
@@ -76,8 +74,6 @@ index feacf05..2024b5d 100755
   * DB BOARD: Main Initialization
   ****************************************************************************/
  static void __init axp_db_init(void)
-diff --git a/arch/arm/mach-armadaxp/include/mach/armadaxp.h b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
-index 05e9bff..fed55a9 100644
 --- a/arch/arm/mach-armadaxp/include/mach/armadaxp.h
 +++ b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
 @@ -314,6 +314,9 @@
@@ -90,8 +86,6 @@ index 05e9bff..fed55a9 100644
  #define AXP_UART_PHYS_BASE(port)	(INTER_REGS_PHYS_BASE | 0x12000 + (port * 0x100))
  #define DDR_VIRT_BASE			(INTER_REGS_BASE | 0x00000)
  #define AXP_BRIDGE_VIRT_BASE		(INTER_REGS_BASE | 0x20000)
-diff --git a/arch/arm/mach-armadaxp/pm.c b/arch/arm/mach-armadaxp/pm.c
-index 86faefd..7c16339 100644
 --- a/arch/arm/mach-armadaxp/pm.c
 +++ b/arch/arm/mach-armadaxp/pm.c
 @@ -21,6 +21,8 @@
@@ -113,7 +107,7 @@ index 86faefd..7c16339 100644
  }
  
  /*
-@@ -112,6 +115,16 @@ static int armadaxp_pm_enter(suspend_state_t state)
+@@ -112,6 +115,16 @@ static int armadaxp_pm_enter(suspend_sta
  		printk(KERN_INFO "Exiting Wol Mode (Neta IRQs 8,10,12,14 are disabled now)...\n");
  #endif /* CONFIG_MV_ETH_PNC_WOL */
  		break;
@@ -130,8 +124,6 @@ index 86faefd..7c16339 100644
  	default:
  		return -EINVAL;
  	}
-diff --git a/arch/arm/plat-armada/Makefile b/arch/arm/plat-armada/Makefile
-index 35cd6aa..e0a9ec5 100644
 --- a/arch/arm/plat-armada/Makefile
 +++ b/arch/arm/plat-armada/Makefile
 @@ -9,7 +9,7 @@ endif
@@ -143,8 +135,6 @@ index 35cd6aa..e0a9ec5 100644
  obj-$(CONFIG_HOTPLUG_CPU)               += hotplug.o
  obj-$(CONFIG_ARCH_ARMADA_XP)		+= pmu.o
  obj-$(CONFIG_PCI_MSI)			+= msi.o
-diff --git a/arch/arm/plat-armada/armadaxp_suspend.S b/arch/arm/plat-armada/armadaxp_suspend.S
-index 1e50433..3aa91d2 100644
 --- a/arch/arm/plat-armada/armadaxp_suspend.S
 +++ b/arch/arm/plat-armada/armadaxp_suspend.S
 @@ -12,6 +12,137 @@
@@ -285,9 +275,6 @@ index 1e50433..3aa91d2 100644
  /*
  * armadaxp_cpu_suspend: enter cpu deepIdle state
  * input:
-diff --git a/arch/arm/plat-armada/suspend.c b/arch/arm/plat-armada/suspend.c
-new file mode 100644
-index 0000000..4917164
 --- /dev/null
 +++ b/arch/arm/plat-armada/suspend.c
 @@ -0,0 +1,102 @@
@@ -393,6 +380,3 @@ index 0000000..4917164
 +	vfp_restore();
 +#endif
 +}
--- 
-1.7.9.5
-

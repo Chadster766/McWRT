@@ -10,8 +10,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  drivers/video/marvell/dovefb_gfx.c |  104 +++++++++++++++++++-----------------
  2 files changed, 55 insertions(+), 50 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
-index 4b3df6c..5c8e72e 100644
 --- a/arch/arm/mach-armadaxp/core.c
 +++ b/arch/arm/mach-armadaxp/core.c
 @@ -1291,6 +1291,7 @@ static void __init axp_db_init(void)
@@ -22,8 +20,6 @@ index 4b3df6c..5c8e72e 100644
  		printk(KERN_INFO "LCD Panel enabled.\n");
  	}
  	clcd_platform_init(&kw_lcd0_dmi, &kw_lcd0_vid_dmi, &dsmp_backlight_data);
-diff --git a/drivers/video/marvell/dovefb_gfx.c b/drivers/video/marvell/dovefb_gfx.c
-index e5e0db7..5770369 100644
 --- a/drivers/video/marvell/dovefb_gfx.c
 +++ b/drivers/video/marvell/dovefb_gfx.c
 @@ -57,26 +57,25 @@ static const u8 edid_header[] = {
@@ -64,7 +60,7 @@ index e5e0db7..5770369 100644
  		k = 16;
  
  	return k;
-@@ -95,36 +94,38 @@ static void set_lcd_clock_dividers(struct dovefb_layer_info *dfli, u32 f_in,
+@@ -95,36 +94,38 @@ static void set_lcd_clock_dividers(struc
  	f_vco = f_in * n_div;
  	do_div(f_vco, m_div);
  	do_div(f_vco, 1000000);
@@ -124,7 +120,7 @@ index e5e0db7..5770369 100644
  
  	/* Set APLL LPF */
  	if (n_div <= 4)
-@@ -213,6 +214,7 @@ static void calc_best_clock_div(struct dovefb_info *info,  u32 tar_freq, u32 f_i
+@@ -213,6 +214,7 @@ static void calc_best_clock_div(struct d
  	u32 half_div = 0;
  	u64 rem;
  	u64 temp;
@@ -132,7 +128,7 @@ index e5e0db7..5770369 100644
  	u32 n, m, x, k, ld;
  	int override = 0; 	/* Used to mark special cases where the LCD */
  	u32 n_max;
-@@ -222,7 +224,7 @@ static void calc_best_clock_div(struct dovefb_info *info,  u32 tar_freq, u32 f_i
+@@ -222,7 +224,7 @@ static void calc_best_clock_div(struct d
  	if (info->fixed_full_div) {
  		x_start = info->full_div_val;
  		x_end = x_start + 1;
@@ -141,7 +137,7 @@ index e5e0db7..5770369 100644
  	} else {
  		x_start = 1;
  		x_end = 64;
-@@ -234,14 +236,17 @@ static void calc_best_clock_div(struct dovefb_info *info,  u32 tar_freq, u32 f_i
+@@ -234,14 +236,17 @@ static void calc_best_clock_div(struct d
  	/* Look for the best N & M values assuming that we will NOT use the
  	** HALF divider.
  	*/
@@ -167,7 +163,7 @@ index e5e0db7..5770369 100644
  					temp = (u64)f_in * (u64)n;
  					do_div(temp, m);
  					/* Fin * N / M Must be < 1500MHz */
-@@ -251,6 +256,7 @@ static void calc_best_clock_div(struct dovefb_info *info,  u32 tar_freq, u32 f_i
+@@ -251,6 +256,7 @@ static void calc_best_clock_div(struct d
  					do_div(temp, x);
  					do_div(temp, ld);
  					rem = calc_diff(tar_freq, temp);
@@ -175,7 +171,7 @@ index e5e0db7..5770369 100644
  					if ((rem < best_rem) ||
  					    ((override == 1) && (rem == best_rem)) ||
  					    ((rem == best_rem) && (k < best_k))) {
-@@ -272,14 +278,12 @@ static void calc_best_clock_div(struct dovefb_info *info,  u32 tar_freq, u32 f_i
+@@ -272,14 +278,12 @@ static void calc_best_clock_div(struct d
  	** HALF divider.
  	*/
  	if ((info->fixed_full_div == 0) && (best_rem != 0)) {
@@ -196,6 +192,3 @@ index e5e0db7..5770369 100644
  						temp = (u64)f_in * (u64)n * 10;
  						do_div(temp, m);
  						/* Fin * N / M Must be < 1500MHz */
--- 
-1.7.9.5
-

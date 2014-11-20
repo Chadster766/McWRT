@@ -9,8 +9,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  mm/bounce.c |   42 ++++++++++++++++++++++++++++++++++++++++++
  1 file changed, 42 insertions(+)
 
-diff --git a/mm/bounce.c b/mm/bounce.c
-index 4e9ae72..6e613ab 100644
 --- a/mm/bounce.c
 +++ b/mm/bounce.c
 @@ -15,6 +15,7 @@
@@ -61,7 +59,7 @@ index 4e9ae72..6e613ab 100644
  
  #ifdef CONFIG_HIGHMEM
  static __init int init_emergency_pool(void)
-@@ -36,6 +69,12 @@ static __init int init_emergency_pool(void)
+@@ -36,6 +69,12 @@ static __init int init_emergency_pool(vo
  	BUG_ON(!page_pool);
  	printk("highmem bounce pool size: %d pages\n", POOL_SIZE);
  
@@ -74,7 +72,7 @@ index 4e9ae72..6e613ab 100644
  	return 0;
  }
  
-@@ -228,6 +267,7 @@ static void __blk_queue_bounce(struct request_queue *q, struct bio **bio_orig,
+@@ -228,6 +267,7 @@ static void __blk_queue_bounce(struct re
  	if (!bio)
  		return;
  
@@ -82,7 +80,7 @@ index 4e9ae72..6e613ab 100644
  	trace_block_bio_bounce(q, *bio_orig);
  
  	/*
-@@ -276,6 +316,8 @@ void blk_queue_bounce(struct request_queue *q, struct bio **bio_orig)
+@@ -276,6 +316,8 @@ void blk_queue_bounce(struct request_que
  	if (!bio_has_data(*bio_orig))
  		return;
  
@@ -91,6 +89,3 @@ index 4e9ae72..6e613ab 100644
  	/*
  	 * for non-isa bounce case, just check if the bounce pfn is equal
  	 * to or bigger than the highest pfn in the system -- in that case,
--- 
-1.7.9.5
-

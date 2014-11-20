@@ -14,11 +14,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/mach-armadaxp/core.c |  120 +++++++++++++++++++++++------------------
  1 file changed, 68 insertions(+), 52 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
-index a34b2da..9285d10 100755
 --- a/arch/arm/mach-armadaxp/core.c
 +++ b/arch/arm/mach-armadaxp/core.c
-@@ -550,6 +550,19 @@ static struct platform_device axp_i2c1 = {
+@@ -550,6 +550,19 @@ static struct platform_device axp_i2c1 =
  };
  #endif
  
@@ -38,7 +36,7 @@ index a34b2da..9285d10 100755
  /**********
   * UART-0 *
   **********/
-@@ -692,8 +705,11 @@ static struct platform_device mv_sdio_plat = {
+@@ -692,8 +705,11 @@ static struct platform_device mv_sdio_pl
  	.resource	= mvsdio_resources,
  };
  
@@ -51,7 +49,7 @@ index a34b2da..9285d10 100755
  	if (MV_TRUE == mvCtrlPwrClckGet(SDIO_UNIT_ID, 0)) {
  		int irq_detect = mvBoardSDIOGpioPinGet(BOARD_GPP_SDIO_DETECT);
  		static MV_UNIT_WIN_INFO addrWinMap[MAX_TARGETS + 1];
-@@ -828,7 +844,9 @@ static struct resource axp_rtc_resource[] = {
+@@ -828,7 +844,9 @@ static struct resource axp_rtc_resource[
  
  static void __init rtc_init(void)
  {
@@ -62,7 +60,7 @@ index a34b2da..9285d10 100755
  }
  
  /********
-@@ -868,6 +886,8 @@ static struct platform_device armadaxp_sata = {
+@@ -868,6 +886,8 @@ static struct platform_device armadaxp_s
  
  void __init armadaxp_sata_init(struct mv_sata_platform_data *sata_data)
  {
@@ -71,7 +69,7 @@ index a34b2da..9285d10 100755
  
  	armadaxp_sata.dev.platform_data = sata_data;
  	sata_data->dram = &armadaxp_mbus_dram_info;
-@@ -879,7 +899,8 @@ void __init armadaxp_sata_init(struct mv_sata_platform_data *sata_data)
+@@ -879,7 +899,8 @@ void __init armadaxp_sata_init(struct mv
   ****************************************************************************/
  void __init armadaxp_hwmon_init(void)
  {
@@ -81,7 +79,7 @@ index a34b2da..9285d10 100755
  }
  
  /*************
-@@ -1061,6 +1082,9 @@ static struct platform_device axp_nfc = {
+@@ -1061,6 +1082,9 @@ static struct platform_device axp_nfc =
  
  static void __init axp_db_nfc_init(void)
  {
@@ -91,7 +89,7 @@ index a34b2da..9285d10 100755
  	/* Check for ganaged mode */
  	if (nfcConfig) {
  		if (strncmp(nfcConfig, "ganged", 6) == 0) {
-@@ -1275,6 +1299,9 @@ static struct platform_device armadaxp_xor01_channel = {
+@@ -1275,6 +1299,9 @@ static struct platform_device armadaxp_x
  
  static void __init armadaxp_xor0_init(void)
  {
@@ -101,7 +99,7 @@ index a34b2da..9285d10 100755
  	platform_device_register(&armadaxp_xor0_shared);
  
  	/*
-@@ -1373,6 +1400,9 @@ static struct platform_device armadaxp_xor11_channel = {
+@@ -1373,6 +1400,9 @@ static struct platform_device armadaxp_x
  
  static void __init armadaxp_xor1_init(void)
  {
@@ -282,6 +280,3 @@ index a34b2da..9285d10 100755
  
  #if defined(CONFIG_MV_INCLUDE_SDIO)
  	if (MV_TRUE == mvCtrlPwrClckGet(SDIO_UNIT_ID, 0)) {
--- 
-1.7.9.5
-

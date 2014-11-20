@@ -26,11 +26,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  net/socket.c                  |    1 +
  19 files changed, 840 insertions(+), 287 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
-index 91e188b..6366de1 100644
 --- a/arch/arm/mach-armadaxp/core.c
 +++ b/arch/arm/mach-armadaxp/core.c
-@@ -1117,13 +1117,13 @@ static void __init armadaxp_xor1_init(void)
+@@ -1117,13 +1117,13 @@ static void __init armadaxp_xor1_init(vo
  	 * two engines can't do memset simultaneously, this limitation
  	 * satisfied by removing memset support from one of the engines.
  	 */
@@ -46,8 +44,6 @@ index 91e188b..6366de1 100644
  	platform_device_register(&armadaxp_xor11_channel);
  }
  
-diff --git a/drivers/dma/Kconfig b/drivers/dma/Kconfig
-index f43b0c7..ddb8df3 100644
 --- a/drivers/dma/Kconfig
 +++ b/drivers/dma/Kconfig
 @@ -261,9 +261,19 @@ config NET_DMA
@@ -71,8 +67,6 @@ index f43b0c7..ddb8df3 100644
  	help
  	  This allows the async_tx api to take advantage of offload engines for
  	  memcpy, memset, xor, and raid6 p+q operations.  If your platform has
-diff --git a/drivers/dma/dmaengine.c b/drivers/dma/dmaengine.c
-index 5991114..9d81974 100644
 --- a/drivers/dma/dmaengine.c
 +++ b/drivers/dma/dmaengine.c
 @@ -60,11 +60,13 @@
@@ -89,7 +83,7 @@ index 5991114..9d81974 100644
  
  /* --- sysfs implementation --- */
  
-@@ -882,6 +884,8 @@ dma_async_memcpy_buf_to_buf(struct dma_chan *chan, void *dest,
+@@ -882,6 +884,8 @@ dma_async_memcpy_buf_to_buf(struct dma_c
  }
  EXPORT_SYMBOL(dma_async_memcpy_buf_to_buf);
  
@@ -98,7 +92,7 @@ index 5991114..9d81974 100644
  /**
   * dma_async_memcpy_buf_to_pg - offloaded copy from address to page
   * @chan: DMA channel to offload copy to
-@@ -905,6 +909,40 @@ dma_async_memcpy_buf_to_pg(struct dma_chan *chan, struct page *page,
+@@ -905,6 +909,40 @@ dma_async_memcpy_buf_to_pg(struct dma_ch
  	dma_cookie_t cookie;
  	unsigned long flags;
  
@@ -139,7 +133,7 @@ index 5991114..9d81974 100644
  	dma_src = dma_map_single(dev->dev, kdata, len, DMA_TO_DEVICE);
  	dma_dest = dma_map_page(dev->dev, page, offset, len, DMA_FROM_DEVICE);
  	flags = DMA_CTRL_ACK | DMA_COMPL_SRC_UNMAP_SINGLE;
-@@ -953,6 +991,40 @@ dma_async_memcpy_pg_to_pg(struct dma_chan *chan, struct page *dest_pg,
+@@ -953,6 +991,40 @@ dma_async_memcpy_pg_to_pg(struct dma_cha
  	dma_cookie_t cookie;
  	unsigned long flags;
  
@@ -190,8 +184,6 @@ index 5991114..9d81974 100644
  	return class_register(&dma_devclass);
  }
  arch_initcall(dma_bus_init);
-diff --git a/drivers/dma/iovlock.c b/drivers/dma/iovlock.c
-index bb48a57..a04a995 100644
 --- a/drivers/dma/iovlock.c
 +++ b/drivers/dma/iovlock.c
 @@ -121,6 +121,73 @@ out:
@@ -268,11 +260,9 @@ index bb48a57..a04a995 100644
  void dma_unpin_iovec_pages(struct dma_pinned_list *pinned_list)
  {
  	int i, j;
-diff --git a/drivers/dma/mv_xor.c b/drivers/dma/mv_xor.c
-index 6c80977..3343b7a 100644
 --- a/drivers/dma/mv_xor.c
 +++ b/drivers/dma/mv_xor.c
-@@ -801,14 +801,17 @@ static enum dma_status mv_xor_status(struct dma_chan *chan,
+@@ -801,14 +801,17 @@ static enum dma_status mv_xor_status(str
  
  	last_used = chan->cookie;
  	last_complete = mv_chan->completed_cookie;
@@ -290,11 +280,9 @@ index 6c80977..3343b7a 100644
  	mv_xor_slot_cleanup(mv_chan);
  
  	last_used = chan->cookie;
-diff --git a/fs/ext4/file.c b/fs/ext4/file.c
-index cb70f18..b25a096 100644
 --- a/fs/ext4/file.c
 +++ b/fs/ext4/file.c
-@@ -244,6 +244,7 @@ const struct file_operations ext4_file_operations = {
+@@ -244,6 +244,7 @@ const struct file_operations ext4_file_o
  	.fsync		= ext4_sync_file,
  	.splice_read	= generic_file_splice_read,
  	.splice_write	= generic_file_splice_write,
@@ -302,8 +290,6 @@ index cb70f18..b25a096 100644
  	.fallocate	= ext4_fallocate,
  };
  
-diff --git a/fs/read_write.c b/fs/read_write.c
-index 7c70e76..3115535 100644
 --- a/fs/read_write.c
 +++ b/fs/read_write.c
 @@ -16,15 +16,10 @@
@@ -323,7 +309,7 @@ index 7c70e76..3115535 100644
  const struct file_operations generic_ro_fops = {
  	.llseek		= generic_file_llseek,
  	.read		= do_sync_read,
-@@ -927,6 +922,8 @@ static ssize_t do_sendfile(int out_fd, int in_fd, loff_t *ppos,
+@@ -927,6 +922,8 @@ static ssize_t do_sendfile(int out_fd, i
  	if (!(out_file->f_mode & FMODE_WRITE))
  		goto fput_out;
  	retval = -EINVAL;
@@ -332,7 +318,7 @@ index 7c70e76..3115535 100644
  	in_inode = in_file->f_path.dentry->d_inode;
  	out_inode = out_file->f_path.dentry->d_inode;
  	retval = rw_verify_area(WRITE, out_file, &out_file->f_pos, count);
-@@ -1015,164 +1012,3 @@ SYSCALL_DEFINE4(sendfile64, int, out_fd, int, in_fd, loff_t __user *, offset, si
+@@ -1015,164 +1012,3 @@ SYSCALL_DEFINE4(sendfile64, int, out_fd,
  	return do_sendfile(out_fd, in_fd, NULL, count, 0);
  }
  
@@ -497,8 +483,6 @@ index 7c70e76..3115535 100644
 -
 -	return release_resources(file, err);
 -}
-diff --git a/fs/read_write.h b/fs/read_write.h
-index 3cd1b1e..d07b954 100644
 --- a/fs/read_write.h
 +++ b/fs/read_write.h
 @@ -3,41 +3,6 @@
@@ -543,7 +527,7 @@ index 3cd1b1e..d07b954 100644
  
  typedef ssize_t (*io_fn_t)(struct file *, char __user *, size_t, loff_t *);
  typedef ssize_t (*iov_fn_t)(struct kiocb *, const struct iovec *,
-@@ -47,8 +12,3 @@ ssize_t do_sync_readv_writev(struct file *filp, const struct iovec *iov,
+@@ -47,8 +12,3 @@ ssize_t do_sync_readv_writev(struct file
  		unsigned long nr_segs, size_t len, loff_t *ppos, iov_fn_t fn);
  ssize_t do_loop_readv_writev(struct file *filp, struct iovec *iov,
  		unsigned long nr_segs, loff_t *ppos, io_fn_t fn);
@@ -552,8 +536,6 @@ index 3cd1b1e..d07b954 100644
 -
 -#endif /* _READ_WRITE_H_ */
 -
-diff --git a/fs/splice.c b/fs/splice.c
-index 66e8153..3c39eff 100644
 --- a/fs/splice.c
 +++ b/fs/splice.c
 @@ -33,14 +33,14 @@
@@ -577,7 +559,7 @@ index 66e8153..3c39eff 100644
  
  /*
   * Attempt to steal a page from a pipe buffer. This should perhaps go into
-@@ -544,10 +544,8 @@ ssize_t generic_file_splice_read(struct file *in, loff_t *ppos,
+@@ -544,10 +544,8 @@ ssize_t generic_file_splice_read(struct
  		len = left;
  
  	ret = __generic_file_splice_read(in, ppos, pipe, len, flags);
@@ -589,7 +571,7 @@ index 66e8153..3c39eff 100644
  
  	return ret;
  }
-@@ -700,17 +698,19 @@ static int pipe_to_sendpage(struct pipe_inode_info *pipe,
+@@ -700,17 +698,19 @@ static int pipe_to_sendpage(struct pipe_
  {
  	struct file *file = sd->u.file;
  	loff_t pos = sd->pos;
@@ -617,7 +599,7 @@ index 66e8153..3c39eff 100644
  }
  
  /*
-@@ -1020,10 +1020,8 @@ generic_file_splice_write(struct pipe_inode_info *pipe, struct file *out,
+@@ -1020,10 +1020,8 @@ generic_file_splice_write(struct pipe_in
  
  		mutex_lock_nested(&inode->i_mutex, I_MUTEX_CHILD);
  		ret = file_remove_suid(out);
@@ -629,7 +611,7 @@ index 66e8153..3c39eff 100644
  		mutex_unlock(&inode->i_mutex);
  	} while (ret > 0);
  	splice_from_pipe_end(pipe, &sd);
-@@ -1119,9 +1117,8 @@ static long do_splice_from(struct pipe_inode_info *pipe, struct file *out,
+@@ -1119,9 +1117,8 @@ static long do_splice_from(struct pipe_i
  	if (unlikely(ret < 0))
  		return ret;
  
@@ -641,7 +623,7 @@ index 66e8153..3c39eff 100644
  		splice_write = default_file_splice_write;
  
  	return splice_write(pipe, out, ppos, len, flags);
-@@ -1145,9 +1142,8 @@ static long do_splice_to(struct file *in, loff_t *ppos,
+@@ -1145,9 +1142,8 @@ static long do_splice_to(struct file *in
  	if (unlikely(ret < 0))
  		return ret;
  
@@ -653,7 +635,7 @@ index 66e8153..3c39eff 100644
  		splice_read = default_file_splice_read;
  
  	return splice_read(in, ppos, pipe, len, flags);
-@@ -1398,6 +1394,402 @@ static long do_splice(struct file *in, loff_t __user *off_in,
+@@ -1398,6 +1394,402 @@ static long do_splice(struct file *in, l
  	return -EINVAL;
  }
  
@@ -1056,7 +1038,7 @@ index 66e8153..3c39eff 100644
  /*
   * Map an iov into an array of pages and offset/length tupples. With the
   * partial_page structure, we can map several non-contiguous ranges into
-@@ -1703,66 +2095,54 @@ SYSCALL_DEFINE6(splice, int, fd_in, loff_t __user *, off_in,
+@@ -1703,66 +2095,54 @@ SYSCALL_DEFINE6(splice, int, fd_in, loff
  		int, fd_out, loff_t __user *, off_out,
  		size_t, len, unsigned int, flags)
  {
@@ -1158,7 +1140,7 @@ index 66e8153..3c39eff 100644
  	return error;
  	
  	}
-@@ -2098,3 +2478,23 @@ SYSCALL_DEFINE4(tee, int, fdin, int, fdout, size_t, len, unsigned int, flags)
+@@ -2098,3 +2478,23 @@ SYSCALL_DEFINE4(tee, int, fdin, int, fdo
  
  	return error;
  }
@@ -1182,8 +1164,6 @@ index 66e8153..3c39eff 100644
 +}
 +
 +fs_initcall(init_splice_pools);
-diff --git a/fs/xfs/xfs_file.c b/fs/xfs/xfs_file.c
-index 753ed9b..e97c22d 100644
 --- a/fs/xfs/xfs_file.c
 +++ b/fs/xfs/xfs_file.c
 @@ -506,6 +506,61 @@ xfs_file_splice_write(
@@ -1248,7 +1228,7 @@ index 753ed9b..e97c22d 100644
  /*
   * This routine is called to handle zeroing any space in the last
   * block of the file that is beyond the EOF.  We do this since the
-@@ -1149,6 +1204,7 @@ const struct file_operations xfs_file_operations = {
+@@ -1149,6 +1204,7 @@ const struct file_operations xfs_file_op
  	.aio_write	= xfs_file_aio_write,
  	.splice_read	= xfs_file_splice_read,
  	.splice_write	= xfs_file_splice_write,
@@ -1256,8 +1236,6 @@ index 753ed9b..e97c22d 100644
  	.unlocked_ioctl	= xfs_file_ioctl,
  #ifdef CONFIG_COMPAT
  	.compat_ioctl	= xfs_file_compat_ioctl,
-diff --git a/include/linux/dmaengine.h b/include/linux/dmaengine.h
-index 75f53f8..437f1a2 100644
 --- a/include/linux/dmaengine.h
 +++ b/include/linux/dmaengine.h
 @@ -881,6 +881,11 @@ struct dma_pinned_list {
@@ -1272,8 +1250,6 @@ index 75f53f8..437f1a2 100644
  dma_cookie_t dma_memcpy_to_iovec(struct dma_chan *chan, struct iovec *iov,
  	struct dma_pinned_list *pinned_list, unsigned char *kdata, size_t len);
  dma_cookie_t dma_memcpy_pg_to_iovec(struct dma_chan *chan, struct iovec *iov,
-diff --git a/include/linux/fs.h b/include/linux/fs.h
-index 03e2f2b..03c64fa 100644
 --- a/include/linux/fs.h
 +++ b/include/linux/fs.h
 @@ -374,6 +374,8 @@ struct inodes_stat_t {
@@ -1302,7 +1278,7 @@ index 03e2f2b..03c64fa 100644
  	int (*setlease)(struct file *, long, struct file_lock **);
  	long (*fallocate)(struct file *file, int mode, loff_t offset,
  			  loff_t len);
-@@ -2451,6 +2456,8 @@ extern ssize_t generic_splice_sendpage(struct pipe_inode_info *pipe,
+@@ -2451,6 +2456,8 @@ extern ssize_t generic_splice_sendpage(s
  		struct file *out, loff_t *, size_t len, unsigned int flags);
  extern long do_splice_direct(struct file *in, loff_t *ppos, struct file *out,
  		size_t len, unsigned int flags);
@@ -1311,11 +1287,9 @@ index 03e2f2b..03c64fa 100644
  
  extern void
  file_ra_state_init(struct file_ra_state *ra, struct address_space *mapping);
-diff --git a/include/linux/skbuff.h b/include/linux/skbuff.h
-index 982019c..4733d12 100644
 --- a/include/linux/skbuff.h
 +++ b/include/linux/skbuff.h
-@@ -2093,6 +2093,9 @@ extern unsigned int    datagram_poll(struct file *file, struct socket *sock,
+@@ -2093,6 +2093,9 @@ extern unsigned int    datagram_poll(str
  extern int	       skb_copy_datagram_iovec(const struct sk_buff *from,
  					       int offset, struct iovec *to,
  					       int size);
@@ -1325,8 +1299,6 @@ index 982019c..4733d12 100644
  extern int	       skb_copy_and_csum_datagram_iovec(struct sk_buff *skb,
  							int hlen,
  							struct iovec *iov);
-diff --git a/include/linux/socket.h b/include/linux/socket.h
-index ad919e0..6ca591f 100644
 --- a/include/linux/socket.h
 +++ b/include/linux/socket.h
 @@ -266,6 +266,8 @@ struct ucred {
@@ -1338,7 +1310,7 @@ index ad919e0..6ca591f 100644
  #define MSG_EOF         MSG_FIN
  
  #define MSG_CMSG_CLOEXEC 0x40000000	/* Set close_on_exit for file
-@@ -332,6 +334,7 @@ extern int memcpy_toiovecend(const struct iovec *v, unsigned char *kdata,
+@@ -332,6 +334,7 @@ extern int memcpy_toiovecend(const struc
  			     int offset, int len);
  extern int move_addr_to_kernel(void __user *uaddr, int ulen, struct sockaddr *kaddr);
  extern int put_cmsg(struct msghdr*, int level, int type, int len, void *data);
@@ -1346,8 +1318,6 @@ index ad919e0..6ca591f 100644
  
  struct timespec;
  
-diff --git a/include/linux/splice.h b/include/linux/splice.h
-index 09a545a..da53d13 100644
 --- a/include/linux/splice.h
 +++ b/include/linux/splice.h
 @@ -58,6 +58,14 @@ struct splice_pipe_desc {
@@ -1365,8 +1335,6 @@ index 09a545a..da53d13 100644
  typedef int (splice_actor)(struct pipe_inode_info *, struct pipe_buffer *,
  			   struct splice_desc *);
  typedef int (splice_direct_actor)(struct pipe_inode_info *,
-diff --git a/net/core/datagram.c b/net/core/datagram.c
-index 68bbf9f..e54d89c 100644
 --- a/net/core/datagram.c
 +++ b/net/core/datagram.c
 @@ -128,6 +128,65 @@ out_noerr:
@@ -1435,11 +1403,9 @@ index 68bbf9f..e54d89c 100644
  /**
   *	__skb_recv_datagram - Receive a datagram skbuff
   *	@sk: socket
-diff --git a/net/core/iovec.c b/net/core/iovec.c
-index c40f27e..b7e0190 100644
 --- a/net/core/iovec.c
 +++ b/net/core/iovec.c
-@@ -125,6 +125,26 @@ int memcpy_toiovecend(const struct iovec *iov, unsigned char *kdata,
+@@ -125,6 +125,26 @@ int memcpy_toiovecend(const struct iovec
  EXPORT_SYMBOL(memcpy_toiovecend);
  
  /*
@@ -1466,11 +1432,9 @@ index c40f27e..b7e0190 100644
   *	Copy iovec to kernel. Returns -EFAULT on error.
   *
   *	Note: this modifies the original iovec.
-diff --git a/net/ipv4/tcp.c b/net/ipv4/tcp.c
-index 52edbb8..5e63534 100644
 --- a/net/ipv4/tcp.c
 +++ b/net/ipv4/tcp.c
-@@ -1443,6 +1443,20 @@ int tcp_recvmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
+@@ -1443,6 +1443,20 @@ int tcp_recvmsg(struct kiocb *iocb, stru
  
  		if (skb)
  			available = TCP_SKB_CB(skb)->seq + skb->len - (*seq);
@@ -1491,7 +1455,7 @@ index 52edbb8..5e63534 100644
  		if ((available < target) &&
  		    (len > sysctl_tcp_dma_copybreak) && !(flags & MSG_PEEK) &&
  		    !sysctl_tcp_low_latency &&
-@@ -1453,14 +1467,30 @@ int tcp_recvmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
+@@ -1453,14 +1467,30 @@ int tcp_recvmsg(struct kiocb *iocb, stru
  		} else {
  			preempt_enable_no_resched();
  		}
@@ -1552,11 +1516,9 @@ index 52edbb8..5e63534 100644
  		tp->ucopy.pinned_list = NULL;
  	}
  #endif
-diff --git a/net/socket.c b/net/socket.c
-index 68879db..597d113 100644
 --- a/net/socket.c
 +++ b/net/socket.c
-@@ -1750,6 +1750,7 @@ SYSCALL_DEFINE6(recvfrom, int, fd, void __user *, ubuf, size_t, size,
+@@ -1750,6 +1750,7 @@ SYSCALL_DEFINE6(recvfrom, int, fd, void
  	msg.msg_controllen = 0;
  	msg.msg_iovlen = 1;
  	msg.msg_iov = &iov;
@@ -1564,6 +1526,3 @@ index 68879db..597d113 100644
  	iov.iov_len = size;
  	iov.iov_base = ubuf;
  	msg.msg_name = (struct sockaddr *)&address;
--- 
-1.7.9.5
-

@@ -8,8 +8,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  drivers/usb/misc/usbtest.c |  158 ++++++++++++++++++++++++++++----------------
  1 file changed, 100 insertions(+), 58 deletions(-)
 
-diff --git a/drivers/usb/misc/usbtest.c b/drivers/usb/misc/usbtest.c
-index b9ac9a3..d3e51ba 100644
 --- a/drivers/usb/misc/usbtest.c
 +++ b/drivers/usb/misc/usbtest.c
 @@ -61,6 +61,7 @@ struct usbtest_dev {
@@ -20,7 +18,7 @@ index b9ac9a3..d3e51ba 100644
  	int			in_iso_pipe;
  	int			out_iso_pipe;
  	struct usb_endpoint_descriptor	*iso_in, *iso_out;
-@@ -76,7 +77,7 @@ static struct usb_device *testdev_to_usbdev(struct usbtest_dev *test)
+@@ -76,7 +77,7 @@ static struct usb_device *testdev_to_usb
  }
  
  /* set up all urbs so they can be used with either bulk or interrupt */
@@ -29,7 +27,7 @@ index b9ac9a3..d3e51ba 100644
  
  #define ERROR(tdev, fmt, args...) \
  	dev_err(&(tdev)->intf->dev , fmt , ## args)
-@@ -112,6 +113,7 @@ get_endpoints(struct usbtest_dev *dev, struct usb_interface *intf)
+@@ -112,6 +113,7 @@ get_endpoints(struct usbtest_dev *dev, s
  			e = alt->endpoint + ep;
  			switch (e->desc.bmAttributes) {
  			case USB_ENDPOINT_XFER_BULK:
@@ -63,7 +61,7 @@ index b9ac9a3..d3e51ba 100644
  	}
  	if (iso_in) {
  		dev->iso_in = &iso_in->desc;
-@@ -191,19 +204,28 @@ static void simple_callback(struct urb *urb)
+@@ -191,19 +204,28 @@ static void simple_callback(struct urb *
  static struct urb *usbtest_alloc_urb(
  	struct usb_device	*udev,
  	int			pipe,
@@ -107,7 +105,7 @@ index b9ac9a3..d3e51ba 100644
  }
  
  static unsigned pattern;
-@@ -331,15 +354,19 @@ static void simple_free_urb(struct urb *urb)
+@@ -331,15 +354,19 @@ static void simple_free_urb(struct urb *
  {
  	unsigned long offset = buffer_offset(urb->transfer_buffer);
  
@@ -136,7 +134,7 @@ index b9ac9a3..d3e51ba 100644
  }
  
  static int simple_io(
-@@ -426,6 +453,8 @@ alloc_sglist(int nents, int max, int vary)
+@@ -426,6 +453,8 @@ alloc_sglist(int nents, int max, int var
  	sg = kmalloc(nents * sizeof *sg, GFP_KERNEL);
  	if (!sg)
  		return NULL;
@@ -183,7 +181,7 @@ index b9ac9a3..d3e51ba 100644
  		retval = req->status;
  
  		/* FIXME check resulting data pattern */
-@@ -1053,7 +1089,7 @@ test_ctrl_queue(struct usbtest_dev *dev, struct usbtest_param *param)
+@@ -1053,7 +1089,7 @@ test_ctrl_queue(struct usbtest_dev *dev,
  			goto cleanup;
  		}
  		req.wLength = cpu_to_le16(len);
@@ -192,7 +190,7 @@ index b9ac9a3..d3e51ba 100644
  		if (!u)
  			goto cleanup;
  
-@@ -1119,14 +1155,15 @@ static void unlink1_callback(struct urb *urb)
+@@ -1119,14 +1155,15 @@ static void unlink1_callback(struct urb
  	}
  }
  
@@ -210,7 +208,7 @@ index b9ac9a3..d3e51ba 100644
  	if (!urb)
  		return -ENOMEM;
  	urb->context = &completion;
-@@ -1147,7 +1184,7 @@ static int unlink1(struct usbtest_dev *dev, int pipe, int size, int async)
+@@ -1147,7 +1184,7 @@ static int unlink1(struct usbtest_dev *d
  	/* unlinking that should always work.  variable delay tests more
  	 * hcd states and code paths, even with little other system load.
  	 */
@@ -219,7 +217,7 @@ index b9ac9a3..d3e51ba 100644
  	if (async) {
  		while (!completion_done(&completion)) {
  			retval = usb_unlink_urb(urb);
-@@ -1189,14 +1226,15 @@ static int unlink1(struct usbtest_dev *dev, int pipe, int size, int async)
+@@ -1189,14 +1226,15 @@ static int unlink1(struct usbtest_dev *d
  				0 : retval - 2000;
  }
  
@@ -238,7 +236,7 @@ index b9ac9a3..d3e51ba 100644
  	return retval;
  }
  
-@@ -1393,9 +1431,9 @@ static int halt_simple(struct usbtest_dev *dev)
+@@ -1393,9 +1431,9 @@ static int halt_simple(struct usbtest_de
  	struct usb_device	*udev = testdev_to_usbdev(dev);
  
  	if (udev->speed == USB_SPEED_SUPER)
@@ -250,7 +248,7 @@ index b9ac9a3..d3e51ba 100644
  	if (urb == NULL)
  		return -ENOMEM;
  
-@@ -1646,9 +1684,9 @@ test_iso_queue(struct usbtest_dev *dev, struct usbtest_param *param,
+@@ -1646,9 +1684,9 @@ test_iso_queue(struct usbtest_dev *dev,
  	unsigned		i;
  	unsigned long		packets = 0;
  	int			status = 0;
@@ -262,7 +260,7 @@ index b9ac9a3..d3e51ba 100644
  		return -EDOM;
  
  	memset(&context, 0, sizeof context);
-@@ -1692,9 +1730,6 @@ test_iso_queue(struct usbtest_dev *dev, struct usbtest_param *param,
+@@ -1692,9 +1730,6 @@ test_iso_queue(struct usbtest_dev *dev,
  				spin_unlock_irq(&context.lock);
  				goto fail;
  			}
@@ -272,7 +270,7 @@ index b9ac9a3..d3e51ba 100644
  			context.pending--;
  			context.submit_error = 1;
  			break;
-@@ -1704,10 +1739,6 @@ test_iso_queue(struct usbtest_dev *dev, struct usbtest_param *param,
+@@ -1704,10 +1739,6 @@ test_iso_queue(struct usbtest_dev *dev,
  
  	wait_for_completion(&context.done);
  
@@ -283,7 +281,7 @@ index b9ac9a3..d3e51ba 100644
  	/*
  	 * Isochronous transfers are expected to fail sometimes.  As an
  	 * arbitrary limit, we will report an error if any submissions
-@@ -1719,7 +1750,6 @@ test_iso_queue(struct usbtest_dev *dev, struct usbtest_param *param,
+@@ -1719,7 +1750,6 @@ test_iso_queue(struct usbtest_dev *dev,
  		status = -EACCES;
  	else if (context.errors > context.packet_count / 10)
  		status = -EIO;
@@ -300,7 +298,7 @@ index b9ac9a3..d3e51ba 100644
  
  	if (!urb)
  		return -ENOMEM;
-@@ -1846,7 +1876,7 @@ usbtest_ioctl(struct usb_interface *intf, unsigned int code, void *buf)
+@@ -1846,7 +1876,7 @@ usbtest_ioctl(struct usb_interface *intf
  		dev_info(&intf->dev,
  				"TEST 1:  write %d bytes %u times\n",
  				param->length, param->iterations);
@@ -309,7 +307,7 @@ index b9ac9a3..d3e51ba 100644
  		if (!urb) {
  			retval = -ENOMEM;
  			break;
-@@ -1861,7 +1891,7 @@ usbtest_ioctl(struct usb_interface *intf, unsigned int code, void *buf)
+@@ -1861,7 +1891,7 @@ usbtest_ioctl(struct usb_interface *intf
  		dev_info(&intf->dev,
  				"TEST 2:  read %d bytes %u times\n",
  				param->length, param->iterations);
@@ -318,7 +316,7 @@ index b9ac9a3..d3e51ba 100644
  		if (!urb) {
  			retval = -ENOMEM;
  			break;
-@@ -1876,7 +1906,7 @@ usbtest_ioctl(struct usb_interface *intf, unsigned int code, void *buf)
+@@ -1876,7 +1906,7 @@ usbtest_ioctl(struct usb_interface *intf
  		dev_info(&intf->dev,
  				"TEST 3:  write/%d 0..%d bytes %u times\n",
  				param->vary, param->length, param->iterations);
@@ -327,7 +325,7 @@ index b9ac9a3..d3e51ba 100644
  		if (!urb) {
  			retval = -ENOMEM;
  			break;
-@@ -1892,7 +1922,7 @@ usbtest_ioctl(struct usb_interface *intf, unsigned int code, void *buf)
+@@ -1892,7 +1922,7 @@ usbtest_ioctl(struct usb_interface *intf
  		dev_info(&intf->dev,
  				"TEST 4:  read/%d 0..%d bytes %u times\n",
  				param->vary, param->length, param->iterations);
@@ -336,7 +334,7 @@ index b9ac9a3..d3e51ba 100644
  		if (!urb) {
  			retval = -ENOMEM;
  			break;
-@@ -1918,7 +1948,7 @@ usbtest_ioctl(struct usb_interface *intf, unsigned int code, void *buf)
+@@ -1918,7 +1948,7 @@ usbtest_ioctl(struct usb_interface *intf
  		}
  		/* FIRMWARE:  bulk sink (maybe accepts short writes) */
  		retval = perform_sglist(dev, param->iterations, dev->out_pipe,
@@ -345,7 +343,7 @@ index b9ac9a3..d3e51ba 100644
  		free_sglist(sg, param->sglen);
  		break;
  
-@@ -1936,7 +1966,7 @@ usbtest_ioctl(struct usb_interface *intf, unsigned int code, void *buf)
+@@ -1936,7 +1966,7 @@ usbtest_ioctl(struct usb_interface *intf
  		}
  		/* FIRMWARE:  bulk source (maybe generates short writes) */
  		retval = perform_sglist(dev, param->iterations, dev->in_pipe,
@@ -354,7 +352,7 @@ index b9ac9a3..d3e51ba 100644
  		free_sglist(sg, param->sglen);
  		break;
  	case 7:
-@@ -1953,7 +1983,7 @@ usbtest_ioctl(struct usb_interface *intf, unsigned int code, void *buf)
+@@ -1953,7 +1983,7 @@ usbtest_ioctl(struct usb_interface *intf
  		}
  		/* FIRMWARE:  bulk sink (maybe accepts short writes) */
  		retval = perform_sglist(dev, param->iterations, dev->out_pipe,
@@ -363,7 +361,7 @@ index b9ac9a3..d3e51ba 100644
  		free_sglist(sg, param->sglen);
  		break;
  	case 8:
-@@ -1970,7 +2000,7 @@ usbtest_ioctl(struct usb_interface *intf, unsigned int code, void *buf)
+@@ -1970,7 +2000,7 @@ usbtest_ioctl(struct usb_interface *intf
  		}
  		/* FIRMWARE:  bulk source (maybe generates short writes) */
  		retval = perform_sglist(dev, param->iterations, dev->in_pipe,
@@ -372,7 +370,7 @@ index b9ac9a3..d3e51ba 100644
  		free_sglist(sg, param->sglen);
  		break;
  
-@@ -2007,7 +2037,7 @@ usbtest_ioctl(struct usb_interface *intf, unsigned int code, void *buf)
+@@ -2007,7 +2037,7 @@ usbtest_ioctl(struct usb_interface *intf
  		dev_info(&intf->dev, "TEST 11:  unlink %d reads of %d\n",
  				param->iterations, param->length);
  		for (i = param->iterations; retval == 0 && i--; /* NOP */)
@@ -381,7 +379,7 @@ index b9ac9a3..d3e51ba 100644
  						param->length);
  		if (retval)
  			dev_err(&intf->dev, "unlink reads failed %d, "
-@@ -2020,7 +2050,7 @@ usbtest_ioctl(struct usb_interface *intf, unsigned int code, void *buf)
+@@ -2020,7 +2050,7 @@ usbtest_ioctl(struct usb_interface *intf
  		dev_info(&intf->dev, "TEST 12:  unlink %d writes of %d\n",
  				param->iterations, param->length);
  		for (i = param->iterations; retval == 0 && i--; /* NOP */)
@@ -390,7 +388,7 @@ index b9ac9a3..d3e51ba 100644
  						param->length);
  		if (retval)
  			dev_err(&intf->dev, "unlink writes failed %d, "
-@@ -2295,10 +2325,22 @@ usbtest_probe(struct usb_interface *intf, const struct usb_device_id *id)
+@@ -2295,10 +2325,22 @@ usbtest_probe(struct usb_interface *intf
  				dev->out_pipe = usb_sndbulkpipe(udev,
  							info->ep_out);
  		}
@@ -417,6 +415,3 @@ index b9ac9a3..d3e51ba 100644
  		if (dev->in_iso_pipe)
  			irtest = " iso-in";
  		if (dev->out_iso_pipe)
--- 
-1.7.9.5
-

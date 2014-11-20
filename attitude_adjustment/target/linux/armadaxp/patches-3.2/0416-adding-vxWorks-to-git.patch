@@ -17,8 +17,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/plat-armada/common/mvCommon.h             |    5 ++
  8 files changed, 89 insertions(+), 5 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
-index 706f127..8e01e47 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
 @@ -1233,7 +1233,7 @@ MV_BOARD_INFO db78X60amcInfo = {
@@ -30,7 +28,7 @@ index 706f127..8e01e47 100644
  
  /***************************/
  /* ARMADA-XP RD GP  BOARD */
-@@ -1384,7 +1384,8 @@ MV_BOARD_MODULE_TYPE_INFO rd78460customerInfoBoardModTypeInfo[] = {
+@@ -1384,7 +1384,8 @@ MV_BOARD_MODULE_TYPE_INFO rd78460custome
  		.boardOtherMod		= MV_BOARD_NONE
  	}
  };
@@ -49,8 +47,6 @@ index 706f127..8e01e47 100644
  
  MV_BOARD_INFO *boardInfoTbl[] = {
  	&db88f78XX0Info,
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
-index 260a2fc..395d442 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
 @@ -582,6 +582,70 @@ MV_U32 mvCtrlSataMaxPortGet(MV_VOID)
@@ -124,8 +120,6 @@ index 260a2fc..395d442 100644
  #if defined(MV_INCLUDE_XOR)
  /*******************************************************************************
  * mvCtrlXorMaxChanGet - Get Marvell controller number of XOR channels.
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
-index 7a46199..f497e3c 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
 @@ -231,6 +231,10 @@ MV_U32	mvCtrlPciMaxIfGet(MV_VOID);
@@ -139,8 +133,6 @@ index 7a46199..f497e3c 100644
  #if defined(MV_INCLUDE_XOR)
  MV_U32 mvCtrlXorMaxChanGet(MV_VOID);
  MV_U32 mvCtrlXorMaxUnitGet(MV_VOID);
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
-index 57ab3cf..b833da9 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
 @@ -121,6 +121,9 @@ extern "C" {
@@ -165,8 +157,6 @@ index 57ab3cf..b833da9 100644
  #define MV_SATA_MAX_CHAN			2
  
  #define MV_MPP_MAX_GROUP			9
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
-index eb846e4..d71df4e 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
 @@ -121,4 +121,4 @@ MV_32 mvReadAmpReg(int regId)
@@ -176,8 +166,6 @@ index eb846e4..d71df4e 100644
 -}
 \ No newline at end of file
 +}
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
-index 6a8846e..3a406be 100755
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIf.c
 @@ -301,7 +301,7 @@ MV_STATUS mvCpuIfDramInit()
@@ -189,11 +177,9 @@ index 6a8846e..3a406be 100755
  		if (size != 0) {
  			size |= ~(SDRAM_ADDR_MASK);
  
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
-index b140f8c..21ed29f 100755
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
-@@ -323,6 +323,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -323,6 +323,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #define CPU_INT_CLEAR_MASK_LOCAL_REG		(MV_CPUIF_LOCAL_REGS_OFFSET + CPU_INT_CLEAR_MASK_OFFS)
  
  
@@ -202,8 +188,6 @@ index b140f8c..21ed29f 100755
  #define MV_IRQ_NR							116
  
  
-diff --git a/arch/arm/plat-armada/common/mvCommon.h b/arch/arm/plat-armada/common/mvCommon.h
-index 5f5d2bb..3ef2bd0 100755
 --- a/arch/arm/plat-armada/common/mvCommon.h
 +++ b/arch/arm/plat-armada/common/mvCommon.h
 @@ -91,7 +91,12 @@ extern "C" {
@@ -219,6 +203,3 @@ index 5f5d2bb..3ef2bd0 100755
  {
  	a += MV_JHASH_GOLDEN_RATIO;
  	b += MV_JHASH_GOLDEN_RATIO;
--- 
-1.7.9.5
-

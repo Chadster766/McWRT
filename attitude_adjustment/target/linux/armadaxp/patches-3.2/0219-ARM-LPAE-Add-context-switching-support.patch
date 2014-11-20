@@ -13,11 +13,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/mm/context.c |   34 +++++++++++++++++++++++++++++-----
  1 file changed, 29 insertions(+), 5 deletions(-)
 
-diff --git a/arch/arm/mm/context.c b/arch/arm/mm/context.c
-index d9e4ded..19e5254 100644
 --- a/arch/arm/mm/context.c
 +++ b/arch/arm/mm/context.c
-@@ -22,6 +22,34 @@ unsigned int cpu_last_asid = ASID_FIRST_VERSION;
+@@ -22,6 +22,34 @@ unsigned int cpu_last_asid = ASID_FIRST_
  DEFINE_PER_CPU(struct mm_struct *, current_mm);
  #endif
  
@@ -52,7 +50,7 @@ index d9e4ded..19e5254 100644
  /*
   * We fork()ed a process, and we need a new context for the child
   * to run in.
-@@ -34,11 +62,7 @@ void __init_new_context(struct task_struct *tsk, struct mm_struct *mm)
+@@ -34,11 +62,7 @@ void __init_new_context(struct task_stru
  
  static void flush_context(void)
  {
@@ -65,6 +63,3 @@ index d9e4ded..19e5254 100644
  	isb();
  	local_flush_tlb_all();
  	if (icache_is_vivt_asid_tagged()) {
--- 
-1.7.9.5
-

@@ -12,8 +12,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/mm/proc-macros.S        |    4 ++++
  5 files changed, 48 insertions(+)
 
-diff --git a/arch/arm/include/asm/assembler.h b/arch/arm/include/asm/assembler.h
-index 7bb8bf9..757f9cb 100644
 --- a/arch/arm/include/asm/assembler.h
 +++ b/arch/arm/include/asm/assembler.h
 @@ -198,9 +198,17 @@
@@ -34,11 +32,9 @@ index 7bb8bf9..757f9cb 100644
  	.endif
  #elif __LINUX_ARM_ARCH__ == 6
  	ALT_SMP(mcr	p15, 0, r0, c7, c10, 5)	@ dmb
-diff --git a/arch/arm/include/asm/system.h b/arch/arm/include/asm/system.h
-index b4deeea..5b784d1 100644
 --- a/arch/arm/include/asm/system.h
 +++ b/arch/arm/include/asm/system.h
-@@ -93,6 +93,7 @@ void hook_ifault_code(int nr, int (*fn)(unsigned long, unsigned int,
+@@ -93,6 +93,7 @@ void hook_ifault_code(int nr, int (*fn)(
  
  extern asmlinkage void c_backtrace(unsigned long fp, int pmode);
  
@@ -58,8 +54,6 @@ index b4deeea..5b784d1 100644
  #elif defined(CONFIG_CPU_XSC3) || __LINUX_ARM_ARCH__ == 6
  #define isb() __asm__ __volatile__ ("mcr p15, 0, %0, c7, c5, 4" \
  				    : : "r" (0) : "memory")
-diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
-index fa941ca..cd80ba5 100644
 --- a/arch/arm/mm/Kconfig
 +++ b/arch/arm/mm/Kconfig
 @@ -986,6 +986,29 @@ config SHEEVA_ERRATA_ARM_CPU_6043
@@ -92,8 +86,6 @@ index fa941ca..cd80ba5 100644
  config SHEEVA_ERRATA_ARM_CPU_PMU_RESET
  	bool "Sheeva Errata CPU Performance counters reset"
  	depends on CPU_SHEEVA_PJ4B_V6 || CPU_SHEEVA_PJ4B_V7
-diff --git a/arch/arm/mm/cache-v7.S b/arch/arm/mm/cache-v7.S
-index f66be7e..700d465 100644
 --- a/arch/arm/mm/cache-v7.S
 +++ b/arch/arm/mm/cache-v7.S
 @@ -42,7 +42,11 @@ ENDPROC(v7_flush_icache_all)
@@ -121,8 +113,6 @@ index f66be7e..700d465 100644
  	mcr	p15, 0, r0, c7, c6, 1		@ invalidate D / U line
  	add	r0, r0, r2
  	cmp	r0, r1
-diff --git a/arch/arm/mm/proc-macros.S b/arch/arm/mm/proc-macros.S
-index 8650f61..09f09ce 100644
 --- a/arch/arm/mm/proc-macros.S
 +++ b/arch/arm/mm/proc-macros.S
 @@ -206,7 +206,11 @@
@@ -137,6 +127,3 @@ index 8650f61..09f09ce 100644
  #elif __LINUX_ARM_ARCH__ == 6
          mcr     p15, 0, r0, c7, c10, 5          @ DMB for V6
  #endif
--- 
-1.7.9.5
-

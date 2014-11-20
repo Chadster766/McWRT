@@ -14,8 +14,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h     |    2 +
  6 files changed, 86 insertions(+), 1004 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
-index d7be286..6903a4a 100644
 --- a/arch/arm/mach-armadaxp/Makefile
 +++ b/arch/arm/mach-armadaxp/Makefile
 @@ -50,10 +50,6 @@ ifdef CONFIG_MV_ETH_NFP_PPP
@@ -40,7 +38,7 @@ index d7be286..6903a4a 100644
  ifdef NFPLIB
  	armadaxp-y := $(NFPOBJS)
  	obj-y   				+=  armadaxp.o
-@@ -146,7 +138,6 @@ armadaxp-$(CONFIG_MV_ETH_NFP_NAT) 	+= $(HAL_ETH_NFP_DIR)/mvNfpNat.o
+@@ -146,7 +138,6 @@ armadaxp-$(CONFIG_MV_ETH_NFP_NAT) 	+= $(
  armadaxp-$(CONFIG_MV_ETH_NFP_FDB) 	+= $(HAL_ETH_NFP_DIR)/mvNfpFdb.o
  armadaxp-$(CONFIG_MV_ETH_NFP_PPP) 	+= $(HAL_ETH_NFP_DIR)/mvNfpPpp.o
  armadaxp-$(CONFIG_MV_ETH_NFP_SEC)	+= $(HAL_ETH_NFP_DIR)/mvNfpSec.o
@@ -56,8 +54,6 @@ index d7be286..6903a4a 100644
  endif
  
  obj-$(CONFIG_MV_USE_XOR_ENGINE) 	+= $(PLAT_DRIVERS)/mv_xor/
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
-index 490f237..342f682 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
 @@ -631,6 +631,13 @@ config MV_ETH_L2FW
@@ -88,8 +84,6 @@ index 490f237..342f682 100644
  endmenu
  
  menuconfig MV_ETH_NAPI
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/l2fw_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/l2fw_sysfs.c
-index 18af0ae..4e8c2b7 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/l2fw_sysfs.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/l2fw_sysfs.c
 @@ -10,6 +10,10 @@
@@ -113,7 +107,7 @@ index 18af0ae..4e8c2b7 100644
  	off += sprintf(buf+off, "cat dump - display L2fw rules DB\n");
  	off += sprintf(buf+off, "echo 1 > flush - flush L2fw rules DB\n");
  	return off;
-@@ -44,19 +50,23 @@ static ssize_t l2fw_show(struct device *dev,
+@@ -44,19 +50,23 @@ static ssize_t l2fw_show(struct device *
  		l2fw_show_numHashEntries();
  		return off;
  	}
@@ -138,7 +132,7 @@ index 18af0ae..4e8c2b7 100644
  
  	return off;
  }
-@@ -71,7 +81,9 @@ static ssize_t l2fw_hex_store(struct device *dev, struct device_attribute *attr,
+@@ -71,7 +81,9 @@ static ssize_t l2fw_hex_store(struct dev
  	unsigned int    addr1, addr2;
  	int port;
  	unsigned long   flags;
@@ -148,7 +142,7 @@ index 18af0ae..4e8c2b7 100644
  	if (!capable(CAP_NET_ADMIN))
  		return -EPERM;
  	err = addr1 = addr2 = port = 0;
-@@ -82,9 +94,11 @@ static ssize_t l2fw_hex_store(struct device *dev, struct device_attribute *attr,
+@@ -82,9 +94,11 @@ static ssize_t l2fw_hex_store(struct dev
  		l2fw_add(addr1, addr2, port);
  	} else if (!strcmp(name, "l2fw_add_ip")) {
  		l2fw_add_ip(buf);
@@ -160,7 +154,7 @@ index 18af0ae..4e8c2b7 100644
  	} else if (!strcmp(name, "flush")) {
  		l2fw_flush();
  	}
-@@ -116,10 +130,10 @@ static ssize_t l2fw_store(struct device *dev,
+@@ -116,10 +130,10 @@ static ssize_t l2fw_store(struct device
  
  	else if (!strcmp(name, "l2fw"))
  		l2fw(p, txp, txq);
@@ -173,7 +167,7 @@ index 18af0ae..4e8c2b7 100644
  	local_irq_restore(flags);
  
  	if (err)
-@@ -137,12 +151,12 @@ static DEVICE_ATTR(l2fw_add_ip,		S_IWUSR, l2fw_show, l2fw_hex_store);
+@@ -137,12 +151,12 @@ static DEVICE_ATTR(l2fw_add_ip,		S_IWUSR
  static DEVICE_ATTR(help,			S_IRUSR, l2fw_show,  NULL);
  static DEVICE_ATTR(dump,			S_IRUSR, l2fw_show,  NULL);
  static DEVICE_ATTR(numHashEntries,	S_IRUSR, l2fw_show,  NULL);
@@ -189,7 +183,7 @@ index 18af0ae..4e8c2b7 100644
  
  
  static struct attribute *l2fw_attrs[] = {
-@@ -153,10 +167,12 @@ static struct attribute *l2fw_attrs[] = {
+@@ -153,10 +167,12 @@ static struct attribute *l2fw_attrs[] =
  	&dev_attr_help.attr,
  	&dev_attr_dump.attr,
  	&dev_attr_flush.attr,
@@ -204,8 +198,6 @@ index 18af0ae..4e8c2b7 100644
  	NULL
  };
  
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c
-index 308fa1b..965f07c 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c
 @@ -13,96 +13,31 @@
@@ -402,7 +394,7 @@ index 308fa1b..965f07c 100644
  static s32 atoi(char *psz_buf)
  {
  	char *pch = psz_buf;
-@@ -259,30 +112,6 @@ static L2FW_RULE *l2fw_lookup(MV_U32 srcIP, MV_U32 dstIP)
+@@ -259,30 +112,6 @@ static L2FW_RULE *l2fw_lookup(MV_U32 src
  	return NULL;
  }
  
@@ -462,7 +454,7 @@ index 308fa1b..965f07c 100644
  
  
  /* L2fw defines */
-@@ -616,25 +434,32 @@ void mv_eth_set_l2fw(int cmd, int rx_port, int out_tx_port)
+@@ -616,25 +434,32 @@ void mv_eth_set_l2fw(int cmd, int rx_por
  	int group;
  
  	pp     = mv_eth_ports[rx_port];
@@ -501,17 +493,17 @@ index 308fa1b..965f07c 100644
 +	/* when disabling l2fw, and then ifdown/up, we should
 +	   enable MV_ETH_F_CONNECT_LINUX_BIT bit so that the port will be started ok.
 +	   TBD: remember last state */
-+
+ 
 +	if (cmd == L2FW_DISABLE)
 +		set_bit(MV_ETH_F_CONNECT_LINUX_BIT, &(pp->flags));
 +	else
 +		clear_bit(MV_ETH_F_CONNECT_LINUX_BIT, &(pp->flags));
- 
++
 +	for (group = 0; group < CONFIG_MV_ETH_NAPI_GROUPS; group++) {
  		if (cmd == L2FW_DISABLE) {
  			if (test_bit(MV_ETH_F_STARTED_BIT, &(pp->flags)))
  				napi_disable(pp->napiGroup[group]);
-@@ -776,6 +601,7 @@ struct eth_pbuf *eth_l2fw_copy_packet_withXor(struct eth_pbuf *pRxPktInfo)
+@@ -776,6 +601,7 @@ struct eth_pbuf *eth_l2fw_copy_packet_wi
  	return pTxPktInfo;
  }
  
@@ -538,7 +530,7 @@ index 308fa1b..965f07c 100644
  	mv_eth_ports_l2fw_num = mvCtrlEthMaxPortGet();
  	ppl2fw = mv_eth_ports_l2fw[rx_port];
  	mvOsPrintf("cmd=%d rx_port=%d tx_port=%d in %s \n",
-@@ -826,18 +650,6 @@ void l2fw(int cmd, int rx_port, int tx_port)
+@@ -826,18 +650,6 @@ void l2fw(int cmd, int rx_port, int tx_p
  	ppl2fw->txPort = tx_port;
  	ppl2fw->cmd	= cmd;
  	mv_eth_set_l2fw(cmd, rx_port, tx_port);
@@ -924,7 +916,7 @@ index 308fa1b..965f07c 100644
  
  static inline MV_STATUS mv_eth_l2fw_tx(struct eth_pbuf *pkt, struct eth_port *pp, int withXor,
  									   struct neta_rx_desc *rx_desc)
-@@ -1216,7 +668,7 @@ static inline MV_STATUS mv_eth_l2fw_tx(struct eth_pbuf *pkt, struct eth_port *pp
+@@ -1216,7 +668,7 @@ static inline MV_STATUS mv_eth_l2fw_tx(s
  	/* assigning different txq for each rx port , to avoid waiting on the
  	same txq lock when traffic on several rx ports are destined to the same
  	outgoing interface */
@@ -933,7 +925,7 @@ index 308fa1b..965f07c 100644
  	read_lock(&pp->rwlock);
  	txq_ctrl = &pp->txq_ctrl[pp->txp * CONFIG_MV_ETH_TXQ + txq];
  	spin_lock(&txq_ctrl->queue_lock);
-@@ -1264,49 +716,6 @@ static inline MV_STATUS mv_eth_l2fw_tx(struct eth_pbuf *pkt, struct eth_port *pp
+@@ -1264,49 +716,6 @@ static inline MV_STATUS mv_eth_l2fw_tx(s
  	return MV_OK;
  }
  
@@ -983,7 +975,7 @@ index 308fa1b..965f07c 100644
  
  inline int mv_eth_rx_l2f(struct eth_port *pp, int rx_todo, int rxq)
  {
-@@ -1369,10 +778,16 @@ inline int mv_eth_rx_l2f(struct eth_port *pp, int rx_todo, int rxq)
+@@ -1369,10 +778,16 @@ inline int mv_eth_rx_l2f(struct eth_port
  		pkt->bytes = rx_desc->dataSize - (MV_ETH_CRC_SIZE + MV_ETH_MH_SIZE);
  
  		pData = pkt->pBuf + pkt->offset;
@@ -1000,7 +992,7 @@ index 308fa1b..965f07c 100644
  		pIph = (MV_IP_HEADER *)(pData + ipOffset);
  		if (pIph == NULL) {
  			printk(KERN_INFO "pIph==NULL in %s\n", __func__);
-@@ -1408,12 +823,12 @@ inline int mv_eth_rx_l2f(struct eth_port *pp, int rx_todo, int rxq)
+@@ -1408,12 +823,12 @@ inline int mv_eth_rx_l2f(struct eth_port
  
  		switch (ppl2fw->cmd) {
  		case TX_AS_IS:
@@ -1016,7 +1008,7 @@ index 308fa1b..965f07c 100644
  					status = mv_eth_l2fw_tx(pkt, new_pp, 0, rx_desc);
  				break;
  
-@@ -1465,354 +880,6 @@ inline int mv_eth_rx_l2f(struct eth_port *pp, int rx_todo, int rxq)
+@@ -1465,354 +880,6 @@ inline int mv_eth_rx_l2f(struct eth_port
  	return rx_done;
  }
  
@@ -1386,8 +1378,6 @@ index 308fa1b..965f07c 100644
  	return 0;
  oom:
  	mvOsPrintf("%s: out of memory in L2FW initialization\n", __func__);
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h
-index 666db47..08782ce 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h
 @@ -7,6 +7,7 @@
@@ -1406,8 +1396,6 @@ index 666db47..08782ce 100644
 +
  
  #endif
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
-index ec041fa..1cf9b34 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
 @@ -75,6 +75,8 @@ extern unsigned int mv_eth_pnc_ctrl_en;
@@ -1419,6 +1407,3 @@ index ec041fa..1cf9b34 100755
  /****************************************************************************
   * Rx buffer size: MTU + 2(Marvell Header) + 4(VLAN) + 14(MAC hdr) + 4(CRC) *
   ****************************************************************************/
--- 
-1.7.9.5
-

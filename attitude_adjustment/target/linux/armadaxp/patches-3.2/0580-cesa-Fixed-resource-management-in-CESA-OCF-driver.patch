@@ -21,8 +21,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  .../mv_drivers_lsp/mv_cesa/cesa_ocf_drv.c          |   43 +++++++++++---------
  1 file changed, 23 insertions(+), 20 deletions(-)
 
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_ocf_drv.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_ocf_drv.c
-index ec1df9d..50b1039 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_ocf_drv.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/cesa_ocf_drv.c
 @@ -108,7 +108,6 @@ struct cesa_ocf_process {
@@ -33,7 +31,7 @@ index ec1df9d..50b1039 100755
  };
  
  /* global variables */
-@@ -137,7 +136,9 @@ static struct tasklet_struct cesa_ocf_tasklet;
+@@ -137,7 +136,9 @@ static struct tasklet_struct cesa_ocf_ta
  static struct timeval          tt_start;
  static struct timeval          tt_end;
  static struct cesa_ocf_process *cesa_ocf_pool = NULL;
@@ -44,7 +42,7 @@ index ec1df9d..50b1039 100755
  /*
   * dummy device structure
   */
-@@ -266,23 +267,19 @@ ocf_check_action(struct cryptop *crp, struct cesa_ocf_data *cesa_ocf_cur_ses) {
+@@ -266,23 +267,19 @@ ocf_check_action(struct cryptop *crp, st
  
  static inline struct cesa_ocf_process* cesa_ocf_alloc(void)
  {
@@ -72,7 +70,7 @@ index ec1df9d..50b1039 100755
  }
  
  static inline void cesa_ocf_free(struct cesa_ocf_process *ocf_process_p)
-@@ -290,7 +287,7 @@ static inline void cesa_ocf_free(struct cesa_ocf_process *ocf_process_p)
+@@ -290,7 +287,7 @@ static inline void cesa_ocf_free(struct
  	unsigned long flags;
  
  	spin_lock_irqsave(&cesa_lock, flags);
@@ -131,6 +129,3 @@ index ec1df9d..50b1039 100755
  	memset(cesa_ocf_pool, 0, (sizeof(struct cesa_ocf_process) * CESA_OCF_POOL_SIZE));
  	memset(&mv_cesa_dev, 0, sizeof(mv_cesa_dev));
  	softc_device_init(&mv_cesa_dev, "MV CESA", 0, mv_cesa_methods);
--- 
-1.7.9.5
-

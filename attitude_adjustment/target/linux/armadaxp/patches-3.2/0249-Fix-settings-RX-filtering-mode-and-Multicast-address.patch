@@ -13,11 +13,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |    8 ++++----
  1 file changed, 4 insertions(+), 4 deletions(-)
 
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-index f71f7fc..82728af 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-@@ -959,8 +959,7 @@ static const struct net_device_ops mv_eth_netdev_ops = {
+@@ -959,8 +959,7 @@ static const struct net_device_ops mv_et
  	.ndo_open = mv_eth_open,
  	.ndo_stop = mv_eth_stop,
  	.ndo_start_xmit = mv_eth_tx,
@@ -27,7 +25,7 @@ index f71f7fc..82728af 100755
  	.ndo_set_mac_address = mv_eth_set_mac_addr,
  	.ndo_change_mtu = mv_eth_change_mtu,
  	.ndo_tx_timeout = mv_eth_tx_timeout,
-@@ -976,7 +975,7 @@ static const struct net_device_ops mv_switch_netdev_ops = {
+@@ -976,7 +975,7 @@ static const struct net_device_ops mv_sw
  	.ndo_open = mv_eth_switch_start,
  	.ndo_stop = mv_eth_switch_stop,
  	.ndo_start_xmit = mv_eth_tx,
@@ -36,7 +34,7 @@ index f71f7fc..82728af 100755
  	.ndo_set_mac_address = mv_eth_switch_set_mac_addr,
  	.ndo_change_mtu = mv_eth_switch_change_mtu,
  	.ndo_tx_timeout = mv_eth_tx_timeout,
-@@ -1599,7 +1598,6 @@ static inline int mv_eth_rx(struct eth_port *pp, int rx_todo, int rxq)
+@@ -1599,7 +1598,6 @@ static inline int mv_eth_rx(struct eth_p
  #else
  		dev = pp->dev;
  #endif /* CONFIG_MV_ETH_SWITCH */
@@ -44,7 +42,7 @@ index f71f7fc..82728af 100755
  		STAT_DBG(pp->stats.rxq[rxq]++);
  		dev->stats.rx_packets++;
  
-@@ -3523,6 +3521,8 @@ struct net_device *mv_eth_netdev_init(struct eth_port *pp, int mtu, u8 *mac,
+@@ -3523,6 +3521,8 @@ struct net_device *mv_eth_netdev_init(st
  
  	SET_NETDEV_DEV(dev, &pdev->dev);
  
@@ -53,6 +51,3 @@ index f71f7fc..82728af 100755
  	if (pp->flags & MV_ETH_F_CONNECT_LINUX) {
  		mv_eth_netdev_set_features(dev);
  		if (register_netdev(dev)) {
--- 
-1.7.9.5
-

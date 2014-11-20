@@ -11,8 +11,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  net/core/mv_nfp.c               |   63 ++++++++++++++++++++++++++++++++++
  4 files changed, 215 insertions(+), 52 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
-index bf3ebdf..65f9206 100644
 --- a/arch/arm/mach-armadaxp/Makefile
 +++ b/arch/arm/mach-armadaxp/Makefile
 @@ -16,75 +16,53 @@
@@ -112,7 +110,7 @@ index bf3ebdf..65f9206 100644
  
  # Objects list
  COMMON_OBJS	= $(COMMON_DIR)/mvDebug.o $(COMMON_DIR)/mvCommon.o $(COMMON_DIR)/mvStack.o $(COMMON_DIR)/mvList.o $(COMMON_DIR)/mvIpc.o
-@@ -137,10 +115,6 @@ armadaxp-$(CONFIG_MV_INCLUDE_USB) 	+= $(HAL_USB_DIR)/mvUsb.o $(HAL_USB_DIR)/mvUs
+@@ -137,10 +115,6 @@ armadaxp-$(CONFIG_MV_INCLUDE_USB) 	+= $(
  					   $(HAL_IF_DIR)/mvSysUsb.o
  armadaxp-y				+= $(HAL_ETHPHY_DIR)/mvEthPhy.o $(HAL_IF_DIR)/mvSysEthPhy.o
  
@@ -123,8 +121,6 @@ index bf3ebdf..65f9206 100644
  # Legacy Giga driver
  ifeq ($(CONFIG_MV_ETH_LEGACY),y)
  armadaxp-$(CONFIG_MV_ETH_LEGACY)	+= $(HAL_ETH_GBE_DIR)/mvEth.o $(HAL_ETH_GBE_DIR)/mvEthDebug.o \
-diff --git a/include/linux/mv_neta.h b/include/linux/mv_neta.h
-index c1e55d8..b5f2391 100644
 --- a/include/linux/mv_neta.h
 +++ b/include/linux/mv_neta.h
 @@ -1,3 +1,66 @@
@@ -200,8 +196,6 @@ index c1e55d8..b5f2391 100644
  
 -#endif
 +#endif  /* LINUX_MV_NETA_H */
-diff --git a/include/linux/mv_nfp.h b/include/linux/mv_nfp.h
-index 758bd3d..b15fa39 100644
 --- a/include/linux/mv_nfp.h
 +++ b/include/linux/mv_nfp.h
 @@ -1,4 +1,67 @@
@@ -285,8 +279,6 @@ index 758bd3d..b15fa39 100644
 +#endif /* CONFIG_MV_ETH_NFP || CONFIG_MV_ETH_NFP_MODULE */
 +
 +#endif /* LINUX_MV_NFP_H */
-diff --git a/net/core/mv_nfp.c b/net/core/mv_nfp.c
-index 97cb202..326427e 100644
 --- a/net/core/mv_nfp.c
 +++ b/net/core/mv_nfp.c
 @@ -1,3 +1,66 @@
@@ -356,6 +348,3 @@ index 97cb202..326427e 100644
  /* mv_nfp.c */
  #include "linux/mv_nfp.h"
  
--- 
-1.7.9.5
-

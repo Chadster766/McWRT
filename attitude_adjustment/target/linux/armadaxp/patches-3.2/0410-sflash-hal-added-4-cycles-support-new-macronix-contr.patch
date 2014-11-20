@@ -13,11 +13,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/plat-armada/mv_hal/sflash/mvSFlashSpec.h |   35 ++++---
  3 files changed, 79 insertions(+), 64 deletions(-)
 
-diff --git a/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c b/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c
-index 4226af2..51f4c6f 100644
 --- a/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c
 +++ b/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.c
-@@ -101,7 +101,8 @@ static MV_SFLASH_DEVICE_PARAMS sflash[] = {
+@@ -101,7 +101,8 @@ static MV_SFLASH_DEVICE_PARAMS sflash[]
       MV_M25P32_DEVICE_ID,
       MV_M25P32_MAX_SPI_FREQ,
       MV_M25P32_MAX_FAST_SPI_FREQ,
@@ -27,7 +25,7 @@ index 4226af2..51f4c6f 100644
      },
      /* ST M25P64 SPI flash, 8MB, 128 sectors of 64K each */
      {
-@@ -125,7 +126,8 @@ static MV_SFLASH_DEVICE_PARAMS sflash[] = {
+@@ -125,7 +126,8 @@ static MV_SFLASH_DEVICE_PARAMS sflash[]
       MV_M25P64_DEVICE_ID,
       MV_M25P64_MAX_SPI_FREQ,
       MV_M25P64_MAX_FAST_SPI_FREQ,
@@ -37,7 +35,7 @@ index 4226af2..51f4c6f 100644
      },
      /* ST M25PX64 SPI flash, 8MB, 128 sectors of 64K each */
      {
-@@ -149,7 +151,8 @@ static MV_SFLASH_DEVICE_PARAMS sflash[] = {
+@@ -149,7 +151,8 @@ static MV_SFLASH_DEVICE_PARAMS sflash[]
       MV_M25PX64_DEVICE_ID,
       MV_M25PX64_MAX_SPI_FREQ,
       MV_M25PX64_MAX_FAST_SPI_FREQ,
@@ -47,7 +45,7 @@ index 4226af2..51f4c6f 100644
      },
  
      /* ST M25P128 SPI flash, 16MB, 64 sectors of 256K each */
-@@ -174,7 +177,8 @@ static MV_SFLASH_DEVICE_PARAMS sflash[] = {
+@@ -174,7 +177,8 @@ static MV_SFLASH_DEVICE_PARAMS sflash[]
       MV_M25P128_DEVICE_ID,
       MV_M25P128_MAX_SPI_FREQ,
       MV_M25P128_MAX_FAST_SPI_FREQ,
@@ -57,7 +55,7 @@ index 4226af2..51f4c6f 100644
      },
  /* ST M25Q128 SPI flash, 16MB, 256 sectors of 64K each */
      {
-@@ -222,7 +226,8 @@ static MV_SFLASH_DEVICE_PARAMS sflash[] = {
+@@ -222,7 +226,8 @@ static MV_SFLASH_DEVICE_PARAMS sflash[]
       MV_MX25L1605_DEVICE_ID,
       MV_MX25L1605_MAX_SPI_FREQ,
       MV_MX25L1605_MAX_FAST_SPI_FREQ,
@@ -67,7 +65,7 @@ index 4226af2..51f4c6f 100644
      },
      /* Macronix MXIC MX25L3205 SPI flash, 4MB, 64 sectors of 64K each */
      {
-@@ -246,7 +251,8 @@ static MV_SFLASH_DEVICE_PARAMS sflash[] = {
+@@ -246,7 +251,8 @@ static MV_SFLASH_DEVICE_PARAMS sflash[]
       MV_MX25L3205_DEVICE_ID,
       MV_MX25L3205_MAX_SPI_FREQ,
       MV_MX25L3205_MAX_FAST_SPI_FREQ,
@@ -77,7 +75,7 @@ index 4226af2..51f4c6f 100644
      },
      /* Macronix MXIC MX25L6405 SPI flash, 8MB, 128 sectors of 64K each */
      {
-@@ -270,7 +276,8 @@ static MV_SFLASH_DEVICE_PARAMS sflash[] = {
+@@ -270,7 +276,8 @@ static MV_SFLASH_DEVICE_PARAMS sflash[]
       MV_MX25L6405_DEVICE_ID,
       MV_MX25L6405_MAX_SPI_FREQ,
       MV_MX25L6405_MAX_FAST_SPI_FREQ,
@@ -87,7 +85,7 @@ index 4226af2..51f4c6f 100644
      },
      /* SPANSION S25FL128P SPI flash, 16MB, 64 sectors of 256K each */
      {
-@@ -294,31 +301,33 @@ static MV_SFLASH_DEVICE_PARAMS sflash[] = {
+@@ -294,31 +301,33 @@ static MV_SFLASH_DEVICE_PARAMS sflash[]
       MV_S25FL128_DEVICE_ID,
       MV_S25FL128_MAX_SPI_FREQ,
       MV_M25P128_MAX_FAST_SPI_FREQ,
@@ -143,7 +141,7 @@ index 4226af2..51f4c6f 100644
      }
  };
  
-@@ -480,6 +489,7 @@ static MV_STATUS mvSFlashPageWr(MV_SFLASH_INFO *pFlinfo, MV_U32 offset,
+@@ -480,6 +489,7 @@ static MV_STATUS mvSFlashPageWr(MV_SFLAS
  {
      MV_STATUS ret;
  	MV_U8 cmd[MV_SFLASH_PP_CMND_LENGTH];
@@ -151,7 +149,7 @@ index 4226af2..51f4c6f 100644
  
  	/* Protection - check if the model was detected */
  	if (pFlinfo->index >= MV_ARRAY_SIZE(sflash)) {
-@@ -499,13 +509,12 @@ static MV_STATUS mvSFlashPageWr(MV_SFLASH_INFO *pFlinfo, MV_U32 offset,
+@@ -499,13 +509,12 @@ static MV_STATUS mvSFlashPageWr(MV_SFLAS
  	if (ret != MV_OK)
  		return ret;
  
@@ -169,7 +167,7 @@ index 4226af2..51f4c6f 100644
  	if (ret == MV_OK)
  		ret = mvSysSflashDataWrite(NULL, pPageBuff, buffSize, SYS_SFLASH_TRANS_END);
  	if (ret != MV_OK)
-@@ -612,8 +621,6 @@ MV_STATUS mvSFlashInit(MV_SFLASH_INFO *pFlinfo)
+@@ -612,8 +621,6 @@ MV_STATUS mvSFlashInit(MV_SFLASH_INFO *p
  
      /* loop over the whole table and look for the appropriate SFLASH */
      for (indx = 0; indx < MV_ARRAY_SIZE(sflash); indx++) {
@@ -178,7 +176,7 @@ index 4226af2..51f4c6f 100644
  	if ((manf == sflash[indx].manufacturerId) && (dev == sflash[indx].deviceId)) {
  		pFlinfo->manufacturerId = manf;
  		pFlinfo->deviceId = dev;
-@@ -623,8 +630,7 @@ MV_STATUS mvSFlashInit(MV_SFLASH_INFO *pFlinfo)
+@@ -623,8 +630,7 @@ MV_STATUS mvSFlashInit(MV_SFLASH_INFO *p
      }
  
      if (!detectFlag) {
@@ -188,7 +186,7 @@ index 4226af2..51f4c6f 100644
  	return MV_FAIL;
      }
  
-@@ -672,6 +678,7 @@ MV_STATUS mvSFlashSectorErase(MV_SFLASH_INFO *pFlinfo, MV_U32 secNumber)
+@@ -672,6 +678,7 @@ MV_STATUS mvSFlashSectorErase(MV_SFLASH_
      MV_STATUS ret;
      MV_U8 cmd[MV_SFLASH_SE_CMND_LENGTH];
      MV_U32 secAddr;
@@ -196,7 +194,7 @@ index 4226af2..51f4c6f 100644
  
      /* check for NULL pointer */
      if (pFlinfo == NULL) {
-@@ -696,9 +703,8 @@ MV_STATUS mvSFlashSectorErase(MV_SFLASH_INFO *pFlinfo, MV_U32 secNumber)
+@@ -696,9 +703,8 @@ MV_STATUS mvSFlashSectorErase(MV_SFLASH_
  	becasue of timing issue between CS asserts. */
  
      cmd[0] = sflash[pFlinfo->index].opcdSE;
@@ -208,7 +206,7 @@ index 4226af2..51f4c6f 100644
  
  	/* Issue the Write enable command prior the sector erase command */
  	ret = mvWriteEnable(pFlinfo);
-@@ -706,7 +712,7 @@ MV_STATUS mvSFlashSectorErase(MV_SFLASH_INFO *pFlinfo, MV_U32 secNumber)
+@@ -706,7 +712,7 @@ MV_STATUS mvSFlashSectorErase(MV_SFLASH_
  		return ret;
  
  	/*  mvSpiWriteThenWrite(MV_SFLASH_SE_CMND_LENGTH) */
@@ -217,7 +215,7 @@ index 4226af2..51f4c6f 100644
  	if (ret != MV_OK)
  		return ret;
  	ret = mvWaitOnWipClear(pFlinfo);
-@@ -794,6 +800,7 @@ MV_STATUS mvSFlashBlockRd(MV_SFLASH_INFO *pFlinfo, MV_U32 offset,
+@@ -794,6 +800,7 @@ MV_STATUS mvSFlashBlockRd(MV_SFLASH_INFO
  {
  	MV_U8 cmd[MV_SFLASH_READ_CMND_LENGTH];
  	MV_STATUS status;
@@ -225,7 +223,7 @@ index 4226af2..51f4c6f 100644
  
      /* check for NULL pointer */
  	if ((pFlinfo == NULL) || (pReadBuff == NULL)) {
-@@ -808,12 +815,11 @@ MV_STATUS mvSFlashBlockRd(MV_SFLASH_INFO *pFlinfo, MV_U32 offset,
+@@ -808,12 +815,11 @@ MV_STATUS mvSFlashBlockRd(MV_SFLASH_INFO
  	}
  
  	cmd[0] = sflash[pFlinfo->index].opcdREAD;
@@ -241,7 +239,7 @@ index 4226af2..51f4c6f 100644
  			SYS_SFLASH_TRANS_START);
  	if (status == MV_OK)
  		status = mvSysSflashDataRead(NULL, pReadBuff, buffSize, 0,
-@@ -846,6 +852,7 @@ MV_STATUS mvSFlashFastBlockRd(MV_SFLASH_INFO *pFlinfo, MV_U32 offset,
+@@ -846,6 +852,7 @@ MV_STATUS mvSFlashFastBlockRd(MV_SFLASH_
  {
      MV_U8 cmd[MV_SFLASH_READ_CMND_LENGTH];
      MV_STATUS ret, retCmd;
@@ -249,7 +247,7 @@ index 4226af2..51f4c6f 100644
  
      /* check for NULL pointer */
      if ((pFlinfo == NULL) || (pReadBuff == NULL)) {
-@@ -860,14 +867,12 @@ MV_STATUS mvSFlashFastBlockRd(MV_SFLASH_INFO *pFlinfo, MV_U32 offset,
+@@ -860,14 +867,12 @@ MV_STATUS mvSFlashFastBlockRd(MV_SFLASH_
      }
  
      cmd[0] = sflash[pFlinfo->index].opcdFSTRD;
@@ -267,8 +265,6 @@ index 4226af2..51f4c6f 100644
  		    SYS_SFLASH_TRANS_START);
  
      /* Set the SPI frequency to the MAX allowed for fast-read operations */
-diff --git a/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.h b/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.h
-index a67aa4c..848c705 100644
 --- a/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.h
 +++ b/arch/arm/plat-armada/mv_hal/sflash/mvSFlash.h
 @@ -115,6 +115,7 @@ typedef struct {
@@ -279,8 +275,6 @@ index a67aa4c..848c705 100644
  } MV_SFLASH_DEVICE_PARAMS;
  
  typedef struct {
-diff --git a/arch/arm/plat-armada/mv_hal/sflash/mvSFlashSpec.h b/arch/arm/plat-armada/mv_hal/sflash/mvSFlashSpec.h
-index 294d7b7..7c50289 100644
 --- a/arch/arm/plat-armada/mv_hal/sflash/mvSFlashSpec.h
 +++ b/arch/arm/plat-armada/mv_hal/sflash/mvSFlashSpec.h
 @@ -70,10 +70,10 @@ extern "C" {
@@ -394,6 +388,3 @@ index 294d7b7..7c50289 100644
  
  /* Sector Sizes and population per device model*/
  #define     MV_S25FL128_SECTOR_SIZE            			0x40000 /* 256K */
--- 
-1.7.9.5
-

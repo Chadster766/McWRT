@@ -13,8 +13,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  include/linux/mtd/nand.h                           |    6 ++++++
  5 files changed, 15 insertions(+), 6 deletions(-)
 
-diff --git a/arch/arm/configs/armada_xp_defconfig b/arch/arm/configs/armada_xp_defconfig
-index 80030d2..ed7e7fb 100644
 --- a/arch/arm/configs/armada_xp_defconfig
 +++ b/arch/arm/configs/armada_xp_defconfig
 @@ -19,6 +19,7 @@ CONFIG_ARMADAXP_USE_IRQ_INDIRECT_MODE=y
@@ -34,8 +32,6 @@ index 80030d2..ed7e7fb 100644
  CONFIG_MTD_UBI=y
  CONFIG_BLK_DEV_LOOP=y
  # CONFIG_SCSI_PROC_FS is not set
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.c
-index 66a6140..d8def8a 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_mtd/nand_nfc.c
 @@ -26,7 +26,7 @@
@@ -47,7 +43,7 @@ index 66a6140..d8def8a 100644
  #include "mvCommon.h"
  #include "mvOs.h"
  
-@@ -1413,13 +1413,15 @@ static void orion_nfc_init_nand(struct nand_chip *nand, struct orion_nfc_info *i
+@@ -1413,13 +1413,15 @@ static void orion_nfc_init_nand(struct n
  {
  	
  	if (info->nfc_width == 16)
@@ -65,11 +61,9 @@ index 66a6140..d8def8a 100644
  	nand->waitfunc		= orion_nfc_waitfunc;
  	nand->select_chip	= orion_nfc_select_chip;
  	nand->dev_ready		= orion_nfc_dev_ready;
-diff --git a/drivers/mtd/nand/nand_bbt.c b/drivers/mtd/nand/nand_bbt.c
-index 997bbf7..ea1e6ae 100644
 --- a/drivers/mtd/nand/nand_bbt.c
 +++ b/drivers/mtd/nand/nand_bbt.c
-@@ -457,7 +457,7 @@ static int scan_block_custom(struct mtd_info *mtd, struct nand_bbt_descr *bd,
+@@ -457,7 +457,7 @@ static int scan_block_custom(struct mtd_
  	int ret;
  	struct mtd_oob_ops ops;
  
@@ -78,8 +72,6 @@ index 997bbf7..ea1e6ae 100644
  	ops.ooboffs = 0;
  	ops.ooblen = mtd->oobsize;
  	ops.oobbuf = (buf + mtd->writesize);
-diff --git a/include/linux/mtd/bbm.h b/include/linux/mtd/bbm.h
-index 58c7f21..1dd5270 100644
 --- a/include/linux/mtd/bbm.h
 +++ b/include/linux/mtd/bbm.h
 @@ -120,10 +120,8 @@ struct nand_bbt_descr {
@@ -93,8 +85,6 @@ index 58c7f21..1dd5270 100644
  /* The maximum number of blocks to scan for a bbt */
  #define NAND_BBT_SCAN_MAXBLOCKS	4
  
-diff --git a/include/linux/mtd/nand.h b/include/linux/mtd/nand.h
-index b3f514b..eaf202b 100644
 --- a/include/linux/mtd/nand.h
 +++ b/include/linux/mtd/nand.h
 @@ -503,6 +503,12 @@ struct nand_chip {
@@ -110,6 +100,3 @@ index b3f514b..eaf202b 100644
  	unsigned int bbt_options;
  
  	int page_shift;
--- 
-1.7.9.5
-

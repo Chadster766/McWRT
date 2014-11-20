@@ -9,11 +9,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c     |   43 +++++++++++++++++---
  2 files changed, 38 insertions(+), 25 deletions(-)
 
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c
-index f280d1e..0351f3e 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c
-@@ -730,24 +730,6 @@ int mv_eth_tool_set_tso(struct net_device *netdev, uint32_t data)
+@@ -730,24 +730,6 @@ int mv_eth_tool_set_tso(struct net_devic
  #endif
  }
  /******************************************************************************
@@ -38,7 +36,7 @@ index f280d1e..0351f3e 100644
  * mv_eth_tool_get_strings
  * Description:
  *	ethtool get strings (used for statistics and self-test descriptions)
-@@ -871,8 +853,6 @@ const struct ethtool_ops mv_eth_tool_ops = {
+@@ -871,8 +853,6 @@ const struct ethtool_ops mv_eth_tool_ops
  	.set_sg						= ethtool_op_set_sg,
  	.get_tso					= ethtool_op_get_tso,
  	.set_tso					= mv_eth_tool_set_tso,
@@ -47,11 +45,9 @@ index f280d1e..0351f3e 100644
  	.get_strings				= mv_eth_tool_get_strings,
  #if LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 32)
  	.get_stats_count			= mv_eth_tool_get_stats_count,
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-index 7bd9a68..6381a27 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-@@ -804,6 +804,28 @@ static inline u16 mv_eth_select_txq(struct net_device *dev,
+@@ -804,6 +804,28 @@ static inline u16 mv_eth_select_txq(stru
  	return mv_eth_tx_policy(pp, skb);
  }
  
@@ -80,7 +76,7 @@ index 7bd9a68..6381a27 100755
  static const struct net_device_ops mv_eth_netdev_ops = {
  	.ndo_open = mv_eth_open,
  	.ndo_stop = mv_eth_stop,
-@@ -814,6 +836,9 @@ static const struct net_device_ops mv_eth_netdev_ops = {
+@@ -814,6 +836,9 @@ static const struct net_device_ops mv_et
  	.ndo_change_mtu = mv_eth_change_mtu,
  	.ndo_tx_timeout = mv_eth_tx_timeout,
  	.ndo_select_queue = mv_eth_select_txq,
@@ -90,7 +86,7 @@ index 7bd9a68..6381a27 100755
  };
  
  #ifdef CONFIG_MV_ETH_SWITCH
-@@ -3144,12 +3169,18 @@ struct net_device *mv_eth_netdev_init(struct eth_port *pp, int mtu, u8 *mac)
+@@ -3144,12 +3169,18 @@ struct net_device *mv_eth_netdev_init(st
  	pp->cleanup_timer.data = (unsigned long)dev;
  
  	if (pp->flags & MV_ETH_F_CONNECT_LINUX) {
@@ -124,7 +120,7 @@ index 7bd9a68..6381a27 100755
  
  #ifdef CONFIG_MV_ETH_TX_CSUM_OFFLOAD_DEF
  	if (dev->mtu <= MV_ETH_TX_CSUM_MAX_SIZE)
-@@ -3429,9 +3465,6 @@ static void mv_eth_netdev_set_features(struct net_device *dev)
+@@ -3429,9 +3465,6 @@ static void mv_eth_netdev_set_features(s
  		dev->features |= NETIF_F_TSO;
  #endif /* CONFIG_MV_ETH_TSO_DEF */
  
@@ -134,6 +130,3 @@ index 7bd9a68..6381a27 100755
  }
  
  /* Update network device features after changing MTU.	*/
--- 
-1.7.9.5
-

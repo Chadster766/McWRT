@@ -19,11 +19,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h        |    1 +
  12 files changed, 324 insertions(+), 80 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
-index e8564ed..4b74008 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
-@@ -293,6 +293,9 @@ MV_BOOL mvBoardIsPortInSgmii(MV_U32 ethPortNum)
+@@ -293,6 +293,9 @@ MV_BOOL mvBoardIsPortInSgmii(MV_U32 ethP
  		break;
  	case DB_78X60_PCAC_ID:
  	case RD_78460_NAS_ID:
@@ -42,7 +40,7 @@ index e8564ed..4b74008 100644
  #else
  		mvOsPrintf("mvBoardIdSet: Board ID must be defined!\n");
  		while (1) {
-@@ -1539,12 +1544,16 @@ MV_STATUS mvBoardTwsiSatRSet(MV_U8 devNum, MV_U8 regNum, MV_U8 regVal)
+@@ -1539,12 +1544,16 @@ MV_STATUS mvBoardTwsiSatRSet(MV_U8 devNu
  MV_U8 mvBoardFabFreqGet(MV_VOID)
  {
  	MV_U8 sar0;
@@ -60,7 +58,7 @@ index e8564ed..4b74008 100644
  }
  
  /*******************************************************************************/
-@@ -1562,7 +1571,16 @@ MV_STATUS mvBoardFabFreqSet(MV_U8 freqVal)
+@@ -1562,7 +1571,16 @@ MV_STATUS mvBoardFabFreqSet(MV_U8 freqVa
  		DB1(mvOsPrintf("Board: Write FreqOpt S@R fail\n"));
  		return MV_ERROR;
  	}
@@ -77,7 +75,7 @@ index e8564ed..4b74008 100644
  	DB(mvOsPrintf("Board: Write FreqOpt S@R succeeded\n"));
  	return MV_OK;
  }
-@@ -1632,12 +1650,16 @@ MV_STATUS mvBoardCpuFreqModeSet(MV_U8 freqVal)
+@@ -1632,12 +1650,16 @@ MV_STATUS mvBoardCpuFreqModeSet(MV_U8 fr
  MV_U8 mvBoardCpuFreqGet(MV_VOID)
  {
  	MV_U8 sar;
@@ -95,7 +93,7 @@ index e8564ed..4b74008 100644
  }
  
  /*******************************************************************************/
-@@ -1655,6 +1677,15 @@ MV_STATUS mvBoardCpuFreqSet(MV_U8 freqVal)
+@@ -1655,6 +1677,15 @@ MV_STATUS mvBoardCpuFreqSet(MV_U8 freqVa
  		DB1(mvOsPrintf("Board: Write CpuFreq S@R fail\n"));
  		return MV_ERROR;
  	}
@@ -182,7 +180,7 @@ index e8564ed..4b74008 100644
  /*******************************************************************************
  * End of SatR Configuration functions
  *******************************************************************************/
-@@ -2536,6 +2597,7 @@ MV_BOARD_PEX_INFO *mvBoardPexInfoGet(void)
+@@ -2536,6 +2597,7 @@ MV_BOARD_PEX_INFO *mvBoardPexInfoGet(voi
  	case DB_88F78XX0_BP_REV2_ID:
  	case RD_78460_NAS_ID:
  	case DB_78X60_AMC_ID:
@@ -190,11 +188,9 @@ index e8564ed..4b74008 100644
  		return &BOARD_INFO(boardId)->boardPexInfo;
  		break;
  	default:
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
-index 6b667cf..6b6cb67 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
-@@ -183,11 +183,11 @@ MV_BOARD_MPP_INFO db88f78XX0InfoBoardMppConfigValue[] = {
+@@ -183,11 +183,11 @@ MV_BOARD_MPP_INFO db88f78XX0InfoBoardMpp
  
  MV_SERDES_CFG db88f78XX0InfoBoardSerdesConfigValue[] = {
  	/* Z1B */
@@ -210,7 +206,7 @@ index 6b667cf..6b6cb67 100644
  };
  
  MV_BOARD_TDM_INFO	db88f78XX0Tdm880[]	= { {1}, {2} };
-@@ -369,12 +369,12 @@ MV_BOARD_MPP_INFO db88f78XX0rev2InfoBoardMppConfigValue[] = {
+@@ -369,12 +369,12 @@ MV_BOARD_MPP_INFO db88f78XX0rev2InfoBoar
  
  MV_SERDES_CFG db88f78XX0rev2InfoBoardSerdesConfigValue[] = {
  	/* A0 */
@@ -229,7 +225,7 @@ index 6b667cf..6b6cb67 100644
  };
  
  MV_BOARD_TDM_INFO	db88f78XX0rev2Tdm880[]	= { {1}, {2} };
-@@ -495,8 +495,8 @@ MV_BOARD_MPP_INFO rd78460nasInfoBoardMppConfigValue[] = {
+@@ -495,8 +495,8 @@ MV_BOARD_MPP_INFO rd78460nasInfoBoardMpp
  };
  
  MV_SERDES_CFG rd78460nasInfoBoardSerdesConfigValue[] = {
@@ -240,7 +236,7 @@ index 6b667cf..6b6cb67 100644
  };
  
  MV_BOARD_INFO rd78460nasInfo = {
-@@ -603,8 +603,8 @@ MV_BOARD_MPP_INFO rd78460InfoBoardMppConfigValue[] = {
+@@ -603,8 +603,8 @@ MV_BOARD_MPP_INFO rd78460InfoBoardMppCon
  };
  
  MV_SERDES_CFG rd78460InfoBoardSerdesConfigValue[] = {
@@ -251,7 +247,7 @@ index 6b667cf..6b6cb67 100644
  };
  
  MV_BOARD_INFO rd78460Info = {
-@@ -721,7 +721,7 @@ MV_BOARD_MPP_INFO db78X60pcacInfoBoardMppConfigValue[] = {
+@@ -721,7 +721,7 @@ MV_BOARD_MPP_INFO db78X60pcacInfoBoardMp
  };
  
  MV_SERDES_CFG db78X60pcacInfoBoardSerdesConfigValue[] = {
@@ -376,7 +372,7 @@ index 6b667cf..6b6cb67 100644
  /************************/
  /* ARMADA-XP FPGA BOARD */
  /************************/
-@@ -842,7 +951,7 @@ MV_BOARD_MPP_INFO fpga88f78XX0InfoBoardMppConfigValue[] = {
+@@ -842,7 +951,7 @@ MV_BOARD_MPP_INFO fpga88f78XX0InfoBoardM
  };
  
  MV_SERDES_CFG fpga88f78XX0InfoBoardSerdesConfigValue[] = {
@@ -385,7 +381,7 @@ index 6b667cf..6b6cb67 100644
  };
  
  MV_BOARD_TDM_INFO	fpga88f78XX0Tdm880[]	= { {1}, {2} };
-@@ -962,7 +1071,7 @@ MV_BOARD_MPP_INFO db78X60amcInfoBoardMppConfigValue[] = {
+@@ -962,7 +1071,7 @@ MV_BOARD_MPP_INFO db78X60amcInfoBoardMpp
  };
  
  MV_SERDES_CFG db78X60amcInfoBoardSerdesConfigValue[] = {
@@ -402,11 +398,9 @@ index 6b667cf..6b6cb67 100644
 +	&db78X60amcInfo,
 +	&db78X60pcacrev2Info
  };
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
-index 03a04d2..d9bbd58 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
-@@ -96,7 +96,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -96,7 +96,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #define DB_88F78XX0_BP_REV2_ID			(FPGA_88F78XX0_ID + 1)
  #define RD_78460_NAS_ID                         (DB_88F78XX0_BP_REV2_ID + 1)
  #define DB_78X60_AMC_ID				(RD_78460_NAS_ID + 1)
@@ -468,10 +462,11 @@ index 03a04d2..d9bbd58 100644
 -#define DB_78X60_AMC_GPP_OUT_VAL_LOW		0x0
 -#define DB_78X60_AMC_GPP_OUT_VAL_MID		0x0
 -#define DB_78X60_AMC_GPP_OUT_VAL_HIGH		0x0
- 
+-
 -#define DB_78X60_AMC_GPP_POL_LOW		0x0
 -#define DB_78X60_AMC_GPP_POL_MID		0x0
 -#define DB_78X60_AMC_GPP_POL_HIGH		0x0
++
  
  /********************/
  /* DB-78460-AMC     */
@@ -493,11 +488,9 @@ index 03a04d2..d9bbd58 100644
  #define DB_78X60_AMC_GPP_OUT_ENA_MID		(~(BIT21 | BIT22 | BIT23 | BIT24))
  #define DB_78X60_AMC_GPP_OUT_ENA_HIGH		(~(0x0))
  
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
-index d7d1aef..b031681 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
-@@ -123,12 +123,12 @@ MV_BIOS_MODE bios_modes[BIOS_MODES_NUM] = {
+@@ -123,12 +123,12 @@ MV_BIOS_MODE bios_modes[BIOS_MODES_NUM]
  #else
  /*DBConf ConfID Code L2Size CPUFreq CpuFreqMode FabricFreq FabricFreqMode CPU1/2/3Enable cpuEndianess dramBusWidth BootSRC BootWidth */
  /*	                       0x4d/[1:0]  0x4d/[4:2]  0x4e[0]      0x4e/[4:1]  	0x4f[0]   0x4f/[2:1]      0x4f/[3]   	  */
@@ -654,8 +647,6 @@ index d7d1aef..b031681 100644
  	DB(mvOsPrintf("%s:Shutting down unused interfaces:\n", __func__));
  	/*now report everything to the screen*/
  	if (!(powermngmntctrlregmap & PMC_SATASTOPCLOCK_MASK(0))) {
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
-index 4ce9ca3..d67520f 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
 @@ -129,6 +129,7 @@ typedef struct _boardSerdesConf {
@@ -674,8 +665,6 @@ index 4ce9ca3..d67520f 100644
  	MV_U8 fabricFreqMode;
  	MV_U8 cpuEna;
  #ifdef MV88F78X60_Z1
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
-index 6167d93..a506d3c 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
 @@ -130,9 +130,9 @@ extern "C" {
@@ -708,11 +697,9 @@ index 6167d93..a506d3c 100644
  #else
   #undef MV_INCLUDE_PEX0
  #endif
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
-index 3b78b09..11f3025 100755
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
-@@ -93,6 +93,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -93,6 +93,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #define SOC_COHERENCY_FABRIC_CFG_REG		(MV_COHERENCY_FABRIC_REGS_BASE + 0x4)
  #define SOC_CIB_CTRL_CFG_REG			(MV_COHERENCY_FABRIC_REGS_BASE + 0x80)
  
@@ -729,8 +716,6 @@ index 3b78b09..11f3025 100755
  /* ARM Configuration register */
  /* CPU_CONFIG_REG (CCR) */
  
-diff --git a/arch/arm/plat-armada/common/mvCommon.h b/arch/arm/plat-armada/common/mvCommon.h
-index f26b681..1301e01 100644
 --- a/arch/arm/plat-armada/common/mvCommon.h
 +++ b/arch/arm/plat-armada/common/mvCommon.h
 @@ -74,7 +74,6 @@ extern "C" {
@@ -741,7 +726,7 @@ index f26b681..1301e01 100644
  
  /* The golden ration: an arbitrary value */
  #define MV_JHASH_GOLDEN_RATIO           0x9e3779b9
-@@ -101,6 +100,7 @@ static inline MV_U32 mv_jhash_3words(MV_U32 a, MV_U32 b, MV_U32 c, MV_U32 initva
+@@ -101,6 +100,7 @@ static inline MV_U32 mv_jhash_3words(MV_
  
  	return c;
  }
@@ -749,8 +734,6 @@ index f26b681..1301e01 100644
  
  
  /* Swap tool */
-diff --git a/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIfRegs.h b/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIfRegs.h
-index 7b921e9..1d15df5 100644
 --- a/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIfRegs.h
 +++ b/arch/arm/plat-armada/mv_hal/ddr2_3/mvDramIfRegs.h
 @@ -153,6 +153,19 @@ extern "C" {
@@ -773,11 +756,9 @@ index 7b921e9..1d15df5 100644
  
  #ifdef __cplusplus
  }
-diff --git a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
-index ae38a92..3f79634 100755
 --- a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
 +++ b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
-@@ -1709,9 +1709,10 @@ MV_VOID mvEth1540A0PhyBasicInit(MV_U32 ethPortNum, MV_BOOL eeeEnable)
+@@ -1709,9 +1709,10 @@ MV_VOID mvEth1540A0PhyBasicInit(MV_U32 e
  	mvEthPhyRegWrite(i, 0x16, 0);
  
  	/* Power up the phy */
@@ -791,7 +772,7 @@ index ae38a92..3f79634 100755
  
  	/* Disable Drop BadTag */
  	mvEthPhyRegWrite(i, 22, 0x0010);
-@@ -1812,6 +1813,9 @@ MV_VOID mvEth1540A0PhyBasicInit(MV_U32 ethPortNum, MV_BOOL eeeEnable)
+@@ -1812,6 +1813,9 @@ MV_VOID mvEth1540A0PhyBasicInit(MV_U32 e
  	mvEthPhyRegWrite(i, 22, 0x0000);
  	mvEthPhyRegWrite(i, 0, 0x9140);
  
@@ -801,11 +782,9 @@ index ae38a92..3f79634 100755
  	mvOsDelay(100);
  	/*  Sleep 3000 */
  	/* mvOsDelay(300); */
-diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPex.c b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
-index b00ec35..544532c 100755
 --- a/arch/arm/plat-armada/mv_hal/pex/mvPex.c
 +++ b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
-@@ -122,7 +122,6 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+@@ -122,7 +122,6 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX
  			(ctrlModel != MV_78000_DEV_ID)) {
  		/* Read current value of TXAMP */
  		MV_REG_WRITE(PEX_PHY_ACCESS_REG(pexIf), 0x80820000);	/* Write the read command   */
@@ -813,7 +792,7 @@ index b00ec35..544532c 100755
  		regVal = MV_REG_READ(PEX_PHY_ACCESS_REG(pexIf));	/* Extract the data         */
  
  		/* Prepare new data for write */
-@@ -130,6 +129,7 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+@@ -130,6 +129,7 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX
  		regVal |= 0x4;	/* Set the new value        */
  		regVal &= ~0x80000000;	/* Set "write" command      */
  		MV_REG_WRITE(PEX_PHY_ACCESS_REG(pexIf), regVal);	/* Write the write command  */
@@ -821,7 +800,7 @@ index b00ec35..544532c 100755
  #ifndef MV88F78X60_Z1
  		/* in DSMP A0 we should enable the target link width */
  		/* Read current value of Dynamic width management register 0x1A30*/
-@@ -160,7 +160,6 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+@@ -160,7 +160,6 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX
  			regVal |= (BIT0 | BIT3);
  			regVal &= ~0x80000000;	/* Set "write" command      */
  			MV_REG_WRITE(PEX_PHY_ACCESS_REG(pexIf), regVal);	/* Write the write command  */
@@ -829,7 +808,7 @@ index b00ec35..544532c 100755
  			MV_REG_WRITE(0x31b00, 0x80860000);	/* Write the read command   */
  			regVal = MV_REG_READ(0x31b00);	/* Extract the data         */
  			regVal |= (BIT0 | BIT3);
-@@ -221,10 +220,13 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+@@ -221,10 +220,13 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX
  		status = MV_REG_READ(PEX_CFG_DIRECT_ACCESS(pexIf, PEX_STATUS_AND_COMMAND));
  		status |= PXSAC_INT_DIS;
  		MV_REG_WRITE(PEX_CFG_DIRECT_ACCESS(pexIf, PEX_STATUS_AND_COMMAND), status);
@@ -845,7 +824,7 @@ index b00ec35..544532c 100755
  	/* now wait 1ms to be sure the link is valid */
  	mvOsDelay(1);
  
-@@ -998,6 +1000,7 @@ MV_VOID mvPexPhyRegWrite(MV_U32 pexIf, MV_U32 regOffset, MV_U16 value)
+@@ -998,6 +1000,7 @@ MV_VOID mvPexPhyRegWrite(MV_U32 pexIf, M
  	}
  	regAddr = (((regOffset & 0x3fff) << 16) | value);
  	MV_REG_WRITE(PEX_PHY_ACCESS_REG(pexIf), regAddr);
@@ -862,7 +841,7 @@ index b00ec35..544532c 100755
  /* NOTE: this was asked by CV, bit is reserved in the spec, but causing problems, disabling for now. */
  	/* MV_REG_BIT_SET(PEX_CTRL_REG(pexIf), PXCR_AUTO_SPEED_CTRL_MASK); */
  
-@@ -1099,7 +1104,17 @@ MV_VOID mvPexIfEnable(MV_U32 pexIf, MV_PEX_TYPE pexType)
+@@ -1099,7 +1104,17 @@ MV_VOID mvPexIfEnable(MV_U32 pexIf, MV_P
  		/* Change pex mode in capability reg */
  		MV_REG_BIT_RESET(PEX_CFG_DIRECT_ACCESS(pexIf, PEX_CAPABILITY_REG), BIT22);
  		MV_REG_BIT_SET(PEX_CFG_DIRECT_ACCESS(pexIf, PEX_CAPABILITY_REG), BIT20);
@@ -880,8 +859,6 @@ index b00ec35..544532c 100755
  		MV_REG_BIT_SET(PEX_CTRL_REG(pexIf), PXCR_DEV_TYPE_CTRL_MASK);
  	}
  	return;
-diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h b/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h
-index 04266bf..baa4ffd 100755
 --- a/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h
 +++ b/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h
 @@ -174,6 +174,7 @@ extern "C" {
@@ -892,6 +869,3 @@ index 04266bf..baa4ffd 100755
  #define PEX_STATUS_REG(pexIf)				((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A04)
  #define PEX_COMPLT_TMEOUT_REG(pexIf)			((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A10)
  #define PEX_PWR_MNG_EXT_REG(pexIf)			((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A18)
--- 
-1.7.9.5
-

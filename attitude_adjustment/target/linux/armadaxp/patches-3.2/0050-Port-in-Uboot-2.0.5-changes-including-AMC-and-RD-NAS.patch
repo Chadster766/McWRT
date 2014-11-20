@@ -55,11 +55,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/usb/mvUsbAddrDec.c
  mode change 100644 => 100755 arch/arm/plat-armada/mv_hal/xor/mvXorAddrDec.c
 
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
-index 2d95e70..e8564ed 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
-@@ -283,14 +283,17 @@ MV_BOOL mvBoardIsPortInSgmii(MV_U32 ethPortNum)
+@@ -283,14 +283,17 @@ MV_BOOL mvBoardIsPortInSgmii(MV_U32 ethP
  		if (ethPortNum > 1)
  			return MV_TRUE;
  		break;
@@ -79,7 +77,7 @@ index 2d95e70..e8564ed 100644
  	default:
  		DB(mvOsPrintf("mvBoardSerdesCfgGet: Unsupported board!\n"));
  		return MV_FALSE;
-@@ -957,6 +960,10 @@ MV_VOID mvBoardMppModuleTypePrint(MV_VOID)
+@@ -957,6 +960,10 @@ MV_VOID mvBoardMppModuleTypePrint(MV_VOI
  	if (mvBoardIsLcdDviModuleConnected())
  		mvOsOutput("       LCD DVI module.\n");
  
@@ -130,7 +128,7 @@ index 2d95e70..e8564ed 100644
  	}
  
  	return MV_OK;
-@@ -2132,6 +2147,33 @@ MV_BOOL mvBoardIsPexModuleConnected(void)
+@@ -2132,6 +2147,33 @@ MV_BOOL mvBoardIsPexModuleConnected(void
  
  	return MV_FALSE;
  }
@@ -183,7 +181,7 @@ index 2d95e70..e8564ed 100644
  	}
  
  	return &BOARD_INFO(boardId)->pBoardSerdesConfigValue[serdesCfg];
-@@ -2490,6 +2535,7 @@ MV_BOARD_PEX_INFO *mvBoardPexInfoGet(void)
+@@ -2490,6 +2535,7 @@ MV_BOARD_PEX_INFO *mvBoardPexInfoGet(voi
  	case FPGA_88F78XX0_ID:
  	case DB_88F78XX0_BP_REV2_ID:
  	case RD_78460_NAS_ID:
@@ -191,10 +189,6 @@ index 2d95e70..e8564ed 100644
  		return &BOARD_INFO(boardId)->boardPexInfo;
  		break;
  	default:
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
-old mode 100644
-new mode 100755
-index 9411275..2428d49
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
 @@ -144,12 +144,14 @@ typedef enum _devBoardMppTypeClass {
@@ -241,11 +235,9 @@ index 9411275..2428d49
  MV_BOOL mvBoardIsLvdsModuleConnected(void);
  MV_BOOL mvBoardIsLcdDviModuleConnected(void);
  MV_BOOL mvBoardIsGMIIModuleConnected(void);
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
-index 8b652f5..4a9f4c0 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
-@@ -296,7 +296,7 @@ MV_BOARD_MODULE_TYPE_INFO db88f78XX0rev2InfoBoardModTypeInfo[] = {
+@@ -296,7 +296,7 @@ MV_BOARD_MODULE_TYPE_INFO db88f78XX0rev2
  MV_BOARD_GPP_INFO db88f78XX0rev2InfoBoardGppInfo[] = {
  	/* {{MV_BOARD_GPP_CLASS	devClass, MV_U8	gppPinNum}} */
  	{BOARD_GPP_USB_VBUS,    24} /* from MPP map */
@@ -269,7 +261,7 @@ index 8b652f5..4a9f4c0 100644
  };
  
  MV_BOARD_MODULE_TYPE_INFO rd78460nasInfoBoardModTypeInfo[] = {
-@@ -470,17 +470,13 @@ MV_BOARD_MODULE_TYPE_INFO rd78460nasInfoBoardModTypeInfo[] = {
+@@ -470,17 +470,13 @@ MV_BOARD_MODULE_TYPE_INFO rd78460nasInfo
  
  MV_BOARD_GPP_INFO rd78460nasInfoBoardGppInfo[] = {
  	/* {{MV_BOARD_GPP_CLASS	devClass, MV_U8	gppPinNum}} */
@@ -289,7 +281,7 @@ index 8b652f5..4a9f4c0 100644
  #endif
  };
  
-@@ -499,9 +495,8 @@ MV_BOARD_MPP_INFO rd78460nasInfoBoardMppConfigValue[] = {
+@@ -499,9 +495,8 @@ MV_BOARD_MPP_INFO rd78460nasInfoBoardMpp
  };
  
  MV_SERDES_CFG rd78460nasInfoBoardSerdesConfigValue[] = {
@@ -430,11 +422,9 @@ index 8b652f5..4a9f4c0 100644
 +	&rd78460nasInfo,
 +	&db78X60amcInfo
  };
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
-index d4c268f..5167309 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
-@@ -95,7 +95,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -95,7 +95,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #define FPGA_88F78XX0_ID			(DB_78X60_PCAC_ID + 1)
  #define DB_88F78XX0_BP_REV2_ID			(FPGA_88F78XX0_ID + 1)
  #define RD_78460_NAS_ID                         (DB_88F78XX0_BP_REV2_ID + 1)
@@ -554,13 +544,9 @@ index d4c268f..5167309 100644
 +#define DB_78X60_AMC_GPP_POL_HIGH		0x0
 +
  #endif /* __INCmvBoardEnvSpech */
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.c
-old mode 100644
-new mode 100755
-index 8449c15..7ad882c
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvAddrDec.c
-@@ -113,6 +113,14 @@ MV_STATUS mvCtrlAttribGet(MV_TARGET target, MV_TARGET_ATTRIB *targetAttrib)
+@@ -113,6 +113,14 @@ MV_STATUS mvCtrlAttribGet(MV_TARGET targ
  
  	return MV_OK;
  }
@@ -575,8 +561,6 @@ index 8449c15..7ad882c
  
  /*******************************************************************************
  * mvCtrlGetAttrib -
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
-index 0e1a026..7ce4842 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
 @@ -1,10 +1,3 @@
@@ -590,7 +574,7 @@ index 0e1a026..7ce4842 100644
  /*******************************************************************************
  Copyright (C) Marvell International Ltd. and its affiliates
  
-@@ -79,10 +72,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -79,10 +72,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #include "gpp/mvGppRegs.h"
  #include "mvSysEthConfig.h"
  
@@ -626,7 +610,7 @@ index 0e1a026..7ce4842 100644
  
  #if defined(MV_INCLUDE_PCI)
  /*******************************************************************************
-@@ -1212,7 +1203,10 @@ static void mvUnitAddrDecShow(MV_U8 numUnits, MV_UNIT_ID unitId, const char *nam
+@@ -1212,7 +1203,10 @@ static void mvUnitAddrDecShow(MV_U8 numU
  						   mvCtrlTargetNameGet(mvCtrlTargetByWinInfoGet(&win)),
  						   win.addrWin.baseLow);
  					mvOsOutput("....");
@@ -750,8 +734,6 @@ index 0e1a026..7ce4842 100644
  
  			DB(mvOsPrintf("Step[3].4 Addr[0x%08x] Value[0x%08x]\n", \
  						  PEX_PHY_ACCESS_REG(pexUnit), (0xC8 << 16) | 0x05));
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
-index ebc21ac..53c7044 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
 @@ -331,10 +331,11 @@ extern "C" {
@@ -767,8 +749,6 @@ index ebc21ac..53c7044 100644
  /* Controler environment registers offsets */
  #define GEN_PURP_RES_1_REG			0x182F4
  #define GEN_PURP_RES_2_REG			0x182F8
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
-index 58ddd89..6857a91 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
 @@ -94,7 +94,11 @@ extern "C" {
@@ -783,13 +763,9 @@ index 58ddd89..6857a91 100644
  #define MV_MISC_REGS_OFFSET			(0x18200)
  #define MV_MBUS_REGS_OFFSET			(0x20000)
  #define MV_COHERENCY_FABRIC_OFFSET		(0x20200)
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
-old mode 100644
-new mode 100755
-index 6a6caa3..527581f
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
-@@ -80,6 +80,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -80,6 +80,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  
  #define CPU_CONFIG_REG(cpu)			(MV_CPUIF_REGS_BASE(cpu))
  #define CPU_CTRL_STAT_REG(cpu)			(MV_CPUIF_REGS_BASE(cpu) + 0x8)
@@ -799,7 +775,7 @@ index 6a6caa3..527581f
  #define CPU_RSTOUTN_MASK_REG			(MV_MISC_REGS_BASE + 0x60)
  #define CPU_SYS_SOFT_RST_REG			(MV_MISC_REGS_BASE + 0x64)
  #define CPU_L2_CTRL_REG				(MV_L2C_REGS_BASE + 0x100)
-@@ -248,7 +251,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -248,7 +251,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #define CL2ACR_REP_STRGY_OFFS			27
  #define CL2ACR_REP_STRGY_MASK			(3 << CL2ACR_REP_STRGY_OFFS)
  
@@ -810,10 +786,6 @@ index 6a6caa3..527581f
  
  
  /* SOC_CTRL_REG fields */
-diff --git a/arch/arm/plat-armada/common/mvTypes.h b/arch/arm/plat-armada/common/mvTypes.h
-old mode 100644
-new mode 100755
-index 18d5296..814db81
 --- a/arch/arm/plat-armada/common/mvTypes.h
 +++ b/arch/arm/plat-armada/common/mvTypes.h
 @@ -182,7 +182,7 @@ typedef enum {
@@ -825,10 +797,6 @@ index 18d5296..814db81
  
  } MV_ETH_MAC_SPEED;
  
-diff --git a/arch/arm/plat-armada/common/mvVideo.h b/arch/arm/plat-armada/common/mvVideo.h
-old mode 100644
-new mode 100755
-index e9918b1..d1f6e86
 --- a/arch/arm/plat-armada/common/mvVideo.h
 +++ b/arch/arm/plat-armada/common/mvVideo.h
 @@ -98,7 +98,7 @@ typedef enum mvPixFormatId {
@@ -840,13 +808,9 @@ index e9918b1..d1f6e86
  } MV_PIX_FORMAT_ID;
  
  typedef struct mvPixelFormat {
-diff --git a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
-old mode 100644
-new mode 100755
-index 6d8695f..ae38a92
 --- a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
 +++ b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.c
-@@ -1231,7 +1231,7 @@ MV_VOID mvEthInternalGEPhyBasicInit(MV_U32 ethPortNum)
+@@ -1231,7 +1231,7 @@ MV_VOID mvEthInternalGEPhyBasicInit(MV_U
  {
  }
  
@@ -855,7 +819,7 @@ index 6d8695f..ae38a92
  {
  	MV_U16 reg;
  	MV_U16 i = ethphyHalData.phyAddr[ethPortNum];
-@@ -1678,6 +1678,11 @@ MV_VOID mvEth1540PhyBasicInit(MV_U32 ethPortNum, MV_BOOL eeeEnable)
+@@ -1678,6 +1678,11 @@ MV_VOID mvEth1540PhyBasicInit(MV_U32 eth
  
  	mvEthPhyRegWrite(i, 0x16, 0x0000);
  
@@ -867,7 +831,7 @@ index 6d8695f..ae38a92
  
  	/* Power up the phy */
  	mvEthPhyRegRead(i, ETH_PHY_CTRL_REG, &reg);
-@@ -1689,6 +1694,152 @@ MV_VOID mvEth1540PhyBasicInit(MV_U32 ethPortNum, MV_BOOL eeeEnable)
+@@ -1689,6 +1694,152 @@ MV_VOID mvEth1540PhyBasicInit(MV_U32 eth
  
  }
  
@@ -1053,10 +1017,6 @@ index 6d8695f..ae38a92
  }
  
  
-diff --git a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.h b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.h
-old mode 100644
-new mode 100755
-index 4a3076d..864b02c
 --- a/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.h
 +++ b/arch/arm/plat-armada/mv_hal/eth-phy/mvEthPhy.h
 @@ -109,6 +109,7 @@ typedef struct {
@@ -1067,13 +1027,9 @@ index 4a3076d..864b02c
  } MV_ETHPHY_HAL_DATA;
  
  MV_STATUS 	mvEthPhyHalInit(MV_ETHPHY_HAL_DATA *halData);
-diff --git a/arch/arm/plat-armada/mv_hal/eth/gbe/mvEthAddrDec.c b/arch/arm/plat-armada/mv_hal/eth/gbe/mvEthAddrDec.c
-old mode 100644
-new mode 100755
-index 92dd3d5..7348a1a
 --- a/arch/arm/plat-armada/mv_hal/eth/gbe/mvEthAddrDec.c
 +++ b/arch/arm/plat-armada/mv_hal/eth/gbe/mvEthAddrDec.c
-@@ -195,6 +195,10 @@ MV_STATUS mvEthWinWrite(MV_U32 port, MV_U32 winNum, MV_UNIT_WIN_INFO *pAddrDecWi
+@@ -195,6 +195,10 @@ MV_STATUS mvEthWinWrite(MV_U32 port, MV_
  	MV_U32 size, alignment;
  	MV_U32 baseReg, sizeReg;
  
@@ -1084,7 +1040,7 @@ index 92dd3d5..7348a1a
  	/* Parameter checking   */
  	if (winNum >= ETH_MAX_DECODE_WIN) {
  		mvOsPrintf("mvEthWinSet: ERR. Invalid win num %d\n", winNum);
-@@ -215,12 +219,13 @@ MV_STATUS mvEthWinWrite(MV_U32 port, MV_U32 winNum, MV_UNIT_WIN_INFO *pAddrDecWi
+@@ -215,12 +219,13 @@ MV_STATUS mvEthWinWrite(MV_U32 port, MV_
  		return MV_ERROR;
  	}
  
@@ -1103,10 +1059,6 @@ index 92dd3d5..7348a1a
  	baseReg = (pAddrDecWin->addrWin.baseLow & ETH_WIN_BASE_MASK);
  	sizeReg = MV_REG_READ(ETH_WIN_SIZE_REG(port, winNum));
  
-diff --git a/arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h b/arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h
-old mode 100644
-new mode 100755
-index 6a82968..4d7ab18
 --- a/arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h
 +++ b/arch/arm/plat-armada/mv_hal/gpp/mvGppRegs.h
 @@ -104,7 +104,44 @@ extern "C" {
@@ -1164,10 +1116,6 @@ index 6a82968..4d7ab18
  #define GPP_DATA_OUT_SET_REG			(MV_GPP_REGS_BASE(0) + 0x20)
  #define GPP_DATA_OUT_CLEAR_REG			(MV_GPP_REGS_BASE(0) + 0x24)
  
-diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
-old mode 100644
-new mode 100755
-index 3172b72..fe8afa2
 --- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
 +++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
 @@ -199,7 +199,7 @@ typedef enum {
@@ -1179,13 +1127,9 @@ index 3172b72..fe8afa2
  
  } MV_ETH_PORT_FC;
  
-diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaAddrDec.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaAddrDec.c
-old mode 100644
-new mode 100755
-index ebd8fe1..03edf46
 --- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaAddrDec.c
 +++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaAddrDec.c
-@@ -170,6 +170,10 @@ MV_STATUS mvNetaWinWrite(MV_U32 port, MV_U32 winNum, MV_UNIT_WIN_INFO *pAddrDecW
+@@ -170,6 +170,10 @@ MV_STATUS mvNetaWinWrite(MV_U32 port, MV
  	MV_U32 size, alignment;
  	MV_U32 baseReg, sizeReg;
  
@@ -1196,7 +1140,7 @@ index ebd8fe1..03edf46
  	/* Parameter checking   */
  	if (winNum >= ETH_MAX_DECODE_WIN) {
  		mvOsPrintf("mvNetaWinSet: ERR. Invalid win num %d\n", winNum);
-@@ -190,11 +194,13 @@ MV_STATUS mvNetaWinWrite(MV_U32 port, MV_U32 winNum, MV_UNIT_WIN_INFO *pAddrDecW
+@@ -190,11 +194,13 @@ MV_STATUS mvNetaWinWrite(MV_U32 port, MV
  		return MV_ERROR;
  	}
  
@@ -1215,16 +1159,9 @@ index ebd8fe1..03edf46
  	}
  
  	baseReg = (pAddrDecWin->addrWin.baseLow & ETH_WIN_BASE_MASK);
-diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNetaDebug.c
-old mode 100644
-new mode 100755
-diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPex.c b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
-old mode 100644
-new mode 100755
-index 11c4579..25903bd
 --- a/arch/arm/plat-armada/mv_hal/pex/mvPex.c
 +++ b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
-@@ -296,12 +296,19 @@ MV_U32 mvPexModeGet(MV_U32 pexIf, MV_PEX_MODE *pexMode)
+@@ -296,12 +296,19 @@ MV_U32 mvPexModeGet(MV_U32 pexIf, MV_PEX
  
  		/* If there is no link, the auto negotiation data is worthless */
  		pexMode->pexWidth = MV_PEX_WITDH_INVALID;
@@ -1246,10 +1183,6 @@ index 11c4579..25903bd
  	}
  
  	return MV_OK;
-diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPex.h b/arch/arm/plat-armada/mv_hal/pex/mvPex.h
-old mode 100644
-new mode 100755
-index 5a20a29..a403da5
 --- a/arch/arm/plat-armada/mv_hal/pex/mvPex.h
 +++ b/arch/arm/plat-armada/mv_hal/pex/mvPex.h
 @@ -91,6 +91,11 @@ extern "C" {
@@ -1272,10 +1205,6 @@ index 5a20a29..a403da5
  	} MV_PEX_MODE;
  
  	/* PEX Bar attributes */
-diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h b/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h
-old mode 100644
-new mode 100755
-index f883d84..04266bf
 --- a/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h
 +++ b/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h
 @@ -184,6 +184,7 @@ extern "C" {
@@ -1306,10 +1235,6 @@ index f883d84..04266bf
  #define PXLCSR_LNK_TRN 				BIT27	/* Link Training */
  
  #define PXLCSR_SLT_CLK_CFG_OFFS			28	/* Slot Clock Configuration */
-diff --git a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvOsS.h b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvOsS.h
-old mode 100644
-new mode 100755
-index 374bc5f..e057f27
 --- a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvOsS.h
 +++ b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvOsS.h
 @@ -86,7 +86,7 @@ extern "C" {
@@ -1321,10 +1246,6 @@ index 374bc5f..e057f27
  
  #elif defined(MV_NETBSD)
  
-diff --git a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.h b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.h
-old mode 100644
-new mode 100755
-index b35b893..4528e7f
 --- a/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.h
 +++ b/arch/arm/plat-armada/mv_hal/sata/CoreDriver/mvSata.h
 @@ -290,7 +290,7 @@ typedef enum mvPMSwitchingmode {
@@ -1336,10 +1257,6 @@ index b35b893..4528e7f
  } MV_SATA_SWITCHING_MODE;
  
  struct mvDmaRequestQueueEntry;
-diff --git a/arch/arm/plat-armada/mv_hal/spi/mvSpi.c b/arch/arm/plat-armada/mv_hal/spi/mvSpi.c
-old mode 100644
-new mode 100755
-index f92bb1f..36c56e6
 --- a/arch/arm/plat-armada/mv_hal/spi/mvSpi.c
 +++ b/arch/arm/plat-armada/mv_hal/spi/mvSpi.c
 @@ -82,12 +82,12 @@ static MV_SPI_TYPE_INFO spiTypes[] = {
@@ -1357,13 +1274,9 @@ index f92bb1f..36c56e6
  	}
  };
  
-diff --git a/arch/arm/plat-armada/mv_hal/twsi/mvTwsi.c b/arch/arm/plat-armada/mv_hal/twsi/mvTwsi.c
-old mode 100644
-new mode 100755
-index 257be24..582b35e
 --- a/arch/arm/plat-armada/mv_hal/twsi/mvTwsi.c
 +++ b/arch/arm/plat-armada/mv_hal/twsi/mvTwsi.c
-@@ -152,7 +152,7 @@ MV_STATUS mvTwsiStartBitSet(MV_U8 chanNum)
+@@ -152,7 +152,7 @@ MV_STATUS mvTwsiStartBitSet(MV_U8 chanNu
  
  	/* check for timeout */
  	if (MV_TRUE == twsiTimeoutChk(timeout,
@@ -1372,7 +1285,7 @@ index 257be24..582b35e
  		return MV_TIMEOUT;
  
  	/* check that start bit went down */
-@@ -210,7 +210,7 @@ MV_STATUS mvTwsiStopBitSet(MV_U8 chanNum)
+@@ -210,7 +210,7 @@ MV_STATUS mvTwsiStopBitSet(MV_U8 chanNum
  		;
  
  	/* check for timeout */
@@ -1381,7 +1294,7 @@ index 257be24..582b35e
  		return MV_TIMEOUT;
  
  	/* check that the stop bit went down */
-@@ -556,7 +556,7 @@ static MV_STATUS twsiAddr10BitSet(MV_U8 chanNum, MV_U32 deviceAddress, MV_TWSI_C
+@@ -556,7 +556,7 @@ static MV_STATUS twsiAddr10BitSet(MV_U8
  
  	/* check for timeout */
  	if (MV_TRUE ==
@@ -1390,7 +1303,7 @@ index 257be24..582b35e
  		return MV_TIMEOUT;
  
  	/* check the status */
-@@ -585,7 +585,7 @@ static MV_STATUS twsiAddr10BitSet(MV_U8 chanNum, MV_U32 deviceAddress, MV_TWSI_C
+@@ -585,7 +585,7 @@ static MV_STATUS twsiAddr10BitSet(MV_U8
  
  	/* check for timeout */
  	if (MV_TRUE ==
@@ -1399,7 +1312,7 @@ index 257be24..582b35e
  		return MV_TIMEOUT;
  
  	/* check the status */
-@@ -647,7 +647,7 @@ static MV_STATUS twsiAddr7BitSet(MV_U8 chanNum, MV_U32 deviceAddress, MV_TWSI_CM
+@@ -647,7 +647,7 @@ static MV_STATUS twsiAddr7BitSet(MV_U8 c
  
  	/* check for timeout */
  	if (MV_TRUE ==
@@ -1408,7 +1321,7 @@ index 257be24..582b35e
  		return MV_TIMEOUT;
  
  	/* check the status */
-@@ -709,7 +709,7 @@ static MV_STATUS twsiDataTransmit(MV_U8 chanNum, MV_U8 *pBlock, MV_U32 blockSize
+@@ -709,7 +709,7 @@ static MV_STATUS twsiDataTransmit(MV_U8
  
  	/* check for timeout */
  	if (MV_TRUE ==
@@ -1417,7 +1330,7 @@ index 257be24..582b35e
  		return MV_TIMEOUT;
  
  	while (blockSizeWr) {
-@@ -728,7 +728,7 @@ static MV_STATUS twsiDataTransmit(MV_U8 chanNum, MV_U8 *pBlock, MV_U32 blockSize
+@@ -728,7 +728,7 @@ static MV_STATUS twsiDataTransmit(MV_U8
  
  		/* check for timeout */
  		if (MV_TRUE ==
@@ -1426,7 +1339,7 @@ index 257be24..582b35e
  			return MV_TIMEOUT;
  
  		/* check the status */
-@@ -789,7 +789,7 @@ static MV_STATUS twsiDataReceive(MV_U8 chanNum, MV_U8 *pBlock, MV_U32 blockSize)
+@@ -789,7 +789,7 @@ static MV_STATUS twsiDataReceive(MV_U8 c
  
  	/* check for timeout */
  	if (MV_TRUE ==
@@ -1435,7 +1348,7 @@ index 257be24..582b35e
  		return MV_TIMEOUT;
  
  	while (blockSizeRd) {
-@@ -807,7 +807,7 @@ static MV_STATUS twsiDataReceive(MV_U8 chanNum, MV_U8 *pBlock, MV_U32 blockSize)
+@@ -807,7 +807,7 @@ static MV_STATUS twsiDataReceive(MV_U8 c
  
  		/* check for timeout */
  		if (MV_TRUE ==
@@ -1444,7 +1357,7 @@ index 257be24..582b35e
  			return MV_TIMEOUT;
  
  		/* check the status */
-@@ -910,11 +910,11 @@ MV_STATUS mvTwsiRead(MV_U8 chanNum, MV_TWSI_SLAVE *pTwsiSlave, MV_U8 *pBlock, MV
+@@ -910,11 +910,11 @@ MV_STATUS mvTwsiRead(MV_U8 chanNum, MV_T
  {
  	MV_STATUS rc;
  	MV_STATUS ret = MV_FAIL;
@@ -1457,7 +1370,7 @@ index 257be24..582b35e
  	do	{
  		if (counter > 0) /* wait for 1 mili sec for the clear to take effect */
  			mvOsDelay(1);
-@@ -1033,11 +1033,11 @@ MV_STATUS mvTwsiRead(MV_U8 chanNum, MV_TWSI_SLAVE *pTwsiSlave, MV_U8 *pBlock, MV
+@@ -1033,11 +1033,11 @@ MV_STATUS mvTwsiRead(MV_U8 chanNum, MV_T
  *******************************************************************************/
  MV_STATUS mvTwsiWrite(MV_U8 chanNum, MV_TWSI_SLAVE *pTwsiSlave, MV_U8 *pBlock, MV_U32 blockSize)
  {
@@ -1471,13 +1384,9 @@ index 257be24..582b35e
  	do	{
  		if (counter > 0) /* wait for 1 mili sec for the clear to take effect */
  			mvOsDelay(1);
-diff --git a/arch/arm/plat-armada/mv_hal/usb/mvUsbAddrDec.c b/arch/arm/plat-armada/mv_hal/usb/mvUsbAddrDec.c
-old mode 100644
-new mode 100755
-index b24a868..cecafd4
 --- a/arch/arm/plat-armada/mv_hal/usb/mvUsbAddrDec.c
 +++ b/arch/arm/plat-armada/mv_hal/usb/mvUsbAddrDec.c
-@@ -172,6 +172,12 @@ MV_STATUS mvUsbWinWrite(MV_U32 dev, MV_U32 winNum, MV_UNIT_WIN_INFO *pDecWin)
+@@ -172,6 +172,12 @@ MV_STATUS mvUsbWinWrite(MV_U32 dev, MV_U
  	MV_U32 sizeReg, baseReg;
  	MV_U32 size;
  
@@ -1490,7 +1399,7 @@ index b24a868..cecafd4
  	/* Parameter checking   */
  	if (winNum >= MV_USB_MAX_ADDR_DECODE_WIN) {
  		mvOsPrintf("%s: ERR. Invalid win num %d\n", __func__, winNum);
-@@ -192,9 +198,11 @@ MV_STATUS mvUsbWinWrite(MV_U32 dev, MV_U32 winNum, MV_UNIT_WIN_INFO *pDecWin)
+@@ -192,9 +198,11 @@ MV_STATUS mvUsbWinWrite(MV_U32 dev, MV_U
  		return MV_ERROR;
  	}
  
@@ -1505,13 +1414,9 @@ index b24a868..cecafd4
  	}
  
  	size = pDecWin->addrWin.size / MV_USB_WIN_SIZE_ALIGN - 1;
-diff --git a/arch/arm/plat-armada/mv_hal/xor/mvXorAddrDec.c b/arch/arm/plat-armada/mv_hal/xor/mvXorAddrDec.c
-old mode 100644
-new mode 100755
-index 21dc1e9..da7ed88
 --- a/arch/arm/plat-armada/mv_hal/xor/mvXorAddrDec.c
 +++ b/arch/arm/plat-armada/mv_hal/xor/mvXorAddrDec.c
-@@ -206,6 +206,10 @@ MV_STATUS mvXorTargetWinWrite(MV_U32 unit, MV_U32 winNum,
+@@ -206,6 +206,10 @@ MV_STATUS mvXorTargetWinWrite(MV_U32 uni
  	MV_U32 sizeReg, baseReg;
  	MV_U32 chan;
  
@@ -1522,6 +1427,3 @@ index 21dc1e9..da7ed88
  	/* Parameter checking */
  	if (winNum >= XOR_MAX_ADDR_DEC_WIN) {
  		DB(mvOsPrintf("%s: ERR. Invalid win num %d\n",  __func__, winNum));
--- 
-1.7.9.5
-

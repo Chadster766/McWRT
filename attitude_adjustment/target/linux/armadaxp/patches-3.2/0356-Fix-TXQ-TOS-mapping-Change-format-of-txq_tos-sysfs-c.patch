@@ -13,8 +13,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h     |    2 +-
  3 files changed, 71 insertions(+), 39 deletions(-)
 
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
-index 92dd921..a984470 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
 @@ -40,10 +40,14 @@ static ssize_t mv_eth_help(char *buf)
@@ -98,7 +96,7 @@ index 92dd921..a984470 100644
  	off += sprintf(buf+off, "echo p {0|1|2}     > pm_mode       - set port <p> pm mode. 0 wol, 1 clock, 2 disabled.\n");
  	return off;
  }
-@@ -345,6 +349,36 @@ static ssize_t mv_eth_3_store(struct device *dev,
+@@ -345,6 +349,36 @@ static ssize_t mv_eth_3_store(struct dev
  	return err ? -EINVAL : len;
  }
  
@@ -135,7 +133,7 @@ index 92dd921..a984470 100644
  static ssize_t mv_eth_4_store(struct device *dev,
  				   struct device_attribute *attr, const char *buf, size_t len)
  {
-@@ -387,8 +421,6 @@ static ssize_t mv_eth_4_store(struct device *dev,
+@@ -387,8 +421,6 @@ static ssize_t mv_eth_4_store(struct dev
  		mvNetaTxqShow(p, txp, txq, v);
  	} else if (!strcmp(name, "txq_regs")) {
  		mvNetaTxqRegs(p, txp, txq);
@@ -144,7 +142,7 @@ index 92dd921..a984470 100644
  	} else if (!strcmp(name, "txq_shared")) {
  		err = mv_eth_shared_set(p, txp, txq, v);
  	} else {
-@@ -422,7 +454,7 @@ static DEVICE_ATTR(ejp,         S_IWUSR, mv_eth_show, mv_eth_3_store);
+@@ -422,7 +454,7 @@ static DEVICE_ATTR(ejp,         S_IWUSR,
  static DEVICE_ATTR(buf_num,     S_IWUSR, mv_eth_show, mv_eth_3_store);
  static DEVICE_ATTR(rxq_tos,     S_IWUSR, mv_eth_show, mv_eth_3_hex_store);
  static DEVICE_ATTR(rxq_vlan,    S_IWUSR, mv_eth_show, mv_eth_3_hex_store);
@@ -153,8 +151,6 @@ index 92dd921..a984470 100644
  static DEVICE_ATTR(mh_en,       S_IWUSR, mv_eth_show, mv_eth_port_store);
  static DEVICE_ATTR(mh_2B,       S_IWUSR, mv_eth_show, mv_eth_port_store);
  static DEVICE_ATTR(tx_cmd,      S_IWUSR, mv_eth_show, mv_eth_port_store);
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-index 05759a9..3cebbda 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 @@ -1931,9 +1931,8 @@ out:
@@ -203,7 +199,7 @@ index 05759a9..3cebbda 100755
  		}
  	}
  }
-@@ -5002,7 +5001,7 @@ int mv_eth_rxq_vlan_prio_set(int port, int rxq, unsigned char prio)
+@@ -5002,7 +5001,7 @@ int mv_eth_rxq_vlan_prio_set(int port, i
  }
  
  /* Set TXQ for special TOS value. txq=-1 - use default TXQ for this port */
@@ -212,7 +208,7 @@ index 05759a9..3cebbda 100755
  {
  	MV_U8 old_txq;
  	struct cpu_ctrl	*cpuCtrl;
-@@ -5024,10 +5023,10 @@ int mv_eth_txq_tos_map_set(int port, int txq, unsigned char tos, unsigned char c
+@@ -5024,10 +5023,10 @@ int mv_eth_txq_tos_map_set(int port, int
  		printk(KERN_ERR "%s:Error, cpu #%d is masked \n", __func__, cpu);
  		return -EINVAL;
  	}
@@ -226,7 +222,7 @@ index 05759a9..3cebbda 100755
  	cpuCtrl = pp->cpu_config[cpu];
  	old_txq = cpuCtrl->txq_tos_map[tos];
  
-@@ -5041,6 +5040,7 @@ int mv_eth_txq_tos_map_set(int port, int txq, unsigned char tos, unsigned char c
+@@ -5041,6 +5040,7 @@ int mv_eth_txq_tos_map_set(int port, int
  			return -EINVAL;
  
  		cpuCtrl->txq_tos_map[tos] = MV_ETH_TXQ_INVALID;
@@ -234,7 +230,7 @@ index 05759a9..3cebbda 100755
  		return 0;
  	}
  
-@@ -5057,7 +5057,7 @@ int mv_eth_txq_tos_map_set(int port, int txq, unsigned char tos, unsigned char c
+@@ -5057,7 +5057,7 @@ int mv_eth_txq_tos_map_set(int port, int
  		return -EINVAL;
  
  	cpuCtrl->txq_tos_map[tos] = (MV_U8) txq;
@@ -243,11 +239,9 @@ index 05759a9..3cebbda 100755
  	return 0;
  }
  
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
-index 1f9ed9f..955e9d1 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
-@@ -768,7 +768,7 @@ bool                 mv_eth_netdev_find(unsigned int if_index);
+@@ -768,7 +768,7 @@ bool                 mv_eth_netdev_find(
  void        mv_eth_mac_show(int port);
  void        mv_eth_tos_map_show(int port);
  int         mv_eth_rxq_tos_map_set(int port, int rxq, unsigned char tos);
@@ -256,6 +250,3 @@ index 1f9ed9f..955e9d1 100755
  int         mv_eth_napi_set_cpu_affinity(int port, int group, int affinity);
  int         mv_eth_napi_set_rxq_affinity(int port, int group, int rxq);
  void        mv_eth_napi_group_show(int port);
--- 
-1.7.9.5
-

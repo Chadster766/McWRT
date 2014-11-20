@@ -27,11 +27,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c        |    2 +-
  18 files changed, 325 insertions(+), 55 deletions(-)
 
-diff --git a/arch/arm/include/asm/tlbflush.h b/arch/arm/include/asm/tlbflush.h
-index 3ba837c..7040d75 100644
 --- a/arch/arm/include/asm/tlbflush.h
 +++ b/arch/arm/include/asm/tlbflush.h
-@@ -482,6 +482,7 @@ static inline void flush_pmd_entry(void *pmd)
+@@ -482,6 +482,7 @@ static inline void flush_pmd_entry(void
  {
  	const unsigned int __tlb_flag = __cpu_tlb_flags;
  
@@ -39,7 +37,7 @@ index 3ba837c..7040d75 100644
  	if (tlb_flag(TLB_DCLEAN))
  #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_4611
  	{
-@@ -490,8 +491,21 @@ static inline void flush_pmd_entry(void *pmd)
+@@ -490,8 +491,21 @@ static inline void flush_pmd_entry(void
  		dmb();
  #endif
  #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043
@@ -61,7 +59,7 @@ index 3ba837c..7040d75 100644
  #else
  		asm("mcr	p15, 0, %0, c7, c10, 1	@ flush_pmd"
  			: : "r" (pmd) : "cc");
-@@ -525,8 +539,21 @@ static inline void clean_pmd_entry(void *pmd)
+@@ -525,8 +539,21 @@ static inline void clean_pmd_entry(void
                  dmb();
  #endif
  #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043
@@ -83,8 +81,6 @@ index 3ba837c..7040d75 100644
  #else
  		asm("mcr	p15, 0, %0, c7, c10, 1	@ flush_pmd"
  			: : "r" (pmd) : "cc");
-diff --git a/arch/arm/kernel/entry-armv.S b/arch/arm/kernel/entry-armv.S
-index ece0996..128a5d0 100644
 --- a/arch/arm/kernel/entry-armv.S
 +++ b/arch/arm/kernel/entry-armv.S
 @@ -789,10 +789,34 @@ ENDPROC(__switch_to)
@@ -152,8 +148,6 @@ index ece0996..128a5d0 100644
  	ALT_UP(usr_ret	lr)
  
  #endif
-diff --git a/arch/arm/kernel/traps.c b/arch/arm/kernel/traps.c
-index 7ac5dfd..7f737ac 100644
 --- a/arch/arm/kernel/traps.c
 +++ b/arch/arm/kernel/traps.c
 @@ -788,6 +788,9 @@ void __init early_trap_init(void)
@@ -178,8 +172,6 @@ index 7ac5dfd..7f737ac 100644
  	/*
  	 * Do processor specific fixups for the kuser helpers
  	 */
-diff --git a/arch/arm/mach-armadaxp/Kconfig b/arch/arm/mach-armadaxp/Kconfig
-index ff58fa3..a51d0ff 100644
 --- a/arch/arm/mach-armadaxp/Kconfig
 +++ b/arch/arm/mach-armadaxp/Kconfig
 @@ -16,7 +16,7 @@ config ARMADA_XP
@@ -225,8 +217,6 @@ index ff58fa3..a51d0ff 100644
  endmenu
  
  endif
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
-index a506d3c..1c05c74 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
 @@ -237,7 +237,7 @@ extern "C" {
@@ -247,8 +237,6 @@ index a506d3c..1c05c74 100644
  #define MV_78130_ETH_MAX_PORT			3
  #define MV_78460_ETH_MAX_PORT			4
  
-diff --git a/arch/arm/mach-armadaxp/config/mvSysHwConfig.h b/arch/arm/mach-armadaxp/config/mvSysHwConfig.h
-index caf7774..4f742f3 100644
 --- a/arch/arm/mach-armadaxp/config/mvSysHwConfig.h
 +++ b/arch/arm/mach-armadaxp/config/mvSysHwConfig.h
 @@ -203,10 +203,12 @@ disclaimer.
@@ -266,8 +254,6 @@ index caf7774..4f742f3 100644
  /****************************************************************/
  /************* General    configuration ********************/
  /****************************************************************/
-diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
-index 296e53d..023a86f 100755
 --- a/arch/arm/mach-armadaxp/core.c
 +++ b/arch/arm/mach-armadaxp/core.c
 @@ -1441,7 +1441,7 @@ static void __init axp_db_init(void)
@@ -279,8 +265,6 @@ index 296e53d..023a86f 100755
  	gBoardId = DB_88F78XX0_BP_REV2_ID;
  #else
  	gBoardId = DB_88F78XX0_BP_ID;
-diff --git a/arch/arm/mach-armadaxp/include/mach/armadaxp.h b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
-index ed61264..26a63aa 100644
 --- a/arch/arm/mach-armadaxp/include/mach/armadaxp.h
 +++ b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
 @@ -338,4 +338,6 @@
@@ -290,8 +274,6 @@ index ed61264..26a63aa 100644
 +#define AXP_REVISION_ID_PHYS_REG	(INTER_REGS_PHYS_BASE | 0x40008)
 +#define AXP_REVISION_ID_VIRT_REG	(INTER_REGS_BASE | 0x40008)
  #endif
-diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
-index 441ca46..a04dc3d 100644
 --- a/arch/arm/mm/Kconfig
 +++ b/arch/arm/mm/Kconfig
 @@ -965,7 +965,7 @@ config SHEEVA_ERRATA_ARM_CPU_4948
@@ -366,8 +348,6 @@ index 441ca46..a04dc3d 100644
          default y
          help
            This option enables Snoop Filter feature.
-diff --git a/arch/arm/mm/cache-v7.S b/arch/arm/mm/cache-v7.S
-index 27d3fe1..14a7875 100644
 --- a/arch/arm/mm/cache-v7.S
 +++ b/arch/arm/mm/cache-v7.S
 @@ -16,6 +16,7 @@
@@ -433,8 +413,6 @@ index 27d3fe1..14a7875 100644
  #endif
  	add	r0, r0, r2
  	cmp	r0, r1
-diff --git a/arch/arm/mm/proc-macros.S b/arch/arm/mm/proc-macros.S
-index c343997..b1bd133 100644
 --- a/arch/arm/mm/proc-macros.S
 +++ b/arch/arm/mm/proc-macros.S
 @@ -208,9 +208,13 @@
@@ -452,8 +430,6 @@ index c343997..b1bd133 100644
  #endif
  #elif __LINUX_ARM_ARCH__ == 6
          mcr     p15, 0, r0, c7, c10, 5          @ DMB for V6
-diff --git a/arch/arm/mm/proc-sheeva_pj4bv7.S b/arch/arm/mm/proc-sheeva_pj4bv7.S
-index 2f8b3fb..c9beed9 100644
 --- a/arch/arm/mm/proc-sheeva_pj4bv7.S
 +++ b/arch/arm/mm/proc-sheeva_pj4bv7.S
 @@ -47,10 +47,6 @@ ENDPROC(cpu_pj4bv7_proc_init)
@@ -600,7 +576,7 @@ index 2f8b3fb..c9beed9 100644
  #endif
  	orr          r0, r0, #0x40000000                         /* BIT30 L1 Replacement Policy Config--> '1' Strict Round-Robin Replacement Policy  */
  	mcr        p15, 1, r0, c15, c1, 2                         /* Write */
-@@ -554,6 +595,10 @@ adr	r12, __pj4bv7_setup_stack		@ the local stack
+@@ -554,6 +595,10 @@ adr	r12, __pj4bv7_setup_stack		@ the loc
  	mov	pc, lr				@ return to head.S:__ret
  ENDPROC(__pj4bv7_setup)
  
@@ -620,8 +596,6 @@ index 2f8b3fb..c9beed9 100644
  	ALT_SMP(.long \
  		PMD_TYPE_SECT | \
  		PMD_SECT_AP_WRITE | \
-diff --git a/arch/arm/mm/sheeva_pj4b-macros.S b/arch/arm/mm/sheeva_pj4b-macros.S
-index 8def4b2..c7e31e9 100644
 --- a/arch/arm/mm/sheeva_pj4b-macros.S
 +++ b/arch/arm/mm/sheeva_pj4b-macros.S
 @@ -40,3 +40,61 @@
@@ -686,8 +660,6 @@ index 8def4b2..c7e31e9 100644
 +	dmb
 +3:
 +	.endm
-diff --git a/arch/arm/plat-armada/common/mvDeviceId.h b/arch/arm/plat-armada/common/mvDeviceId.h
-index 90e9b56..9782da7 100644
 --- a/arch/arm/plat-armada/common/mvDeviceId.h
 +++ b/arch/arm/plat-armada/common/mvDeviceId.h
 @@ -303,6 +303,23 @@ extern "C" {
@@ -714,11 +686,9 @@ index 90e9b56..9782da7 100644
  #ifdef __cplusplus
  }
  #endif	/* __cplusplus */
-diff --git a/arch/arm/plat-armada/include/plat/cache-aurora-l2.h b/arch/arm/plat-armada/include/plat/cache-aurora-l2.h
-index 010ea7b..c44b117 100644
 --- a/arch/arm/plat-armada/include/plat/cache-aurora-l2.h
 +++ b/arch/arm/plat-armada/include/plat/cache-aurora-l2.h
-@@ -149,10 +149,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -149,10 +149,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #define L2ACR_REPLACEMENT_MASK		(0x3 << L2ACR_REPLACEMENT_OFFSET)
  #define L2ACR_REPLACEMENT_TYPE_WAYRR	(0 << L2ACR_REPLACEMENT_OFFSET)
  #define L2ACR_REPLACEMENT_TYPE_LFSR	(1 << L2ACR_REPLACEMENT_OFFSET)
@@ -732,11 +702,9 @@ index 010ea7b..c44b117 100644
  #endif
  
  /* L2_CNTR_CTRL_REG (L2CCR) */
-diff --git a/arch/arm/plat-armada/linux_oss/mvOs.h b/arch/arm/plat-armada/linux_oss/mvOs.h
-index d9a863e..8a889db 100755
 --- a/arch/arm/plat-armada/linux_oss/mvOs.h
 +++ b/arch/arm/plat-armada/linux_oss/mvOs.h
-@@ -342,17 +342,23 @@ static inline void mvOsBridgeReorderWA(void)
+@@ -342,17 +342,23 @@ static inline void mvOsBridgeReorderWA(v
  #if defined(CONFIG_L2_CACHE_ENABLE) || defined(CONFIG_CACHE_FEROCEON_L2)
  #define mvOsCacheLineFlush(handle, addr)                     \
  {                                                               \
@@ -765,7 +733,7 @@ index d9a863e..8a889db 100755
   #define mvOsCacheLineFlush(handle, addr)                     \
   {                                                               \
     DSBWA_4611(addr);                                             \
-@@ -362,6 +368,19 @@ static inline void mvOsBridgeReorderWA(void)
+@@ -362,6 +368,19 @@ static inline void mvOsBridgeReorderWA(v
     __asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 4" : : "r" (addr)); /* DSB */ \
   }
  
@@ -785,7 +753,7 @@ index d9a863e..8a889db 100755
  #elif defined(CONFIG_CACHE_AURORA_L2) && defined(CONFIG_SHEEVA_ERRATA_ARM_CPU_6043)
   #define mvOsCacheLineFlush(handle, addr)                     \
   {                                                               \
-@@ -375,11 +394,19 @@ static inline void mvOsBridgeReorderWA(void)
+@@ -375,11 +394,19 @@ static inline void mvOsBridgeReorderWA(v
   #define mvOsCacheLineFlush(handle, addr)                     \
   {                                                               \
     DSBWA_4611(addr);						 \
@@ -808,7 +776,7 @@ index d9a863e..8a889db 100755
  	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 4" : : "r" (addr)); \
  }
  #endif
-@@ -401,9 +428,17 @@ static inline void mvOsCacheMultiLineFlush(void *handle, void *addr, int size)
+@@ -401,9 +428,17 @@ static inline void mvOsCacheMultiLineFlu
  		DSBWA_4611(addr);
  		while (size > 0) {
  #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043
@@ -827,11 +795,9 @@ index d9a863e..8a889db 100755
  #endif
  			writel(__virt_to_phys(((int)addr) & ~0x1f), (INTER_REGS_BASE + MV_AURORA_L2_REGS_OFFSET + 0x7B0/*L2_CLEAN_PA*/));
  			size -= CPU_D_CACHE_LINE_SIZE;
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_xor/mv_netdma.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_xor/mv_netdma.c
-index c67f00c..cac52f5 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_xor/mv_netdma.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_xor/mv_netdma.c
-@@ -513,7 +513,15 @@ static inline void dmac_clean_dcache_line(void* addr)
+@@ -513,7 +513,15 @@ static inline void dmac_clean_dcache_lin
  //#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,26)
  
  #if defined CONFIG_SHEEVA_ERRATA_ARM_CPU_6043 || defined CONFIG_SHEEVA_ERRATA_ARM_CPU_6076
@@ -847,11 +813,9 @@ index c67f00c..cac52f5 100644
  #else
  	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 1" : : "r" (addr));
  #endif
-diff --git a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
-index 9b606aa..2079c57 100644
 --- a/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
 +++ b/arch/arm/plat-armada/mv_hal/cntmr/mvCntmr.c
-@@ -84,7 +84,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -84,7 +84,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #if defined(MV88F78X60_Z1)
  #define CNTMR_EVENTS_STATUS_REG_PRIVATE(t)	(MV_CPUIF_REGS_OFFSET(TIMER_TO_CPU(t) + 0x68))
  #define TIMER_PRIVATE_BIT(timer)	(1 << ((CPU_TIMER(timer) * 8)))
@@ -860,6 +824,3 @@ index 9b606aa..2079c57 100644
  #define CNTMR_EVENTS_STATUS_REG_PRIVATE		(MV_CPUIF_LOCAL_REGS_OFFSET + 0x68)
  #define TIMER_PRIVATE_BIT(timer)	(1 << ((timer - FIRST_PRIVATE_TIMER) * 8))
  #else
--- 
-1.7.9.5
-

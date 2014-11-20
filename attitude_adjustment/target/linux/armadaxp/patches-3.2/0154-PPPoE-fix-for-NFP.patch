@@ -9,8 +9,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  drivers/net/ppp/pppoe.c       |   28 +++++++++++++++-------------
  2 files changed, 19 insertions(+), 17 deletions(-)
 
-diff --git a/drivers/net/ppp/ppp_generic.c b/drivers/net/ppp/ppp_generic.c
-index 9c34cb3..3178c73 100644
 --- a/drivers/net/ppp/ppp_generic.c
 +++ b/drivers/net/ppp/ppp_generic.c
 @@ -55,9 +55,9 @@
@@ -25,7 +23,7 @@ index 9c34cb3..3178c73 100644
  
  /*
   * Network protocols we support.
-@@ -2843,9 +2843,9 @@ ppp_connect_channel(struct channel *pch, int unit)
+@@ -2843,9 +2843,9 @@ ppp_connect_channel(struct channel *pch,
  	atomic_inc(&ppp->file.refcnt);
  	ppp_unlock(ppp);
  	ret = 0;
@@ -37,8 +35,6 @@ index 9c34cb3..3178c73 100644
  outl:
  	write_unlock_bh(&pch->upl);
   out:
-diff --git a/drivers/net/ppp/pppoe.c b/drivers/net/ppp/pppoe.c
-index 046bd11..3e4f28e 100644
 --- a/drivers/net/ppp/pppoe.c
 +++ b/drivers/net/ppp/pppoe.c
 @@ -84,12 +84,13 @@
@@ -58,7 +54,7 @@ index 046bd11..3e4f28e 100644
  
  #define PPPOE_HASH_BITS 4
  #define PPPOE_HASH_SIZE (1 << PPPOE_HASH_BITS)
-@@ -599,9 +600,9 @@ static int pppoe_release(struct socket *sock)
+@@ -599,9 +600,9 @@ static int pppoe_release(struct socket *
  	 * protect "po" from concurrent updates
  	 * on pppoe_flush_dev
  	 */
@@ -71,7 +67,7 @@ index 046bd11..3e4f28e 100644
  	delete_item(pn, po->pppoe_pa.sid, po->pppoe_pa.remote,
  		    po->pppoe_ifindex);
  
-@@ -702,9 +703,9 @@ static int pppoe_connect(struct socket *sock, struct sockaddr *uservaddr,
+@@ -702,9 +703,9 @@ static int pppoe_connect(struct socket *
  		}
  
  		sk->sk_state = PPPOX_CONNECTED;
@@ -109,6 +105,3 @@ index 046bd11..3e4f28e 100644
  	unregister_netdevice_notifier(&pppoe_notifier);
  	dev_remove_pack(&pppoed_ptype);
  	dev_remove_pack(&pppoes_ptype);
--- 
-1.7.9.5
-

@@ -10,11 +10,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/plat-armada/mv_hal/pex/mvPex.c |    2 +-
  3 files changed, 2 insertions(+), 4 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
-index f323e3f..0898973 100755
 --- a/arch/arm/mach-armadaxp/core.c
 +++ b/arch/arm/mach-armadaxp/core.c
-@@ -223,8 +223,6 @@ static int __init parse_tag_mv_uboot(const struct tag *tag)
+@@ -223,8 +223,6 @@ static int __init parse_tag_mv_uboot(con
  		memset(mvMacAddr[i], 0, 6);
  		mvMtu[i] = 0;
  #else
@@ -23,8 +21,6 @@ index f323e3f..0898973 100755
  		memcpy(mvMacAddr[i], tag->u.mv_uboot.macAddr[i], 6);
  		mvMtu[i] = read_mtu(tag->u.mv_uboot.mtu[i]);
  #endif
-diff --git a/arch/arm/mach-armadaxp/platsmp.c b/arch/arm/mach-armadaxp/platsmp.c
-index 9f95c36..3774e4f 100644
 --- a/arch/arm/mach-armadaxp/platsmp.c
 +++ b/arch/arm/mach-armadaxp/platsmp.c
 @@ -305,7 +305,7 @@ void __init smp_init_cpus(void)
@@ -36,11 +32,9 @@ index 9f95c36..3774e4f 100644
  
  	for (i = 0; i < ncores; i++)
  		set_cpu_possible(i, true);
-diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPex.c b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
-index 25903bd..b00ec35 100755
 --- a/arch/arm/plat-armada/mv_hal/pex/mvPex.c
 +++ b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
-@@ -301,7 +301,7 @@ MV_U32 mvPexModeGet(MV_U32 pexIf, MV_PEX_MODE *pexMode)
+@@ -301,7 +301,7 @@ MV_U32 mvPexModeGet(MV_U32 pexIf, MV_PEX
  		if ((MV_REG_READ(PEX_DBG_STATUS_REG(pexIf))) == 0x7e)
  			pexMode->pexLinkUp = MV_TRUE;
  		else {
@@ -49,6 +43,3 @@ index 25903bd..b00ec35 100755
  			pexMode->pexLinkUp = MV_FALSE;
  		}
  
--- 
-1.7.9.5
-

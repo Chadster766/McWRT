@@ -33,8 +33,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  kernel/events/core.c                              |    1 -
  22 files changed, 199 insertions(+), 155 deletions(-)
 
-diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-index 576367d..7fc7da7 100644
 --- a/arch/arm/Kconfig
 +++ b/arch/arm/Kconfig
 @@ -1588,7 +1588,7 @@ config LOCAL_TIMERS
@@ -46,8 +44,6 @@ index 576367d..7fc7da7 100644
  	help
  	  Enable support for local timers on SMP platforms, rather then the
  	  legacy IPI broadcast method.  Local timers allows the system
-diff --git a/arch/arm/configs/armada_xp_defconfig b/arch/arm/configs/armada_xp_defconfig
-index c57b01c..0f99b49 100644
 --- a/arch/arm/configs/armada_xp_defconfig
 +++ b/arch/arm/configs/armada_xp_defconfig
 @@ -1,6 +1,6 @@
@@ -94,7 +90,7 @@ index c57b01c..0f99b49 100644
  # CONFIG_GPIO_PCA953X is not set
  CONFIG_ARCH_SUPPORTS_BIG_ENDIAN=y
  CONFIG_MV_HAL_RULES_PATH="arch/arm/mach-armadaxp/mv_hal_support/mvRules.mk"
-@@ -254,7 +254,6 @@ CONFIG_MV_HAL_RULES_PATH="arch/arm/mach-armadaxp/mv_hal_support/mvRules.mk"
+@@ -254,7 +254,6 @@ CONFIG_MV_HAL_RULES_PATH="arch/arm/mach-
  #
  CONFIG_ARMADA_XP=y
  CONFIG_ARMADA_XP_REV_Z1=y
@@ -268,11 +264,9 @@ index c57b01c..0f99b49 100644
  CONFIG_NLATTR=y
  # CONFIG_AVERAGE is not set
 -# CONFIG_CORDIC is not set
-diff --git a/arch/arm/include/asm/spinlock.h b/arch/arm/include/asm/spinlock.h
-index 65fa3c8..25f6224 100644
 --- a/arch/arm/include/asm/spinlock.h
 +++ b/arch/arm/include/asm/spinlock.h
-@@ -83,7 +83,9 @@ static inline void arch_spin_lock(arch_spinlock_t *lock)
+@@ -83,7 +83,9 @@ static inline void arch_spin_lock(arch_s
  	__asm__ __volatile__(
  "1:	ldrex	%0, [%1]\n"
  "	teq	%0, #0\n"
@@ -282,7 +276,7 @@ index 65fa3c8..25f6224 100644
  "	strexeq	%0, %2, [%1]\n"
  "	teqeq	%0, #0\n"
  "	bne	1b"
-@@ -139,17 +141,20 @@ static inline void arch_write_lock(arch_rwlock_t *rw)
+@@ -139,17 +141,20 @@ static inline void arch_write_lock(arch_
  {
  	unsigned long tmp;
  
@@ -304,7 +298,7 @@ index 65fa3c8..25f6224 100644
  	smp_mb();
  }
  
-@@ -169,6 +174,7 @@ static inline int arch_write_trylock(arch_rwlock_t *rw)
+@@ -169,6 +174,7 @@ static inline int arch_write_trylock(arc
  		smp_mb();
  		return 1;
  	} else {
@@ -312,7 +306,7 @@ index 65fa3c8..25f6224 100644
  		return 0;
  	}
  }
-@@ -209,13 +215,14 @@ static inline void arch_read_lock(arch_rwlock_t *rw)
+@@ -209,13 +215,14 @@ static inline void arch_read_lock(arch_r
  "1:	ldrex	%0, [%2]\n"
  "	adds	%0, %0, #1\n"
  "	strexpl	%1, %0, [%2]\n"
@@ -328,8 +322,6 @@ index 65fa3c8..25f6224 100644
  	smp_mb();
  }
  
-diff --git a/arch/arm/include/asm/system.h b/arch/arm/include/asm/system.h
-index 984014b..b4deeea 100644
 --- a/arch/arm/include/asm/system.h
 +++ b/arch/arm/include/asm/system.h
 @@ -255,6 +255,24 @@ do {									\
@@ -357,11 +349,9 @@ index 984014b..b4deeea 100644
  static inline unsigned long __xchg(unsigned long x, volatile void *ptr, int size)
  {
  	extern void __bad_xchg(volatile void *, int);
-diff --git a/arch/arm/kernel/smp.c b/arch/arm/kernel/smp.c
-index ccdc25f..8767598 100644
 --- a/arch/arm/kernel/smp.c
 +++ b/arch/arm/kernel/smp.c
-@@ -594,7 +594,6 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
+@@ -594,7 +594,6 @@ void handle_IPI(int ipinr, struct pt_reg
  {
  	unsigned int cpu = smp_processor_id();
  	struct pt_regs *old_regs = set_irq_regs(regs);
@@ -369,8 +359,6 @@ index ccdc25f..8767598 100644
  	if (ipinr >= IPI_TIMER && ipinr < IPI_TIMER + NR_IPI)
  		__inc_irq_stat(cpu, ipi_irqs[ipinr - IPI_TIMER]);
  
-diff --git a/arch/arm/kernel/smp_tlb.c b/arch/arm/kernel/smp_tlb.c
-index 7dcb352..1d62e02 100644
 --- a/arch/arm/kernel/smp_tlb.c
 +++ b/arch/arm/kernel/smp_tlb.c
 @@ -12,7 +12,7 @@
@@ -390,7 +378,7 @@ index 7dcb352..1d62e02 100644
  static inline void ipi_flush_tlb_all(void *ignored)
  {
  	local_flush_tlb_all();
-@@ -137,3 +138,27 @@ void flush_tlb_kernel_range(unsigned long start, unsigned long end)
+@@ -137,3 +138,27 @@ void flush_tlb_kernel_range(unsigned lon
  		local_flush_tlb_kernel_range(start, end);
  }
  
@@ -418,8 +406,6 @@ index 7dcb352..1d62e02 100644
 +	}
 +}
 +#endif
-diff --git a/arch/arm/mach-armadaxp/Kconfig b/arch/arm/mach-armadaxp/Kconfig
-index 43bd7d3..d708256 100644
 --- a/arch/arm/mach-armadaxp/Kconfig
 +++ b/arch/arm/mach-armadaxp/Kconfig
 @@ -37,13 +37,6 @@ config  ARMADA_XP_REV_Z1
@@ -436,8 +422,6 @@ index 43bd7d3..d708256 100644
  config  ARMADA_XP_REV_A0
  	bool "MV88F78x30 and MV88F78x60 A0 SoC devices"
  	---help---
-diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
-index 5c8e72e..91e188b 100644
 --- a/arch/arm/mach-armadaxp/core.c
 +++ b/arch/arm/mach-armadaxp/core.c
 @@ -1517,13 +1517,10 @@ static void __init axp_fpga_init(void)
@@ -456,8 +440,6 @@ index 5c8e72e..91e188b 100644
  	.init_machine	= axp_fpga_init,
 -MACHINE_END */
 +MACHINE_END
-diff --git a/arch/arm/mach-armadaxp/include/mach/entry-macro.S b/arch/arm/mach-armadaxp/include/mach/entry-macro.S
-index 98f5b90..e3eb156 100644
 --- a/arch/arm/mach-armadaxp/include/mach/entry-macro.S
 +++ b/arch/arm/mach-armadaxp/include/mach/entry-macro.S
 @@ -83,7 +83,14 @@
@@ -476,8 +458,6 @@ index 98f5b90..e3eb156 100644
  	strh   	\tmp, [\base, #AXP_IN_DOORBELL_CAUSE]	@ clean irq
  1002:
  	.endm
-diff --git a/arch/arm/mach-armadaxp/include/mach/smp.h b/arch/arm/mach-armadaxp/include/mach/smp.h
-index 7f4563e..953f741 100644
 --- a/arch/arm/mach-armadaxp/include/mach/smp.h
 +++ b/arch/arm/mach-armadaxp/include/mach/smp.h
 @@ -3,7 +3,6 @@
@@ -507,8 +487,6 @@ index 7f4563e..953f741 100644
 -}
  
  #endif
-diff --git a/arch/arm/mach-armadaxp/irq.c b/arch/arm/mach-armadaxp/irq.c
-index 432b6f6..f024b70 100644
 --- a/arch/arm/mach-armadaxp/irq.c
 +++ b/arch/arm/mach-armadaxp/irq.c
 @@ -78,12 +78,10 @@ void axp_irq_mask(struct irq_data *d)
@@ -626,8 +604,6 @@ index 432b6f6..f024b70 100644
  	}
  #endif
  
-diff --git a/arch/arm/mach-armadaxp/platsmp.c b/arch/arm/mach-armadaxp/platsmp.c
-index bed0c40..d94d82c 100644
 --- a/arch/arm/mach-armadaxp/platsmp.c
 +++ b/arch/arm/mach-armadaxp/platsmp.c
 @@ -12,7 +12,7 @@
@@ -661,7 +637,7 @@ index bed0c40..d94d82c 100644
  /*
   * control for which core is the next to come out of the secondary
   * boot "holding pen"
-@@ -93,8 +108,6 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
+@@ -93,8 +108,6 @@ int __cpuinit boot_secondary(unsigned in
  	flush_cache_all();
  	pen_release = cpu;
  	flush_cache_all();
@@ -683,7 +659,7 @@ index bed0c40..d94d82c 100644
  {
  	unsigned int ncores = get_core_count();
  	unsigned int cpu = smp_processor_id();
-@@ -243,8 +258,6 @@ void __init smp_prepare_cpus(unsigned int max_cpus)
+@@ -243,8 +258,6 @@ void __init smp_prepare_cpus(unsigned in
  		ncores = NR_CPUS;
  	}
  
@@ -692,8 +668,6 @@ index bed0c40..d94d82c 100644
  	/*
  	 * are we trying to boot more cores than exist?
  	 */
-diff --git a/arch/arm/mach-armadaxp/time.c b/arch/arm/mach-armadaxp/time.c
-index 53c1f7d..c535a45 100644
 --- a/arch/arm/mach-armadaxp/time.c
 +++ b/arch/arm/mach-armadaxp/time.c
 @@ -14,6 +14,7 @@
@@ -730,15 +704,14 @@ index 53c1f7d..c535a45 100644
  #else
  	unsigned int fabric_clk = mvCpuL2ClkGet();
  #endif
--
++	static cpu0_flag=0;
++	int cpu = smp_processor_id();
+ 
 -	ticks_per_jiffy = (fabric_clk + HZ/2) / HZ;
 -	clk->name = "local_timer";
 -	clk->irq = IRQ_LOCALTIMER;
 -	mv_timer_setup(clk, fabric_clk);
 -	clockevents_register_device(clk);
-+	static cpu0_flag=0;
-+	int cpu = smp_processor_id();
-+
 +	if((cpu) || (!cpu && !cpu0_flag)){
 +		ticks_per_jiffy = (fabric_clk + HZ/2) / HZ;
 +		clk->name = "local_timer";
@@ -752,8 +725,6 @@ index 53c1f7d..c535a45 100644
  }
  
  #ifdef CONFIG_HOTPLUG_CPU
-diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
-index adeabf2..72e3738 100644
 --- a/arch/arm/mm/Kconfig
 +++ b/arch/arm/mm/Kconfig
 @@ -390,6 +390,7 @@ config CPU_SHEEVA_PJ4B_V6
@@ -786,8 +757,6 @@ index adeabf2..72e3738 100644
  config ENABLE_UNALINGED_ACCESS_FAULT
  	bool "Enable S/W handling for Unaligned Access"
  	default n
-diff --git a/arch/arm/mm/cache-aurora-l2.c b/arch/arm/mm/cache-aurora-l2.c
-index e969a00..e38ba82 100644
 --- a/arch/arm/mm/cache-aurora-l2.c
 +++ b/arch/arm/mm/cache-aurora-l2.c
 @@ -18,7 +18,7 @@
@@ -799,11 +768,9 @@ index e969a00..e38ba82 100644
  #include "ctrlEnv/mvCtrlEnvSpec.h"
  
  /*
-diff --git a/arch/arm/mm/mmu.c b/arch/arm/mm/mmu.c
-index 96a3e87..0cd841d 100644
 --- a/arch/arm/mm/mmu.c
 +++ b/arch/arm/mm/mmu.c
-@@ -441,7 +441,7 @@ static void __init build_mem_type_table(void)
+@@ -441,7 +441,7 @@ static void __init build_mem_type_table(
  		mem_types[MT_MINICLEAN].prot_sect |= PMD_SECT_APX|PMD_SECT_AP_WRITE;
  		mem_types[MT_CACHECLEAN].prot_sect |= PMD_SECT_APX|PMD_SECT_AP_WRITE;
  
@@ -812,7 +779,7 @@ index 96a3e87..0cd841d 100644
  			/*
  			 * Mark memory with the "shared" attribute
  			 * for SMP systems
-@@ -457,7 +457,7 @@ static void __init build_mem_type_table(void)
+@@ -457,7 +457,7 @@ static void __init build_mem_type_table(
  			mem_types[MT_MEMORY].prot_pte |= L_PTE_SHARED;
  			mem_types[MT_MEMORY_NONCACHED].prot_sect |= PMD_SECT_S;
  			mem_types[MT_MEMORY_NONCACHED].prot_pte |= L_PTE_SHARED;
@@ -821,8 +788,6 @@ index 96a3e87..0cd841d 100644
  	}
  
  	/*
-diff --git a/arch/arm/mm/proc-macros.S b/arch/arm/mm/proc-macros.S
-index 735fe94..ef0128c 100644
 --- a/arch/arm/mm/proc-macros.S
 +++ b/arch/arm/mm/proc-macros.S
 @@ -173,7 +173,6 @@
@@ -833,8 +798,6 @@ index 735fe94..ef0128c 100644
  #if __LINUX_ARM_ARCH__ >= 7
  	dmb					@ DMB for V7
  #elif __LINUX_ARM_ARCH__ == 6
-diff --git a/arch/arm/mm/proc-sheeva_pj4bv6.S b/arch/arm/mm/proc-sheeva_pj4bv6.S
-index 1bf4a41..0291e0c 100644
 --- a/arch/arm/mm/proc-sheeva_pj4bv6.S
 +++ b/arch/arm/mm/proc-sheeva_pj4bv6.S
 @@ -50,9 +50,6 @@ ENTRY(cpu_sheeva_pj4b_v6_proc_init)
@@ -863,7 +826,7 @@ index 1bf4a41..0291e0c 100644
  ENTRY(cpu_sheeva_pj4b_v6_dcache_clean_area)
  #ifndef TLB_CAN_READ_FROM_L1_CACHE
  #if !defined(CONFIG_HAVE_GENERIC_DMA_COHERENT) || defined(CONFIG_SHEEVA_ERRATA_ARM_CPU_4611)
-@@ -127,7 +122,6 @@ ENTRY(cpu_sheeva_pj4b_v6_dcache_clean_area)
+@@ -127,7 +122,6 @@ ENTRY(cpu_sheeva_pj4b_v6_dcache_clean_ar
  #endif
  #endif
  	mov	pc, lr
@@ -1027,8 +990,6 @@ index 1bf4a41..0291e0c 100644
  	.long	cpu_pj4_name
  	.long	v6_processor_functions
  	.long	v6wbi_tlb_fns
-diff --git a/arch/arm/plat-armada/Makefile b/arch/arm/plat-armada/Makefile
-index 0ee6d82..21d1239 100644
 --- a/arch/arm/plat-armada/Makefile
 +++ b/arch/arm/plat-armada/Makefile
 @@ -10,6 +10,6 @@ endif
@@ -1039,8 +1000,6 @@ index 0ee6d82..21d1239 100644
 +obj-$(CONFIG_HOTPLUG_CPU)               += hotplug.o power.o  cpuidle.o armadaxp_suspend.o
  obj-$(CONFIG_ARCH_ARMADA_XP)		+= pmu.o
  obj-$(CONFIG_PCI_MSI)			+= msi.o
-diff --git a/arch/arm/plat-armada/cpuidle.c b/arch/arm/plat-armada/cpuidle.c
-index 3fb4eab..46547e7 100644
 --- a/arch/arm/plat-armada/cpuidle.c
 +++ b/arch/arm/plat-armada/cpuidle.c
 @@ -330,4 +330,4 @@ int armadaxp_init_cpuidle(void)
@@ -1049,8 +1008,6 @@ index 3fb4eab..46547e7 100644
  
 -device_initcall(armadaxp_init_cpuidle);
 +//device_initcall(armadaxp_init_cpuidle);
-diff --git a/arch/arm/plat-armada/hotplug.c b/arch/arm/plat-armada/hotplug.c
-index 7ed8c78..76c5fe0 100644
 --- a/arch/arm/plat-armada/hotplug.c
 +++ b/arch/arm/plat-armada/hotplug.c
 @@ -16,6 +16,17 @@
@@ -1071,11 +1028,9 @@ index 7ed8c78..76c5fe0 100644
  extern volatile int pen_release;
  
  static DECLARE_COMPLETION(cpu_killed);
-diff --git a/kernel/events/core.c b/kernel/events/core.c
-index 7d1f05e..3622876 100644
 --- a/kernel/events/core.c
 +++ b/kernel/events/core.c
-@@ -5890,7 +5890,6 @@ perf_event_alloc(struct perf_event_attr *attr, int cpu,
+@@ -5890,7 +5890,6 @@ perf_event_alloc(struct perf_event_attr
  	struct perf_event *event;
  	struct hw_perf_event *hwc;
  	long err;
@@ -1083,6 +1038,3 @@ index 7d1f05e..3622876 100644
  	if ((unsigned)cpu >= nr_cpu_ids) {
  		if (!task || cpu != -1)
  			return ERR_PTR(-EINVAL);
--- 
-1.7.9.5
-

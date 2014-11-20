@@ -19,8 +19,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  .../mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.h     |  492 ++----------
  7 files changed, 843 insertions(+), 1119 deletions(-)
 
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig
-index b7b204b..d48683f 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_cesa/Kconfig
 @@ -22,6 +22,37 @@ config MV_CESA_CHANNELS
@@ -99,8 +97,6 @@ index b7b204b..d48683f 100644
  endmenu
  
 -
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/l2fw_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/l2fw_sysfs.c
-index cddfac5..d628937 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/l2fw_sysfs.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/l2fw_sysfs.c
 @@ -34,24 +34,33 @@ disclaimer.
@@ -147,7 +143,7 @@ index cddfac5..d628937 100644
  	return off;
  }
  
-@@ -67,32 +76,16 @@ static ssize_t l2fw_show(struct device *dev,
+@@ -67,32 +76,16 @@ static ssize_t l2fw_show(struct device *
  	if (!strcmp(name, "help")) {
  	    off = l2fw_help(buf);
  		return off;
@@ -160,14 +156,14 @@ index cddfac5..d628937 100644
 -	}
 -	if (!strcmp(name, "numHashEntries")) {
 -		l2fw_show_numHashEntries();
--		return off;
++	} else if (!strcmp(name, "ports_dump")) {
++		l2fw_ports_dump();
+ 		return off;
 -	}
 -#ifdef CONFIG_MV_ETH_L2SEC
 -	if (!strcmp(name, "esp")) {
 -		l2fw_esp_show();
-+	} else if (!strcmp(name, "ports_dump")) {
-+		l2fw_ports_dump();
- 		return off;
+-		return off;
 -	}
 -#endif
 -	if (!strcmp(name, "help")) {
@@ -185,7 +181,7 @@ index cddfac5..d628937 100644
  
  	return off;
  }
-@@ -107,26 +100,18 @@ static ssize_t l2fw_hex_store(struct device *dev, struct device_attribute *attr,
+@@ -107,58 +100,91 @@ static ssize_t l2fw_hex_store(struct dev
  	unsigned int    addr1, addr2;
  	int port;
  	unsigned long   flags;
@@ -215,13 +211,13 @@ index cddfac5..d628937 100644
 +	} else {
 +		err = 1;
 +		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
- 	}
- 
- 	local_irq_restore(flags);
-@@ -134,31 +119,72 @@ static ssize_t l2fw_hex_store(struct device *dev, struct device_attribute *attr,
- 	return err ? -EINVAL : len;
- }
- 
++	}
++
++	local_irq_restore(flags);
++
++	return err ? -EINVAL : len;
++}
++
 +static ssize_t l2fw_ip_store(struct device *dev,
 +			 struct device_attribute *attr, const char *buf, size_t len)
 +{
@@ -249,16 +245,16 @@ index cddfac5..d628937 100644
 +	else {
 +		err = 1;
 +		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
-+	}
-+
-+	local_irq_restore(flags);
-+
+ 	}
+ 
+ 	local_irq_restore(flags);
+ 
 +	if (err)
 +		printk(KERN_ERR "%s: <%s>, error %d\n", __func__, attr->attr.name, err);
 +
-+	return err ? -EINVAL : len;
-+}
-+
+ 	return err ? -EINVAL : len;
+ }
+ 
 +
 +
  static ssize_t l2fw_store(struct device *dev,
@@ -297,7 +293,7 @@ index cddfac5..d628937 100644
  #endif
  	local_irq_restore(flags);
  
-@@ -170,35 +196,35 @@ static ssize_t l2fw_store(struct device *dev,
+@@ -170,35 +196,35 @@ static ssize_t l2fw_store(struct device
  }
  
  
@@ -347,8 +343,6 @@ index cddfac5..d628937 100644
  	NULL
  };
  
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c
-index 4439578..12ae1cb 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c
 @@ -28,6 +28,7 @@ disclaimer.
@@ -397,7 +391,7 @@ index 4439578..12ae1cb 100644
  
  struct eth_port_l2fw **mv_eth_ports_l2fw;
  static inline int       mv_eth_l2fw_rx(struct eth_port *pp, int rx_todo, int rxq);
-@@ -68,56 +68,6 @@ static inline MV_STATUS mv_eth_l2fw_tx(struct eth_pbuf *pkt, struct eth_port *pp
+@@ -68,56 +68,6 @@ static inline MV_STATUS mv_eth_l2fw_tx(s
  					   int withXor, struct neta_rx_desc *rx_desc);
  
  
@@ -454,7 +448,7 @@ index 4439578..12ae1cb 100644
  static L2FW_RULE *l2fw_lookup(MV_U32 srcIP, MV_U32 dstIP)
  {
  	MV_U32 hash;
-@@ -126,6 +76,7 @@ static L2FW_RULE *l2fw_lookup(MV_U32 srcIP, MV_U32 dstIP)
+@@ -126,6 +76,7 @@ static L2FW_RULE *l2fw_lookup(MV_U32 src
  	hash = mv_jhash_3words(srcIP, dstIP, (MV_U32) 0, l2fw_jhash_iv);
  	hash &= L2FW_HASH_MASK;
  	rule = l2fw_hash[hash];
@@ -462,7 +456,7 @@ index 4439578..12ae1cb 100644
  #ifdef CONFIG_MV_ETH_L2FW_DEBUG
  	if (rule)
  		printk(KERN_INFO "rule is not NULL in %s\n", __func__);
-@@ -138,6 +89,7 @@ static L2FW_RULE *l2fw_lookup(MV_U32 srcIP, MV_U32 dstIP)
+@@ -138,6 +89,7 @@ static L2FW_RULE *l2fw_lookup(MV_U32 src
  
  		rule = rule->next;
  	}
@@ -511,7 +505,7 @@ index 4439578..12ae1cb 100644
  
  MV_STATUS l2fw_add(MV_U32 srcIP, MV_U32 dstIP, int port)
  {
-@@ -206,102 +174,9 @@ MV_STATUS l2fw_add(MV_U32 srcIP, MV_U32 dstIP, int port)
+@@ -206,102 +174,9 @@ MV_STATUS l2fw_add(MV_U32 srcIP, MV_U32
  #endif
  
  	l2fw_rule = l2fw_lookup(srcIP, dstIP);
@@ -659,7 +653,7 @@ index 4439578..12ae1cb 100644
  
  	STAT_INFO(pp->stats.poll[smp_processor_id()]++);
  
-@@ -450,19 +303,23 @@ static int mv_eth_poll_l2fw(struct napi_struct *napi, int budget)
+@@ -450,19 +303,23 @@ static int mv_eth_poll_l2fw(struct napi_
  	}
  	pp->cpu_config[smp_processor_id()]->causeRxTx = causeRxTx;
  
@@ -687,7 +681,7 @@ index 4439578..12ae1cb 100644
  	if (!pp) {
  		mvOsPrintf("pp is NULL in setting L2FW (%s)\n", __func__);
  		return;
-@@ -470,7 +327,7 @@ void mv_eth_set_l2fw(int cmd, int rx_port, int out_tx_port)
+@@ -470,7 +327,7 @@ void mv_eth_set_l2fw(int cmd, int rx_por
  
  	dev = pp->dev;
  	if (dev == NULL) {
@@ -696,7 +690,7 @@ index 4439578..12ae1cb 100644
  		return;
  	}
  	if (!test_bit(MV_ETH_F_STARTED_BIT, &(pp->flags))) {
-@@ -479,37 +336,41 @@ void mv_eth_set_l2fw(int cmd, int rx_port, int out_tx_port)
+@@ -479,37 +336,41 @@ void mv_eth_set_l2fw(int cmd, int rx_por
  		return;
  	}
  
@@ -707,17 +701,17 @@ index 4439578..12ae1cb 100644
 +		ppl2fw->txPort = tx_port;
 +		return;
 +	}
-+
-+	if ((cmd != CMD_L2FW_DISABLE) && (ppl2fw->cmd != CMD_L2FW_DISABLE) && (ppl2fw->cmd != CMD_L2FW_LAST)) {
-+		ppl2fw->txPort = tx_port;
-+		ppl2fw->cmd	= cmd;
-+		return;
-+	}
  
 -	if (cmd == L2FW_DISABLE)
 -		set_bit(MV_ETH_F_CONNECT_LINUX_BIT, &(pp->flags));
 -	else
 -		clear_bit(MV_ETH_F_CONNECT_LINUX_BIT, &(pp->flags));
++	if ((cmd != CMD_L2FW_DISABLE) && (ppl2fw->cmd != CMD_L2FW_DISABLE) && (ppl2fw->cmd != CMD_L2FW_LAST)) {
++		ppl2fw->txPort = tx_port;
++		ppl2fw->cmd	= cmd;
++		return;
++	}
++
 +	/*TODO disconnect from linux in case that command != 0, connact back if cmd == 0
 +	 use netif_carrier_on/netif_carrier_off
 +	 netif_tx_stop_all_queues/netif_tx_wake_all_queues
@@ -764,7 +758,7 @@ index 4439578..12ae1cb 100644
  
  static inline struct eth_pbuf *l2fw_swap_mac(struct eth_pbuf *pRxPktInfo)
  {
-@@ -531,13 +392,14 @@ static inline void l2fw_copy_mac(struct eth_pbuf *pRxPktInfo,
+@@ -531,13 +392,14 @@ static inline void l2fw_copy_mac(struct
  					 struct eth_pbuf *pTxPktInfo)
  	{
  	/* copy 30 bytes (start after MH header) */
@@ -780,7 +774,7 @@ index 4439578..12ae1cb 100644
  	/* swap mac SA and DA */
  	for (i = 0; i < 3; i++) {
  		pDst[i]   = pSrc[i+3];
-@@ -625,7 +487,7 @@ struct eth_pbuf *eth_l2fw_copy_packet_withXor(struct eth_pbuf *pRxPktInfo)
+@@ -625,7 +487,7 @@ struct eth_pbuf *eth_l2fw_copy_packet_wi
  	l2fw_copy_mac(pRxPktInfo, pTxPktInfo);
  	mvOsCacheLineFlush(NULL, pTxPktInfo->pBuf + pTxPktInfo->offset);
  
@@ -829,13 +823,10 @@ index 4439578..12ae1cb 100644
 +	mvOsPrintf("cmd=%d rx_port=%d tx_port=%d in %s \n", cmd, rx_port, tx_port, __func__);
 +
 +	mv_eth_set_l2fw(ppl2fw, cmd, rx_port, tx_port);
- }
- 
--void l2fw_xor(int threshold)
++}
++
 +void l2fw_xor(int rx_port, int threshold)
- {
--	mvOsPrintf("setting threshold to %d in %s\n", threshold, __func__);
--	l2fw_xor_threshold = threshold;
++{
 +	int max_port = CONFIG_MV_ETH_PORTS_NUM - 1;
 +
 +	if (rx_port > max_port) {
@@ -847,8 +838,11 @@ index 4439578..12ae1cb 100644
 +	mv_eth_ports_l2fw[rx_port]->xorThreshold = threshold;
  }
  
+-void l2fw_xor(int threshold)
 +void l2fw_lookupEn(int rx_port, int enable)
-+{
+ {
+-	mvOsPrintf("setting threshold to %d in %s\n", threshold, __func__);
+-	l2fw_xor_threshold = threshold;
 +	int max_port = CONFIG_MV_ETH_PORTS_NUM - 1;
 +
 +	if (rx_port > max_port) {
@@ -857,8 +851,8 @@ index 4439578..12ae1cb 100644
 +	}
 +	mvOsPrintf("setting port %d lookup mode to %s in %s\n", rx_port, (enable == 1) ? "enable" : "disable", __func__);
 +	mv_eth_ports_l2fw[rx_port]->lookupEn = enable;
-+}
-+
+ }
+ 
 +void l2fw_stats(void)
 +{
 +	int i;
@@ -873,7 +867,7 @@ index 4439578..12ae1cb 100644
  
  static inline MV_STATUS mv_eth_l2fw_tx(struct eth_pbuf *pkt, struct eth_port *pp, int withXor,
  									   struct neta_rx_desc *rx_desc)
-@@ -700,7 +607,7 @@ static inline MV_STATUS mv_eth_l2fw_tx(struct eth_pbuf *pkt, struct eth_port *pp
+@@ -700,7 +607,7 @@ static inline MV_STATUS mv_eth_l2fw_tx(s
  	same txq lock when traffic on several rx ports are destined to the same
  	outgoing interface */
  	int txq = pp->cpu_config[smp_processor_id()]->txq;
@@ -882,7 +876,7 @@ index 4439578..12ae1cb 100644
  	txq_ctrl = &pp->txq_ctrl[pp->txp * CONFIG_MV_ETH_TXQ + txq];
  
  	mv_eth_lock(txq_ctrl, flags);
-@@ -713,7 +620,7 @@ static inline MV_STATUS mv_eth_l2fw_tx(struct eth_pbuf *pkt, struct eth_port *pp
+@@ -713,7 +620,7 @@ static inline MV_STATUS mv_eth_l2fw_tx(s
  
  		mv_eth_unlock(txq_ctrl, flags);
  
@@ -891,7 +885,7 @@ index 4439578..12ae1cb 100644
  		/* No resources: Drop */
  		pp->dev->stats.tx_dropped++;
  		if (withXor)
-@@ -722,8 +629,13 @@ static inline MV_STATUS mv_eth_l2fw_tx(struct eth_pbuf *pkt, struct eth_port *pp
+@@ -722,8 +629,13 @@ static inline MV_STATUS mv_eth_l2fw_tx(s
  	}
  	txq_ctrl->txq_count++;
  
@@ -905,7 +899,7 @@ index 4439578..12ae1cb 100644
  	mv_eth_shadow_inc_put(txq_ctrl);
  
  	tx_desc->command = tx_cmd | NETA_TX_L4_CSUM_NOT |
-@@ -742,7 +654,7 @@ static inline MV_STATUS mv_eth_l2fw_tx(struct eth_pbuf *pkt, struct eth_port *pp
+@@ -742,7 +654,7 @@ static inline MV_STATUS mv_eth_l2fw_tx(s
  
  			mv_eth_unlock(txq_ctrl, flags);
  
@@ -914,7 +908,7 @@ index 4439578..12ae1cb 100644
  			return MV_DROPPED;
  		}
  	}
-@@ -750,8 +662,6 @@ static inline MV_STATUS mv_eth_l2fw_tx(struct eth_pbuf *pkt, struct eth_port *pp
+@@ -750,8 +662,6 @@ static inline MV_STATUS mv_eth_l2fw_tx(s
  
  	mv_eth_unlock(txq_ctrl, flags);
  
@@ -923,7 +917,7 @@ index 4439578..12ae1cb 100644
  	return MV_OK;
  }
  
-@@ -838,48 +748,40 @@ static inline int mv_eth_l2fw_rx(struct eth_port *pp, int rx_todo, int rxq)
+@@ -838,48 +748,40 @@ static inline int mv_eth_l2fw_rx(struct
  			srcIP = (MV_U8 *)&(pIph->srcIP);
  			dstIP = (MV_U8 *)&(pIph->dstIP);
  			printk(KERN_INFO "%u.%u.%u.%u->%u.%u.%u.%u in %s\n", MV_IPQUAD(srcIP), MV_IPQUAD(dstIP), __func__);
@@ -988,7 +982,7 @@ index 4439578..12ae1cb 100644
  					newpkt = eth_l2fw_copy_packet_withXor(pkt);
  					if (newpkt)
  						status = mv_eth_l2fw_tx(newpkt, new_pp, 1, rx_desc);
-@@ -892,25 +794,49 @@ static inline int mv_eth_l2fw_rx(struct eth_port *pp, int rx_todo, int rxq)
+@@ -892,25 +794,49 @@ static inline int mv_eth_l2fw_rx(struct
  						else
  							status = MV_ERROR;
  				}
@@ -1074,8 +1068,6 @@ index 4439578..12ae1cb 100644
  #endif
  
  #ifdef CONFIG_MV_INCLUDE_XOR
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h
-index f2836ce..a7136ab 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h
 @@ -33,11 +33,27 @@ disclaimer.
@@ -1133,11 +1125,9 @@ index f2836ce..a7136ab 100644
 -
  
  #endif
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.c
-index 09148eb..6134495 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.c
-@@ -26,14 +26,81 @@ DISCLAIMED.  The GPL License provides additional details about this warranty
+@@ -26,14 +26,81 @@ DISCLAIMED.  The GPL License provides ad
  disclaimer.
  *******************************************************************************/
  
@@ -1222,7 +1212,7 @@ index 09148eb..6134495 100644
  
  	/* assigning different txq for each rx port , to avoid waiting on the
  	same txq lock when traffic on several rx ports are destined to the same
-@@ -41,107 +108,103 @@ static inline MV_STATUS mv_eth_cesa_l2fw_tx(struct eth_pbuf *pkt, struct eth_por
+@@ -41,107 +108,103 @@ static inline MV_STATUS mv_eth_cesa_l2fw
  	int txq = 0;
  	txq_ctrl = &pp->txq_ctrl[pp->txp * CONFIG_MV_ETH_TXQ + txq];
  
@@ -1365,7 +1355,7 @@ index 09148eb..6134495 100644
  	MV_CESA_HAL_DATA halData;
  	MV_UNIT_WIN_INFO addrWinMap[MAX_TARGETS + 1];
  	MV_STATUS status;
-@@ -166,262 +229,156 @@ MV_STATUS my_mvSysCesaInit(int numOfSession, int queueDepth, void *osHandle)
+@@ -166,262 +229,156 @@ MV_STATUS my_mvSysCesaInit(int numOfSess
  		halData.ctrlRev = mvCtrlRevGet();
  			status = mvCesaHalInit(numOfSession, queueDepth,
  					osHandle, &halData);
@@ -1389,7 +1379,7 @@ index 09148eb..6134495 100644
 -	MV_CESA_MBUF *pMbufSrc_1, *pMbufDst_1;
 -	MV_BUF_INFO *pFragsSrc_1, *pFragsDst_1;
 -	char *pBuf_1;
--
+ 
 -	printk(KERN_INFO "in %s\n", __func__);
 -
 -	cesaCmdArray_0 = 	mvOsMalloc(sizeof(MV_CESA_COMMAND) * CESA_DEF_REQ_SIZE);
@@ -1478,7 +1468,7 @@ index 09148eb..6134495 100644
 -
 -	/* second engine */
 -	cesaCmdArray_1 = 	mvOsMalloc(sizeof(MV_CESA_COMMAND) * CESA_DEF_REQ_SIZE);
- 
+-
 -	if (cesaCmdArray_1 == NULL) {
 -		mvOsPrintf("Can't allocate %d bytes of memory\n",
 -			   (int)(sizeof(MV_CESA_COMMAND) * CESA_DEF_REQ_SIZE));
@@ -1508,7 +1498,14 @@ index 09148eb..6134495 100644
 -
 -	memset(pMbufDst_1,  0, sizeof(MV_CESA_MBUF) * CESA_DEF_REQ_SIZE);
 -	memset(pFragsDst_1, 0, sizeof(MV_BUF_INFO) * bufNum * CESA_DEF_REQ_SIZE);
--
++	MV_CESA_MBUF *pMbufSrc[CESA_CHAN], *pMbufDst[CESA_CHAN];
++	MV_BUF_INFO *pCesaBufs[CESA_CHAN], *pFragsSrc[CESA_CHAN], *pFragsDst[CESA_CHAN];
++	MV_CESA_COMMAND *cesaCmdArrTmp;
++	MV_BUF_INFO *pCesaBufsTmp;
++	int chan;
++	int i, j, idx;
++	char *pBuf;
+ 
 -	idx = 0;
 -	for (i = 0; i < CESA_DEF_REQ_SIZE; i++) {
 -		pBuf_1 = mvOsIoCachedMalloc(cesaOSHandle, bufSize * bufNum * 2,
@@ -1517,14 +1514,6 @@ index 09148eb..6134495 100644
 -			mvOsPrintf("testStart: Can't malloc %d bytes for pBuf\n", bufSize * bufNum * 2);
 -			return;
 -		}
-+	MV_CESA_MBUF *pMbufSrc[CESA_CHAN], *pMbufDst[CESA_CHAN];
-+	MV_BUF_INFO *pCesaBufs[CESA_CHAN], *pFragsSrc[CESA_CHAN], *pFragsDst[CESA_CHAN];
-+	MV_CESA_COMMAND *cesaCmdArrTmp;
-+	MV_BUF_INFO *pCesaBufsTmp;
-+	int chan;
-+	int i, j, idx;
-+	char *pBuf;
-+
 +	for (chan = 0; chan < CESA_CHAN; chan++) {
 +		MALLOC_AND_CLEAR(cesaCmdArray[chan], sizeof(MV_CESA_COMMAND) * CESA_DEF_REQ_SIZE);
 +		MALLOC_AND_CLEAR(pMbufSrc[chan], sizeof(MV_CESA_MBUF) * CESA_DEF_REQ_SIZE);
@@ -1569,25 +1558,27 @@ index 09148eb..6134495 100644
 -		cesaCmdArray_1[i].pSrc->pFrags = &pFragsSrc_1[idx];
 -		cesaCmdArray_1[i].pSrc->numFrags = bufNum;
 -		cesaCmdArray_1[i].pSrc->mbufSize = 0;
-+			cesaCmdArrTmp[i].pSrc = &pMbufSrc[chan][i];
-+			cesaCmdArrTmp[i].pSrc->pFrags = &pFragsSrc[chan][idx];
-+			cesaCmdArrTmp[i].pSrc->numFrags = L2SEC_CESA_BUF_NUM;
-+			cesaCmdArrTmp[i].pSrc->mbufSize = 0;
- 
+-
 -		cesaCmdArray_1[i].pDst = &pMbufDst_1[i];
 -		cesaCmdArray_1[i].pDst->pFrags = &pFragsDst_1[idx];
 -		cesaCmdArray_1[i].pDst->numFrags = bufNum;
 -		cesaCmdArray_1[i].pDst->mbufSize = 0;
-+			cesaCmdArrTmp[i].pDst = &pMbufDst[chan][i];
-+			cesaCmdArrTmp[i].pDst->pFrags = &pFragsDst[chan][idx];
-+			cesaCmdArrTmp[i].pDst->numFrags = L2SEC_CESA_BUF_NUM;
-+			cesaCmdArrTmp[i].pDst->mbufSize = 0;
- 
+-
 -		for (j = 0; j < bufNum; j++) {
 -			cesaCmdArray_1[i].pSrc->pFrags[j].bufVirtPtr = (MV_U8 *) pBuf_1;
 -			cesaCmdArray_1[i].pSrc->pFrags[j].bufSize = bufSize;
 -			pBuf_1 += bufSize;
 -			cesaCmdArray_1[i].pDst->pFrags[j].bufVirtPtr = (MV_U8 *) pBuf_1;
++			cesaCmdArrTmp[i].pSrc = &pMbufSrc[chan][i];
++			cesaCmdArrTmp[i].pSrc->pFrags = &pFragsSrc[chan][idx];
++			cesaCmdArrTmp[i].pSrc->numFrags = L2SEC_CESA_BUF_NUM;
++			cesaCmdArrTmp[i].pSrc->mbufSize = 0;
++
++			cesaCmdArrTmp[i].pDst = &pMbufDst[chan][i];
++			cesaCmdArrTmp[i].pDst->pFrags = &pFragsDst[chan][idx];
++			cesaCmdArrTmp[i].pDst->numFrags = L2SEC_CESA_BUF_NUM;
++			cesaCmdArrTmp[i].pDst->mbufSize = 0;
++
 +			for (j = 0; j < L2SEC_CESA_BUF_NUM; j++) {
 +				cesaCmdArrTmp[i].pSrc->pFrags[j].bufVirtPtr = (MV_U8 *) pBuf;
 +				cesaCmdArrTmp[i].pSrc->pFrags[j].bufSize = L2SEC_CESA_BUF_SIZE;
@@ -1603,7 +1594,7 @@ index 09148eb..6134495 100644
  		}
 -		idx += bufNum;
 -	}
- 
+-
 -	cesaMbufArray_1 = mvOsMalloc(sizeof(MV_CESA_MBUF) * CESA_DEF_REQ_SIZE);
 -	if (cesaMbufArray_1 == NULL) {
 -		mvOsPrintf("Can't allocate %d bytes of memory\n",
@@ -1611,7 +1602,7 @@ index 09148eb..6134495 100644
 -		return;
 -	}
 -	memset(cesaMbufArray_1, 0, sizeof(MV_CESA_MBUF) * CESA_DEF_REQ_SIZE);
--
+ 
 -	cesaPrivArray_1 = mvOsMalloc(sizeof(MV_NFP_SEC_CESA_PRIV_L2FW) * (CESA_DEF_REQ_SIZE + MV_NFP_SEC_REQ_Q_SIZE));
 -	memset(cesaPrivArray_1, 0, sizeof(MV_NFP_SEC_CESA_PRIV_L2FW) * (CESA_DEF_REQ_SIZE + MV_NFP_SEC_REQ_Q_SIZE));
 +		MALLOC_AND_CLEAR(cesaMbufArray[chan], sizeof(MV_CESA_MBUF) * CESA_DEF_REQ_SIZE);
@@ -1675,6 +1666,8 @@ index 09148eb..6134495 100644
  	status = mvCesaReadyGet(chan, &result);
 -	if (status != MV_OK)
 -		break;
+-
+-	nfp_sec_complete_out((unsigned long)((MV_NFP_SEC_CESA_PRIV_L2FW *)result.pReqPrv));
 +	if (status != MV_OK) {
 +#ifdef CONFIG_MV_CESA_INT_PER_PACKET
 +		printk(KERN_ERR "ERROR: Ready get return %d\n", status);
@@ -1694,8 +1687,7 @@ index 09148eb..6134495 100644
 +		cesaFullResBuf[chan]++;
 +		return IRQ_HANDLED;
 +	}
- 
--	nfp_sec_complete_out((unsigned long)((MV_NFP_SEC_CESA_PRIV_L2FW *)result.pReqPrv));
++
 +	req_array[req_empty] = (MV_L2FW_SEC_CESA_PRIV *)result.pReqPrv;
 +	req_empty = (req_empty + 1) % MV_L2FW_SEC_REQ_Q_SIZE;
 +	atomic_inc(&req_count);
@@ -1846,16 +1838,19 @@ index 09148eb..6134495 100644
 -	MV_REG_WRITE(MV_CESA_ISR_MASK_REG(chan), MV_CESA_CAUSE_ACC_DMA_MASK);
 +	tasklet_init(&l2sec_tasklet, mv_l2sec_req_handler, (unsigned long) 0);
 +	atomic_set(&req_count, 0);
++
++	mv_l2sec_casa_param_init();
++	mv_l2sec_open_cesa_session();
++	mv_l2sec_cesa_start();
++	printk(KERN_INFO "%s: done.\n", __func__);
  
 -	if (request_irq(CESA_IRQ(1), nfp_sec_interrupt_handler_1,
 -							(IRQF_DISABLED) , irq_str[chan], NULL)) {
 -				printk(KERN_INFO "%s,%d: cannot assign irq %x\n", __FILE__, __LINE__, CESA_IRQ(chan));
 -		return EINVAL;
 -		}
-+	mv_l2sec_casa_param_init();
-+	mv_l2sec_open_cesa_session();
-+	mv_l2sec_cesa_start();
-+	printk(KERN_INFO "%s: done.\n", __func__);
++	return 0;
++}
  
 -	atomic_set(&req_count[0], 0);
 -	atomic_set(&req_count[1], 0);
@@ -1865,13 +1860,15 @@ index 09148eb..6134495 100644
 -		MV_REG_READ(MV_CESA_TDMA_CTRL_REG(0)));
 -	mvOsPrintf("MV_CESA_TDMA_CTRL_REG(1)  %08x\n",
 -		MV_REG_READ(MV_CESA_TDMA_CTRL_REG(1)));
-+	return 0;
-+}
  
 -	memset(&sa, 0, sizeof(MV_NFP_SEC_SA_ENTRY));
 -	sa.digestSize = MV_CESA_SHA1_DIGEST_SIZE;
 -	sa.ivSize = MV_CESA_AES_BLOCK_SIZE;
 -	sa.spi = 3;
++void mv_l2sec_build_tunnel(MV_BUF_INFO *pBuf, MV_L2FW_SEC_SA_ENTRY *pSAEntry)
++{
++	MV_IP_HEADER *pIpHdr, *pIntIpHdr;
++	MV_U16 newIpTotalLength;
  
 -	sa.tunProt = MV_NFP_SEC_TUNNEL;
 -	sa.encap   = MV_NFP_SEC_ESP;
@@ -1880,17 +1877,16 @@ index 09148eb..6134495 100644
 -	sa.tunnelHdr.dIp = 0x6401A8C0;
 -	sa.tunnelHdr.outIfIndex = 0;
 -	sa.lifeTime = 0;
-+void mv_l2sec_build_tunnel(MV_BUF_INFO *pBuf, MV_L2FW_SEC_SA_ENTRY *pSAEntry)
-+{
-+	MV_IP_HEADER *pIpHdr, *pIntIpHdr;
-+	MV_U16 newIpTotalLength;
-+
 +	newIpTotalLength = pBuf->dataSize - sizeof(MV_802_3_HEADER);
 +	pIpHdr = (MV_IP_HEADER *) (pBuf->bufVirtPtr + sizeof(MV_802_3_HEADER));
-+
+ 
+-	sa.secOp = MV_NFP_SEC_ENCRYPT;
+-	strcpy(sa.tunnelHdr.dstMac, "aabbccddeeff");
+-	strcpy(sa.tunnelHdr.srcMac, "abacadaeafaa");
 +	pIntIpHdr = (MV_IP_HEADER *) ((MV_U8 *) (pIpHdr) + sizeof(MV_IP_HEADER) + sizeof(MV_ESP_HEADER) +
 +				      pSAEntry->ivSize);
-+
+ 
+-	return 0;
 +	/* TBD - review below settings in RFC */
 +	pIpHdr->version = 0x45;
 +	pIpHdr->tos = 0;
@@ -1904,13 +1900,9 @@ index 09148eb..6134495 100644
 +	pIpHdr->dstIP = pSAEntry->tunnelHdr.dIp;
 +
 +	return;
-+}
- 
--	sa.secOp = MV_NFP_SEC_ENCRYPT;
--	strcpy(sa.tunnelHdr.dstMac, "aabbccddeeff");
--	strcpy(sa.tunnelHdr.srcMac, "abacadaeafaa");
- 
--	return 0;
+ }
++
++
 +/* Append sequence number and spi, save some space for IV */
 +void mv_l2sec_build_esp_hdr(MV_BUF_INFO *pBuf, MV_L2FW_SEC_SA_ENTRY *pSAEntry)
 +{
@@ -2080,10 +2072,8 @@ index 09148eb..6134495 100644
 +
 +	spin_unlock(&cesa_lock[chan]);
 +	return res;
- }
++}
 +
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.h
-index 81b0ec2..3f6c265 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.h
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.h
 @@ -28,493 +28,95 @@ disclaimer.
@@ -2201,10 +2191,19 @@ index 81b0ec2..3f6c265 100644
 -#define CESA_NONE 2
  
 -#define MV_NFP_SEC_REQ_Q_SIZE 1000
--#define CESA_DEF_REQ_SIZE       (256*4)
++/* define number of channels */
++#ifdef CONFIG_ARMADA_XP
++#define CESA_CHAN 2
++#else
++#define CESA_CHAN 1
++#endif
++
++
++#define MV_L2FW_SEC_REQ_Q_SIZE   1000
+ #define CESA_DEF_REQ_SIZE       (256*4)
 -int counterNoResources[4]  = {0, 0, 0, 0};
 -spinlock_t cesa_lock[2];
--
+ 
 -extern u32 mv_crypto_virt_base_get(u8 chan);
 -static MV_PKT_INFO *pPktInfoNewArray_0;
 -static MV_PKT_INFO *pPktInfoNewArray_1;
@@ -2213,21 +2212,13 @@ index 81b0ec2..3f6c265 100644
 -
 -MV_BUF_INFO cesaBufs_0[CESA_DEF_REQ_SIZE];
 -MV_BUF_INFO cesaBufs_1[CESA_DEF_REQ_SIZE];
-+/* define number of channels */
-+#ifdef CONFIG_ARMADA_XP
-+#define CESA_CHAN 2
-+#else
-+#define CESA_CHAN 1
-+#endif
- 
+-
 -static int cesaPrivIndx_0 = 0;
 -static int cesaPrivIndx_1 = 0;
- 
+-
 -static int cesaCmdIndx_0 = 0;
 -static int cesaCmdIndx_1 = 0;
-+#define MV_L2FW_SEC_REQ_Q_SIZE   1000
-+#define CESA_DEF_REQ_SIZE       (256*4)
- 
+-
 -typedef struct _mv_nfp_sec_cesa_priv_l2fw {
 -	MV_NFP_SEC_SA_ENTRY *pSaEntry;
 -	MV_PKT_INFO *pPktInfo;
@@ -2244,7 +2235,8 @@ index 81b0ec2..3f6c265 100644
 -
 -MV_NFP_SEC_CESA_PRIV_L2FW *cesaPrivArray_0;
 -MV_NFP_SEC_CESA_PRIV_L2FW *cesaPrivArray_1;
--
++} MV_L2FW_SEC_CESA_PRIV;
+ 
 -void *cesaOSHandle = NULL;
 -static MV_CESA_MBUF *cesaMbufArray_0;
 -static MV_CESA_MBUF *cesaMbufArray_1;
@@ -2361,8 +2353,7 @@ index 81b0ec2..3f6c265 100644
 -	pMacHdr->typeOrLen = 0x08;	/* stands for IP protocol code 16bit swapped */
 -	return;
 -}
-+} MV_L2FW_SEC_CESA_PRIV;
- 
+-
 -
 -inline MV_STATUS mvSecEspProcess_0(struct eth_pbuf *pPkt, MV_PKT_INFO *pPktInfo,
 -							MV_NFP_SEC_SA_ENTRY *pSAEntry, struct eth_port *newpp,
@@ -2627,6 +2618,3 @@ index 81b0ec2..3f6c265 100644
 +void mv_l2sec_stats(void);
 +int mv_l2sec_set_cesa_chan(int port, int cesaChan);
 +#endif /*L2SEC_MV_ETH_L2SEC_H*/
--- 
-1.7.9.5
-

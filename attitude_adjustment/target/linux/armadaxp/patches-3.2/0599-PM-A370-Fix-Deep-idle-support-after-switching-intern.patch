@@ -23,11 +23,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/plat-armada/cpuidle.h                |    5 +++++
  5 files changed, 43 insertions(+), 6 deletions(-)
 
-diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
-index a2c90a2..8161859 100644
 --- a/arch/arm/mm/Kconfig
 +++ b/arch/arm/mm/Kconfig
-@@ -1099,6 +1099,7 @@ config SHEEVA_ERRATA_ARM_CPU_ADD_DELAY_FOR_STREX
+@@ -1099,6 +1099,7 @@ config SHEEVA_ERRATA_ARM_CPU_ADD_DELAY_F
  config SHEEVA_DEEP_IDLE
  	bool "Enable CPU/L2 Deep Idle Power Management"
  	depends on (ARCH_ARMADA_XP || ARCH_ARMADA370) && CPU_IDLE
@@ -53,8 +51,6 @@ index a2c90a2..8161859 100644
  
  config CACHE_AURORA_L2
  	bool "Enable Marvell Aurora L2 cache controller"
-diff --git a/arch/arm/plat-armada/armada_suspend.S b/arch/arm/plat-armada/armada_suspend.S
-index 0562693..c74e163 100644
 --- a/arch/arm/plat-armada/armada_suspend.S
 +++ b/arch/arm/plat-armada/armada_suspend.S
 @@ -30,7 +30,23 @@
@@ -82,11 +78,9 @@ index 0562693..c74e163 100644
  
  /*
  * armadaxp_snoop_dis_virt:
-diff --git a/arch/arm/plat-armada/cpuidle.c b/arch/arm/plat-armada/cpuidle.c
-index f740ac7..3ae787d 100644
 --- a/arch/arm/plat-armada/cpuidle.c
 +++ b/arch/arm/plat-armada/cpuidle.c
-@@ -99,6 +99,10 @@ void mv_cpuidle_reset_cpu_win_state(void)
+@@ -99,6 +99,10 @@ void mv_cpuidle_reset_cpu_win_state(void
  	u32 i;
  	MV_AHB_TO_MBUS_DEC_WIN	winInfo;
  
@@ -97,7 +91,7 @@ index f740ac7..3ae787d 100644
  	/* Save CPU windows state, and enable access for Bootrom	*
  	** according to SoC default address decoding windows.		*/
  	for (i = 0; i < MAX_AHB_TO_MBUS_WINS; i++) {
-@@ -109,6 +113,15 @@ void mv_cpuidle_reset_cpu_win_state(void)
+@@ -109,6 +113,15 @@ void mv_cpuidle_reset_cpu_win_state(void
  		mvAhbToMbusWinEnable(i, MV_FALSE);
  	}
  
@@ -113,7 +107,7 @@ index f740ac7..3ae787d 100644
  	winInfo.target = BOOT_ROM_CS;
  	winInfo.addrWin.baseLow = 0xF8000000;
  	winInfo.addrWin.baseHigh = 0x0;
-@@ -122,6 +135,7 @@ void mv_cpuidle_reset_cpu_win_state(void)
+@@ -122,6 +135,7 @@ void mv_cpuidle_reset_cpu_win_state(void
  	winInfo.addrWin.size = _64K;
  	winInfo.enable = MV_TRUE;
  	mvAhbToMbusWinSet(8, &winInfo);
@@ -121,11 +115,9 @@ index f740ac7..3ae787d 100644
  }
  #endif
  
-diff --git a/arch/arm/plat-armada/cpuidle.h b/arch/arm/plat-armada/cpuidle.h
-index 160ded5..c6f3ec0 100644
 --- a/arch/arm/plat-armada/cpuidle.h
 +++ b/arch/arm/plat-armada/cpuidle.h
-@@ -24,6 +24,11 @@ void armadaxp_smp_prepare_idle(unsigned int processor_id);
+@@ -24,6 +24,11 @@ void armadaxp_smp_prepare_idle(unsigned
  void armadaxp_smp_restore_idle(unsigned int processor_id);
  
  extern int axp_secondary_startup(void);
@@ -137,6 +129,3 @@ index 160ded5..c6f3ec0 100644
  
  typedef enum  {
  	DISABLED,
--- 
-1.7.9.5
-

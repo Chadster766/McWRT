@@ -14,11 +14,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/mm/fault.c     |   90 ++++++++++++++++++++++++++++++++++++++++++++++-
  2 files changed, 96 insertions(+), 2 deletions(-)
 
-diff --git a/arch/arm/mm/alignment.c b/arch/arm/mm/alignment.c
-index 8cfe0f0..7bc26ed 100644
 --- a/arch/arm/mm/alignment.c
 +++ b/arch/arm/mm/alignment.c
-@@ -944,6 +944,12 @@ do_alignment(unsigned long addr, unsigned int fsr, struct pt_regs *regs)
+@@ -944,6 +944,12 @@ do_alignment(unsigned long addr, unsigne
  	return 0;
  }
  
@@ -40,8 +38,6 @@ index 8cfe0f0..7bc26ed 100644
  			"alignment exception");
  
  	/*
-diff --git a/arch/arm/mm/fault.c b/arch/arm/mm/fault.c
-index b058782..2b83028 100644
 --- a/arch/arm/mm/fault.c
 +++ b/arch/arm/mm/fault.c
 @@ -34,10 +34,15 @@
@@ -60,7 +56,7 @@ index b058782..2b83028 100644
  }
  
  #ifdef CONFIG_MMU
-@@ -123,6 +128,7 @@ void show_pte(struct mm_struct *mm, unsigned long addr)
+@@ -123,6 +128,7 @@ void show_pte(struct mm_struct *mm, unsi
  
  		pte = pte_offset_map(pmd, addr);
  		printk(", *pte=%08llx", (long long)pte_val(*pte));
@@ -68,7 +64,7 @@ index b058782..2b83028 100644
  #ifdef CONFIG_MV_SUPPORT_64KB_PAGE_SIZE
  		{
  			unsigned long pte_ptr = (unsigned long)pte;
-@@ -134,7 +140,9 @@ void show_pte(struct mm_struct *mm, unsigned long addr)
+@@ -134,7 +140,9 @@ void show_pte(struct mm_struct *mm, unsi
  			printk(", *ppte=%08llx", pte_val((pte_t *)pte_ptr));
  		}
  #else
@@ -79,7 +75,7 @@ index b058782..2b83028 100644
  #endif
  		pte_unmap(pte);
  	} while(0);
-@@ -454,6 +462,12 @@ do_translation_fault(unsigned long addr, unsigned int fsr,
+@@ -454,6 +462,12 @@ do_translation_fault(unsigned long addr,
  	pmd = pmd_offset(pud, addr);
  	pmd_k = pmd_offset(pud_k, addr);
  
@@ -92,7 +88,7 @@ index b058782..2b83028 100644
  	/*
  	 * On ARM one Linux PGD entry contains two hardware entries (see page
  	 * tables layout in pgtable.h). We normally guarantee that we always
-@@ -463,6 +477,7 @@ do_translation_fault(unsigned long addr, unsigned int fsr,
+@@ -463,6 +477,7 @@ do_translation_fault(unsigned long addr,
  	 * for the first of pair.
  	 */
  	index = (addr >> SECTION_SHIFT) & 1;
@@ -181,7 +177,7 @@ index b058782..2b83028 100644
  };
  
  void __init
-@@ -587,6 +669,9 @@ do_DataAbort(unsigned long addr, unsigned int fsr, struct pt_regs *regs)
+@@ -587,6 +669,9 @@ do_DataAbort(unsigned long addr, unsigne
  }
  
  
@@ -199,7 +195,7 @@ index b058782..2b83028 100644
  
  void __init
  hook_ifault_code(int nr, int (*fn)(unsigned long, unsigned int, struct pt_regs *),
-@@ -656,6 +742,7 @@ do_PrefetchAbort(unsigned long addr, unsigned int ifsr, struct pt_regs *regs)
+@@ -656,6 +742,7 @@ do_PrefetchAbort(unsigned long addr, uns
  
  static int __init exceptions_init(void)
  {
@@ -215,6 +211,3 @@ index b058782..2b83028 100644
  
  	return 0;
  }
--- 
-1.7.9.5
-

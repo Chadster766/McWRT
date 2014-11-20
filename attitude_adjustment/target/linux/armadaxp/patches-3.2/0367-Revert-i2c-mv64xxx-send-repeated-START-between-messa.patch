@@ -11,8 +11,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  drivers/i2c/busses/i2c-mv64xxx.c |   45 ++++++--------------------------------
  1 file changed, 7 insertions(+), 38 deletions(-)
 
-diff --git a/drivers/i2c/busses/i2c-mv64xxx.c b/drivers/i2c/busses/i2c-mv64xxx.c
-index c4ed59c..b20a456 100644
 --- a/drivers/i2c/busses/i2c-mv64xxx.c
 +++ b/drivers/i2c/busses/i2c-mv64xxx.c
 @@ -59,7 +59,6 @@ enum {
@@ -39,7 +37,7 @@ index c4ed59c..b20a456 100644
  	u32			block;
  	int			rc;
  	u32			freq_m;
-@@ -162,15 +159,8 @@ mv64xxx_i2c_fsm(struct mv64xxx_i2c_data *drv_data, u32 status)
+@@ -162,15 +159,8 @@ mv64xxx_i2c_fsm(struct mv64xxx_i2c_data
  		if ((drv_data->bytes_left == 0)
  				|| (drv_data->aborting
  					&& (drv_data->byte_posn != 0))) {
@@ -73,7 +71,7 @@ index c4ed59c..b20a456 100644
  	case MV64XXX_I2C_ACTION_CONTINUE:
  		writel(drv_data->cntl_bits,
  			drv_data->reg_base + MV64XXX_I2C_REG_CONTROL);
-@@ -405,8 +386,7 @@ mv64xxx_i2c_wait_for_completion(struct mv64xxx_i2c_data *drv_data)
+@@ -405,8 +386,7 @@ mv64xxx_i2c_wait_for_completion(struct m
  }
  
  static int
@@ -83,7 +81,7 @@ index c4ed59c..b20a456 100644
  {
  	unsigned long	flags;
  
-@@ -426,18 +406,10 @@ mv64xxx_i2c_execute_msg(struct mv64xxx_i2c_data *drv_data, struct i2c_msg *msg,
+@@ -426,18 +406,10 @@ mv64xxx_i2c_execute_msg(struct mv64xxx_i
  			drv_data->bytes_left--;
  		}
  	} else {
@@ -104,7 +102,7 @@ index c4ed59c..b20a456 100644
  	drv_data->block = 1;
  	mv64xxx_i2c_do_action(drv_data);
  	spin_unlock_irqrestore(&drv_data->lock, flags);
-@@ -465,12 +437,9 @@ mv64xxx_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
+@@ -465,12 +437,9 @@ mv64xxx_i2c_xfer(struct i2c_adapter *ada
  	struct mv64xxx_i2c_data *drv_data = i2c_get_adapdata(adap);
  	int	i, rc;
  
@@ -119,6 +117,3 @@ index c4ed59c..b20a456 100644
  
  	return num;
  }
--- 
-1.7.9.5
-

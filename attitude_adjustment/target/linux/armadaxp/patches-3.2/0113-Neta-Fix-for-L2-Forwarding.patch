@@ -9,8 +9,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  .../mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h      |    1 -
  2 files changed, 8 insertions(+), 6 deletions(-)
 
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c
-index 4c6508b..588eb94 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c
 @@ -35,8 +35,9 @@ static MV_U32 l2fw_jhash_iv;
@@ -24,7 +22,7 @@ index 4c6508b..588eb94 100644
  
  
  void printBufVirtPtr(MV_BUF_INFO *pBuf)
-@@ -392,7 +393,7 @@ static int mv_eth_poll_l2fw(struct napi_struct *napi, int budget)
+@@ -392,7 +393,7 @@ static int mv_eth_poll_l2fw(struct napi_
  		if (rx_queue == -1)
  			break;
  
@@ -33,7 +31,7 @@ index 4c6508b..588eb94 100644
  		rx_done += count;
  		budget -= count;
  		if (budget > 0)
-@@ -400,7 +401,7 @@ static int mv_eth_poll_l2fw(struct napi_struct *napi, int budget)
+@@ -400,7 +401,7 @@ static int mv_eth_poll_l2fw(struct napi_
  			 ~((1 << rx_queue) << NETA_CAUSE_RXQ_OCCUP_DESC_OFFS);
  	}
  #else
@@ -42,7 +40,7 @@ index 4c6508b..588eb94 100644
  	budget -= rx_done;
  #endif /* (CONFIG_MV_ETH_RXQ > 1) */
  
-@@ -705,10 +706,12 @@ static inline MV_STATUS mv_eth_l2fw_tx(struct eth_pbuf *pkt, struct eth_port *pp
+@@ -705,10 +706,12 @@ static inline MV_STATUS mv_eth_l2fw_tx(s
  	if (withXor) {
  		if (!xorReady()) {
  			mvOsPrintf("MV_DROPPED in %s\n", __func__);
@@ -56,7 +54,7 @@ index 4c6508b..588eb94 100644
  
  	spin_unlock(&txq_ctrl->queue_lock);
  	read_unlock(&pp->rwlock);
-@@ -717,7 +720,7 @@ static inline MV_STATUS mv_eth_l2fw_tx(struct eth_pbuf *pkt, struct eth_port *pp
+@@ -717,7 +720,7 @@ static inline MV_STATUS mv_eth_l2fw_tx(s
  }
  
  
@@ -65,8 +63,6 @@ index 4c6508b..588eb94 100644
  {
  	struct eth_port  *new_pp;
  	L2FW_RULE *l2fw_rule;
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h
-index 08782ce..c25ef58 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h
 @@ -25,7 +25,6 @@ typedef struct l2fw_rule {
@@ -77,6 +73,3 @@ index 08782ce..c25ef58 100644
  MV_STATUS l2fw_add(MV_U32 srcIP, MV_U32 dstIP, int port);
  MV_STATUS l2fw_add_ip(const char *buf);
  void l2fw_esp_show(void);
--- 
-1.7.9.5
-

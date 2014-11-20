@@ -12,8 +12,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  net/ipv6/netfilter/Kconfig                         |    3 +-
  4 files changed, 52 insertions(+), 140 deletions(-)
 
-diff --git a/arch/arm/configs/armada_xp_defconfig b/arch/arm/configs/armada_xp_defconfig
-index 1132fd3..04264c8 100644
 --- a/arch/arm/configs/armada_xp_defconfig
 +++ b/arch/arm/configs/armada_xp_defconfig
 @@ -336,11 +336,7 @@ CONFIG_MV_ETH_TOOL=y
@@ -246,8 +244,6 @@ index 1132fd3..04264c8 100644
  # CONFIG_NET_FC is not set
  # CONFIG_NETCONSOLE is not set
  # CONFIG_NETPOLL is not set
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
-index 177258f..d4bd197 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
 @@ -88,7 +88,7 @@ config  MV_ETH_BM_PORT_0_SHORT_BUF_NUM
@@ -315,8 +311,6 @@ index 177258f..d4bd197 100644
 -		select MV_ETH_NFP_STATS
 -		select MV_ETH_NFP_DEBUG
 -		default n
--        ---help---
--        Choosing this option will enable building nfplib.a for NFP.
 +	depends on MV_ETH_NFP
 +        bool "Use a library (nfplib.a) for Network Fast Processing (NFP)"
 +	select MV_ETH_NFP_CT
@@ -334,7 +328,8 @@ index 177258f..d4bd197 100644
 +	select MV_ETH_NFP_STATS
 +	select MV_ETH_NFP_DEBUG
 +	default n
-+        ---help---
+         ---help---
+-        Choosing this option will enable building nfplib.a for NFP.
 +        Choosing this option will enable using nfplib.a for NFP.
  
  config MV_ETH_NFP_DEF
@@ -412,8 +407,6 @@ index 177258f..d4bd197 100644
  config  MV_ETH_NFP_STATS
          bool "Collect NFP Statistics"
  	depends on MV_ETH_NFP
-diff --git a/net/ipv4/netfilter/Kconfig b/net/ipv4/netfilter/Kconfig
-index d926520..99c6492 100644
 --- a/net/ipv4/netfilter/Kconfig
 +++ b/net/ipv4/netfilter/Kconfig
 @@ -184,7 +184,8 @@ config IP_NF_TARGET_NETMAP
@@ -426,8 +419,6 @@ index d926520..99c6492 100644
  	help
  	  This target allows to process selected connections in NFP.
  	  To compile it as a module, choose M here.  If unsure, say N.
-diff --git a/net/ipv6/netfilter/Kconfig b/net/ipv6/netfilter/Kconfig
-index 292338b..b57be24 100644
 --- a/net/ipv6/netfilter/Kconfig
 +++ b/net/ipv6/netfilter/Kconfig
 @@ -196,7 +196,8 @@ config IP6_NF_RAW
@@ -440,6 +431,3 @@ index 292338b..b57be24 100644
  	help
  	  This target allows to process selected connections in NFP.
  
--- 
-1.7.9.5
-

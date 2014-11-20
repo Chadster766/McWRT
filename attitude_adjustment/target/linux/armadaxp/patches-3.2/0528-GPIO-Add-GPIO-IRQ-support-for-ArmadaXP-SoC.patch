@@ -33,8 +33,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  create mode 100644 arch/arm/mach-armadaxp/btns_dev.h
  create mode 100644 arch/arm/mach-armadaxp/btns_device.c
 
-diff --git a/arch/arm/mach-armadaxp/Kconfig b/arch/arm/mach-armadaxp/Kconfig
-index 07b4121..7ea7904 100644
 --- a/arch/arm/mach-armadaxp/Kconfig
 +++ b/arch/arm/mach-armadaxp/Kconfig
 @@ -102,6 +102,11 @@ config ARMADAXP_USE_IRQ_INTERRUPT_ACK
@@ -49,11 +47,9 @@ index 07b4121..7ea7904 100644
  endmenu
  
  endif
-diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
-index 699fb16..8a1bb8b 100644
 --- a/arch/arm/mach-armadaxp/Makefile
 +++ b/arch/arm/mach-armadaxp/Makefile
-@@ -133,8 +133,10 @@ obj-$(CONFIG_MV_USE_XOR_ENGINE) 	+= $(PLAT_DRIVERS)/mv_xor/
+@@ -133,8 +133,10 @@ obj-$(CONFIG_MV_USE_XOR_ENGINE) 	+= $(PL
  obj-$(CONFIG_MV_CESA) 			+= $(PLAT_DRIVERS)/mv_cesa/
  obj-$(CONFIG_MV_IPC_DRIVER)		+= $(PLAT_DRIVERS)/mv_ipc/
  obj-$(CONFIG_MV_IPC_NET)		+= $(PLAT_DRIVERS)/mv_ipc_net/
@@ -66,9 +62,6 @@ index 699fb16..8a1bb8b 100644
  obj-$(CONFIG_MV_DBG_TRACE)              += $(PLAT_DRIVERS)/mv_trace/
  obj-$(CONFIG_MV_INCLUDE_SWITCH)         += $(LSP_SWITCH_DIR)/
  obj-$(CONFIG_SENSORS_ARMADA)		+= hwmon.o
-diff --git a/arch/arm/mach-armadaxp/btns_dev.h b/arch/arm/mach-armadaxp/btns_dev.h
-new file mode 100644
-index 0000000..a4d325c
 --- /dev/null
 +++ b/arch/arm/mach-armadaxp/btns_dev.h
 @@ -0,0 +1,27 @@
@@ -99,9 +92,6 @@ index 0000000..a4d325c
 +};
 +
 +#endif /* _BTNS_DEV_H_ */
-diff --git a/arch/arm/mach-armadaxp/btns_device.c b/arch/arm/mach-armadaxp/btns_device.c
-new file mode 100644
-index 0000000..3d6d2f5
 --- /dev/null
 +++ b/arch/arm/mach-armadaxp/btns_device.c
 @@ -0,0 +1,93 @@
@@ -198,8 +188,6 @@ index 0000000..3d6d2f5
 +}
 +
 +subsys_initcall(mv_btns_init);
-diff --git a/arch/arm/mach-armadaxp/config/mvRules.mk b/arch/arm/mach-armadaxp/config/mvRules.mk
-index 216f5bc..dc54930 100644
 --- a/arch/arm/mach-armadaxp/config/mvRules.mk
 +++ b/arch/arm/mach-armadaxp/config/mvRules.mk
 @@ -18,6 +18,7 @@ endif
@@ -210,8 +198,6 @@ index 216f5bc..dc54930 100644
  HAL_DIR           = $(PLAT_PATH)/mv_hal
  COMMON_DIR        = $(PLAT_PATH)/common
  OSSERV_DIR        = $(PLAT_PATH)/linux_oss
-diff --git a/arch/arm/mach-armadaxp/include/mach/gpio.h b/arch/arm/mach-armadaxp/include/mach/gpio.h
-index 7ca789d..1fcac42 100644
 --- a/arch/arm/mach-armadaxp/include/mach/gpio.h
 +++ b/arch/arm/mach-armadaxp/include/mach/gpio.h
 @@ -27,15 +27,6 @@
@@ -230,8 +216,6 @@ index 7ca789d..1fcac42 100644
  static inline int gpio_to_irq(int pin)
  {
  	if (pin < NR_GPIO_IRQS)
-diff --git a/arch/arm/mach-armadaxp/include/mach/irqs.h b/arch/arm/mach-armadaxp/include/mach/irqs.h
-index 71716ea..a67744b 100644
 --- a/arch/arm/mach-armadaxp/include/mach/irqs.h
 +++ b/arch/arm/mach-armadaxp/include/mach/irqs.h
 @@ -166,6 +166,7 @@
@@ -242,8 +226,6 @@ index 71716ea..a67744b 100644
  #define SATA_IRQ_NUM			(IRQ_AURORA_SATA0)
  #define CESA_IRQ(chan)			IRQ_AURORA_CRYPTO(chan)
  #endif
-diff --git a/arch/arm/mach-armadaxp/irq.c b/arch/arm/mach-armadaxp/irq.c
-index a3041dc..70500f8 100644
 --- a/arch/arm/mach-armadaxp/irq.c
 +++ b/arch/arm/mach-armadaxp/irq.c
 @@ -8,9 +8,21 @@
@@ -316,11 +298,9 @@ index a3041dc..70500f8 100644
  	armada_msi_init();
  }
  
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_btns/btns_driver.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_btns/btns_driver.c
-index 8f89f04..b12156f 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_btns/btns_driver.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_btns/btns_driver.c
-@@ -13,8 +13,12 @@ WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
+@@ -13,8 +13,12 @@ WARRANTIES OF MERCHANTABILITY OR FITNESS
  DISCLAIMED.  The GPL License provides additional details about this warranty
  disclaimer.
  *******************************************************************************/
@@ -356,7 +336,7 @@ index 8f89f04..b12156f 100644
  {
  	unsigned int btn_id;
  	BTN btn_sts;
-@@ -275,9 +274,9 @@ btnsdev_release(struct inode *inode, struct file *filp)
+@@ -275,9 +274,9 @@ btnsdev_release(struct inode *inode, str
  
  
  static struct file_operations btnsdev_fops = {
@@ -376,6 +356,3 @@ index 8f89f04..b12156f 100644
 -
 +MODULE_ALIAS("platform:mvbtns");
  
--- 
-1.7.9.5
-

@@ -10,9 +10,9 @@
  {
 --- a/drivers/char/random.c
 +++ b/drivers/char/random.c
-@@ -130,6 +130,9 @@
-  * 	void add_interrupt_randomness(int irq);
-  * 	void add_disk_randomness(struct gendisk *disk);
+@@ -139,6 +139,9 @@
+  * that might otherwise be identical and have very little entropy
+  * available to them (particularly common in the embedded world).
   *
 + *      void random_input_words(__u32 *buf, size_t wordcount, int ent_count)
 + *      int random_input_wait(void);
@@ -20,7 +20,7 @@
   * add_input_randomness() uses the input layer interrupt timing, as well as
   * the event type information from the hardware.
   *
-@@ -147,6 +150,13 @@
+@@ -152,6 +155,13 @@
   * seek times do not make for good sources of entropy, as their seek
   * times are usually fairly consistent.
   *
@@ -34,7 +34,7 @@
   * All of these routines try to estimate how many bits of randomness a
   * particular randomness source.  They do this by keeping track of the
   * first and second order deltas of the event timings.
-@@ -722,6 +732,63 @@ void add_disk_randomness(struct gendisk
+@@ -821,6 +831,63 @@ void add_disk_randomness(struct gendisk
  }
  #endif
  
@@ -120,14 +120,14 @@
  #define RTC_MINOR		135
 --- a/include/linux/random.h
 +++ b/include/linux/random.h
-@@ -54,6 +54,10 @@ extern void add_input_randomness(unsigne
+@@ -55,6 +55,10 @@ extern void add_input_randomness(unsigne
  				 unsigned int value);
- extern void add_interrupt_randomness(int irq);
+ extern void add_interrupt_randomness(int irq, int irq_flags);
  
 +extern void random_input_words(__u32 *buf, size_t wordcount, int ent_count);
 +extern int random_input_wait(void);
 +#define HAS_RANDOM_INPUT_WAIT 1
 +
  extern void get_random_bytes(void *buf, int nbytes);
+ extern void get_random_bytes_arch(void *buf, int nbytes);
  void generate_random_uuid(unsigned char uuid_out[16]);
- 

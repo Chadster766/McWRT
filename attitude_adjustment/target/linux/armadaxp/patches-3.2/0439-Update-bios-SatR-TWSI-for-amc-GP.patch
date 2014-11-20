@@ -12,11 +12,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  .../armada_xp_family/ctrlEnv/mvCtrlEnvLib.h        |    2 +-
  3 files changed, 28 insertions(+), 22 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
-index fbcf267..4611026 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
-@@ -410,6 +410,7 @@ MV_32 mvBoardPhyLinkCryptPortAddrGet(MV_U32 ethPortNum)
+@@ -410,6 +410,7 @@ MV_32 mvBoardPhyLinkCryptPortAddrGet(MV_
  	return BOARD_INFO(boardId)->pBoardMacInfo[ethPortNum].LinkCryptPortAddr;
  }
  
@@ -24,7 +22,7 @@ index fbcf267..4611026 100644
  /*******************************************************************************
  * mvBoardSwitchCpuPortGet - Get the the Ethernet Switch CPU port
  *
-@@ -471,7 +472,6 @@ MV_BOARD_MAC_SPEED mvBoardMacSpeedGet(MV_U32 ethPortNum)
+@@ -471,7 +472,6 @@ MV_BOARD_MAC_SPEED mvBoardMacSpeedGet(MV
  	}
  	return BOARD_INFO(boardId)->pBoardMacInfo[ethPortNum].boardMacSpeed;
  }
@@ -32,7 +30,7 @@ index fbcf267..4611026 100644
  /*******************************************************************************
  * mvBoardSpecInitGet -
  *
-@@ -1531,20 +1531,23 @@ MV_U8 mvBoardTwsiSatRGet(MV_U8 devNum, MV_U8 regNum)
+@@ -1531,20 +1531,23 @@ MV_U8 mvBoardTwsiSatRGet(MV_U8 devNum, M
  	MV_TWSI_ADDR slave;
  	MV_U8 data;
  
@@ -62,7 +60,7 @@ index fbcf267..4611026 100644
  
  	if (MV_OK != mvTwsiRead(0, &twsiSlave, &data, 1)) {
  		DB(mvOsPrintf("Board: Read S@R fail\n"));
-@@ -1578,13 +1581,10 @@ MV_STATUS mvBoardTwsiSatRSet(MV_U8 devNum, MV_U8 regNum, MV_U8 regVal)
+@@ -1578,13 +1581,10 @@ MV_STATUS mvBoardTwsiSatRSet(MV_U8 devNu
  	MV_TWSI_SLAVE twsiSlave;
  	MV_TWSI_ADDR slave;
  
@@ -78,7 +76,7 @@ index fbcf267..4611026 100644
  	twsiSlave.slaveAddr.type = mvBoardTwsiAddrTypeGet(BOARD_DEV_TWSI_SATR, devNum);
  	twsiSlave.validOffset = MV_TRUE;
  	DB(mvOsPrintf("Board: Write S@R device addr %x, type %x, data %x\n",
-@@ -1592,6 +1592,11 @@ MV_STATUS mvBoardTwsiSatRSet(MV_U8 devNum, MV_U8 regNum, MV_U8 regVal)
+@@ -1592,6 +1592,11 @@ MV_STATUS mvBoardTwsiSatRSet(MV_U8 devNu
  	/* Use offset as command */
  	twsiSlave.offset = regNum;
  	twsiSlave.moreThen256 = MV_FALSE;
@@ -99,8 +97,6 @@ index fbcf267..4611026 100644
  
  	sar = mvBoardTwsiSatRGet(3, 0);
  	if ((MV_8)MV_ERROR == (MV_8)sar)
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
-index 4315530..ec95d36 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
 @@ -111,8 +111,6 @@ MV_U32 dummyFlavour = 0;
@@ -112,7 +108,7 @@ index 4315530..ec95d36 100644
  {"78230",0x13, 0x7823, 0x1,  0x3,      0x0,	 0x1a, 		0x5,		0x1,	     0x1,	    0x0,	0x1, 	     0x3,	0x1},
  {"78260",0x14, 0x7826, 0x1,  0x3,      0x0,	 0x1a,		0x5,		0x1,	     0x1,	    0x0,	0x0, 	     0x3,	0x1},
  {"78460",0x15, 0x7846, 0x3,  0x3,      0x0,	 0x1a, 		0x5,		0x1,	     0x3,	    0x0,	0x0, 	     0x3,	0x1},
-@@ -124,8 +122,6 @@ MV_BIOS_MODE bios_modes[BIOS_MODES_NUM] = {
+@@ -124,8 +122,6 @@ MV_BIOS_MODE bios_modes[BIOS_MODES_NUM]
  MV_BIOS_MODE bios_modes_b0[BIOS_MODES_NUM] = {
  /*DBConf ConfID Code L2Size CPUFreq CpuFreqMode FabricFreq  Altfabricfreq  FabricFreqMode CPUEna  cpuEndianess dramBusWidth BootSRC BootWidth */
  /*	                       0x4d/[1:0]  0x4d/[4:2]  0x4e[0]      0x4e/[4:1]  	0x4f[0]   0x4f/[2:1]      0x4f/[3]   	  */
@@ -168,8 +164,6 @@ index 4315530..ec95d36 100644
  	devVendId = MV_REG_READ(PEX_CFG_DIRECT_ACCESS(0, PEX_DEVICE_AND_VENDOR_ID));
  	devVendId &= 0x0000FFFF;
  	devVendId |= 0x7846 << 16;
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
-index 59baf1d..0d2e39a 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
 @@ -174,7 +174,7 @@ typedef struct _boardSerdesConf {
@@ -181,6 +175,3 @@ index 59baf1d..0d2e39a 100644
  
  typedef struct {
  	char *name;
--- 
-1.7.9.5
-

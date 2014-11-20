@@ -9,10 +9,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  1 file changed, 228 insertions(+), 228 deletions(-)
  mode change 100644 => 100755 arch/arm/plat-armada/linux_oss/mvOs.h
 
-diff --git a/arch/arm/plat-armada/linux_oss/mvOs.h b/arch/arm/plat-armada/linux_oss/mvOs.h
-old mode 100644
-new mode 100755
-index d9dbd09..46c7ac1
 --- a/arch/arm/plat-armada/linux_oss/mvOs.h
 +++ b/arch/arm/plat-armada/linux_oss/mvOs.h
 @@ -1,7 +1,7 @@
@@ -34,16 +30,17 @@ index d9dbd09..46c7ac1
 -available along with the File in the license.txt file or by writing to the Free 
 -Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or 
 -on the worldwide web at http://www.gnu.org/licenses/gpl.txt. 
+-
+-THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED 
+-WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY 
+-DISCLAIMED.  The GPL License provides additional details about this warranty 
 +If you received this File from Marvell, you may opt to use, redistribute and/or
 +modify this File in accordance with the terms and conditions of the General
 +Public License Version 2, June 1991 (the "GPL License"), a copy of which is
 +available along with the File in the license.txt file or by writing to the Free
 +Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
 +on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
- 
--THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED 
--WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY 
--DISCLAIMED.  The GPL License provides additional details about this warranty 
++
 +THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
 +WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
 +DISCLAIMED.  The GPL License provides additional details about this warranty
@@ -86,7 +83,7 @@ index d9dbd09..46c7ac1
  #define INLINE              inline
  #define _INIT				__init
  #define MV_TRC_REC	        TRC_REC
-@@ -74,7 +73,7 @@ extern void mv_early_printk(char *fmt,...);
+@@ -74,7 +73,7 @@ extern void mv_early_printk(char *fmt,..
  #define mvOsEarlyPrintf	    mv_early_printk
  #define mvOsOutput          printk
  #define mvOsSPrintf         sprintf
@@ -95,7 +92,7 @@ index d9dbd09..46c7ac1
  #define mvOsFree            kfree
  #define mvOsMemcpy          memcpy
  #define mvOsMemset          memset
-@@ -88,80 +87,81 @@ extern void mv_early_printk(char *fmt,...);
+@@ -88,80 +87,81 @@ extern void mv_early_printk(char *fmt,..
  #define mvCopyToOs          copy_to_user
  #define mvOsWarning()       WARN_ON(1)
  
@@ -205,7 +202,7 @@ index d9dbd09..46c7ac1
  
  
  /* No Fast Swap implementation (in assembler) for ARM */
-@@ -169,70 +169,68 @@ extern void mv_early_printk(char *fmt,...);
+@@ -169,70 +169,68 @@ extern void mv_early_printk(char *fmt,..
  #define MV_16BIT_LE_FAST(val)            MV_16BIT_LE(val)
  #define MV_32BIT_BE_FAST(val)            MV_32BIT_BE(val)
  #define MV_16BIT_BE_FAST(val)            MV_16BIT_BE(val)
@@ -306,7 +303,7 @@ index d9dbd09..46c7ac1
  {
  	volatile MV_U32 val = 0;
  
-@@ -260,93 +258,96 @@ static __inline void mvOsBridgeReorderWA(void)
+@@ -260,93 +258,96 @@ static __inline void mvOsBridgeReorderWA
  #define CPU_I_CACHE_LINE_SIZE   32    /* 2do: replace 32 with linux core macro */
  #define CPU_D_CACHE_LINE_SIZE   32    /* 2do: replace 32 with linux core macro */
  
@@ -329,14 +326,7 @@ index d9dbd09..46c7ac1
 - #define mvOsCacheLineInv(handle,addr)
 - #define mvOsCacheLineFlush(handle, addr)
 - #define mvOsCacheIoSync()			{ MV_REG_WRITE(0x21810, 0x1); while (MV_REG_READ(0x21810) & 0x1);}
-+#define mvOsCacheLineFlushInv(handle, addr)
-+#define mvOsCacheLineInv(handle, addr)
-+#define mvOsCacheLineFlush(handle, addr)
-+#define mvOsCacheMultiLineFlush(handle, addr, size)
-+#define mvOsCacheMultiLineInv(handle, addr, size)
-+#define mvOsCacheMultiLineFlushInv(handle, addr, size)
-+#define mvOsCacheIoSync()		{ MV_REG_WRITE(0x21810, 0x1); while (MV_REG_READ(0x21810) & 0x1); }
- #else
+-#else
 - #define mvOsCacheIoSync()			/* Dummy - not needed in s/w cache coherency */
 - /*************************************/
 - /* FLUSH & INVALIDATE single D$ line */
@@ -392,6 +382,14 @@ index d9dbd09..46c7ac1
 -   __asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 4" : : "r" (addr)); \
 - }
 - #endif
++#define mvOsCacheLineFlushInv(handle, addr)
++#define mvOsCacheLineInv(handle, addr)
++#define mvOsCacheLineFlush(handle, addr)
++#define mvOsCacheMultiLineFlush(handle, addr, size)
++#define mvOsCacheMultiLineInv(handle, addr, size)
++#define mvOsCacheMultiLineFlushInv(handle, addr, size)
++#define mvOsCacheIoSync()		{ MV_REG_WRITE(0x21810, 0x1); while (MV_REG_READ(0x21810) & 0x1); }
++#else
 +#define mvOsCacheIoSync()		/* Dummy - not needed in s/w cache coherency */
 +/*************************************/
 +/* FLUSH & INVALIDATE single D$ line */
@@ -474,7 +472,7 @@ index d9dbd09..46c7ac1
   }
   #elif defined(CONFIG_CACHE_AURORA_L2) && !defined(CONFIG_SHEEVA_ERRATA_ARM_CPU_6043)
  
-@@ -374,20 +375,19 @@ static __inline void mvOsBridgeReorderWA(void)
+@@ -374,20 +375,19 @@ static __inline void mvOsBridgeReorderWA
   {                                                               \
     DSBWA_4611(addr);						 \
  #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043
@@ -501,7 +499,7 @@ index d9dbd09..46c7ac1
  		DSBWA_4611(addr);
  		while (size > 0) {
  #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_6043
-@@ -407,15 +407,15 @@ static inline void mvOsCacheMultiLineFlush(void *handle, void *addr, int size)
+@@ -407,15 +407,15 @@ static inline void mvOsCacheMultiLineFlu
  			size -= CPU_D_CACHE_LINE_SIZE;
  			addr += CPU_D_CACHE_LINE_SIZE;
  		}
@@ -520,7 +518,7 @@ index d9dbd09..46c7ac1
  		DSBWA_4413(addr);
  		while (size > 0) {
  			__asm__ __volatile__ ("mcr p15, 0, %0, c7, c6, 1" : : "r" (addr));   /* Invalidate D$ by MVA to PoC */
-@@ -431,18 +431,17 @@ static inline void mvOsCacheMultiLineInv(void *handle, void *addr, int size)
+@@ -431,18 +431,17 @@ static inline void mvOsCacheMultiLineInv
  			size -= CPU_D_CACHE_LINE_SIZE;
  			addr += CPU_D_CACHE_LINE_SIZE;
  		}
@@ -543,7 +541,7 @@ index d9dbd09..46c7ac1
  			__asm__ __volatile__ ("mcr p15, 0, %0, c7, c14, 1" : : "r" (addr));  /* Clean and Inv D$ by MVA to PoC */
  			writel(__virt_to_phys((int)(((int)addr) & ~0x1f)), (INTER_REGS_BASE + MV_AURORA_L2_REGS_OFFSET + 0x7F0/*L2_FLUSH_PA*/));
  			size -= CPU_D_CACHE_LINE_SIZE;
-@@ -451,23 +450,24 @@ static inline void mvOsCacheMultiLineFlushInv(void *handle, void *addr, int size
+@@ -451,23 +450,24 @@ static inline void mvOsCacheMultiLineFlu
  		writel(0x0, (INTER_REGS_BASE + MV_AURORA_L2_REGS_OFFSET + 0x700/*L2_SYNC*/));
  		__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 4" : : "r" (addr));  /* DSB */
  #else
@@ -578,7 +576,7 @@ index d9dbd09..46c7ac1
  }
  
  
-@@ -481,7 +481,7 @@ static __inline void mvOsPrefetch(const void *ptr)
+@@ -481,7 +481,7 @@ static __inline void mvOsPrefetch(const
  /* register manipulations  */
  
  /******************************************************************************
@@ -682,6 +680,11 @@ index d9dbd09..46c7ac1
 -                reg_arry[reg_arry_index][1] = (MV_MEMIO32_READ(INTER_REGS_BASE | (offset)));\
 -                reg_arry_index++;\
 -        }
+-#else
+-#define MV_REG_BIT_RESET(offset,bitMask)                \
+-        (MV_MEMIO32_WRITE((INTER_REGS_BASE | (offset)), \
+-         (MV_MEMIO32_READ(INTER_REGS_BASE | (offset)) & \
+-          MV_32BIT_LE_FAST(~bitMask))))
 +#define MV_REG_BIT_RESET(offset, bitMask)                \
 +	(MV_MEMIO32_WRITE((INTER_REGS_BASE | (offset)), \
 +	(MV_MEMIO32_READ(INTER_REGS_BASE | (offset)) & \
@@ -691,11 +694,7 @@ index d9dbd09..46c7ac1
 +		reg_arry[reg_arry_index][1] = (MV_MEMIO32_READ(INTER_REGS_BASE | (offset)));\
 +		reg_arry_index++;\
 +	}
- #else
--#define MV_REG_BIT_RESET(offset,bitMask)                \
--        (MV_MEMIO32_WRITE((INTER_REGS_BASE | (offset)), \
--         (MV_MEMIO32_READ(INTER_REGS_BASE | (offset)) & \
--          MV_32BIT_LE_FAST(~bitMask))))
++#else
 +#define MV_REG_BIT_RESET(offset, bitMask)                \
 +	(MV_MEMIO32_WRITE((INTER_REGS_BASE | (offset)), \
 +	(MV_MEMIO32_READ(INTER_REGS_BASE | (offset)) & \
@@ -734,6 +733,3 @@ index d9dbd09..46c7ac1
  
  #endif /* _MV_OS_LNX_H_ */
  
--- 
-1.7.9.5
-

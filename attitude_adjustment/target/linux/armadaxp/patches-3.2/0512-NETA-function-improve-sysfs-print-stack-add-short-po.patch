@@ -16,8 +16,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h     |    2 +-
  3 files changed, 27 insertions(+), 5 deletions(-)
 
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
-index 5584bb0..d55dff5 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
 @@ -45,7 +45,7 @@ static ssize_t mv_eth_help(char *buf)
@@ -29,7 +27,7 @@ index 5584bb0..d55dff5 100644
  	off += sprintf(buf+off, "echo p             > port          - show a port info\n");
  	off += sprintf(buf+off, "echo p             > stats         - show a port statistics\n");
  	off += sprintf(buf+off, "echo p txp         > cntrs         - show a port counters\n");
-@@ -221,7 +221,7 @@ static ssize_t mv_eth_port_store(struct device *dev,
+@@ -221,7 +221,7 @@ static ssize_t mv_eth_port_store(struct
  		mvNetaPortStatus(p);
  		mv_eth_port_status_print(p);
  	} else if (!strcmp(name, "stack")) {
@@ -38,8 +36,6 @@ index 5584bb0..d55dff5 100644
  	} else if (!strcmp(name, "stats")) {
  		mv_eth_port_stats_print(p);
  	} else if (!strcmp(name, "tos")) {
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-index 579bc12..20caace 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 @@ -193,10 +193,32 @@ int mv_eth_cmdline_port3_config(char *s)
@@ -77,11 +73,9 @@ index 579bc12..20caace 100755
  }
  
  
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
-index 36ae9e9..a617a5e 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
-@@ -476,7 +476,7 @@ int mv_eth_bm_config_long_buf_num_get(int port);
+@@ -476,7 +476,7 @@ int mv_eth_bm_config_long_buf_num_get(in
  void mv_eth_bm_config_print(void);
  #endif /* CONFIG_MV_ETH_BM */
  
@@ -90,6 +84,3 @@ index 36ae9e9..a617a5e 100755
  extern struct bm_pool mv_eth_pool[MV_ETH_BM_POOLS];
  extern struct eth_port **mv_eth_ports;
  
--- 
-1.7.9.5
-

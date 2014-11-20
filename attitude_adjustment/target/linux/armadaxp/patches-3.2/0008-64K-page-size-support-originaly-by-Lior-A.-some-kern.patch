@@ -28,11 +28,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  mm/mmap.c                                    |    8 ++++++
  20 files changed, 227 insertions(+), 19 deletions(-)
 
-diff --git a/arch/arm/include/asm/elf.h b/arch/arm/include/asm/elf.h
-index 0e9ce8d..ea80957 100644
 --- a/arch/arm/include/asm/elf.h
 +++ b/arch/arm/include/asm/elf.h
-@@ -109,7 +109,12 @@ int dump_task_regs(struct task_struct *t, elf_gregset_t *elfregs);
+@@ -109,7 +109,12 @@ int dump_task_regs(struct task_struct *t
  #define ELF_CORE_COPY_TASK_REGS dump_task_regs
  
  #define CORE_DUMP_USE_REGSET
@@ -46,8 +44,6 @@ index 0e9ce8d..ea80957 100644
  
  /* This is the location that an ET_DYN program is loaded if exec'ed.  Typical
     use of this is to invoke "./ld.so someprog" to test out a new version of
-diff --git a/arch/arm/include/asm/fixmap.h b/arch/arm/include/asm/fixmap.h
-index bbae919..dc364ca 100644
 --- a/arch/arm/include/asm/fixmap.h
 +++ b/arch/arm/include/asm/fixmap.h
 @@ -13,8 +13,13 @@
@@ -64,8 +60,6 @@ index bbae919..dc364ca 100644
  #define FIXADDR_SIZE		(FIXADDR_TOP - FIXADDR_START)
  
  #define FIX_KMAP_BEGIN		0
-diff --git a/arch/arm/include/asm/memory.h b/arch/arm/include/asm/memory.h
-index a8997d7..c0185bb 100644
 --- a/arch/arm/include/asm/memory.h
 +++ b/arch/arm/include/asm/memory.h
 @@ -80,7 +80,11 @@
@@ -80,8 +74,6 @@ index a8997d7..c0185bb 100644
  
  #else /* CONFIG_MMU */
  
-diff --git a/arch/arm/include/asm/page.h b/arch/arm/include/asm/page.h
-index ca94653..b522337 100644
 --- a/arch/arm/include/asm/page.h
 +++ b/arch/arm/include/asm/page.h
 @@ -11,7 +11,11 @@
@@ -96,8 +88,6 @@ index ca94653..b522337 100644
  #define PAGE_SIZE		(_AC(1,UL) << PAGE_SHIFT)
  #define PAGE_MASK		(~(PAGE_SIZE-1))
  
-diff --git a/arch/arm/include/asm/pgtable-2level-hwdef.h b/arch/arm/include/asm/pgtable-2level-hwdef.h
-index 5cfba15..b60a9fc 100644
 --- a/arch/arm/include/asm/pgtable-2level-hwdef.h
 +++ b/arch/arm/include/asm/pgtable-2level-hwdef.h
 @@ -65,7 +65,11 @@
@@ -124,8 +114,6 @@ index 5cfba15..b60a9fc 100644
  #define PTE_EXT_APX		(_AT(pteval_t, 1) << 9)		/* v6 */
  #define PTE_EXT_COHERENT	(_AT(pteval_t, 1) << 9)		/* XScale3 */
  #define PTE_EXT_SHARED		(_AT(pteval_t, 1) << 10)	/* v6 */
-diff --git a/arch/arm/include/asm/pgtable-2level.h b/arch/arm/include/asm/pgtable-2level.h
-index 470457e..35525ca 100644
 --- a/arch/arm/include/asm/pgtable-2level.h
 +++ b/arch/arm/include/asm/pgtable-2level.h
 @@ -68,13 +68,22 @@
@@ -155,8 +143,6 @@ index 470457e..35525ca 100644
  
  /*
   * PMD_SHIFT determines the size of the area a second-level page table can map
-diff --git a/arch/arm/include/asm/shmparam.h b/arch/arm/include/asm/shmparam.h
-index a5223b3..8e977b6 100644
 --- a/arch/arm/include/asm/shmparam.h
 +++ b/arch/arm/include/asm/shmparam.h
 @@ -6,7 +6,11 @@
@@ -171,8 +157,6 @@ index a5223b3..8e977b6 100644
  
  /*
   * Enforce SHMLBA in shmat
-diff --git a/arch/arm/kernel/entry-common.S b/arch/arm/kernel/entry-common.S
-index b2a27b6..6e928f8 100644
 --- a/arch/arm/kernel/entry-common.S
 +++ b/arch/arm/kernel/entry-common.S
 @@ -582,9 +582,9 @@ ENDPROC(sys_fstatfs64_wrapper)
@@ -188,8 +172,6 @@ index b2a27b6..6e928f8 100644
  		streq	r5, [sp, #4]
  		beq	sys_mmap_pgoff
  		mov	r0, #-EINVAL
-diff --git a/arch/arm/lib/copy_page.S b/arch/arm/lib/copy_page.S
-index 6ee2f67..8ab251b 100644
 --- a/arch/arm/lib/copy_page.S
 +++ b/arch/arm/lib/copy_page.S
 @@ -28,7 +28,11 @@ ENTRY(copy_page)
@@ -204,8 +186,6 @@ index 6ee2f67..8ab251b 100644
  		ldmia	r1!, {r3, r4, ip, lr}		@	4+1
  1:	PLD(	pld	[r1, #2 * L1_CACHE_BYTES])
  	PLD(	pld	[r1, #3 * L1_CACHE_BYTES])
-diff --git a/arch/arm/mach-armadaxp/include/mach/system.h b/arch/arm/mach-armadaxp/include/mach/system.h
-index 3f83783..ae532e1 100644
 --- a/arch/arm/mach-armadaxp/include/mach/system.h
 +++ b/arch/arm/mach-armadaxp/include/mach/system.h
 @@ -14,7 +14,13 @@
@@ -223,11 +203,9 @@ index 3f83783..ae532e1 100644
  
  static inline void arch_idle(void)
  {
-diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
-index 72e3738..fa7efcb 100644
 --- a/arch/arm/mm/Kconfig
 +++ b/arch/arm/mm/Kconfig
-@@ -1041,6 +1041,13 @@ config CPU_SHEEVA_PJ4B_PMC_ACCESS_IN_USERMODE
+@@ -1041,6 +1041,13 @@ config CPU_SHEEVA_PJ4B_PMC_ACCESS_IN_USE
  	  Say Y if you allow user mode application to access Performance 
  	  Monitor Counter of PJ4 in user mode
  
@@ -241,8 +219,6 @@ index 72e3738..fa7efcb 100644
  config CACHE_L2X0
  	bool "Enable the L2x0 outer cache controller"
  	depends on REALVIEW_EB_ARM11MP || MACH_REALVIEW_PB11MP || MACH_REALVIEW_PB1176 || \
-diff --git a/arch/arm/mm/cache-v6.S b/arch/arm/mm/cache-v6.S
-index 4434a19..fc8c2ec 100644
 --- a/arch/arm/mm/cache-v6.S
 +++ b/arch/arm/mm/cache-v6.S
 @@ -184,9 +184,15 @@ ENTRY(v6_coherent_user_range)
@@ -261,8 +237,6 @@ index 4434a19..fc8c2ec 100644
  	b	2b
   UNWIND(.fnend		)
  ENDPROC(v6_coherent_user_range)
-diff --git a/arch/arm/mm/cache-v7.S b/arch/arm/mm/cache-v7.S
-index 8c96aa6..be1c8e5 100644
 --- a/arch/arm/mm/cache-v7.S
 +++ b/arch/arm/mm/cache-v7.S
 @@ -214,9 +214,15 @@ ENTRY(v7_coherent_user_range)
@@ -281,11 +255,9 @@ index 8c96aa6..be1c8e5 100644
  	b	3b
   UNWIND(.fnend		)
  ENDPROC(v7_coherent_kern_range)
-diff --git a/arch/arm/mm/fault.c b/arch/arm/mm/fault.c
-index 4b0bc37..b058782 100644
 --- a/arch/arm/mm/fault.c
 +++ b/arch/arm/mm/fault.c
-@@ -123,8 +123,19 @@ void show_pte(struct mm_struct *mm, unsigned long addr)
+@@ -123,8 +123,19 @@ void show_pte(struct mm_struct *mm, unsi
  
  		pte = pte_offset_map(pmd, addr);
  		printk(", *pte=%08llx", (long long)pte_val(*pte));
@@ -307,8 +279,6 @@ index 4b0bc37..b058782 100644
  		pte_unmap(pte);
  	} while(0);
  
-diff --git a/arch/arm/mm/init.c b/arch/arm/mm/init.c
-index fbdd12e..f9f87ea 100644
 --- a/arch/arm/mm/init.c
 +++ b/arch/arm/mm/init.c
 @@ -35,6 +35,14 @@
@@ -355,8 +325,6 @@ index fbdd12e..f9f87ea 100644
  	if (!keep_initrd) {
  		poison_init_mem((void *)start, PAGE_ALIGN(end) - start);
  		totalram_pages += free_area(__phys_to_pfn(__pa(start)),
-diff --git a/arch/arm/mm/mm.h b/arch/arm/mm/mm.h
-index ad7cce3..427a7ab 100644
 --- a/arch/arm/mm/mm.h
 +++ b/arch/arm/mm/mm.h
 @@ -3,7 +3,11 @@
@@ -371,8 +339,6 @@ index ad7cce3..427a7ab 100644
  
  static inline pmd_t *pmd_off_k(unsigned long virt)
  {
-diff --git a/arch/arm/mm/mmu.c b/arch/arm/mm/mmu.c
-index 0cd841d..8a8c411 100644
 --- a/arch/arm/mm/mmu.c
 +++ b/arch/arm/mm/mmu.c
 @@ -26,6 +26,10 @@
@@ -386,7 +352,7 @@ index 0cd841d..8a8c411 100644
  #include <asm/mach/arch.h>
  #include <asm/mach/map.h>
  
-@@ -543,7 +547,11 @@ static void __init *early_alloc(unsigned long sz)
+@@ -543,7 +547,11 @@ static void __init *early_alloc(unsigned
  static pte_t * __init early_pte_alloc(pmd_t *pmd, unsigned long addr, unsigned long prot)
  {
  	if (pmd_none(*pmd)) {
@@ -399,7 +365,7 @@ index 0cd841d..8a8c411 100644
  		__pmd_populate(pmd, __pa(pte), prot);
  	}
  	BUG_ON(pmd_bad(*pmd));
-@@ -929,6 +937,30 @@ void __init arm_mm_memblock_reserve(void)
+@@ -929,6 +937,30 @@ void __init arm_mm_memblock_reserve(void
  #endif
  }
  
@@ -430,7 +396,7 @@ index 0cd841d..8a8c411 100644
  /*
   * Set up device the mappings.  Since we clear out the page tables for all
   * mappings above VMALLOC_END, we will remove any debug device mappings.
-@@ -996,6 +1028,10 @@ static void __init devicemaps_init(struct machine_desc *mdesc)
+@@ -996,6 +1028,10 @@ static void __init devicemaps_init(struc
  		create_mapping(&map);
  	}
  
@@ -441,8 +407,6 @@ index 0cd841d..8a8c411 100644
  	/*
  	 * Ask the machine support to map in the statically mapped devices.
  	 */
-diff --git a/arch/arm/mm/proc-macros.S b/arch/arm/mm/proc-macros.S
-index ef0128c..8650f61 100644
 --- a/arch/arm/mm/proc-macros.S
 +++ b/arch/arm/mm/proc-macros.S
 @@ -137,11 +137,26 @@
@@ -510,8 +474,6 @@ index ef0128c..8650f61 100644
  #if defined (CONFIG_CACHE_AURORA_L2) && defined (CONFIG_AURORA_L2_OUTER) && !defined (CONFIG_AURORA_L2_PT_WALK)
  #error "armv6_set_pte_ext: calling l2_clean_va corrupts r2. SHOULD BE FIXED"
  	bl	l2_clean_va
-diff --git a/arch/arm/mm/proc-sheeva_pj4bv7.S b/arch/arm/mm/proc-sheeva_pj4bv7.S
-index 0b1aac2..7e0e907 100644
 --- a/arch/arm/mm/proc-sheeva_pj4bv7.S
 +++ b/arch/arm/mm/proc-sheeva_pj4bv7.S
 @@ -172,12 +172,25 @@ ENTRY(cpu_pj4bv7_set_pte_ext)
@@ -572,11 +534,9 @@ index 0b1aac2..7e0e907 100644
  #endif
  	mov	pc, lr
  ENDPROC(cpu_pj4bv7_set_pte_ext)
-diff --git a/mm/mmap.c b/mm/mmap.c
-index eae90af..4792e76 100644
 --- a/mm/mmap.c
 +++ b/mm/mmap.c
-@@ -1586,7 +1586,15 @@ struct vm_area_struct *find_vma(struct mm_struct *mm, unsigned long addr)
+@@ -1586,7 +1586,15 @@ struct vm_area_struct *find_vma(struct m
  				vma_tmp = rb_entry(rb_node,
  						struct vm_area_struct, vm_rb);
  
@@ -592,6 +552,3 @@ index eae90af..4792e76 100644
  					vma = vma_tmp;
  					if (vma_tmp->vm_start <= addr)
  						break;
--- 
-1.7.9.5
-

@@ -153,8 +153,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  create mode 100644 drivers/scsi/thor/patch.kbuild
  create mode 100644 drivers/scsi/thor/patch.sh
 
-diff --git a/drivers/scsi/Kconfig b/drivers/scsi/Kconfig
-index 06ea3bc..f94ecf1 100644
 --- a/drivers/scsi/Kconfig
 +++ b/drivers/scsi/Kconfig
 @@ -348,6 +348,12 @@ menuconfig SCSI_LOWLEVEL
@@ -170,11 +168,9 @@ index 06ea3bc..f94ecf1 100644
  config ISCSI_TCP
  	tristate "iSCSI Initiator over TCP/IP"
  	depends on SCSI && INET
-diff --git a/drivers/scsi/Makefile b/drivers/scsi/Makefile
-index 2b88749..8c84a4e 100644
 --- a/drivers/scsi/Makefile
 +++ b/drivers/scsi/Makefile
-@@ -51,6 +51,7 @@ obj-$(CONFIG_A2091_SCSI)	+= a2091.o	wd33c93.o
+@@ -51,6 +51,7 @@ obj-$(CONFIG_A2091_SCSI)	+= a2091.o	wd33
  obj-$(CONFIG_GVP11_SCSI)	+= gvp11.o	wd33c93.o
  obj-$(CONFIG_MVME147_SCSI)	+= mvme147.o	wd33c93.o
  obj-$(CONFIG_SGIWD93_SCSI)	+= sgiwd93.o	wd33c93.o
@@ -182,9 +178,6 @@ index 2b88749..8c84a4e 100644
  obj-$(CONFIG_ATARI_SCSI)	+= atari_scsi.o
  obj-$(CONFIG_MAC_SCSI)		+= mac_scsi.o
  obj-$(CONFIG_SCSI_MAC_ESP)	+= esp_scsi.o	mac_esp.o
-diff --git a/drivers/scsi/thor/Makefile b/drivers/scsi/thor/Makefile
-new file mode 100644
-index 0000000..8ac2359
 --- /dev/null
 +++ b/drivers/scsi/thor/Makefile
 @@ -0,0 +1,174 @@
@@ -362,9 +355,6 @@ index 0000000..8ac2359
 +clean:
 +	$(MAKE) ARCH=$(ARCH_TYPE) CC=$(MV_CC) LD=$(MV_LD) CROSS_COMPILE=$(CROSS_COMPILE) V=$(V) -C $(KERNEL_BLD_DIR) SUBDIRS=`pwd` clean
 +endif
-diff --git a/drivers/scsi/thor/Makefile.kbuild b/drivers/scsi/thor/Makefile.kbuild
-new file mode 100644
-index 0000000..4c0992e
 --- /dev/null
 +++ b/drivers/scsi/thor/Makefile.kbuild
 @@ -0,0 +1,187 @@
@@ -555,9 +545,6 @@ index 0000000..4c0992e
 +EXTRA_CFLAGS  += #-D__MV_DEBUG__
 +EXTRA_CFLAGS  += -Wno-unused-variable  -Wno-pointer-arith
 +EXTRA_CFLAGS  +=   -D__LEGACY_OSSW__=1
-diff --git a/drivers/scsi/thor/core/thor/consolid.c b/drivers/scsi/thor/core/thor/consolid.c
-new file mode 100644
-index 0000000..7dc4b8e
 --- /dev/null
 +++ b/drivers/scsi/thor/core/thor/consolid.c
 @@ -0,0 +1,524 @@
@@ -1085,9 +1072,6 @@ index 0000000..7dc4b8e
 +	CONS_SEND_REQUEST(This, pInternal);
 +}
 +#endif
-diff --git a/drivers/scsi/thor/core/thor/consolid.h b/drivers/scsi/thor/core/thor/consolid.h
-new file mode 100644
-index 0000000..f24a1c4
 --- /dev/null
 +++ b/drivers/scsi/thor/core/thor/consolid.h
 @@ -0,0 +1,60 @@
@@ -1151,9 +1135,6 @@ index 0000000..f24a1c4
 +	);
 +
 +#endif
-diff --git a/drivers/scsi/thor/core/thor/core_api.c b/drivers/scsi/thor/core/thor/core_api.c
-new file mode 100644
-index 0000000..7846190
 --- /dev/null
 +++ b/drivers/scsi/thor/core/thor/core_api.c
 @@ -0,0 +1,710 @@
@@ -1867,9 +1848,6 @@ index 0000000..7846190
 +	return core_pd_cmd_handler[pReq->Cdb[1]](pCore, pReq);
 +}
 +#endif
-diff --git a/drivers/scsi/thor/core/thor/core_api.h b/drivers/scsi/thor/core/thor/core_api.h
-new file mode 100644
-index 0000000..ab563e4
 --- /dev/null
 +++ b/drivers/scsi/thor/core/thor/core_api.h
 @@ -0,0 +1,44 @@
@@ -1917,9 +1895,6 @@ index 0000000..ab563e4
 +#endif
 +
 +#endif
-diff --git a/drivers/scsi/thor/core/thor/core_ata.h b/drivers/scsi/thor/core/thor/core_ata.h
-new file mode 100644
-index 0000000..6d82013
 --- /dev/null
 +++ b/drivers/scsi/thor/core/thor/core_ata.h
 @@ -0,0 +1,265 @@
@@ -2188,9 +2163,6 @@ index 0000000..6d82013
 +#define ATA_REGISTER_DEVICE_CONTROL	0x16
 +
 +#endif
-diff --git a/drivers/scsi/thor/core/thor/core_cons.h b/drivers/scsi/thor/core/thor/core_cons.h
-new file mode 100644
-index 0000000..f22edd0
 --- /dev/null
 +++ b/drivers/scsi/thor/core/thor/core_cons.h
 @@ -0,0 +1,28 @@
@@ -2222,9 +2194,6 @@ index 0000000..f22edd0
 +#define CONS_SEND_REQUEST	Core_InternalSendRequest
 +
 +#endif
-diff --git a/drivers/scsi/thor/core/thor/core_exp.c b/drivers/scsi/thor/core/thor/core_exp.c
-new file mode 100644
-index 0000000..76b6dc9
 --- /dev/null
 +++ b/drivers/scsi/thor/core/thor/core_exp.c
 @@ -0,0 +1,4651 @@
@@ -6879,9 +6848,6 @@ index 0000000..76b6dc9
 +}
 +
 +#endif /* _OS_LINUX */
-diff --git a/drivers/scsi/thor/core/thor/core_exp.h b/drivers/scsi/thor/core/thor/core_exp.h
-new file mode 100644
-index 0000000..98f7d40
 --- /dev/null
 +++ b/drivers/scsi/thor/core/thor/core_exp.h
 @@ -0,0 +1,67 @@
@@ -6952,9 +6918,6 @@ index 0000000..98f7d40
 +
 +void sata_hotplug(MV_PVOID data,MV_U32 intStatus);
 +#endif /* CORE_EXPOSE_H */
-diff --git a/drivers/scsi/thor/core/thor/core_init.c b/drivers/scsi/thor/core/thor/core_init.c
-new file mode 100644
-index 0000000..68f71de
 --- /dev/null
 +++ b/drivers/scsi/thor/core/thor/core_init.c
 @@ -0,0 +1,2818 @@
@@ -9776,9 +9739,6 @@ index 0000000..68f71de
 +		Core_ModuleSendRequest(pPort->Core_Extension, pReq);
 +	}
 +}
-diff --git a/drivers/scsi/thor/core/thor/core_init.h b/drivers/scsi/thor/core/thor/core_init.h
-new file mode 100644
-index 0000000..06ac77b
 --- /dev/null
 +++ b/drivers/scsi/thor/core/thor/core_init.h
 @@ -0,0 +1,135 @@
@@ -9917,9 +9877,6 @@ index 0000000..06ac77b
 +#define CORE_MAX_RESET_COUNT		0xffff
 +#define CORE_MAX_PATA_RESET_COUNT	0xffff
 +#endif
-diff --git a/drivers/scsi/thor/core/thor/core_inter.h b/drivers/scsi/thor/core/thor/core_inter.h
-new file mode 100644
-index 0000000..f121058
 --- /dev/null
 +++ b/drivers/scsi/thor/core/thor/core_inter.h
 @@ -0,0 +1,77 @@
@@ -10000,9 +9957,6 @@ index 0000000..f121058
 +}Core_Driver_Extension, *PCore_Driver_Extension;
 +
 +#endif /* CORE_MAIN_H */
-diff --git a/drivers/scsi/thor/core/thor/core_sat.c b/drivers/scsi/thor/core/thor/core_sat.c
-new file mode 100644
-index 0000000..1d9a3cd
 --- /dev/null
 +++ b/drivers/scsi/thor/core/thor/core_sat.c
 @@ -0,0 +1,836 @@
@@ -10842,9 +10796,6 @@ index 0000000..1d9a3cd
 +}
 +
 +#endif //#ifdef SUPPORT_ATA_SMART
-diff --git a/drivers/scsi/thor/core/thor/core_sat.h b/drivers/scsi/thor/core/thor/core_sat.h
-new file mode 100644
-index 0000000..8516b55
 --- /dev/null
 +++ b/drivers/scsi/thor/core/thor/core_sat.h
 @@ -0,0 +1,77 @@
@@ -10925,9 +10876,6 @@ index 0000000..8516b55
 +void Core_Fill_SendDiagTaskfile( PDomain_Device device,PMV_Request req, PATA_TaskFile taskfile);
 +
 +#endif /* __CORE_SAT_H__ */
-diff --git a/drivers/scsi/thor/core/thor/core_sata.h b/drivers/scsi/thor/core/thor/core_sata.h
-new file mode 100644
-index 0000000..2750b51
 --- /dev/null
 +++ b/drivers/scsi/thor/core/thor/core_sata.h
 @@ -0,0 +1,50 @@
@@ -10981,9 +10929,6 @@ index 0000000..2750b51
 +#define SATA_FIS_TYPE_SET_DEVICE_BITS	0xA1	/* Set Device Bits FIS - Device to Host */
 +
 +#endif /* FIS_H */
-diff --git a/drivers/scsi/thor/core/thor/core_swxor.c b/drivers/scsi/thor/core/thor/core_swxor.c
-new file mode 100644
-index 0000000..fc6bcb3
 --- /dev/null
 +++ b/drivers/scsi/thor/core/thor/core_swxor.c
 @@ -0,0 +1,528 @@
@@ -11515,9 +11460,6 @@ index 0000000..fc6bcb3
 +}
 +
 +#endif
-diff --git a/drivers/scsi/thor/core/thor/core_thor.h b/drivers/scsi/thor/core/thor/core_thor.h
-new file mode 100644
-index 0000000..857f98d
 --- /dev/null
 +++ b/drivers/scsi/thor/core/thor/core_thor.h
 @@ -0,0 +1,500 @@
@@ -12021,9 +11963,6 @@ index 0000000..857f98d
 +	((PMV_Command_Table)((MV_PU8)pPort->Cmd_Table + slot * SATA_CMD_TABLE_SIZE))
 +
 +#endif /* CORE_SATA_H */
-diff --git a/drivers/scsi/thor/core/thor/core_xor.c b/drivers/scsi/thor/core/thor/core_xor.c
-new file mode 100644
-index 0000000..b4d0f5b
 --- /dev/null
 +++ b/drivers/scsi/thor/core/thor/core_xor.c
 @@ -0,0 +1,846 @@
@@ -12873,9 +12812,6 @@ index 0000000..b4d0f5b
 +#endif /* SOFTWARE_XOR */
 +#endif /* RAID_DRIVER */
 +#endif /* USE_NEW_SGTABLE */
-diff --git a/drivers/scsi/thor/core/thor/core_xor.h b/drivers/scsi/thor/core/thor/core_xor.h
-new file mode 100644
-index 0000000..75c0ada
 --- /dev/null
 +++ b/drivers/scsi/thor/core/thor/core_xor.h
 @@ -0,0 +1,10 @@
@@ -12889,9 +12825,6 @@ index 0000000..75c0ada
 +#endif /* RAID_DRIVER */
 +
 +#endif
-diff --git a/drivers/scsi/thor/core/thor/scsi2sata.c b/drivers/scsi/thor/core/thor/scsi2sata.c
-new file mode 100644
-index 0000000..a5ab8f7
 --- /dev/null
 +++ b/drivers/scsi/thor/core/thor/scsi2sata.c
 @@ -0,0 +1,787 @@
@@ -13682,9 +13615,6 @@ index 0000000..a5ab8f7
 +
 +	return MV_TRUE;
 +}
-diff --git a/drivers/scsi/thor/include/com_dbg.h b/drivers/scsi/thor/include/com_dbg.h
-new file mode 100644
-index 0000000..55c9100
 --- /dev/null
 +++ b/drivers/scsi/thor/include/com_dbg.h
 @@ -0,0 +1,164 @@
@@ -13852,9 +13782,6 @@ index 0000000..55c9100
 +void mvLogMsg(MV_U8 moduleId, MV_U32 type, char* format, ...);
 +
 +#endif /* COMMON_DEBUG_H */
-diff --git a/drivers/scsi/thor/include/com_list.c b/drivers/scsi/thor/include/com_list.c
-new file mode 100644
-index 0000000..600c007
 --- /dev/null
 +++ b/drivers/scsi/thor/include/com_list.c
 @@ -0,0 +1,183 @@
@@ -14041,9 +13968,6 @@ index 0000000..600c007
 +		MV_LIST_HEAD_INIT(list);
 +	}
 +}
-diff --git a/drivers/scsi/thor/include/com_list.h b/drivers/scsi/thor/include/com_list.h
-new file mode 100644
-index 0000000..2a7bb81
 --- /dev/null
 +++ b/drivers/scsi/thor/include/com_list.h
 @@ -0,0 +1,193 @@
@@ -14240,9 +14164,6 @@ index 0000000..2a7bb81
 +	LIST_ENTRY(List_GetLast(head), type, member)
 +
 +#endif /* COMMON_LIST_H */
-diff --git a/drivers/scsi/thor/include/com_mod_mgmt.h b/drivers/scsi/thor/include/com_mod_mgmt.h
-new file mode 100644
-index 0000000..700637d
 --- /dev/null
 +++ b/drivers/scsi/thor/include/com_mod_mgmt.h
 @@ -0,0 +1,137 @@
@@ -14383,9 +14304,6 @@ index 0000000..700637d
 +};
 +
 +#endif /* __MV_MODULE_MGMT__ */
-diff --git a/drivers/scsi/thor/include/com_nvram.h b/drivers/scsi/thor/include/com_nvram.h
-new file mode 100644
-index 0000000..2987b8d
 --- /dev/null
 +++ b/drivers/scsi/thor/include/com_nvram.h
 @@ -0,0 +1,106 @@
@@ -14495,9 +14413,6 @@ index 0000000..2987b8d
 +
 +MV_U8	mvCaculateChecksum(MV_PU8	Address, MV_U32 Size);
 +MV_U8	mvVerifyChecksum(MV_PU8	Address, MV_U32 Size);
-diff --git a/drivers/scsi/thor/include/com_scsi.h b/drivers/scsi/thor/include/com_scsi.h
-new file mode 100644
-index 0000000..dfbb47c
 --- /dev/null
 +++ b/drivers/scsi/thor/include/com_scsi.h
 @@ -0,0 +1,299 @@
@@ -14800,9 +14715,6 @@ index 0000000..dfbb47c
 +#endif
 +
 +#endif /*  __MV_COM_SCSI_H__ */
-diff --git a/drivers/scsi/thor/include/com_sgd.h b/drivers/scsi/thor/include/com_sgd.h
-new file mode 100644
-index 0000000..f4d3f56
 --- /dev/null
 +++ b/drivers/scsi/thor/include/com_sgd.h
 @@ -0,0 +1,383 @@
@@ -15189,9 +15101,6 @@ index 0000000..f4d3f56
 +	);
 +
 +#endif	/*__MV_COM_SGD_H__*/
-diff --git a/drivers/scsi/thor/include/com_tag.h b/drivers/scsi/thor/include/com_tag.h
-new file mode 100644
-index 0000000..db55158
 --- /dev/null
 +++ b/drivers/scsi/thor/include/com_tag.h
 @@ -0,0 +1,33 @@
@@ -15228,9 +15137,6 @@ index 0000000..db55158
 +MV_BOOLEAN Tag_IsEmpty(PTag_Stack pTagStack);
 +
 +#endif /*  __MV_COM_TAG_H__ */
-diff --git a/drivers/scsi/thor/include/com_type.h b/drivers/scsi/thor/include/com_type.h
-new file mode 100644
-index 0000000..3030aed
 --- /dev/null
 +++ b/drivers/scsi/thor/include/com_type.h
 @@ -0,0 +1,427 @@
@@ -15661,9 +15567,6 @@ index 0000000..3030aed
 +
 +
 +#endif /* __MV_COM_TYPE_H__ */
-diff --git a/drivers/scsi/thor/include/com_u64.h b/drivers/scsi/thor/include/com_u64.h
-new file mode 100644
-index 0000000..b67b5e3
 --- /dev/null
 +++ b/drivers/scsi/thor/include/com_u64.h
 @@ -0,0 +1,22 @@
@@ -15689,9 +15592,6 @@ index 0000000..b67b5e3
 +#endif
 +
 +#endif
-diff --git a/drivers/scsi/thor/include/com_util.h b/drivers/scsi/thor/include/com_util.h
-new file mode 100644
-index 0000000..fb37eee
 --- /dev/null
 +++ b/drivers/scsi/thor/include/com_util.h
 @@ -0,0 +1,241 @@
@@ -15936,9 +15836,6 @@ index 0000000..fb37eee
 +#endif
 +
 +#endif /*  __MV_COM_UTIL_H__ */
-diff --git a/drivers/scsi/thor/include/csmisas.h b/drivers/scsi/thor/include/csmisas.h
-new file mode 100644
-index 0000000..506925d
 --- /dev/null
 +++ b/drivers/scsi/thor/include/csmisas.h
 @@ -0,0 +1,1223 @@
@@ -17165,9 +17062,6 @@ index 0000000..506925d
 +#pragma pack()
 +
 +#endif // _CSMI_SAS_H_
-diff --git a/drivers/scsi/thor/include/generic/com_define.h b/drivers/scsi/thor/include/generic/com_define.h
-new file mode 100644
-index 0000000..014017e
 --- /dev/null
 +++ b/drivers/scsi/thor/include/generic/com_define.h
 @@ -0,0 +1,345 @@
@@ -17516,9 +17410,6 @@ index 0000000..014017e
 +#endif
 +
 +#endif /* COM_DEFINE_H */
-diff --git a/drivers/scsi/thor/include/generic/com_error.h b/drivers/scsi/thor/include/generic/com_error.h
-new file mode 100644
-index 0000000..8655971
 --- /dev/null
 +++ b/drivers/scsi/thor/include/generic/com_error.h
 @@ -0,0 +1,61 @@
@@ -17583,9 +17474,6 @@ index 0000000..8655971
 +#define ERR_MIGRATION_LIMIT	                     (ERR_API + 11)
 +
 +#endif /*  __COM_ERROR_H__ */
-diff --git a/drivers/scsi/thor/include/generic/com_event_define.h b/drivers/scsi/thor/include/generic/com_event_define.h
-new file mode 100644
-index 0000000..28a45e1
 --- /dev/null
 +++ b/drivers/scsi/thor/include/generic/com_event_define.h
 @@ -0,0 +1,353 @@
@@ -17942,9 +17830,6 @@ index 0000000..28a45e1
 +#define EVT_ID_HD_MP_RATE_CHANGE		 _CLASS_ADPT(EVT_CODE_HD_MP_RATE_CHANGE)
 +
 +#endif /*  COM_EVENT_DEFINE_H */
-diff --git a/drivers/scsi/thor/include/generic/com_event_define_ext.h b/drivers/scsi/thor/include/generic/com_event_define_ext.h
-new file mode 100644
-index 0000000..06e5502
 --- /dev/null
 +++ b/drivers/scsi/thor/include/generic/com_event_define_ext.h
 @@ -0,0 +1,357 @@
@@ -18305,9 +18190,6 @@ index 0000000..06e5502
 +#define EVT_ID_MISC_PD_TOO_SMALL_FOR_AUTOREBUILD	_CLASS_MISC(EVT_CODE_MISC_PD_TOO_SMALL_FOR_AUTOREBUILD)
 +
 +#endif
-diff --git a/drivers/scsi/thor/include/generic/com_struct.h b/drivers/scsi/thor/include/generic/com_struct.h
-new file mode 100644
-index 0000000..deba32d
 --- /dev/null
 +++ b/drivers/scsi/thor/include/generic/com_struct.h
 @@ -0,0 +1,684 @@
@@ -18995,9 +18877,6 @@ index 0000000..deba32d
 +#endif /* _OS_BIOS */
 +
 +#endif /*  __MV_COM_STRUCT_H__ */
-diff --git a/drivers/scsi/thor/include/icommon/com_api.h b/drivers/scsi/thor/include/icommon/com_api.h
-new file mode 100644
-index 0000000..9520e18
 --- /dev/null
 +++ b/drivers/scsi/thor/include/icommon/com_api.h
 @@ -0,0 +1,167 @@
@@ -19168,9 +19047,6 @@ index 0000000..9520e18
 +
 +
 +#endif /*  __MV_COM_API_H__ */
-diff --git a/drivers/scsi/thor/include/icommon/com_event_struct.h b/drivers/scsi/thor/include/icommon/com_event_struct.h
-new file mode 100644
-index 0000000..d2cd9a7
 --- /dev/null
 +++ b/drivers/scsi/thor/include/icommon/com_event_struct.h
 @@ -0,0 +1,40 @@
@@ -19214,9 +19090,6 @@ index 0000000..d2cd9a7
 +#endif /*  _OS_BIOS */
 +
 +#endif /*  COM_EVENT_DRIVER_H */
-diff --git a/drivers/scsi/thor/include/icommon/com_flash.h b/drivers/scsi/thor/include/icommon/com_flash.h
-new file mode 100644
-index 0000000..89404d7
 --- /dev/null
 +++ b/drivers/scsi/thor/include/icommon/com_flash.h
 @@ -0,0 +1,26 @@
@@ -19246,9 +19119,6 @@ index 0000000..89404d7
 +#endif /* _OS_BIOS */
 +
 +#endif /* __MV_COM_FLASH_H__ */
-diff --git a/drivers/scsi/thor/include/icommon/com_ioctl.h b/drivers/scsi/thor/include/icommon/com_ioctl.h
-new file mode 100644
-index 0000000..70375a9
 --- /dev/null
 +++ b/drivers/scsi/thor/include/icommon/com_ioctl.h
 @@ -0,0 +1,59 @@
@@ -19311,9 +19181,6 @@ index 0000000..70375a9
 +#endif /* _OS_BIOS */
 +
 +#endif /* __MV_COM_IOCTL_H__ */
-diff --git a/drivers/scsi/thor/lib/common/com_dbg.c b/drivers/scsi/thor/lib/common/com_dbg.c
-new file mode 100644
-index 0000000..a8a31f0
 --- /dev/null
 +++ b/drivers/scsi/thor/lib/common/com_dbg.c
 @@ -0,0 +1,33 @@
@@ -19350,9 +19217,6 @@ index 0000000..a8a31f0
 +	return result;
 +}
 +#endif
-diff --git a/drivers/scsi/thor/lib/common/com_nvram.c b/drivers/scsi/thor/lib/common/com_nvram.c
-new file mode 100644
-index 0000000..5026e50
 --- /dev/null
 +++ b/drivers/scsi/thor/lib/common/com_nvram.c
 @@ -0,0 +1,164 @@
@@ -19520,9 +19384,6 @@ index 0000000..5026e50
 +}
 +
 +#endif
-diff --git a/drivers/scsi/thor/lib/common/com_scsi.c b/drivers/scsi/thor/lib/common/com_scsi.c
-new file mode 100644
-index 0000000..67bcb28
 --- /dev/null
 +++ b/drivers/scsi/thor/lib/common/com_scsi.c
 @@ -0,0 +1,84 @@
@@ -19610,9 +19471,6 @@ index 0000000..67bcb28
 +		pSense->AdditionalSenseLength = sizeof(MV_Sense_Data) - 8;
 +	}
 +}
-diff --git a/drivers/scsi/thor/lib/common/com_sgd.c b/drivers/scsi/thor/lib/common/com_sgd.c
-new file mode 100644
-index 0000000..b73f689
 --- /dev/null
 +++ b/drivers/scsi/thor/lib/common/com_sgd.c
 @@ -0,0 +1,935 @@
@@ -20551,9 +20409,6 @@ index 0000000..b73f689
 +}
 +
 +#endif // USE_NEW_SGTABLE
-diff --git a/drivers/scsi/thor/lib/common/com_tag.c b/drivers/scsi/thor/lib/common/com_tag.c
-new file mode 100644
-index 0000000..614ea2f
 --- /dev/null
 +++ b/drivers/scsi/thor/lib/common/com_tag.c
 @@ -0,0 +1,71 @@
@@ -20628,9 +20483,6 @@ index 0000000..614ea2f
 +	}
 +	return MV_FALSE;
 +}
-diff --git a/drivers/scsi/thor/lib/common/com_u64.c b/drivers/scsi/thor/lib/common/com_u64.c
-new file mode 100644
-index 0000000..0925c33
 --- /dev/null
 +++ b/drivers/scsi/thor/lib/common/com_u64.c
 @@ -0,0 +1,148 @@
@@ -20782,9 +20634,6 @@ index 0000000..0925c33
 +	return	v1;
 +}
 +#endif /*  _OS_BIOS */
-diff --git a/drivers/scsi/thor/lib/common/com_util.c b/drivers/scsi/thor/lib/common/com_util.c
-new file mode 100644
-index 0000000..be4e921
 --- /dev/null
 +++ b/drivers/scsi/thor/lib/common/com_util.c
 @@ -0,0 +1,736 @@
@@ -21524,9 +21373,6 @@ index 0000000..be4e921
 +
 +
 +#endif
-diff --git a/drivers/scsi/thor/linux/hba_exp.c b/drivers/scsi/thor/linux/hba_exp.c
-new file mode 100644
-index 0000000..3af2ee3
 --- /dev/null
 +++ b/drivers/scsi/thor/linux/hba_exp.c
 @@ -0,0 +1,305 @@
@@ -21835,9 +21681,6 @@ index 0000000..3af2ee3
 +	}
 +	return cmd_flag;
 +}
-diff --git a/drivers/scsi/thor/linux/hba_exp.h b/drivers/scsi/thor/linux/hba_exp.h
-new file mode 100644
-index 0000000..2fb0a23
 --- /dev/null
 +++ b/drivers/scsi/thor/linux/hba_exp.h
 @@ -0,0 +1,196 @@
@@ -22037,9 +21880,6 @@ index 0000000..2fb0a23
 +MV_U32 hba_parse_ata_protocol(struct scsi_cmnd *scmd);
 +
 +#endif /* __HBA_EXPOSE_H__ */
-diff --git a/drivers/scsi/thor/linux/hba_header.h b/drivers/scsi/thor/linux/hba_header.h
-new file mode 100644
-index 0000000..86fb04c
 --- /dev/null
 +++ b/drivers/scsi/thor/linux/hba_header.h
 @@ -0,0 +1,27 @@
@@ -22070,9 +21910,6 @@ index 0000000..86fb04c
 +#include "res_mgmt.h"
 +
 +#endif /* __MV_HBA_HEADER_LINUX__ */
-diff --git a/drivers/scsi/thor/linux/hba_inter.h b/drivers/scsi/thor/linux/hba_inter.h
-new file mode 100644
-index 0000000..fa1f8d8
 --- /dev/null
 +++ b/drivers/scsi/thor/linux/hba_inter.h
 @@ -0,0 +1,64 @@
@@ -22140,9 +21977,6 @@ index 0000000..fa1f8d8
 +#define DRIVER_STATUS_SHUTDOWN   4    /* All modules are all settled. */
 +
 +#endif /* HBA_INTERNAL_H */
-diff --git a/drivers/scsi/thor/linux/hba_mod.c b/drivers/scsi/thor/linux/hba_mod.c
-new file mode 100644
-index 0000000..b08c047
 --- /dev/null
 +++ b/drivers/scsi/thor/linux/hba_mod.c
 @@ -0,0 +1,2822 @@
@@ -24968,9 +24802,6 @@ index 0000000..b08c047
 +{
 +	return &hba_module_interface;
 +}
-diff --git a/drivers/scsi/thor/linux/hba_mod.h b/drivers/scsi/thor/linux/hba_mod.h
-new file mode 100644
-index 0000000..55c08e3
 --- /dev/null
 +++ b/drivers/scsi/thor/linux/hba_mod.h
 @@ -0,0 +1,21 @@
@@ -24995,9 +24826,6 @@ index 0000000..55c08e3
 +struct hba_extension *__mv_get_ext_from_adp_id(int id);
 + void raid_capability( MV_PVOID This, PAdapter_Info pAdInfo);
 +#endif /* __MODULE_MANAGE_H__ */
-diff --git a/drivers/scsi/thor/linux/hba_timer.c b/drivers/scsi/thor/linux/hba_timer.c
-new file mode 100644
-index 0000000..e92ba05
 --- /dev/null
 +++ b/drivers/scsi/thor/linux/hba_timer.c
 @@ -0,0 +1,315 @@
@@ -25316,9 +25144,6 @@ index 0000000..e92ba05
 +	init_timer(&req->eh_timeout);
 +}
 +#endif
-diff --git a/drivers/scsi/thor/linux/hba_timer.h b/drivers/scsi/thor/linux/hba_timer.h
-new file mode 100644
-index 0000000..f96a1cd
 --- /dev/null
 +++ b/drivers/scsi/thor/linux/hba_timer.h
 @@ -0,0 +1,74 @@
@@ -25396,9 +25221,6 @@ index 0000000..f96a1cd
 +void hba_wait_eh(void);
 +
 +#endif /* __HBA_TIMER_H__ */
-diff --git a/drivers/scsi/thor/linux/linux_iface.c b/drivers/scsi/thor/linux/linux_iface.c
-new file mode 100644
-index 0000000..a95e47e
 --- /dev/null
 +++ b/drivers/scsi/thor/linux/linux_iface.c
 @@ -0,0 +1,684 @@
@@ -26086,9 +25908,6 @@ index 0000000..a95e47e
 +inline int mv_register_chdev(struct hba_extension *hba) {return 0;}
 +inline void mv_unregister_chdev(struct hba_extension *hba) {}
 +#endif /* RAID_DRIVER */
-diff --git a/drivers/scsi/thor/linux/linux_iface.h b/drivers/scsi/thor/linux/linux_iface.h
-new file mode 100644
-index 0000000..85edcfc
 --- /dev/null
 +++ b/drivers/scsi/thor/linux/linux_iface.h
 @@ -0,0 +1,56 @@
@@ -26148,9 +25967,6 @@ index 0000000..85edcfc
 +void mv_unregister_chdev(struct hba_extension *hba);
 +
 +#endif /* ifndef __MV_HBA_LINUX_INTERFACE__ */
-diff --git a/drivers/scsi/thor/linux/linux_main.c b/drivers/scsi/thor/linux/linux_main.c
-new file mode 100644
-index 0000000..eee3a27
 --- /dev/null
 +++ b/drivers/scsi/thor/linux/linux_main.c
 @@ -0,0 +1,307 @@
@@ -26461,9 +26277,6 @@ index 0000000..eee3a27
 +
 +module_init(mv_linux_driver_init);
 +module_exit(mv_linux_driver_exit);
-diff --git a/drivers/scsi/thor/linux/linux_main.h b/drivers/scsi/thor/linux/linux_main.h
-new file mode 100644
-index 0000000..56e5029
 --- /dev/null
 +++ b/drivers/scsi/thor/linux/linux_main.h
 @@ -0,0 +1,48 @@
@@ -26515,9 +26328,6 @@ index 0000000..56e5029
 +#define HI_BUSADDR(x) (sizeof(BUS_ADDRESS)>4? (u64)(x) >> 32 : 0)
 +
 +#endif /*_LINUX_MAIN_H*/
-diff --git a/drivers/scsi/thor/linux/mv_os.h b/drivers/scsi/thor/linux/mv_os.h
-new file mode 100644
-index 0000000..8c262f2
 --- /dev/null
 +++ b/drivers/scsi/thor/linux/mv_os.h
 @@ -0,0 +1,208 @@
@@ -26729,9 +26539,6 @@ index 0000000..8c262f2
 +#endif
 +
 +#endif /* LINUX_OS_H */
-diff --git a/drivers/scsi/thor/linux/oss_wrapper.c b/drivers/scsi/thor/linux/oss_wrapper.c
-new file mode 100644
-index 0000000..a464db8
 --- /dev/null
 +++ b/drivers/scsi/thor/linux/oss_wrapper.c
 @@ -0,0 +1,111 @@
@@ -26846,9 +26653,6 @@ index 0000000..a464db8
 +}
 +
 +#endif
-diff --git a/drivers/scsi/thor/linux/oss_wrapper.h b/drivers/scsi/thor/linux/oss_wrapper.h
-new file mode 100644
-index 0000000..ad108aa
 --- /dev/null
 +++ b/drivers/scsi/thor/linux/oss_wrapper.h
 @@ -0,0 +1,118 @@
@@ -26970,9 +26774,6 @@ index 0000000..ad108aa
 +void hba_msleep(MV_U32 msec);
 +
 +#endif /* __OSS_WRAPPER_H__ */
-diff --git a/drivers/scsi/thor/linux/res_mgmt.c b/drivers/scsi/thor/linux/res_mgmt.c
-new file mode 100644
-index 0000000..69ef18e
 --- /dev/null
 +++ b/drivers/scsi/thor/linux/res_mgmt.c
 @@ -0,0 +1,201 @@
@@ -27177,9 +26978,6 @@ index 0000000..69ef18e
 +}
 +
 +#endif
-diff --git a/drivers/scsi/thor/linux/res_mgmt.h b/drivers/scsi/thor/linux/res_mgmt.h
-new file mode 100644
-index 0000000..15e53db
 --- /dev/null
 +++ b/drivers/scsi/thor/linux/res_mgmt.h
 @@ -0,0 +1,47 @@
@@ -27230,16 +27028,10 @@ index 0000000..15e53db
 +
 +
 +#endif /* __RES_MGMT_H__ */
-diff --git a/drivers/scsi/thor/mv_conf.mk b/drivers/scsi/thor/mv_conf.mk
-new file mode 100644
-index 0000000..680f903
 --- /dev/null
 +++ b/drivers/scsi/thor/mv_conf.mk
 @@ -0,0 +1 @@
 +SUPPORT_THOR=y
-diff --git a/drivers/scsi/thor/mv_config.h b/drivers/scsi/thor/mv_config.h
-new file mode 100644
-index 0000000..502b3cb
 --- /dev/null
 +++ b/drivers/scsi/thor/mv_config.h
 @@ -0,0 +1,17 @@
@@ -27260,9 +27052,6 @@ index 0000000..502b3cb
 +#endif /*PRODUCTNAME_ODIN , PRODUCTNAME_THOR*/
 +
 +#endif /* MV_CONFIGURATION_H */
-diff --git a/drivers/scsi/thor/mv_include.h b/drivers/scsi/thor/mv_include.h
-new file mode 100644
-index 0000000..9700b2d
 --- /dev/null
 +++ b/drivers/scsi/thor/mv_include.h
 @@ -0,0 +1,49 @@
@@ -27315,9 +27104,6 @@ index 0000000..9700b2d
 +#endif
 +
 +#endif /* MV_INCLUDE_H */
-diff --git a/drivers/scsi/thor/mv_thor.h b/drivers/scsi/thor/mv_thor.h
-new file mode 100644
-index 0000000..de50cda
 --- /dev/null
 +++ b/drivers/scsi/thor/mv_thor.h
 @@ -0,0 +1,174 @@
@@ -27495,9 +27281,6 @@ index 0000000..de50cda
 +//#define SUPPORT_WORKQUEUE             1
 +
 +#endif
-diff --git a/drivers/scsi/thor/patch.kbuild b/drivers/scsi/thor/patch.kbuild
-new file mode 100644
-index 0000000..d0b8382
 --- /dev/null
 +++ b/drivers/scsi/thor/patch.kbuild
 @@ -0,0 +1,10 @@
@@ -27511,9 +27294,6 @@ index 0000000..d0b8382
 + obj-$(CONFIG_SGIWD93_SCSI)	+= sgiwd93.o	wd33c93.o
 + obj-$(CONFIG_ATARI_SCSI)	+= atari_scsi.o
 + obj-$(CONFIG_MAC_SCSI)		+= mac_scsi.o
-diff --git a/drivers/scsi/thor/patch.sh b/drivers/scsi/thor/patch.sh
-new file mode 100644
-index 0000000..df28486
 --- /dev/null
 +++ b/drivers/scsi/thor/patch.sh
 @@ -0,0 +1,87 @@
@@ -27604,6 +27384,3 @@ index 0000000..df28486
 +subtxt Kconfig $2 > Kconfig.new
 +mv Kconfig Kconfig.orig
 +mv Kconfig.new Kconfig
--- 
-1.7.9.5
-

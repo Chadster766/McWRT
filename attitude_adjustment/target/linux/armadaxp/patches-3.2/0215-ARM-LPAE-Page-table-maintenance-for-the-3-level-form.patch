@@ -25,8 +25,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/mm/pgd.c                     |   51 ++++++++++++++++++++++++---
  6 files changed, 163 insertions(+), 8 deletions(-)
 
-diff --git a/arch/arm/include/asm/pgalloc.h b/arch/arm/include/asm/pgalloc.h
-index 7418894..943504f 100644
 --- a/arch/arm/include/asm/pgalloc.h
 +++ b/arch/arm/include/asm/pgalloc.h
 @@ -25,6 +25,26 @@
@@ -65,7 +63,7 @@ index 7418894..943504f 100644
  extern pgd_t *pgd_alloc(struct mm_struct *mm);
  extern void pgd_free(struct mm_struct *mm, pgd_t *pgd);
  
-@@ -109,7 +131,9 @@ static inline void __pmd_populate(pmd_t *pmdp, phys_addr_t pte,
+@@ -109,7 +131,9 @@ static inline void __pmd_populate(pmd_t
  {
  	pmdval_t pmdval = (pte + PTE_HWTABLE_OFF) | prot;
  	pmdp[0] = __pmd(pmdval);
@@ -75,8 +73,6 @@ index 7418894..943504f 100644
  	flush_pmd_entry(pmdp);
  }
  
-diff --git a/arch/arm/include/asm/pgtable-3level.h b/arch/arm/include/asm/pgtable-3level.h
-index 79bf0ac..a6261f5 100644
 --- a/arch/arm/include/asm/pgtable-3level.h
 +++ b/arch/arm/include/asm/pgtable-3level.h
 @@ -99,4 +99,9 @@
@@ -89,11 +85,9 @@ index 79bf0ac..a6261f5 100644
 +#define L_PGD_SWAPPER		(_AT(pgdval_t, 1) << 55)	/* swapper_pg_dir entry */
 +
  #endif /* _ASM_PGTABLE_3LEVEL_H */
-diff --git a/arch/arm/include/asm/pgtable.h b/arch/arm/include/asm/pgtable.h
-index 684210a..fdb98a1 100644
 --- a/arch/arm/include/asm/pgtable.h
 +++ b/arch/arm/include/asm/pgtable.h
-@@ -168,6 +168,31 @@ extern pgd_t swapper_pg_dir[PTRS_PER_PGD];
+@@ -168,6 +168,31 @@ extern pgd_t swapper_pg_dir[PTRS_PER_PGD
  /* to find an entry in a kernel page-table-directory */
  #define pgd_offset_k(addr)	pgd_offset(&init_mm, addr)
  
@@ -125,7 +119,7 @@ index 684210a..fdb98a1 100644
  /*
   * The "pud_xxx()" functions here are trivial when the pmd is folded into
   * the pud: the pud entry is never bad, always exists, and can't be set or
-@@ -179,15 +204,43 @@ extern pgd_t swapper_pg_dir[PTRS_PER_PGD];
+@@ -179,15 +204,43 @@ extern pgd_t swapper_pg_dir[PTRS_PER_PGD
  #define pud_clear(pudp)		do { } while (0)
  #define set_pud(pud,pudp)	do { } while (0)
  
@@ -169,7 +163,7 @@ index 684210a..fdb98a1 100644
  #define pmd_bad(pmd)		(pmd_val(pmd) & 2)
  
  #define copy_pmd(pmdpd,pmdps)		\
-@@ -204,6 +257,8 @@ static inline pmd_t *pmd_offset(pud_t *pud, unsigned long addr)
+@@ -204,6 +257,8 @@ static inline pmd_t *pmd_offset(pud_t *p
  		clean_pmd_entry(pmdp);	\
  	} while (0)
  
@@ -178,7 +172,7 @@ index 684210a..fdb98a1 100644
  static inline pte_t *pmd_page_vaddr(pmd_t pmd)
  {
  	return __va(pmd_val(pmd) & PHYS_MASK & (s32)PAGE_MASK);
-@@ -236,7 +291,6 @@ static inline pte_t *pmd_page_vaddr(pmd_t pmd)
+@@ -236,7 +291,6 @@ static inline pte_t *pmd_page_vaddr(pmd_
  #define pte_page(pte)		pfn_to_page(pte_pfn(pte))
  #define mk_pte(page,prot)	pfn_pte(page_to_pfn(page), prot)
  
@@ -186,7 +180,7 @@ index 684210a..fdb98a1 100644
  #define pte_clear(mm,addr,ptep)	set_pte_ext(ptep, __pte(0), 0)
  
  #define pte_none(pte)		(!pte_val(pte))
-@@ -251,6 +305,12 @@ static inline pte_t *pmd_page_vaddr(pmd_t pmd)
+@@ -251,6 +305,12 @@ static inline pte_t *pmd_page_vaddr(pmd_
  	((pte_val(pte) & (L_PTE_PRESENT | L_PTE_USER)) == \
  	 (L_PTE_PRESENT | L_PTE_USER))
  
@@ -199,8 +193,6 @@ index 684210a..fdb98a1 100644
  #if __LINUX_ARM_ARCH__ < 6
  static inline void __sync_icache_dcache(pte_t pteval)
  {
-diff --git a/arch/arm/include/asm/proc-fns.h b/arch/arm/include/asm/proc-fns.h
-index a39b8f7..ac4fdfc 100644
 --- a/arch/arm/include/asm/proc-fns.h
 +++ b/arch/arm/include/asm/proc-fns.h
 @@ -65,7 +65,11 @@ extern struct processor {
@@ -254,11 +246,9 @@ index a39b8f7..ac4fdfc 100644
  
  #endif /* __ASSEMBLY__ */
  #endif /* __KERNEL__ */
-diff --git a/arch/arm/mm/ioremap.c b/arch/arm/mm/ioremap.c
-index c3fa40d..d1f78ba 100644
 --- a/arch/arm/mm/ioremap.c
 +++ b/arch/arm/mm/ioremap.c
-@@ -64,7 +64,7 @@ void __check_kvm_seq(struct mm_struct *mm)
+@@ -64,7 +64,7 @@ void __check_kvm_seq(struct mm_struct *m
  	} while (seq != init_mm.context.kvm_seq);
  }
  
@@ -267,7 +257,7 @@ index c3fa40d..d1f78ba 100644
  /*
   * Section support is unsafe on SMP - If you iounmap and ioremap a region,
   * the other CPUs will not see this change until their next context switch.
-@@ -202,11 +202,13 @@ void __iomem * __arm_ioremap_pfn_caller(unsigned long pfn,
+@@ -202,11 +202,13 @@ void __iomem * __arm_ioremap_pfn_caller(
  	unsigned long addr;
   	struct vm_struct * area;
  
@@ -281,7 +271,7 @@ index c3fa40d..d1f78ba 100644
  
  	/*
  	 * Don't allow RAM to be mapped - this causes problems with ARMv6+
-@@ -228,7 +230,7 @@ void __iomem * __arm_ioremap_pfn_caller(unsigned long pfn,
+@@ -228,7 +230,7 @@ void __iomem * __arm_ioremap_pfn_caller(
   		return NULL;
   	addr = (unsigned long)area->addr;
  
@@ -290,7 +280,7 @@ index c3fa40d..d1f78ba 100644
  	if (DOMAIN_IO == 0 &&
  	    (((cpu_architecture() >= CPU_ARCH_ARMv6) && (get_cr() & CR_XP)) ||
  	       cpu_is_xsc3()) && pfn >= 0x100000 &&
-@@ -320,7 +322,7 @@ __arm_ioremap_exec(unsigned long phys_addr, size_t size, bool cached)
+@@ -320,7 +322,7 @@ __arm_ioremap_exec(unsigned long phys_ad
  void __iounmap(volatile void __iomem *io_addr)
  {
  	void *addr = (void *)(PAGE_MASK & (unsigned long)io_addr);
@@ -299,8 +289,6 @@ index c3fa40d..d1f78ba 100644
  	struct vm_struct **p, *tmp;
  
  	/*
-diff --git a/arch/arm/mm/pgd.c b/arch/arm/mm/pgd.c
-index b2027c1..a3e78cc 100644
 --- a/arch/arm/mm/pgd.c
 +++ b/arch/arm/mm/pgd.c
 @@ -10,6 +10,7 @@
@@ -397,6 +385,3 @@ index b2027c1..a3e78cc 100644
 +#endif
 +	__pgd_free(pgd_base);
  }
--- 
-1.7.9.5
-

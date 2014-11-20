@@ -24,8 +24,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  .../plat-armada/mv_drivers_lsp/mv_error/mv_error.c |    3 +-
  7 files changed, 82 insertions(+), 232 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/Kconfig b/arch/arm/mach-armadaxp/Kconfig
-index 2a8f51c..07b4121 100644
 --- a/arch/arm/mach-armadaxp/Kconfig
 +++ b/arch/arm/mach-armadaxp/Kconfig
 @@ -97,20 +97,6 @@ config ARMADA_XP_SPARSEMEM
@@ -49,8 +47,6 @@ index 2a8f51c..07b4121 100644
  config ARMADAXP_USE_IRQ_INTERRUPT_ACK
         bool "Use Interrupt Ack register to detect pending interrupts"
         default n
-diff --git a/arch/arm/mach-armadaxp/include/mach/irqs.h b/arch/arm/mach-armadaxp/include/mach/irqs.h
-index 3968cf9..71716ea 100644
 --- a/arch/arm/mach-armadaxp/include/mach/irqs.h
 +++ b/arch/arm/mach-armadaxp/include/mach/irqs.h
 @@ -137,7 +137,7 @@
@@ -62,8 +58,6 @@ index 3968cf9..71716ea 100644
  /*
   * AURORA General Purpose Pins
   */
-diff --git a/arch/arm/mach-armadaxp/irq.c b/arch/arm/mach-armadaxp/irq.c
-index 13a1991..a3041dc 100644
 --- a/arch/arm/mach-armadaxp/irq.c
 +++ b/arch/arm/mach-armadaxp/irq.c
 @@ -6,36 +6,15 @@
@@ -104,7 +98,7 @@ index 13a1991..a3041dc 100644
  #if (defined(CONFIG_PERF_EVENTS) && defined(CONFIG_HW_PERF_EVENTS)) || defined(CONFIG_ERROR_HANDLING)
  static void axp_unmask_fabric_interrupt(int cpu)
  {
-@@ -62,22 +41,38 @@ static void axp_mask_fabric_interrupt(int cpu)
+@@ -62,22 +41,38 @@ static void axp_mask_fabric_interrupt(in
  	MV_REG_WRITE(CPU_CF_LOCAL_MASK_REG(cpu), val);
  
  #ifdef CONFIG_SMP
@@ -389,10 +383,7 @@ index 13a1991..a3041dc 100644
 -        	/* Set the default affinity to the boot cpu. */
 -        	cpumask_clear(irq_default_affinity);
 -        	cpumask_set_cpu(smp_processor_id(), irq_default_affinity);
-+	/* Set the default affinity to the boot cpu. */
-+	cpumask_clear(irq_default_affinity);
-+	cpumask_set_cpu(smp_processor_id(), irq_default_affinity);
- 
+-
 -		/* open IPI mask */
 -		/* this  register write does the job of axp_irq_unmask(IRQ_AURORA_IN_DRBL_LOW)
 -		   i.e. enable / unmask the DRBL_LOW interrupt.
@@ -401,6 +392,10 @@ index 13a1991..a3041dc 100644
 -		addr = /*(void __iomem *)*/(AXP_IN_DRBEL_MSK);
 -		MV_REG_WRITE(addr, ENABLED_DOORBELS);
 -	}
++	/* Set the default affinity to the boot cpu. */
++	cpumask_clear(irq_default_affinity);
++	cpumask_set_cpu(smp_processor_id(), irq_default_affinity);
++
 +	axp_ipi_init();
  #endif
  
@@ -450,11 +445,9 @@ index 13a1991..a3041dc 100644
  EXPORT_SYMBOL(pmu_free_irq);
  #endif
  
-diff --git a/arch/arm/mach-armadaxp/pm.c b/arch/arm/mach-armadaxp/pm.c
-index 88ce8d2..ea7936a 100644
 --- a/arch/arm/mach-armadaxp/pm.c
 +++ b/arch/arm/mach-armadaxp/pm.c
-@@ -54,7 +54,8 @@ static int armadaxp_pm_enter(suspend_state_t state)
+@@ -54,7 +54,8 @@ static int armadaxp_pm_enter(suspend_sta
  		/* Reenable the Uart IRQ in order to wake from it */
  		/* Enable Uart IRQ */
  		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0));
@@ -464,7 +457,7 @@ index 88ce8d2..ea7936a 100644
  		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0), reg);
  
  		/* Disable IPI IRQs */
-@@ -93,7 +94,7 @@ static int armadaxp_pm_enter(suspend_state_t state)
+@@ -93,7 +94,7 @@ static int armadaxp_pm_enter(suspend_sta
  
  		/* Disable it since it will be re-enabled by the stack */
  		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0));
@@ -473,8 +466,6 @@ index 88ce8d2..ea7936a 100644
  		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_UART0), reg);
  #ifdef CONFIG_MV_ETH_PNC_WOL
  		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE0_FIC));
-diff --git a/arch/arm/plat-armada/Kconfig b/arch/arm/plat-armada/Kconfig
-index 77f9c2e..59c5d37 100644
 --- a/arch/arm/plat-armada/Kconfig
 +++ b/arch/arm/plat-armada/Kconfig
 @@ -197,7 +197,7 @@ menu "Armada AMP options"
@@ -486,11 +477,9 @@ index 77f9c2e..59c5d37 100644
  	default n
  
  config MV_DRAM_BASE_G0
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_error/mv_error.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_error/mv_error.c
-index cd3c5a1..a846ccb 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_error/mv_error.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_error/mv_error.c
-@@ -389,12 +389,11 @@ static int __init errorhandling_notification_setup(void)
+@@ -389,12 +389,11 @@ static int __init errorhandling_notifica
  		     IRQ_AURORA_SOC_ERROR, err);
  		return err;
  	}
@@ -504,6 +493,3 @@ index cd3c5a1..a846ccb 100644
  
  	/*setup the axp_error_info struct */
  	axp_error_info.head = 0;
--- 
-1.7.9.5
-

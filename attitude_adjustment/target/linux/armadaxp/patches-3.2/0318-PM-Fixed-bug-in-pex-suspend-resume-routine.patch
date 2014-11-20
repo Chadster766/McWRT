@@ -14,11 +14,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/mach-armadaxp/pex.c |   12 ++++++++++++
  1 file changed, 12 insertions(+)
 
-diff --git a/arch/arm/mach-armadaxp/pex.c b/arch/arm/mach-armadaxp/pex.c
-index ff84320..70ebe9e 100644
 --- a/arch/arm/mach-armadaxp/pex.c
 +++ b/arch/arm/mach-armadaxp/pex.c
-@@ -467,6 +467,12 @@ static int mv_pex_suspend(struct platform_device *dev, pm_message_t state)
+@@ -467,6 +467,12 @@ static int mv_pex_suspend(struct platfor
  	/* Save PCI Express status Register */
  	for (pciIf = 0; pciIf < pex_ifnum; pciIf++) {
  		pexHWInf = boardPexInfo->pexMapping[pciIf];
@@ -31,7 +29,7 @@ index ff84320..70ebe9e 100644
  		pex_status[pexHWInf] = MV_REG_READ(PEX_STATUS_REG(pexHWInf));
  	}
  
-@@ -484,6 +490,12 @@ static int mv_pex_resume(struct platform_device *dev)
+@@ -484,6 +490,12 @@ static int mv_pex_resume(struct platform
  	/* Restore PCI Express status Register */
  	for (pciIf = 0; pciIf < pex_ifnum; pciIf++) {
  		pexHWInf = boardPexInfo->pexMapping[pciIf];
@@ -44,6 +42,3 @@ index ff84320..70ebe9e 100644
  		MV_REG_WRITE(PEX_STATUS_REG(pexHWInf), pex_status[pexHWInf]);
  	}
  
--- 
-1.7.9.5
-

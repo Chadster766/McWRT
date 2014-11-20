@@ -16,11 +16,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  .../plat-armada/mv_drivers_lsp/mv_xor/mv_netdma.c  |   11 +---
  9 files changed, 60 insertions(+), 173 deletions(-)
 
-diff --git a/arch/arm/include/asm/tlbflush.h b/arch/arm/include/asm/tlbflush.h
-index 7040d75..f8af44f 100644
 --- a/arch/arm/include/asm/tlbflush.h
 +++ b/arch/arm/include/asm/tlbflush.h
-@@ -490,22 +490,9 @@ static inline void flush_pmd_entry(void *pmd)
+@@ -490,22 +490,9 @@ static inline void flush_pmd_entry(void
          	raw_local_irq_save(flags);
  		dmb();
  #endif
@@ -46,7 +44,7 @@ index 7040d75..f8af44f 100644
  #else
  		asm("mcr	p15, 0, %0, c7, c10, 1	@ flush_pmd"
  			: : "r" (pmd) : "cc");
-@@ -538,22 +525,9 @@ static inline void clean_pmd_entry(void *pmd)
+@@ -538,22 +525,9 @@ static inline void clean_pmd_entry(void
                  raw_local_irq_save(flags);
                  dmb();
  #endif
@@ -72,8 +70,6 @@ index 7040d75..f8af44f 100644
  #else
  		asm("mcr	p15, 0, %0, c7, c10, 1	@ flush_pmd"
  			: : "r" (pmd) : "cc");
-diff --git a/arch/arm/kernel/entry-armv.S b/arch/arm/kernel/entry-armv.S
-index 128a5d0..d1ba84e 100644
 --- a/arch/arm/kernel/entry-armv.S
 +++ b/arch/arm/kernel/entry-armv.S
 @@ -796,7 +796,7 @@ __kuser_helper_start:
@@ -85,7 +81,7 @@ index 128a5d0..d1ba84e 100644
  	beq		1f
  	dsb
  	b errata_6075_barrier_return
-@@ -808,7 +808,7 @@ __kuser_memory_barrier_errata_6075_1:				@ 0xffff0f20
+@@ -808,7 +808,7 @@ __kuser_memory_barrier_errata_6075_1:
  
  __kuser_memory_barrier_errata_6075_2:				@ 0xffff0f40
  	ldr		r3, [pc, #0x1C]
@@ -94,8 +90,6 @@ index 128a5d0..d1ba84e 100644
  	beq		1f
  	dsb
  	usr_ret	lr
-diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
-index a04dc3d..e0b8df0 100644
 --- a/arch/arm/mm/Kconfig
 +++ b/arch/arm/mm/Kconfig
 @@ -1064,6 +1064,16 @@ config SHEEVA_ERRATA_ARM_CPU_6136
@@ -115,8 +109,6 @@ index a04dc3d..e0b8df0 100644
  config SHEEVA_ERRATA_ARM_CPU_PMU_RESET
  	bool "Sheeva Errata CPU Performance counters reset"
  	depends on CPU_SHEEVA_PJ4B_V6 || CPU_SHEEVA_PJ4B_V7
-diff --git a/arch/arm/mm/cache-v7.S b/arch/arm/mm/cache-v7.S
-index 14a7875..6a5232a 100644
 --- a/arch/arm/mm/cache-v7.S
 +++ b/arch/arm/mm/cache-v7.S
 @@ -194,12 +194,8 @@ ENTRY(v7_coherent_user_range)
@@ -147,8 +139,6 @@ index 14a7875..6a5232a 100644
  #else
  	mcr		p15, 0, r0, c7, c10, 1		@ clean D / U line
  #endif
-diff --git a/arch/arm/mm/proc-macros.S b/arch/arm/mm/proc-macros.S
-index b1bd133..7e6f5ee 100644
 --- a/arch/arm/mm/proc-macros.S
 +++ b/arch/arm/mm/proc-macros.S
 @@ -209,7 +209,7 @@
@@ -160,8 +150,6 @@ index b1bd133..7e6f5ee 100644
  #else
  	dsb
  #endif
-diff --git a/arch/arm/mm/proc-sheeva_pj4bv7.S b/arch/arm/mm/proc-sheeva_pj4bv7.S
-index c9beed9..a917bd4 100644
 --- a/arch/arm/mm/proc-sheeva_pj4bv7.S
 +++ b/arch/arm/mm/proc-sheeva_pj4bv7.S
 @@ -106,26 +106,19 @@ ENTRY(cpu_pj4bv7_dcache_clean_area)
@@ -294,7 +282,7 @@ index c9beed9..a917bd4 100644
  	ALT_SMP(mrc	p15, 0, r0, c1, c0, 1)
  	ALT_UP(mov	r0, #(1 << 6))		@ fake it for UP
  	tst	r0, #(1 << 6)			@ SMP/nAMP mode enabled?
-@@ -493,7 +477,7 @@ adr	r12, __pj4bv7_setup_stack		@ the local stack
+@@ -493,7 +477,7 @@ adr	r12, __pj4bv7_setup_stack		@ the loc
  	orr	r6, r6, r5, lsr #20-4		@ combine variant and revision
  	ubfx	r0, r0, #4, #12			@ primary part number
  
@@ -303,8 +291,6 @@ index c9beed9..a917bd4 100644
  	ldr	r10, =0x00000c08		@ Cortex-A8 primary part number
  	teq	r0, r10
  	bne	2f
-diff --git a/arch/arm/mm/sheeva_pj4b-macros.S b/arch/arm/mm/sheeva_pj4b-macros.S
-index c7e31e9..93f56e6 100644
 --- a/arch/arm/mm/sheeva_pj4b-macros.S
 +++ b/arch/arm/mm/sheeva_pj4b-macros.S
 @@ -33,50 +33,22 @@
@@ -338,7 +324,7 @@ index c7e31e9..93f56e6 100644
 -	ldr		\reg2, =soc_revision
 -	ldr		\reg2, [\reg2]
 -	cmp		\reg2, #0x2		/* MV_78XX0_B0_REV */
- 	beq		1f
+-	beq		1f
 -	mcr     p15, 0, \reg0, c7, c14, 1			@ clean & invalidate D entry
 -	b 		2f
 -1:
@@ -353,7 +339,7 @@ index c7e31e9..93f56e6 100644
 -	ldr		\reg1, =soc_revision
 -	ldr		\reg1, [\reg1]
 -	cmp		\reg1, #0x2		/* MV_78XX0_B0_REV */
--	beq		1f
+ 	beq		1f
 -	USER(  mcr     p15, 0, \reg0, c7, c14, 1 )       @ clean & invalidate D line to the point of unification
 -	b 2f
 -1:
@@ -362,11 +348,9 @@ index c7e31e9..93f56e6 100644
  	.endm
  
  /*
-diff --git a/arch/arm/plat-armada/linux_oss/mvOs.h b/arch/arm/plat-armada/linux_oss/mvOs.h
-index 8a889db..c9375bd 100755
 --- a/arch/arm/plat-armada/linux_oss/mvOs.h
 +++ b/arch/arm/plat-armada/linux_oss/mvOs.h
-@@ -342,23 +342,16 @@ static inline void mvOsBridgeReorderWA(void)
+@@ -342,23 +342,16 @@ static inline void mvOsBridgeReorderWA(v
  #if defined(CONFIG_L2_CACHE_ENABLE) || defined(CONFIG_CACHE_FEROCEON_L2)
  #define mvOsCacheLineFlush(handle, addr)                     \
  {                                                               \
@@ -395,7 +379,7 @@ index 8a889db..c9375bd 100755
   #define mvOsCacheLineFlush(handle, addr)                     \
   {                                                               \
     DSBWA_4611(addr);                                             \
-@@ -368,20 +361,7 @@ static inline void mvOsBridgeReorderWA(void)
+@@ -368,20 +361,7 @@ static inline void mvOsBridgeReorderWA(v
     __asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 4" : : "r" (addr)); /* DSB */ \
   }
  
@@ -417,7 +401,7 @@ index 8a889db..c9375bd 100755
   #define mvOsCacheLineFlush(handle, addr)                     \
   {                                                               \
     DSBWA_4611(addr);						 \
-@@ -394,19 +374,11 @@ static inline void mvOsBridgeReorderWA(void)
+@@ -394,19 +374,11 @@ static inline void mvOsBridgeReorderWA(v
   #define mvOsCacheLineFlush(handle, addr)                     \
   {                                                               \
     DSBWA_4611(addr);						 \
@@ -440,7 +424,7 @@ index 8a889db..c9375bd 100755
  	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 4" : : "r" (addr)); \
  }
  #endif
-@@ -427,18 +399,10 @@ static inline void mvOsCacheMultiLineFlush(void *handle, void *addr, int size)
+@@ -427,18 +399,10 @@ static inline void mvOsCacheMultiLineFlu
  #if defined(CONFIG_CACHE_AURORA_L2)
  		DSBWA_4611(addr);
  		while (size > 0) {
@@ -461,11 +445,9 @@ index 8a889db..c9375bd 100755
  #endif
  			writel(__virt_to_phys(((int)addr) & ~0x1f), (INTER_REGS_BASE + MV_AURORA_L2_REGS_OFFSET + 0x7B0/*L2_CLEAN_PA*/));
  			size -= CPU_D_CACHE_LINE_SIZE;
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_xor/mv_netdma.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_xor/mv_netdma.c
-index cac52f5..5393656 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_xor/mv_netdma.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_xor/mv_netdma.c
-@@ -511,17 +511,8 @@ static inline void xor_put(struct xor_channel* xch)
+@@ -511,17 +511,8 @@ static inline void xor_put(struct xor_ch
  static inline void dmac_clean_dcache_line(void* addr)
  {
  //#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,26)
@@ -484,6 +466,3 @@ index cac52f5..5393656 100644
  #else
  	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 1" : : "r" (addr));
  #endif
--- 
-1.7.9.5
-

@@ -44,11 +44,9 @@ Subject: [PATCH 1/1]  Armada300,crypto: Import new version of crypto code.
  crypto/ocf/uio.h                                   |    4 +-
  38 files changed, 990 insertions(+), 2303 deletions(-)
 
-diff --git a/cesa/openswan/README b/cesa/openswan/README
-index 288ed2c..71c85f3 100644
 --- a/cesa/openswan/README
 +++ b/cesa/openswan/README
-@@ -33,6 +33,9 @@ against the routing table. If the best route for the source IP address does not
+@@ -33,6 +33,9 @@ against the routing table. If the best r
  5. Before tunnel is enabled on target, PMTU discovery must be disabled under procfs, using the following command:
        - echo 1 > /proc/sys/net/ipv4/ip_no_pmtu_disc
  
@@ -58,8 +56,6 @@ index 288ed2c..71c85f3 100644
  IPSec routing using encryption/authentication only:
  
    basic vpn connection:
-diff --git a/crypto/ocf/Kconfig b/crypto/ocf/Kconfig
-index 65a4461..74b98b2 100644
 --- a/crypto/ocf/Kconfig
 +++ b/crypto/ocf/Kconfig
 @@ -84,30 +84,6 @@ config OCF_EP80579
@@ -93,8 +89,6 @@ index 65a4461..74b98b2 100644
  config OCF_OCFNULL
  	tristate "ocfnull (fake crypto engine)"
  	depends on OCF_OCF
-diff --git a/crypto/ocf/c7108/Makefile b/crypto/ocf/c7108/Makefile
-index e7e634b..8b13789 100644
 --- a/crypto/ocf/c7108/Makefile
 +++ b/crypto/ocf/c7108/Makefile
 @@ -1,12 +1 @@
@@ -110,8 +104,6 @@ index e7e634b..8b13789 100644
 --include $(TOPDIR)/Rules.make
 -endif
  
-diff --git a/crypto/ocf/criov.c b/crypto/ocf/criov.c
-index a8c1a8c..2b28d5d 100644
 --- a/crypto/ocf/criov.c
 +++ b/crypto/ocf/criov.c
 @@ -1,8 +1,8 @@
@@ -136,7 +128,7 @@ index a8c1a8c..2b28d5d 100644
  #include <linux/module.h>
  #include <linux/init.h>
  #include <linux/slab.h>
-@@ -155,7 +151,7 @@ skb_copy_bits_back(struct sk_buff *skb, int offset, caddr_t cp, int len)
+@@ -155,7 +151,7 @@ skb_copy_bits_back(struct sk_buff *skb,
  	offset -= skb_headlen(skb);
  	for (i = 0; len > 0 && i < skb_shinfo(skb)->nr_frags; i++) {
  		if (offset < skb_shinfo(skb)->frags[i].size) {
@@ -145,8 +137,6 @@ index a8c1a8c..2b28d5d 100644
  					skb_shinfo(skb)->frags[i].page_offset,
  					cp, min_t(int, skb_shinfo(skb)->frags[i].size, len));
  			len -= skb_shinfo(skb)->frags[i].size;
-diff --git a/crypto/ocf/crypto.c b/crypto/ocf/crypto.c
-index f48210d..6ef6ae8 100644
 --- a/crypto/ocf/crypto.c
 +++ b/crypto/ocf/crypto.c
 @@ -1,6 +1,6 @@
@@ -158,7 +148,7 @@ index f48210d..6ef6ae8 100644
   * Copyright (C) 2004-2005 Intel Corporation.
   * The license and original author are listed below.
   *
-@@ -62,11 +62,6 @@ __FBSDID("$FreeBSD: src/sys/opencrypto/crypto.c,v 1.27 2007/03/21 03:42:51 sam E
+@@ -62,11 +62,6 @@ __FBSDID("$FreeBSD: src/sys/opencrypto/c
  __FBSDID("$FreeBSD: src/sys/opencrypto/crypto.c,v 1.16 2005/01/07 02:29:16 imp Exp $");
   */
  
@@ -170,7 +160,7 @@ index f48210d..6ef6ae8 100644
  #include <linux/module.h>
  #include <linux/init.h>
  #include <linux/list.h>
-@@ -74,9 +69,7 @@ __FBSDID("$FreeBSD: src/sys/opencrypto/crypto.c,v 1.16 2005/01/07 02:29:16 imp E
+@@ -74,9 +69,7 @@ __FBSDID("$FreeBSD: src/sys/opencrypto/c
  #include <linux/wait.h>
  #include <linux/sched.h>
  #include <linux/spinlock.h>
@@ -181,7 +171,7 @@ index f48210d..6ef6ae8 100644
  #include <cryptodev.h>
  
  /*
-@@ -84,7 +77,7 @@ __FBSDID("$FreeBSD: src/sys/opencrypto/crypto.c,v 1.16 2005/01/07 02:29:16 imp E
+@@ -84,7 +77,7 @@ __FBSDID("$FreeBSD: src/sys/opencrypto/c
   * issue if we are linked into the kernel and a driver gets started before
   * us
   */
@@ -348,8 +338,6 @@ index f48210d..6ef6ae8 100644
  
  	/* 
  	 * Reclaim dynamically allocated resources.
-diff --git a/crypto/ocf/cryptocteon/Makefile b/crypto/ocf/cryptocteon/Makefile
-index eeed0d6..8b13789 100644
 --- a/crypto/ocf/cryptocteon/Makefile
 +++ b/crypto/ocf/cryptocteon/Makefile
 @@ -1,17 +1 @@
@@ -370,8 +358,6 @@ index eeed0d6..8b13789 100644
 --include $(TOPDIR)/Rules.make
 -endif
  
-diff --git a/crypto/ocf/cryptocteon/README.txt b/crypto/ocf/cryptocteon/README.txt
-index 807b2e5..8b13789 100644
 --- a/crypto/ocf/cryptocteon/README.txt
 +++ b/crypto/ocf/cryptocteon/README.txt
 @@ -1,11 +1 @@
@@ -386,8 +372,6 @@ index 807b2e5..8b13789 100644
 -and significantly modified to suit use with OCF.  All original
 -copyright/ownership headers retained.
 -
-diff --git a/crypto/ocf/cryptodev.c b/crypto/ocf/cryptodev.c
-index 2ee3618..e168e78 100644
 --- a/crypto/ocf/cryptodev.c
 +++ b/crypto/ocf/cryptodev.c
 @@ -1,8 +1,8 @@
@@ -412,7 +396,7 @@ index 2ee3618..e168e78 100644
  #include <linux/types.h>
  #include <linux/time.h>
  #include <linux/delay.h>
-@@ -58,6 +54,7 @@ __FBSDID("$FreeBSD: src/sys/opencrypto/cryptodev.c,v 1.34 2007/05/09 19:37:02 gn
+@@ -58,6 +54,7 @@ __FBSDID("$FreeBSD: src/sys/opencrypto/c
  #include <linux/file.h>
  #include <linux/mount.h>
  #include <linux/miscdevice.h>
@@ -428,7 +412,7 @@ index 2ee3618..e168e78 100644
  	/* u_int16_t	ctxsize; */
  };
  
-@@ -198,7 +194,7 @@ cryptodev_op(struct csession *cse, struct crypt_op *cop)
+@@ -198,7 +194,7 @@ cryptodev_op(struct csession *cse, struc
  
  	if (cse->uio.uio_iov[0].iov_base == NULL) {
  		dprintk("%s: iov_base kmalloc(%d) failed\n", __FUNCTION__,
@@ -486,8 +470,6 @@ index 2ee3618..e168e78 100644
 -MODULE_AUTHOR("David McCullough <david_mccullough@mcafee.com>");
 +MODULE_AUTHOR("David McCullough <david_mccullough@securecomputing.com>");
  MODULE_DESCRIPTION("Cryptodev (user interface to OCF)");
-diff --git a/crypto/ocf/cryptodev.h b/crypto/ocf/cryptodev.h
-index cca0ec8..3ec926d 100644
 --- a/crypto/ocf/cryptodev.h
 +++ b/crypto/ocf/cryptodev.h
 @@ -2,8 +2,8 @@
@@ -511,8 +493,6 @@ index cca0ec8..3ec926d 100644
  
  /* Algorithm flags */
  #define CRYPTO_ALG_FLAG_SUPPORTED	0x01 /* Algorithm is supported */
-diff --git a/crypto/ocf/cryptosoft.c b/crypto/ocf/cryptosoft.c
-index aa2383d..e570688 100644
 --- a/crypto/ocf/cryptosoft.c
 +++ b/crypto/ocf/cryptosoft.c
 @@ -3,8 +3,8 @@
@@ -617,7 +597,7 @@ index aa2383d..e570688 100644
  #ifndef CRYPTO_TFM_MODE_CBC
  /*
   * As of linux-2.6.21 this is no longer defined, and presumably no longer
-@@ -142,8 +103,8 @@ static struct kmem_cache *swcr_req_cache;
+@@ -142,8 +103,8 @@ static struct kmem_cache *swcr_req_cache
  		struct crypto_tfm *tfm;
  		void *info;
  	};
@@ -628,7 +608,7 @@ index aa2383d..e570688 100644
  	#define crypto_has_blkcipher(X, Y, Z)		crypto_alg_available(X, 0)
  	#define crypto_blkcipher_cast(X)			X
  	#define crypto_blkcipher_tfm(X)				X
-@@ -155,17 +116,13 @@ static struct kmem_cache *swcr_req_cache;
+@@ -155,17 +116,13 @@ static struct kmem_cache *swcr_req_cache
  				crypto_cipher_encrypt_iv((W)->tfm, X, Y, Z, (u8 *)((W)->info))
  	#define crypto_blkcipher_decrypt_iv(W, X, Y, Z)	\
  				crypto_cipher_decrypt_iv((W)->tfm, X, Y, Z, (u8 *)((W)->info))
@@ -647,7 +627,7 @@ index aa2383d..e570688 100644
  	#define crypto_has_hash(X, Y, Z)		crypto_alg_available(X, 0)
  	#define crypto_hash_cast(X)				X
  	#define crypto_hash_tfm(X)				X
-@@ -182,66 +139,53 @@ static struct kmem_cache *swcr_req_cache;
+@@ -182,66 +139,53 @@ static struct kmem_cache *swcr_req_cache
  	#define crypto_comp_tfm(X)				X
  	#define crypto_comp_cast(X)				X
  	#define crypto_alloc_comp(X, Y, Z)		crypto_alloc_tfm(X, mode)
@@ -753,7 +733,7 @@ index aa2383d..e570688 100644
  };
  
  int32_t swcr_id = -1;
-@@ -253,16 +197,6 @@ module_param(swcr_fail_if_compression_grows, int, 0644);
+@@ -253,16 +197,6 @@ module_param(swcr_fail_if_compression_gr
  MODULE_PARM_DESC(swcr_fail_if_compression_grows,
                  "Treat compression that results in more data as a failure");
  
@@ -827,7 +807,7 @@ index aa2383d..e570688 100644
  /*
   * Generate a new software session.
   */
-@@ -342,7 +226,7 @@ swcr_newsession(device_t dev, u_int32_t *sid, struct cryptoini *cri)
+@@ -342,7 +226,7 @@ swcr_newsession(device_t dev, u_int32_t
  	u_int32_t i;
  	int error;
  	char *algo;
@@ -836,7 +816,7 @@ index aa2383d..e570688 100644
  
  	dprintk("%s()\n", __FUNCTION__);
  	if (sid == NULL || cri == NULL) {
-@@ -399,8 +283,7 @@ swcr_newsession(device_t dev, u_int32_t *sid, struct cryptoini *cri)
+@@ -399,8 +283,7 @@ swcr_newsession(device_t dev, u_int32_t
  		}
  		memset(*swd, 0, sizeof(struct swcr_data));
  
@@ -846,7 +826,7 @@ index aa2383d..e570688 100644
  			printk("cryptosoft: Unknown algorithm 0x%x\n", cri->cri_alg);
  			swcr_freesession(NULL, i);
  			return EINVAL;
-@@ -414,10 +297,7 @@ swcr_newsession(device_t dev, u_int32_t *sid, struct cryptoini *cri)
+@@ -414,10 +297,7 @@ swcr_newsession(device_t dev, u_int32_t
  		}
  
  		mode = crypto_details[cri->cri_alg].mode;
@@ -858,7 +838,7 @@ index aa2383d..e570688 100644
  
  		/* Algorithm specific configuration */
  		switch (cri->cri_alg) {
-@@ -542,11 +422,14 @@ swcr_newsession(device_t dev, u_int32_t *sid, struct cryptoini *cri)
+@@ -542,11 +422,14 @@ swcr_newsession(device_t dev, u_int32_t
  				return ENOBUFS;
  			}
  		} else {
@@ -930,8 +910,6 @@ index aa2383d..e570688 100644
 -MODULE_AUTHOR("David McCullough <david_mccullough@mcafee.com>");
 +MODULE_AUTHOR("David McCullough <david_mccullough@securecomputing.com>");
  MODULE_DESCRIPTION("Cryptosoft (OCF module for kernel crypto)");
-diff --git a/crypto/ocf/ep80579/Makefile b/crypto/ocf/ep80579/Makefile
-index 9aab295..19ff6eb 100644
 --- a/crypto/ocf/ep80579/Makefile
 +++ b/crypto/ocf/ep80579/Makefile
 @@ -13,7 +13,7 @@
@@ -1019,11 +997,9 @@ index 9aab295..19ff6eb 100644
  
 -endif
 +
-diff --git a/crypto/ocf/ep80579/environment.mk b/crypto/ocf/ep80579/environment.mk
-index 1a663e5..a674b45 100644
 --- a/crypto/ocf/ep80579/environment.mk
 +++ b/crypto/ocf/ep80579/environment.mk
-@@ -66,9 +66,6 @@ ICP_LAC_API=$(ICP_ROOT)/Acceleration/include/lac
+@@ -66,9 +66,6 @@ ICP_LAC_API=$(ICP_ROOT)/Acceleration/inc
  ICP_BTR_API=$(ICP_ROOT)/Acceleration/include/btr
  ICP_API_DIR=$(ICP_ROOT)/Acceleration/include
  ICP_OCF_SHIM_DIR?=$(KERNEL_SOURCE_ROOT)/crypto/ocf/
@@ -1033,8 +1009,6 @@ index 1a663e5..a674b45 100644
  
  ICP_OS_LEVEL?=kernel_space
  
-diff --git a/crypto/ocf/ep80579/icp_asym.c b/crypto/ocf/ep80579/icp_asym.c
-index d2641c5..f679dd5 100644
 --- a/crypto/ocf/ep80579/icp_asym.c
 +++ b/crypto/ocf/ep80579/icp_asym.c
 @@ -5,7 +5,7 @@
@@ -1124,7 +1098,7 @@ index d2641c5..f679dd5 100644
  static void
  icp_ocfDrvDsaRSSignCallBack(void *callbackTag,
  			    CpaStatus status,
-@@ -165,18 +161,12 @@ icp_ocfDrvDsaRSSignCallBack(void *callbackTag,
+@@ -165,18 +161,12 @@ icp_ocfDrvDsaRSSignCallBack(void *callba
  			    CpaBoolean protocolStatus,
  			    CpaFlatBuffer * pR, CpaFlatBuffer * pS);
  
@@ -1144,7 +1118,7 @@ index d2641c5..f679dd5 100644
  {
  	CpaStatus lacStatus = CPA_STATUS_SUCCESS;
  
-@@ -186,7 +176,7 @@ int icp_ocfDrvPkeProcess(icp_device_t dev, struct cryptkop *krp, int hint)
+@@ -186,7 +176,7 @@ int icp_ocfDrvPkeProcess(icp_device_t de
  		return EINVAL;
  	}
  
@@ -1153,7 +1127,7 @@ index d2641c5..f679dd5 100644
  		krp->krp_status = ECANCELED;
  		return ECANCELED;
  	}
-@@ -268,7 +258,8 @@ int icp_ocfDrvPkeProcess(icp_device_t dev, struct cryptkop *krp, int hint)
+@@ -268,7 +258,8 @@ int icp_ocfDrvPkeProcess(icp_device_t de
   * It has been seen that in general we are passed little endian byte order
   * buffers, but LAC only accepts big endian byte order buffers.
   */
@@ -1163,7 +1137,7 @@ index d2641c5..f679dd5 100644
  {
  
  	int i;
-@@ -328,9 +319,7 @@ static int icp_ocfDrvDHComputeKey(struct cryptkop *krp)
+@@ -328,9 +319,7 @@ static int icp_ocfDrvDHComputeKey(struct
  
  	callbackTag = krp;
  
@@ -1198,7 +1172,7 @@ index d2641c5..f679dd5 100644
  	}
  
  	return lacStatus;
-@@ -430,7 +418,7 @@ static int icp_ocfDrvModExp(struct cryptkop *krp)
+@@ -430,7 +418,7 @@ static int icp_ocfDrvModExp(struct crypt
  
  	callbackTag = krp;
  
@@ -1207,7 +1181,7 @@ index d2641c5..f679dd5 100644
  	if (NULL == pModExpOpData) {
  		APRINTK("%s():Failed to get memory for key gen data\n",
  			__FUNCTION__);
-@@ -438,11 +426,11 @@ static int icp_ocfDrvModExp(struct cryptkop *krp)
+@@ -438,11 +426,11 @@ static int icp_ocfDrvModExp(struct crypt
  		return ENOMEM;
  	}
  
@@ -1221,7 +1195,7 @@ index d2641c5..f679dd5 100644
  		krp->krp_status = ENOMEM;
  		return ENOMEM;
  	}
-@@ -491,7 +479,7 @@ static int icp_ocfDrvModExp(struct cryptkop *krp)
+@@ -491,7 +479,7 @@ static int icp_ocfDrvModExp(struct crypt
  			__FUNCTION__, lacStatus);
  		krp->krp_status = ECANCELED;
  		icp_ocfDrvFreeFlatBuffer(pResult);
@@ -1230,7 +1204,7 @@ index d2641c5..f679dd5 100644
  	}
  
  	return lacStatus;
-@@ -507,6 +495,7 @@ static int icp_ocfDrvModExp(struct cryptkop *krp)
+@@ -507,6 +495,7 @@ static int icp_ocfDrvModExp(struct crypt
   * numbers. Although basic primality checks are done in LAC, it is up to the
   * user to do any correct prime number checking before passing the inputs.
   */
@@ -1238,7 +1212,7 @@ index d2641c5..f679dd5 100644
  static int icp_ocfDrvModExpCRT(struct cryptkop *krp)
  {
  	CpaStatus lacStatus = CPA_STATUS_SUCCESS;
-@@ -518,8 +507,7 @@ static int icp_ocfDrvModExpCRT(struct cryptkop *krp)
+@@ -518,8 +507,7 @@ static int icp_ocfDrvModExpCRT(struct cr
  	   them here. */
  	callbackTag = krp;
  
@@ -1248,7 +1222,7 @@ index d2641c5..f679dd5 100644
  	if (NULL == rsaDecryptOpData) {
  		APRINTK("%s():Failed to get memory"
  			" for MOD EXP CRT Op data struct\n", __FUNCTION__);
-@@ -528,11 +516,11 @@ static int icp_ocfDrvModExpCRT(struct cryptkop *krp)
+@@ -528,11 +516,11 @@ static int icp_ocfDrvModExpCRT(struct cr
  	}
  
  	rsaDecryptOpData->pRecipientPrivateKey
@@ -1262,7 +1236,7 @@ index d2641c5..f679dd5 100644
  		krp->krp_status = ENOMEM;
  		return ENOMEM;
  	}
-@@ -739,8 +727,7 @@ static int icp_ocfDrvDsaSign(struct cryptkop *krp)
+@@ -739,8 +727,7 @@ static int icp_ocfDrvDsaSign(struct cryp
  		return EDOM;
  	}
  
@@ -1272,7 +1246,7 @@ index d2641c5..f679dd5 100644
  	if (NULL == dsaRsSignOpData) {
  		APRINTK("%s():Failed to get memory"
  			" for DSA RS Sign Op data struct\n", __FUNCTION__);
-@@ -914,8 +901,7 @@ static int icp_ocfDrvDsaVerify(struct cryptkop *krp)
+@@ -914,8 +901,7 @@ static int icp_ocfDrvDsaVerify(struct cr
  
  	callbackTag = krp;
  
@@ -1282,7 +1256,7 @@ index d2641c5..f679dd5 100644
  	if (NULL == dsaVerifyOpData) {
  		APRINTK("%s():Failed to get memory"
  			" for DSA Verify Op data struct\n", __FUNCTION__);
-@@ -987,13 +973,48 @@ static int icp_ocfDrvDsaVerify(struct cryptkop *krp)
+@@ -987,13 +973,48 @@ static int icp_ocfDrvDsaVerify(struct cr
  	if (CPA_STATUS_SUCCESS != lacStatus) {
  		EPRINTK("%s(): DSA Verify Operation failed (%d).\n",
  			__FUNCTION__, lacStatus);
@@ -1332,7 +1306,7 @@ index d2641c5..f679dd5 100644
  /* Name        : icp_ocfDrvDhP1Callback
   *
   * Description : When this function returns it signifies that the LAC
-@@ -1027,7 +1048,7 @@ icp_ocfDrvDhP1CallBack(void *callbackTag,
+@@ -1027,7 +1048,7 @@ icp_ocfDrvDhP1CallBack(void *callbackTag
  		DPRINTK("%s(): Invalid input parameters - "
  			"pLocalOctetStringPV Data is NULL\n", __FUNCTION__);
  		memset(pPhase1OpData, 0, sizeof(CpaCyDhPhase1KeyGenOpData));
@@ -1341,7 +1315,7 @@ index d2641c5..f679dd5 100644
  		krp->krp_status = ECANCELED;
  		crypto_kdone(krp);
  		return;
-@@ -1046,7 +1067,7 @@ icp_ocfDrvDhP1CallBack(void *callbackTag,
+@@ -1046,7 +1067,7 @@ icp_ocfDrvDhP1CallBack(void *callbackTag
  
  	icp_ocfDrvFreeFlatBuffer(pLocalOctetStringPV);
  	memset(pPhase1OpData, 0, sizeof(CpaCyDhPhase1KeyGenOpData));
@@ -1350,7 +1324,7 @@ index d2641c5..f679dd5 100644
  
  	crypto_kdone(krp);
  
-@@ -1087,7 +1108,7 @@ icp_ocfDrvModExpCallBack(void *callbackTag,
+@@ -1087,7 +1108,7 @@ icp_ocfDrvModExpCallBack(void *callbackT
  			"pResult data is NULL\n", __FUNCTION__);
  		krp->krp_status = ECANCELED;
  		memset(pLnModExpOpData, 0, sizeof(CpaCyLnModExpOpData));
@@ -1359,7 +1333,7 @@ index d2641c5..f679dd5 100644
  		crypto_kdone(krp);
  		return;
  	}
-@@ -1112,7 +1133,7 @@ icp_ocfDrvModExpCallBack(void *callbackTag,
+@@ -1112,7 +1133,7 @@ icp_ocfDrvModExpCallBack(void *callbackT
  	}
  	icp_ocfDrvFreeFlatBuffer(pResult);
  	memset(pLnModExpOpData, 0, sizeof(CpaCyLnModExpOpData));
@@ -1368,7 +1342,7 @@ index d2641c5..f679dd5 100644
  
  	crypto_kdone(krp);
  
-@@ -1223,7 +1244,7 @@ icp_ocfDrvDsaRSSignCallBack(void *callbackTag,
+@@ -1223,7 +1244,7 @@ icp_ocfDrvDsaRSSignCallBack(void *callba
  		DPRINTK("%s(): Invalid input parameter - "
  			"pR sign is NULL\n", __FUNCTION__);
  		icp_ocfDrvFreeFlatBuffer(pS);
@@ -1377,7 +1351,7 @@ index d2641c5..f679dd5 100644
  		krp->krp_status = ECANCELED;
  		crypto_kdone(krp);
  		return;
-@@ -1233,7 +1254,7 @@ icp_ocfDrvDsaRSSignCallBack(void *callbackTag,
+@@ -1233,7 +1254,7 @@ icp_ocfDrvDsaRSSignCallBack(void *callba
  		DPRINTK("%s(): Invalid input parameter - "
  			"pS sign is NULL\n", __FUNCTION__);
  		icp_ocfDrvFreeFlatBuffer(pR);
@@ -1386,7 +1360,7 @@ index d2641c5..f679dd5 100644
  		krp->krp_status = ECANCELED;
  		crypto_kdone(krp);
  		return;
-@@ -1263,9 +1284,9 @@ icp_ocfDrvDsaRSSignCallBack(void *callbackTag,
+@@ -1263,9 +1284,9 @@ icp_ocfDrvDsaRSSignCallBack(void *callba
  	icp_ocfDrvFreeFlatBuffer(pR);
  	icp_ocfDrvFreeFlatBuffer(pS);
  	memset(pSignData->K.pData, 0, pSignData->K.dataLenInBytes);
@@ -1398,7 +1372,7 @@ index d2641c5..f679dd5 100644
  	crypto_kdone(krp);
  
  	return;
-@@ -1327,7 +1348,7 @@ icp_ocfDrvDsaVerifyCallBack(void *callbackTag,
+@@ -1327,7 +1348,7 @@ icp_ocfDrvDsaVerifyCallBack(void *callba
  	}
  
  	memset(pVerData, 0, sizeof(CpaCyDsaVerifyOpData));
@@ -1407,8 +1381,6 @@ index d2641c5..f679dd5 100644
  	crypto_kdone(krp);
  
  	return;
-diff --git a/crypto/ocf/ep80579/icp_common.c b/crypto/ocf/ep80579/icp_common.c
-index 5d46c0a..fa824a6 100644
 --- a/crypto/ocf/ep80579/icp_common.c
 +++ b/crypto/ocf/ep80579/icp_common.c
 @@ -1,11 +1,11 @@
@@ -1443,7 +1415,7 @@ index 5d46c0a..fa824a6 100644
   *
   ***************************************************************************/
  
-@@ -134,42 +134,66 @@ int num_dereg_retries = DEFAULT_DEREG_RETRIES;
+@@ -134,42 +134,66 @@ int num_dereg_retries = DEFAULT_DEREG_RE
  int dereg_retry_delay_in_jiffies = DEFAULT_DEREG_DELAY_IN_JIFFIES;
  
  /* Module parameter - gives the maximum number of sessions possible between
@@ -1580,7 +1552,7 @@ index 5d46c0a..fa824a6 100644
  int icp_ocfDrvDeregRetry(CpaCySymSessionCtx sessionToDeregister)
  {
  	struct icp_ocfDrvFreeLacSession *workstore = NULL;
-@@ -491,11 +516,11 @@ int icp_ocfDrvDeregRetry(CpaCySymSessionCtx sessionToDeregister)
+@@ -491,11 +516,11 @@ int icp_ocfDrvDeregRetry(CpaCySymSession
  
  	/*make sure the session is not available to be allocated during this
  	   process */
@@ -1594,7 +1566,7 @@ index 5d46c0a..fa824a6 100644
  	if (NULL == workstore) {
  		DPRINTK("%s(): unable to free session - no memory available "
  			"for work queue\n", __FUNCTION__);
-@@ -504,11 +529,9 @@ int icp_ocfDrvDeregRetry(CpaCySymSessionCtx sessionToDeregister)
+@@ -504,11 +529,9 @@ int icp_ocfDrvDeregRetry(CpaCySymSession
  
  	workstore->sessionToDeregister = sessionToDeregister;
  
@@ -1609,7 +1581,7 @@ index 5d46c0a..fa824a6 100644
  
  	return ICP_OCF_DRV_STATUS_SUCCESS;
  
-@@ -521,7 +544,7 @@ int icp_ocfDrvDeregRetry(CpaCySymSessionCtx sessionToDeregister)
+@@ -521,7 +544,7 @@ int icp_ocfDrvDeregRetry(CpaCySymSession
   * CPA_STATUS_RETRY message from the LAC component. This function is run in
   * Thread context because it is called from a worker thread
   */
@@ -1618,7 +1590,7 @@ index 5d46c0a..fa824a6 100644
  {
  	struct icp_ocfDrvFreeLacSession *workstore = NULL;
  	CpaCySymSessionCtx sessionToDeregister = NULL;
-@@ -537,10 +560,10 @@ void icp_ocfDrvDeferedFreeLacSessionProcess(void *arg)
+@@ -537,10 +560,10 @@ void icp_ocfDrvDeferedFreeLacSessionProc
  	}
  
  	sessionToDeregister = workstore->sessionToDeregister;
@@ -1631,7 +1603,7 @@ index 5d46c0a..fa824a6 100644
  		lacStatus = cpaCySymRemoveSession(CPA_INSTANCE_HANDLE_SINGLE,
  						  sessionToDeregister);
  
-@@ -551,7 +574,7 @@ void icp_ocfDrvDeferedFreeLacSessionProcess(void *arg)
+@@ -551,7 +574,7 @@ void icp_ocfDrvDeferedFreeLacSessionProc
  			return;
  		}
  
@@ -1640,7 +1612,7 @@ index 5d46c0a..fa824a6 100644
  		return;
  	}
  
-@@ -560,7 +583,7 @@ void icp_ocfDrvDeferedFreeLacSessionProcess(void *arg)
+@@ -560,7 +583,7 @@ void icp_ocfDrvDeferedFreeLacSessionProc
  						  sessionToDeregister);
  
  		if (lacStatus == CPA_STATUS_SUCCESS) {
@@ -1649,7 +1621,7 @@ index 5d46c0a..fa824a6 100644
  			return;
  		}
  		if (lacStatus != CPA_STATUS_RETRY) {
-@@ -572,17 +595,16 @@ void icp_ocfDrvDeferedFreeLacSessionProcess(void *arg)
+@@ -572,17 +595,16 @@ void icp_ocfDrvDeferedFreeLacSessionProc
  		/*schedule_timout returns the time left for completion if this
  		   task is set to TASK_INTERRUPTIBLE */
  		remaining_delay_time_in_jiffies = dereg_retry_delay_in_jiffies;
@@ -1670,7 +1642,7 @@ index 5d46c0a..fa824a6 100644
  }
  
  /* Name        : icp_ocfDrvPtrAndLenToFlatBuffer 
-@@ -600,6 +622,131 @@ icp_ocfDrvPtrAndLenToFlatBuffer(void *pData, uint32_t len,
+@@ -600,6 +622,131 @@ icp_ocfDrvPtrAndLenToFlatBuffer(void *pD
  	pFlatBuffer->dataLenInBytes = len;
  }
  
@@ -1802,7 +1774,7 @@ index 5d46c0a..fa824a6 100644
  /* Name        : icp_ocfDrvPtrAndLenToBufferList
   *
   * Description : This function converts a "pointer and length" buffer
-@@ -655,6 +802,45 @@ icp_ocfDrvBufferListMemInfo(uint16_t numBuffers,
+@@ -655,6 +802,45 @@ icp_ocfDrvBufferListMemInfo(uint16_t num
  	return ICP_OCF_DRV_STATUS_SUCCESS;
  }
  
@@ -1848,7 +1820,7 @@ index 5d46c0a..fa824a6 100644
  /* Name        : icp_ocfDrvFreeFlatBuffer
   *
   * Description : This function will deallocate flat buffer.
-@@ -663,7 +849,7 @@ inline void icp_ocfDrvFreeFlatBuffer(CpaFlatBuffer * pFlatBuffer)
+@@ -663,7 +849,7 @@ inline void icp_ocfDrvFreeFlatBuffer(Cpa
  {
  	if (pFlatBuffer != NULL) {
  		memset(pFlatBuffer, 0, sizeof(CpaFlatBuffer));
@@ -1857,7 +1829,7 @@ index 5d46c0a..fa824a6 100644
  	}
  }
  
-@@ -690,9 +876,8 @@ icp_ocfDrvAllocMetaData(CpaBufferList * pBufferList,
+@@ -690,9 +876,8 @@ icp_ocfDrvAllocMetaData(CpaBufferList *
  		 * op data.  It has been pre-allocated in memory just after the
  		 * icp_drvOpData structure.
  		 */
@@ -1869,7 +1841,7 @@ index 5d46c0a..fa824a6 100644
  	} else {
  		if (CPA_STATUS_SUCCESS !=
  		    cpaCyBufferListGetMetaSize(CPA_INSTANCE_HANDLE_SINGLE,
-@@ -708,8 +893,7 @@ icp_ocfDrvAllocMetaData(CpaBufferList * pBufferList,
+@@ -708,8 +893,7 @@ icp_ocfDrvAllocMetaData(CpaBufferList *
  			return ICP_OCF_DRV_STATUS_SUCCESS;
  		}
  
@@ -1879,8 +1851,6 @@ index 5d46c0a..fa824a6 100644
  	}
  	if (NULL == pBufferList->pPrivateMetaData) {
  		EPRINTK("%s() Failed to allocate pPrivateMetaData.\n",
-diff --git a/crypto/ocf/ep80579/icp_ocf.h b/crypto/ocf/ep80579/icp_ocf.h
-index d9dde87..cb70680 100644
 --- a/crypto/ocf/ep80579/icp_ocf.h
 +++ b/crypto/ocf/ep80579/icp_ocf.h
 @@ -5,7 +5,7 @@
@@ -1929,11 +1899,12 @@ index d9dde87..cb70680 100644
 -#include <cpa_cy_ln.h>
 -#include <cpa_cy_common.h>
 -#include <cpa_cy_dsa.h>
+-
+-#include "icp_os.h"
 +#include <linux/crypto.h>
 +#include <linux/delay.h>
 +#include <linux/skbuff.h>
- 
--#include "icp_os.h"
++
 +#include "cryptodev.h"
 +#include "uio.h"
 +
@@ -2064,8 +2035,6 @@ index d9dde87..cb70680 100644
  struct icp_drvOpData {
  	CpaCySymOpData lacOpData;
  	uint32_t digestSizeInBytes;
-diff --git a/crypto/ocf/ep80579/icp_sym.c b/crypto/ocf/ep80579/icp_sym.c
-index e1c7148..9374be6 100644
 --- a/crypto/ocf/ep80579/icp_sym.c
 +++ b/crypto/ocf/ep80579/icp_sym.c
 @@ -5,7 +5,7 @@
@@ -2134,7 +2103,7 @@ index e1c7148..9374be6 100644
  /*This function is used to free an OCF->OCF_DRV session object*/
  static void icp_ocfDrvFreeOCFSession(struct icp_drvSessionData *sessionData);
  
-@@ -110,7 +142,7 @@ static void icp_ocfDrvFreeOCFSession(struct icp_drvSessionData *sessionData);
+@@ -110,7 +142,7 @@ static void icp_ocfDrvFreeOCFSession(str
   * Notes : The callbackTag is a pointer to an icp_drvOpData. This memory
   * object was passed to LAC for the cryptographic processing and contains all
   * the relevant information for cleaning up buffer handles etc. so that the
@@ -2166,7 +2135,7 @@ index e1c7148..9374be6 100644
  {
  	struct icp_drvSessionData *sessionData = NULL;
  	uint32_t delete_session = 0;
-@@ -228,44 +259,44 @@ int icp_ocfDrvNewSession(icp_device_t dev, uint32_t * sid,
+@@ -228,44 +259,44 @@ int icp_ocfDrvNewSession(icp_device_t de
  		return EINVAL;
  	}
  
@@ -2223,7 +2192,7 @@ index e1c7148..9374be6 100644
  		return EPERM;
  	}
  
-@@ -530,27 +561,27 @@ static void icp_ocfDrvFreeOCFSession(struct icp_drvSessionData *sessionData)
+@@ -530,27 +561,27 @@ static void icp_ocfDrvFreeOCFSession(str
  	sessionData->inUse = ICP_SESSION_DEREGISTERED;
  
  	/*ENTER CRITICAL SECTION */
@@ -2259,7 +2228,7 @@ index e1c7148..9374be6 100644
  }
  
  /* Name        : icp_ocfDrvFreeLACSession
-@@ -558,7 +589,7 @@ static void icp_ocfDrvFreeOCFSession(struct icp_drvSessionData *sessionData)
+@@ -558,7 +589,7 @@ static void icp_ocfDrvFreeOCFSession(str
   * Description : This attempts to deregister a LAC session. If it fails, the
   * deregistation retry function is called.
   */
@@ -2268,7 +2237,7 @@ index e1c7148..9374be6 100644
  {
  	CpaCySymSessionCtx sessionToDeregister = NULL;
  	struct icp_drvSessionData *sessionData = NULL;
-@@ -574,14 +605,14 @@ int icp_ocfDrvFreeLACSession(icp_device_t dev, uint64_t sid)
+@@ -574,14 +605,14 @@ int icp_ocfDrvFreeLACSession(icp_device_
  
  	sessionToDeregister = sessionData->sessHandle;
  
@@ -2290,7 +2259,7 @@ index e1c7148..9374be6 100644
  		lacStatus = cpaCySymRemoveSession(CPA_INSTANCE_HANDLE_SINGLE,
  						  sessionToDeregister);
  		if (CPA_STATUS_RETRY == lacStatus) {
-@@ -599,12 +630,9 @@ int icp_ocfDrvFreeLACSession(icp_device_t dev, uint64_t sid)
+@@ -599,12 +630,9 @@ int icp_ocfDrvFreeLACSession(icp_device_
  			DPRINTK("%s(): LAC failed to deregister the session. "
  				"localSessionId= %p, lacStatus = %d\n",
  				__FUNCTION__, sessionToDeregister, lacStatus);
@@ -2304,7 +2273,7 @@ index e1c7148..9374be6 100644
  	}
  
  	icp_ocfDrvFreeOCFSession(sessionData);
-@@ -641,12 +669,13 @@ static int icp_ocfDrvAlgCheck(struct cryptodesc *crp_desc)
+@@ -641,12 +669,13 @@ static int icp_ocfDrvAlgCheck(struct cry
   * to whether session paramaters have changed (e.g. alg chain order) are
   * done.
   */
@@ -2319,7 +2288,7 @@ index e1c7148..9374be6 100644
  
  	if (NULL == crp) {
  		DPRINTK("%s(): Invalid input parameters, cryptop is NULL\n",
-@@ -668,7 +697,7 @@ int icp_ocfDrvSymProcess(icp_device_t dev, struct cryptop *crp, int hint)
+@@ -668,7 +697,7 @@ int icp_ocfDrvSymProcess(icp_device_t de
  		return EINVAL;
  	}
  
@@ -2328,7 +2297,7 @@ index e1c7148..9374be6 100644
  		crp->crp_etype = EFAULT;
  		return EFAULT;
  	}
-@@ -765,16 +794,14 @@ int icp_ocfDrvSymProcess(icp_device_t dev, struct cryptop *crp, int hint)
+@@ -765,16 +794,14 @@ int icp_ocfDrvSymProcess(icp_device_t de
  		if (CPA_STATUS_SUCCESS != lacStatus) {
  			EPRINTK("%s(): cpaCySymSessionCtxGetSize failed - %d\n",
  				__FUNCTION__, lacStatus);
@@ -2346,7 +2315,7 @@ index e1c7148..9374be6 100644
  			return ENOMEM;
  		}
  
-@@ -786,14 +813,13 @@ int icp_ocfDrvSymProcess(icp_device_t dev, struct cryptop *crp, int hint)
+@@ -786,14 +813,13 @@ int icp_ocfDrvSymProcess(icp_device_t de
  		if (CPA_STATUS_SUCCESS != lacStatus) {
  			EPRINTK("%s(): cpaCySymInitSession failed -%d \n",
  				__FUNCTION__, lacStatus);
@@ -2362,7 +2331,7 @@ index e1c7148..9374be6 100644
  	if (NULL == drvOpData) {
  		EPRINTK("%s():Failed to get memory for drvOpData\n",
  			__FUNCTION__);
-@@ -902,6 +928,21 @@ int icp_ocfDrvSymProcess(icp_device_t dev, struct cryptop *crp, int hint)
+@@ -902,6 +928,21 @@ int icp_ocfDrvSymProcess(icp_device_t de
  		drvOpData->bufferType = CRYPTO_BUF_CONTIG;
  	}
  
@@ -2384,7 +2353,7 @@ index e1c7148..9374be6 100644
  	/* Allocate srcBuffer's private meta data */
  	if (ICP_OCF_DRV_STATUS_SUCCESS !=
  	    icp_ocfDrvAllocMetaData(&(drvOpData->srcBuffer), drvOpData)) {
-@@ -922,7 +963,7 @@ int icp_ocfDrvSymProcess(icp_device_t dev, struct cryptop *crp, int hint)
+@@ -922,7 +963,7 @@ int icp_ocfDrvSymProcess(icp_device_t de
  		DPRINTK("%s(): cpaCySymPerformOp retry, lacStatus = %d\n",
  			__FUNCTION__, lacStatus);
  		memset(&(drvOpData->lacOpData), 0, sizeof(CpaCySymOpData));
@@ -2393,7 +2362,7 @@ index e1c7148..9374be6 100644
  		goto err;
  	}
  	if (CPA_STATUS_SUCCESS != lacStatus) {
-@@ -937,10 +978,10 @@ int icp_ocfDrvSymProcess(icp_device_t dev, struct cryptop *crp, int hint)
+@@ -937,10 +978,10 @@ int icp_ocfDrvSymProcess(icp_device_t de
  
        err:
  	if (drvOpData->numBufferListArray > ICP_OCF_DRV_DEFAULT_BUFFLIST_ARRAYS) {
@@ -2406,7 +2375,7 @@ index e1c7148..9374be6 100644
  
  	return crp->crp_etype;
  }
-@@ -1151,3 +1192,201 @@ uint8_t *icp_ocfDrvDigestPointerFind(struct icp_drvOpData * drvOpData,
+@@ -1151,3 +1192,201 @@ uint8_t *icp_ocfDrvDigestPointerFind(str
  	DPRINTK("%s() Should not reach this point\n", __FUNCTION__);
  	return NULL;
  }
@@ -2608,11 +2577,9 @@ index e1c7148..9374be6 100644
 +	DPRINTK("%s() Catch-All hit! Process error.\n", __FUNCTION__);
 +	return NULL;
 +}
-diff --git a/crypto/ocf/hifn/hifn7751.c b/crypto/ocf/hifn/hifn7751.c
-index d554f16..6459f35 100644
 --- a/crypto/ocf/hifn/hifn7751.c
 +++ b/crypto/ocf/hifn/hifn7751.c
-@@ -46,8 +46,7 @@ __FBSDID("$FreeBSD: src/sys/dev/hifn/hifn7751.c,v 1.40 2007/03/21 03:42:49 sam E
+@@ -46,8 +46,7 @@ __FBSDID("$FreeBSD: src/sys/dev/hifn/hif
  /*
   * Driver for various Hifn encryption processors.
   */
@@ -2622,7 +2589,7 @@ index d554f16..6459f35 100644
  #include <linux/config.h>
  #endif
  #include <linux/module.h>
-@@ -61,6 +60,7 @@ __FBSDID("$FreeBSD: src/sys/dev/hifn/hifn7751.c,v 1.40 2007/03/21 03:42:49 sam E
+@@ -61,6 +60,7 @@ __FBSDID("$FreeBSD: src/sys/dev/hifn/hif
  #include <linux/interrupt.h>
  #include <linux/spinlock.h>
  #include <linux/random.h>
@@ -2641,7 +2608,7 @@ index d554f16..6459f35 100644
  #ifdef MODULE_PARM
  char *hifn_pllconfig = NULL;
  MODULE_PARM(hifn_pllconfig, "s");
-@@ -241,7 +237,7 @@ pci_map_skb(struct hifn_softc *sc,struct hifn_operand *buf,struct sk_buff *skb)
+@@ -241,7 +237,7 @@ pci_map_skb(struct hifn_softc *sc,struct
  	for (i = 0; i < skb_shinfo(skb)->nr_frags; ) {
  		buf->segs[buf->nsegs].ds_len = skb_shinfo(skb)->frags[i].size;
  		buf->segs[buf->nsegs].ds_addr = pci_map_single(sc->sc_pcidev,
@@ -2661,7 +2628,7 @@ index d554f16..6459f35 100644
  }
  
  /*
-@@ -2375,6 +2369,11 @@ hifn_newsession(device_t dev, u_int32_t *sidp, struct cryptoini *cri)
+@@ -2375,6 +2369,11 @@ hifn_newsession(device_t dev, u_int32_t
  		case CRYPTO_DES_CBC:
  		case CRYPTO_3DES_CBC:
  		case CRYPTO_AES_CBC:
@@ -2673,7 +2640,7 @@ index d554f16..6459f35 100644
  		case CRYPTO_ARC4:
  			if (cry) {
  				DPRINTF("%s,%d: %s - EINVAL\n",__FILE__,__LINE__,__FUNCTION__);
-@@ -2570,7 +2569,8 @@ hifn_process(device_t dev, struct cryptop *crp, int hint)
+@@ -2570,7 +2569,8 @@ hifn_process(device_t dev, struct crypto
  				if (enccrd->crd_flags & CRD_F_IV_EXPLICIT)
  					bcopy(enccrd->crd_iv, cmd->iv, ivlen);
  				else
@@ -2683,7 +2650,7 @@ index d554f16..6459f35 100644
  
  				if ((enccrd->crd_flags & CRD_F_IV_PRESENT)
  				    == 0) {
-@@ -2775,7 +2775,7 @@ hifn_callback(struct hifn_softc *sc, struct hifn_command *cmd, u_int8_t *macbuf)
+@@ -2775,7 +2775,7 @@ hifn_callback(struct hifn_softc *sc, str
  	struct hifn_dma *dma = sc->sc_dma;
  	struct cryptop *crp = cmd->crp;
  	struct cryptodesc *crd;
@@ -2692,7 +2659,7 @@ index d554f16..6459f35 100644
  
  	DPRINTF("%s()\n", __FUNCTION__);
  
-@@ -2840,6 +2840,22 @@ hifn_callback(struct hifn_softc *sc, struct hifn_command *cmd, u_int8_t *macbuf)
+@@ -2840,6 +2840,22 @@ hifn_callback(struct hifn_softc *sc, str
  
  	hifnstats.hst_obytes += cmd->dst_mapsize;
  
@@ -2722,8 +2689,6 @@ index d554f16..6459f35 100644
 -MODULE_AUTHOR("David McCullough <david_mccullough@mcafee.com>");
 +MODULE_AUTHOR("David McCullough <david_mccullough@securecomputing.com>");
  MODULE_DESCRIPTION("OCF driver for hifn PCI crypto devices");
-diff --git a/crypto/ocf/hifn/hifn7751var.h b/crypto/ocf/hifn/hifn7751var.h
-index c5d30f9..9a5f231 100644
 --- a/crypto/ocf/hifn/hifn7751var.h
 +++ b/crypto/ocf/hifn/hifn7751var.h
 @@ -113,6 +113,7 @@ struct hifn_dma {
@@ -2734,8 +2699,6 @@ index c5d30f9..9a5f231 100644
  };
  
  #define	HIFN_RING_SYNC(sc, r, i, f)					\
-diff --git a/crypto/ocf/hifn/hifnHIPP.c b/crypto/ocf/hifn/hifnHIPP.c
-index a69e630..cf55a0f 100644
 --- a/crypto/ocf/hifn/hifnHIPP.c
 +++ b/crypto/ocf/hifn/hifnHIPP.c
 @@ -32,8 +32,7 @@
@@ -2756,8 +2719,6 @@ index a69e630..cf55a0f 100644
  #include <linux/skbuff.h>
  #include <linux/uio.h>
  #include <linux/sysfs.h>
-diff --git a/crypto/ocf/ixp4xx/ixp4xx.c b/crypto/ocf/ixp4xx/ixp4xx.c
-index ede598f..d83d8cc 100644
 --- a/crypto/ocf/ixp4xx/ixp4xx.c
 +++ b/crypto/ocf/ixp4xx/ixp4xx.c
 @@ -3,8 +3,8 @@
@@ -2781,7 +2742,7 @@ index ede598f..d83d8cc 100644
  #include <linux/config.h>
  #endif
  #include <linux/module.h>
-@@ -374,6 +373,9 @@ ixp_freesession(device_t dev, u_int64_t tid)
+@@ -374,6 +373,9 @@ ixp_freesession(device_t dev, u_int64_t
  			ixCryptoAccCtxUnregister(ixp_sessions[sid]->ixp_ctx_id);
  			ixp_sessions[sid]->ixp_ctx_id = -1;
  		}
@@ -2801,8 +2762,6 @@ index ede598f..d83d8cc 100644
  	ixp_process_pending(ixp);
  }
  #endif
-diff --git a/crypto/ocf/kirkwood/Makefile b/crypto/ocf/kirkwood/Makefile
-index 6dafd00..8b13789 100644
 --- a/crypto/ocf/kirkwood/Makefile
 +++ b/crypto/ocf/kirkwood/Makefile
 @@ -1,19 +1 @@
@@ -2825,8 +2784,6 @@ index 6dafd00..8b13789 100644
 --include $(TOPDIR)/Rules.make
 -endif
  
-diff --git a/crypto/ocf/kirkwood/mvHal/common/mvTypes.h b/crypto/ocf/kirkwood/mvHal/common/mvTypes.h
-index de212a1..8b13789 100644
 --- a/crypto/ocf/kirkwood/mvHal/common/mvTypes.h
 +++ b/crypto/ocf/kirkwood/mvHal/common/mvTypes.h
 @@ -1,245 +1 @@
@@ -3075,8 +3032,6 @@ index de212a1..8b13789 100644
 -
 -#endif /* __INCmvTypesh */
  
-diff --git a/crypto/ocf/kirkwood/mvHal/kw_family/ctrlEnv/sys/mvSysUsb.c b/crypto/ocf/kirkwood/mvHal/kw_family/ctrlEnv/sys/mvSysUsb.c
-index 195b5e1..139597f 100644
 --- a/crypto/ocf/kirkwood/mvHal/kw_family/ctrlEnv/sys/mvSysUsb.c
 +++ b/crypto/ocf/kirkwood/mvHal/kw_family/ctrlEnv/sys/mvSysUsb.c
 @@ -1,497 +1,2 @@
@@ -3577,8 +3532,6 @@ index 195b5e1..139597f 100644
 -}
  
  
-diff --git a/crypto/ocf/kirkwood/mvHal/mv_hal/sflash/mvSFlashSpec.h b/crypto/ocf/kirkwood/mvHal/mv_hal/sflash/mvSFlashSpec.h
-index eeb4426..8b13789 100644
 --- a/crypto/ocf/kirkwood/mvHal/mv_hal/sflash/mvSFlashSpec.h
 +++ b/crypto/ocf/kirkwood/mvHal/mv_hal/sflash/mvSFlashSpec.h
 @@ -1,233 +1 @@
@@ -3815,8 +3768,6 @@ index eeb4426..8b13789 100644
 -
 -#endif /* __INCmvSFlashSpecH */
  
-diff --git a/crypto/ocf/kirkwood/mvHal/mv_hal/spi/mvSpiCmnd.c b/crypto/ocf/kirkwood/mvHal/mv_hal/spi/mvSpiCmnd.c
-index a5d5a64..8b13789 100644
 --- a/crypto/ocf/kirkwood/mvHal/mv_hal/spi/mvSpiCmnd.c
 +++ b/crypto/ocf/kirkwood/mvHal/mv_hal/spi/mvSpiCmnd.c
 @@ -1,249 +1 @@
@@ -4069,8 +4020,6 @@ index a5d5a64..8b13789 100644
 -	return ret;
 -}
  
-diff --git a/crypto/ocf/ocf-bench.c b/crypto/ocf/ocf-bench.c
-index f3fe9d0..5eef6b1 100644
 --- a/crypto/ocf/ocf-bench.c
 +++ b/crypto/ocf/ocf-bench.c
 @@ -1,7 +1,7 @@
@@ -4414,8 +4363,6 @@ index f3fe9d0..5eef6b1 100644
 -MODULE_AUTHOR("David McCullough <david_mccullough@mcafee.com>");
 +MODULE_AUTHOR("David McCullough <david_mccullough@securecomputing.com>");
  MODULE_DESCRIPTION("Benchmark various in-kernel crypto speeds");
-diff --git a/crypto/ocf/ocf-compat.h b/crypto/ocf/ocf-compat.h
-index 4ad1223..53f8b0c 100644
 --- a/crypto/ocf/ocf-compat.h
 +++ b/crypto/ocf/ocf-compat.h
 @@ -4,8 +4,8 @@
@@ -4475,7 +4422,7 @@ index 4ad1223..53f8b0c 100644
  
  #if LINUX_VERSION_CODE < KERNEL_VERSION(2,5,0)
  # define strlcpy(dest,src,len) \
-@@ -226,13 +199,8 @@ typedef irqreturn_t (*irq_handler_t)(int irq, void *arg, struct pt_regs *regs);
+@@ -226,13 +199,8 @@ typedef irqreturn_t (*irq_handler_t)(int
  #define MAX_ERRNO	4095
  #endif
  #ifndef IS_ERR_VALUE
@@ -4489,7 +4436,7 @@ index 4ad1223..53f8b0c 100644
  
  /*
   * common debug for all
-@@ -269,7 +237,6 @@ typedef irqreturn_t (*irq_handler_t)(int irq, void *arg, struct pt_regs *regs);
+@@ -269,7 +237,6 @@ typedef irqreturn_t (*irq_handler_t)(int
  
  #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24)
  
@@ -4497,7 +4444,7 @@ index 4ad1223..53f8b0c 100644
  #include <asm/scatterlist.h>
  
  static inline void sg_set_page(struct scatterlist *sg,  struct page *page,
-@@ -285,85 +252,6 @@ static inline void *sg_virt(struct scatterlist *sg)
+@@ -285,85 +252,6 @@ static inline void *sg_virt(struct scatt
  	return page_address(sg->page) + sg->offset;
  }
  
@@ -4583,8 +4530,6 @@ index 4ad1223..53f8b0c 100644
  #endif
  
  #endif /* __KERNEL__ */
-diff --git a/crypto/ocf/pasemi/pasemi.c b/crypto/ocf/pasemi/pasemi.c
-index 1b4333c..c3bb931 100644
 --- a/crypto/ocf/pasemi/pasemi.c
 +++ b/crypto/ocf/pasemi/pasemi.c
 @@ -17,8 +17,7 @@
@@ -4597,7 +4542,7 @@ index 1b4333c..c3bb931 100644
  #include <linux/config.h>
  #endif
  #include <linux/module.h>
-@@ -238,6 +237,11 @@ pasemi_newsession(device_t dev, u_int32_t *sidp, struct cryptoini *cri)
+@@ -238,6 +237,11 @@ pasemi_newsession(device_t dev, u_int32_
  
  	if (encini) {
  		ses->ccmd = ccmd;
@@ -4609,7 +4554,7 @@ index 1b4333c..c3bb931 100644
  		ses->keysz = (encini->cri_klen - 63) / 64;
  		memcpy(ses->key, encini->cri_key, (ses->keysz + 1) * 8);
  
-@@ -444,8 +448,6 @@ pasemi_process(device_t dev, struct cryptop *crp, int hint)
+@@ -444,8 +448,6 @@ pasemi_process(device_t dev, struct cryp
  		if (enccrd->crd_flags & CRD_F_ENCRYPT) {
  			if (enccrd->crd_flags & CRD_F_IV_EXPLICIT)
  				memcpy(ivp, enccrd->crd_iv, ivsize);
@@ -4618,8 +4563,6 @@ index 1b4333c..c3bb931 100644
  			/* If IV is not present in the buffer already, it has to be copied there */
  			if ((enccrd->crd_flags & CRD_F_IV_PRESENT) == 0)
  				crypto_copyback(crp->crp_flags, crp->crp_buf,
-diff --git a/crypto/ocf/random.c b/crypto/ocf/random.c
-index 4bb773f..118575a 100644
 --- a/crypto/ocf/random.c
 +++ b/crypto/ocf/random.c
 @@ -5,8 +5,8 @@
@@ -4651,7 +4594,7 @@ index 4bb773f..118575a 100644
  #include <linux/unistd.h>
  #include <linux/poll.h>
  #include <linux/random.h>
-@@ -172,7 +172,7 @@ crypto_runregister_all(u_int32_t driverid)
+@@ -172,7 +172,7 @@ crypto_runregister_all(u_int32_t driveri
  
  	spin_lock_irqsave(&random_lock, flags);
  	if (list_empty(&random_ops) && started)
@@ -4660,8 +4603,6 @@ index 4bb773f..118575a 100644
  	spin_unlock_irqrestore(&random_lock, flags);
  	return(0);
  }
-diff --git a/crypto/ocf/rndtest.c b/crypto/ocf/rndtest.c
-index 7bed6a1..34b68d8 100644
 --- a/crypto/ocf/rndtest.c
 +++ b/crypto/ocf/rndtest.c
 @@ -1,8 +1,8 @@
@@ -4692,8 +4633,6 @@ index 7bed6a1..34b68d8 100644
  #include <linux/unistd.h>
  #include <linux/kernel.h>
  #include <linux/string.h>
-diff --git a/crypto/ocf/safe/hmachack.h b/crypto/ocf/safe/hmachack.h
-index 598c958..8b13789 100644
 --- a/crypto/ocf/safe/hmachack.h
 +++ b/crypto/ocf/safe/hmachack.h
 @@ -1,37 +1 @@
@@ -4734,8 +4673,6 @@ index 598c958..8b13789 100644
 -};
 -#endif /* HMAC_HACK */
  
-diff --git a/crypto/ocf/safe/safe.c b/crypto/ocf/safe/safe.c
-index 141640e..a77e3a2 100644
 --- a/crypto/ocf/safe/safe.c
 +++ b/crypto/ocf/safe/safe.c
 @@ -1,6 +1,6 @@
@@ -4757,7 +4694,7 @@ index 141640e..a77e3a2 100644
  #include <linux/config.h>
  #endif
  #include <linux/module.h>
-@@ -47,6 +46,7 @@ __FBSDID("$FreeBSD: src/sys/dev/safe/safe.c,v 1.18 2007/03/21 03:42:50 sam Exp $
+@@ -47,6 +46,7 @@ __FBSDID("$FreeBSD: src/sys/dev/safe/saf
  #include <linux/interrupt.h>
  #include <linux/spinlock.h>
  #include <linux/random.h>
@@ -4765,7 +4702,7 @@ index 141640e..a77e3a2 100644
  #include <linux/skbuff.h>
  #include <asm/io.h>
  
-@@ -77,11 +77,40 @@ __FBSDID("$FreeBSD: src/sys/dev/safe/safe.c,v 1.18 2007/03/21 03:42:50 sam Exp $
+@@ -77,11 +77,40 @@ __FBSDID("$FreeBSD: src/sys/dev/safe/saf
   */
  #define HMAC_HACK 1
  #ifdef HMAC_HACK
@@ -4807,7 +4744,7 @@ index 141640e..a77e3a2 100644
  #endif /* HMAC_HACK */
  
  /* add proc entry for this */
-@@ -208,7 +237,7 @@ pci_map_skb(struct safe_softc *sc,struct safe_operand *buf,struct sk_buff *skb)
+@@ -208,7 +237,7 @@ pci_map_skb(struct safe_softc *sc,struct
  
  	for (i = 0; i < skb_shinfo(skb)->nr_frags; i++) {
  		pci_map_linear(sc, buf,
@@ -4816,7 +4753,7 @@ index 141640e..a77e3a2 100644
  				                        skb_shinfo(skb)->frags[i].page_offset,
  				skb_shinfo(skb)->frags[i].size);
  	}
-@@ -532,6 +561,10 @@ safe_newsession(device_t dev, u_int32_t *sidp, struct cryptoini *cri)
+@@ -532,6 +561,10 @@ safe_newsession(device_t dev, u_int32_t
  	ses->ses_used = 1;
  
  	if (encini) {
@@ -4827,7 +4764,7 @@ index 141640e..a77e3a2 100644
  		ses->ses_klen = encini->cri_klen;
  		if (encini->cri_key != NULL)
  			safe_setup_enckey(ses, encini->cri_key);
-@@ -594,7 +627,7 @@ safe_process(device_t dev, struct cryptop *crp, int hint)
+@@ -594,7 +627,7 @@ safe_process(device_t dev, struct crypto
  	struct safe_ringentry *re;
  	struct safe_sarec *sa;
  	struct safe_pdesc *pd;
@@ -4836,7 +4773,7 @@ index 141640e..a77e3a2 100644
  	unsigned long flags;
  
  	DPRINTF(("%s()\n", __FUNCTION__));
-@@ -743,7 +776,7 @@ safe_process(device_t dev, struct cryptop *crp, int hint)
+@@ -743,7 +776,7 @@ safe_process(device_t dev, struct crypto
  			if (enccrd->crd_flags & CRD_F_IV_EXPLICIT)
  				iv = enccrd->crd_iv;
  			else
@@ -4845,7 +4782,7 @@ index 141640e..a77e3a2 100644
  			if ((enccrd->crd_flags & CRD_F_IV_PRESENT) == 0) {
  				crypto_copyback(crp->crp_flags, crp->crp_buf,
  				    enccrd->crd_inject, ivsize, iv);
-@@ -1093,6 +1126,31 @@ safe_callback(struct safe_softc *sc, struct safe_ringentry *re)
+@@ -1093,6 +1126,31 @@ safe_callback(struct safe_softc *sc, str
  		return;
  	}
  
@@ -4884,8 +4821,6 @@ index 141640e..a77e3a2 100644
 -MODULE_AUTHOR("David McCullough <david_mccullough@mcafee.com>");
 +MODULE_AUTHOR("David McCullough <david_mccullough@securecomputing.com>");
  MODULE_DESCRIPTION("OCF driver for safenet PCI crypto devices");
-diff --git a/crypto/ocf/safe/safevar.h b/crypto/ocf/safe/safevar.h
-index 11d8304..f5b7394 100644
 --- a/crypto/ocf/safe/safevar.h
 +++ b/crypto/ocf/safe/safevar.h
 @@ -1,6 +1,6 @@
@@ -4904,8 +4839,6 @@ index 11d8304..f5b7394 100644
  };
  
  struct safe_pkq {
-diff --git a/crypto/ocf/talitos/talitos.c b/crypto/ocf/talitos/talitos.c
-index c4bc8c0..eaf3f30 100644
 --- a/crypto/ocf/talitos/talitos.c
 +++ b/crypto/ocf/talitos/talitos.c
 @@ -8,7 +8,7 @@
@@ -4935,7 +4868,7 @@ index c4bc8c0..eaf3f30 100644
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,15)
  #include <linux/platform_device.h>
  #endif
-@@ -418,6 +418,10 @@ talitos_newsession(device_t dev, u_int32_t *sidp, struct cryptoini *cri)
+@@ -418,6 +418,10 @@ talitos_newsession(device_t dev, u_int32
  	ses->ses_used = 1;
  
  	if (encini) {
@@ -4946,7 +4879,7 @@ index c4bc8c0..eaf3f30 100644
  		ses->ses_klen = (encini->cri_klen + 7) / 8;
  		memcpy(ses->ses_key, encini->cri_key, ses->ses_klen);
  		if (macini) {
-@@ -507,7 +511,6 @@ talitos_process(device_t dev, struct cryptop *crp, int hint)
+@@ -507,7 +511,6 @@ talitos_process(device_t dev, struct cry
  	int hmac_key, hmac_data, cipher_iv, cipher_key, 
  		in_fifo, out_fifo, cipher_iv_out;
  	static int chsel = -1;
@@ -4954,7 +4887,7 @@ index c4bc8c0..eaf3f30 100644
  
  	DPRINTF("%s()\n", __FUNCTION__);
  
-@@ -749,7 +752,7 @@ talitos_process(device_t dev, struct cryptop *crp, int hint)
+@@ -749,7 +752,7 @@ talitos_process(device_t dev, struct cry
  			if (enccrd->crd_flags & CRD_F_IV_EXPLICIT)
  				iv = enccrd->crd_iv;
  			else
@@ -4963,7 +4896,7 @@ index c4bc8c0..eaf3f30 100644
  			if ((enccrd->crd_flags & CRD_F_IV_PRESENT) == 0) {
  				crypto_copyback(crp->crp_flags, crp->crp_buf,
  				    enccrd->crd_inject, ivsize, iv);
-@@ -758,8 +761,9 @@ talitos_process(device_t dev, struct cryptop *crp, int hint)
+@@ -758,8 +761,9 @@ talitos_process(device_t dev, struct cry
  			td->hdr |= TALITOS_DIR_INBOUND; 
  			if (enccrd->crd_flags & CRD_F_IV_EXPLICIT) {
  				iv = enccrd->crd_iv;
@@ -4974,8 +4907,6 @@ index c4bc8c0..eaf3f30 100644
  				crypto_copydata(crp->crp_flags, crp->crp_buf,
  				    enccrd->crd_inject, ivsize, iv);
  			}
-diff --git a/crypto/ocf/talitos/talitos_soft.h b/crypto/ocf/talitos/talitos_soft.h
-index eda9c2e..79efdbd 100644
 --- a/crypto/ocf/talitos/talitos_soft.h
 +++ b/crypto/ocf/talitos/talitos_soft.h
 @@ -69,6 +69,7 @@ struct talitos_session {
@@ -4986,8 +4917,6 @@ index eda9c2e..79efdbd 100644
  	u_int32_t	ses_mlen;		/* desired hash result len (12=ipsec or 16) */
  };
  
-diff --git a/crypto/ocf/ubsec_ssb/Makefile b/crypto/ocf/ubsec_ssb/Makefile
-index f973efd..8b13789 100644
 --- a/crypto/ocf/ubsec_ssb/Makefile
 +++ b/crypto/ocf/ubsec_ssb/Makefile
 @@ -1,12 +1 @@
@@ -5003,8 +4932,6 @@ index f973efd..8b13789 100644
 --include $(TOPDIR)/Rules.make
 -endif
  
-diff --git a/crypto/ocf/ubsec_ssb/ubsecvar.h b/crypto/ocf/ubsec_ssb/ubsecvar.h
-index c808f95..8b13789 100644
 --- a/crypto/ocf/ubsec_ssb/ubsecvar.h
 +++ b/crypto/ocf/ubsec_ssb/ubsecvar.h
 @@ -1,228 +1 @@
@@ -5236,8 +5163,6 @@ index c808f95..8b13789 100644
 -    u_int16_t   pc_type;        /* Cryptographic operation */
 -};
 -
-diff --git a/crypto/ocf/uio.h b/crypto/ocf/uio.h
-index 03a6249..e82e46c 100644
 --- a/crypto/ocf/uio.h
 +++ b/crypto/ocf/uio.h
 @@ -8,8 +8,8 @@
@@ -5251,6 +5176,3 @@ index 03a6249..e82e46c 100644
   * Copyright (C) 2004-2005 Intel Corporation.
   *
   * LICENSE TERMS
--- 
-1.7.9.5
-

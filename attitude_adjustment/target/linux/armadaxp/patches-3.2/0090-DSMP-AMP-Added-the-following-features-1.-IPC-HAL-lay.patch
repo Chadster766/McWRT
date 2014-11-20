@@ -31,8 +31,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  create mode 100644 arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/Makefile
  create mode 100644 arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c
 
-diff --git a/arch/arm/include/asm/entry-macro-multi.S b/arch/arm/include/asm/entry-macro-multi.S
-index 88d6181..1137bc2 100644
 --- a/arch/arm/include/asm/entry-macro-multi.S
 +++ b/arch/arm/include/asm/entry-macro-multi.S
 @@ -20,6 +20,12 @@
@@ -48,8 +46,6 @@ index 88d6181..1137bc2 100644
  	ALT_SMP(test_for_ipi r0, r2, r6, lr)
  	ALT_UP_B(9997f)
  	movne	r1, sp
-diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
-index 1118481..8bc925b 100644
 --- a/arch/arm/mach-armadaxp/Makefile
 +++ b/arch/arm/mach-armadaxp/Makefile
 @@ -75,7 +75,7 @@ ifdef NFPLIB
@@ -70,11 +66,9 @@ index 1118481..8bc925b 100644
  #obj-y					+= $(PLAT_DRIVERS)/mv_btns/
  obj-y					+= $(PLAT_DRIVERS)/mv_gpio/
  obj-$(CONFIG_MV_DBG_TRACE)              += $(PLAT_DRIVERS)/mv_trace/
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
-index 527581f..3b78b09 100755
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
-@@ -311,7 +311,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -311,7 +311,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  /*******************************************/
  /* ARM Doorbell Registers Map		   */
  /*******************************************/
@@ -85,8 +79,6 @@ index 527581f..3b78b09 100755
  #define CPU_HOST_TO_ARM_DRBL_REG(cpu)		(MV_CPUIF_REGS_BASE(cpu) + 0x78)
  #define CPU_HOST_TO_ARM_MASK_REG(cpu)		(MV_CPUIF_REGS_BASE(cpu) + 0x7C)
  #define CPU_ARM_TO_HOST_DRBL_REG(cpu)		(MV_CPUIF_REGS_BASE(cpu) + 0x70)
-diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
-index ff8602d..7a558f7 100755
 --- a/arch/arm/mach-armadaxp/core.c
 +++ b/arch/arm/mach-armadaxp/core.c
 @@ -381,6 +381,60 @@ static int __init mv_rsrc_setup(char *s)
@@ -184,8 +176,6 @@ index ff8602d..7a558f7 100755
  #ifdef CONFIG_FB_DOVE
  	if(mvUnitMapIsMine(LCD) == MV_TRUE){
  		kw_lcd0_dmi.dram = &armadaxp_mbus_dram_info;
-diff --git a/arch/arm/mach-armadaxp/include/mach/entry-macro.S b/arch/arm/mach-armadaxp/include/mach/entry-macro.S
-index 794a156..dd783c0 100644
 --- a/arch/arm/mach-armadaxp/include/mach/entry-macro.S
 +++ b/arch/arm/mach-armadaxp/include/mach/entry-macro.S
 @@ -85,6 +85,9 @@
@@ -242,8 +232,6 @@ index 794a156..dd783c0 100644
 +		cmpcs	\irqnr, \irqnr
 +		.endm
  #endif
-diff --git a/arch/arm/mach-armadaxp/include/mach/smp.h b/arch/arm/mach-armadaxp/include/mach/smp.h
-index 2a14048..f12d59e 100644
 --- a/arch/arm/mach-armadaxp/include/mach/smp.h
 +++ b/arch/arm/mach-armadaxp/include/mach/smp.h
 @@ -6,6 +6,7 @@
@@ -254,11 +242,9 @@ index 2a14048..f12d59e 100644
  
  #define hard_smp_processor_id()			\
  	({						\
-diff --git a/arch/arm/mach-armadaxp/irq.c b/arch/arm/mach-armadaxp/irq.c
-index 15e52c1..796db09 100644
 --- a/arch/arm/mach-armadaxp/irq.c
 +++ b/arch/arm/mach-armadaxp/irq.c
-@@ -62,7 +62,7 @@ MV_REG_WRITE(CPU_CF_LOCAL_MASK_REG(cpu), val);
+@@ -62,7 +62,7 @@ MV_REG_WRITE(CPU_CF_LOCAL_MASK_REG(cpu),
  #ifdef CONFIG_SMP
  if (cpu > 0) { /*disabled for both cpu */
  	val = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_MP));
@@ -285,7 +271,7 @@ index 15e52c1..796db09 100644
  temp |= map;
  temp |= (0x1 << 28); /* Set IntEn for this source */
  MV_REG_WRITE(addr, temp);
-@@ -318,7 +318,7 @@ for (irq = 0; irq < IRQ_AURORA_MSI_START ; irq++) {
+@@ -318,7 +318,7 @@ for (irq = 0; irq < IRQ_AURORA_MSI_START
  		*/
  	        MV_REG_WRITE(CPU_INT_CLEAR_MASK_LOCAL_REG, 0);
  		addr = /*(void __iomem *)*/(AXP_IN_DRBEL_MSK);
@@ -294,11 +280,9 @@ index 15e52c1..796db09 100644
  	}
  #endif
  
-diff --git a/arch/arm/mach-armadaxp/platsmp.c b/arch/arm/mach-armadaxp/platsmp.c
-index f2fa59c..f53efab 100644
 --- a/arch/arm/mach-armadaxp/platsmp.c
 +++ b/arch/arm/mach-armadaxp/platsmp.c
-@@ -272,26 +272,19 @@ static void __init initialize_bridge(void)
+@@ -272,26 +272,19 @@ static void __init initialize_bridge(voi
  	MV_U32 reg;
  	MV_U32 ncores = get_core_count();
  	MV_U32 core_bits;
@@ -328,7 +312,7 @@ index f2fa59c..f53efab 100644
  	reg = MV_REG_READ(SOC_COHERENCY_FABRIC_CTRL_REG);
  	reg |= (core_bits << 24);
  	MV_REG_WRITE(SOC_COHERENCY_FABRIC_CTRL_REG, reg);
-@@ -302,7 +295,7 @@ static void __init initialize_bridge(void)
+@@ -302,7 +295,7 @@ static void __init initialize_bridge(voi
  }
  
  /*
@@ -337,8 +321,6 @@ index f2fa59c..f53efab 100644
   * which may be present or become present in the system.
   */
  void __init smp_init_cpus(void)
-diff --git a/arch/arm/plat-armada/Kconfig b/arch/arm/plat-armada/Kconfig
-index a6a7da9..75efd2c 100644
 --- a/arch/arm/plat-armada/Kconfig
 +++ b/arch/arm/plat-armada/Kconfig
 @@ -183,9 +183,19 @@ menu "Armada AMP options"
@@ -362,9 +344,6 @@ index a6a7da9..75efd2c 100644
  config MV_DRAM_BASE
          hex "Base address of physical memory (= PHYS_OFFSET)"
          depends on   MV_AMP_ENABLE
-diff --git a/arch/arm/plat-armada/common/mvIpc.c b/arch/arm/plat-armada/common/mvIpc.c
-new file mode 100644
-index 0000000..a8a5be7
 --- /dev/null
 +++ b/arch/arm/plat-armada/common/mvIpc.c
 @@ -0,0 +1,975 @@
@@ -1343,9 +1322,6 @@ index 0000000..a8a5be7
 +
 +	return MV_OK;
 +}
-diff --git a/arch/arm/plat-armada/common/mvIpc.h b/arch/arm/plat-armada/common/mvIpc.h
-new file mode 100644
-index 0000000..7cf3d44
 --- /dev/null
 +++ b/arch/arm/plat-armada/common/mvIpc.h
 @@ -0,0 +1,136 @@
@@ -1485,9 +1461,6 @@ index 0000000..7cf3d44
 +
 +
 +#endif /*__mvIpc_h */
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/Makefile b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/Makefile
-new file mode 100644
-index 0000000..9fd5e4d
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/Makefile
 @@ -0,0 +1,7 @@
@@ -1498,9 +1471,6 @@ index 0000000..9fd5e4d
 +	include $(srctree)/arch/arm/mach-armadaxp/config/mvRules.mk
 +endif
 +obj-$(CONFIG_MV_IPC_NET) += mv_ipc.o
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/mv_ipc.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/mv_ipc.c
-new file mode 100644
-index 0000000..a0fc143
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/mv_ipc.c
 @@ -0,0 +1,238 @@
@@ -1742,9 +1712,6 @@ index 0000000..a0fc143
 +MODULE_DESCRIPTION("Marvell Inter Processor Communication (IPC) Driver");
 +MODULE_AUTHOR("Yehuda Yitschak <yehuday@marvell.com>");
 +MODULE_LICENSE("GPL");
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/mv_ipc.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/mv_ipc.h
-new file mode 100644
-index 0000000..481474a
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc/mv_ipc.h
 @@ -0,0 +1,53 @@
@@ -1801,9 +1768,6 @@ index 0000000..481474a
 +int ipc_open_chn(int chnId, IPC_RX_CLBK rx_clbk);
 +
 +#endif /* __MV_IPC_H__ */
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/Makefile b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/Makefile
-new file mode 100644
-index 0000000..029e7ab
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/Makefile
 @@ -0,0 +1,7 @@
@@ -1814,9 +1778,6 @@ index 0000000..029e7ab
 +	include $(srctree)/arch/arm/mach-armadaxp/config/mvRules.mk
 +endif
 +obj-$(CONFIG_MV_IPC_NET) += ipc_net.o
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c
-new file mode 100644
-index 0000000..a6e07be
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_ipc_net/ipc_net.c
 @@ -0,0 +1,601 @@
@@ -2421,6 +2382,3 @@ index 0000000..a6e07be
 +MODULE_DESCRIPTION("Marvell Inter-Processor Pseudo-NIC Driver");
 +MODULE_AUTHOR("Yehuda Yitschak <yehuday@marvell.com>");
 +MODULE_LICENSE("GPL");
--- 
-1.7.9.5
-

@@ -10,11 +10,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/include/asm/dma-mapping.h |    8 ++++----
  1 file changed, 4 insertions(+), 4 deletions(-)
 
-diff --git a/arch/arm/include/asm/dma-mapping.h b/arch/arm/include/asm/dma-mapping.h
-index 78727fe..e0de453 100644
 --- a/arch/arm/include/asm/dma-mapping.h
 +++ b/arch/arm/include/asm/dma-mapping.h
-@@ -81,7 +81,7 @@ static inline void __dma_single_cpu_to_dev(const void *kaddr, size_t size,
+@@ -81,7 +81,7 @@ static inline void __dma_single_cpu_to_d
  	extern void ___dma_single_cpu_to_dev(const void *, size_t,
  		enum dma_data_direction);
  
@@ -23,7 +21,7 @@ index 78727fe..e0de453 100644
  		___dma_single_cpu_to_dev(kaddr, size, dir);
  }
  
-@@ -91,7 +91,7 @@ static inline void __dma_single_dev_to_cpu(const void *kaddr, size_t size,
+@@ -91,7 +91,7 @@ static inline void __dma_single_dev_to_c
  	extern void ___dma_single_dev_to_cpu(const void *, size_t,
  		enum dma_data_direction);
  
@@ -32,7 +30,7 @@ index 78727fe..e0de453 100644
  		___dma_single_dev_to_cpu(kaddr, size, dir);
  	else if (dir != DMA_TO_DEVICE)
  		dma_io_sync();
-@@ -103,7 +103,7 @@ static inline void __dma_page_cpu_to_dev(struct page *page, unsigned long off,
+@@ -103,7 +103,7 @@ static inline void __dma_page_cpu_to_dev
  	extern void ___dma_page_cpu_to_dev(struct page *, unsigned long,
  		size_t, enum dma_data_direction);
  
@@ -41,7 +39,7 @@ index 78727fe..e0de453 100644
  		___dma_page_cpu_to_dev(page, off, size, dir);
  }
  
-@@ -113,7 +113,7 @@ static inline void __dma_page_dev_to_cpu(struct page *page, unsigned long off,
+@@ -113,7 +113,7 @@ static inline void __dma_page_dev_to_cpu
  	extern void ___dma_page_dev_to_cpu(struct page *, unsigned long,
  		size_t, enum dma_data_direction);
  
@@ -50,6 +48,3 @@ index 78727fe..e0de453 100644
  		___dma_page_dev_to_cpu(page, off, size, dir);
  	else if (dir != DMA_TO_DEVICE)
  		dma_io_sync();
--- 
-1.7.9.5
-

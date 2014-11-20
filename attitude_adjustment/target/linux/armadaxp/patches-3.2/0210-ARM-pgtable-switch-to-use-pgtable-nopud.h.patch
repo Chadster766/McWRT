@@ -20,8 +20,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/include/asm/tlb.h     |    1 +
  3 files changed, 15 insertions(+), 11 deletions(-)
 
-diff --git a/arch/arm/include/asm/pgalloc.h b/arch/arm/include/asm/pgalloc.h
-index 3e08fd3..7418894 100644
 --- a/arch/arm/include/asm/pgalloc.h
 +++ b/arch/arm/include/asm/pgalloc.h
 @@ -30,7 +30,7 @@
@@ -33,8 +31,6 @@ index 3e08fd3..7418894 100644
  
  extern pgd_t *pgd_alloc(struct mm_struct *mm);
  extern void pgd_free(struct mm_struct *mm, pgd_t *pgd);
-diff --git a/arch/arm/include/asm/pgtable.h b/arch/arm/include/asm/pgtable.h
-index 9b419ab..e70b8b3 100644
 --- a/arch/arm/include/asm/pgtable.h
 +++ b/arch/arm/include/asm/pgtable.h
 @@ -11,15 +11,16 @@
@@ -55,22 +51,23 @@ index 9b419ab..e70b8b3 100644
  #include <asm/memory.h>
  #include <mach/vmalloc.h>
  #include <asm/pgtable-hwdef.h>
-@@ -164,20 +165,22 @@ extern pgd_t swapper_pg_dir[PTRS_PER_PGD];
+@@ -164,20 +165,22 @@ extern pgd_t swapper_pg_dir[PTRS_PER_PGD
  #define pgd_offset_k(addr)	pgd_offset(&init_mm, addr)
  
  /*
 - * The "pgd_xxx()" functions here are trivial for a folded two-level
 - * setup: the pgd is never bad, and a pmd always exists (as it's folded
 - * into the pgd entry)
-+ * The "pud_xxx()" functions here are trivial when the pmd is folded into
-+ * the pud: the pud entry is never bad, always exists, and can't be set or
-+ * cleared.
-  */
+- */
 -#define pgd_none(pgd)		(0)
 -#define pgd_bad(pgd)		(0)
 -#define pgd_present(pgd)	(1)
 -#define pgd_clear(pgdp)		do { } while (0)
 -#define set_pgd(pgd,pgdp)	do { } while (0)
++ * The "pud_xxx()" functions here are trivial when the pmd is folded into
++ * the pud: the pud entry is never bad, always exists, and can't be set or
++ * cleared.
++ */
 +#define pud_none(pud)		(0)
 +#define pud_bad(pud)		(0)
 +#define pud_present(pud)	(1)
@@ -87,11 +84,9 @@ index 9b419ab..e70b8b3 100644
  
  #define pmd_none(pmd)		(!pmd_val(pmd))
  #define pmd_present(pmd)	(pmd_val(pmd))
-diff --git a/arch/arm/include/asm/tlb.h b/arch/arm/include/asm/tlb.h
-index 265f908..b509e44 100644
 --- a/arch/arm/include/asm/tlb.h
 +++ b/arch/arm/include/asm/tlb.h
-@@ -204,6 +204,7 @@ static inline void __pte_free_tlb(struct mmu_gather *tlb, pgtable_t pte,
+@@ -204,6 +204,7 @@ static inline void __pte_free_tlb(struct
  
  #define pte_free_tlb(tlb, ptep, addr)	__pte_free_tlb(tlb, ptep, addr)
  #define pmd_free_tlb(tlb, pmdp, addr)	pmd_free((tlb)->mm, pmdp)
@@ -99,6 +94,3 @@ index 265f908..b509e44 100644
  
  #define tlb_migrate_finish(mm)		do { } while (0)
  
--- 
-1.7.9.5
-

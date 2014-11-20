@@ -22,11 +22,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  create mode 100644 tools/error_handling/README
  create mode 100755 tools/error_handling/netlink-user.c
 
-diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
-index 0d92c40..b41188b 100644
 --- a/arch/arm/mach-armadaxp/Makefile
 +++ b/arch/arm/mach-armadaxp/Makefile
-@@ -126,6 +126,7 @@ obj-$(CONFIG_MV_ETH_L2SEC)              += $(LSP_L2FW_DIR)/mv_eth_l2sec.o
+@@ -126,6 +126,7 @@ obj-$(CONFIG_MV_ETH_L2SEC)
  endif
  
  obj-$(CONFIG_MV_INCLUDE_GIG_ETH)        += $(LSP_PHY_DIR)/phy_sysfs.o
@@ -34,8 +32,6 @@ index 0d92c40..b41188b 100644
  
  obj-$(CONFIG_MV_USE_XOR_ENGINE) 	+= $(PLAT_DRIVERS)/mv_xor/
  obj-$(CONFIG_MV_CESA) 			+= $(PLAT_DRIVERS)/mv_cesa/
-diff --git a/arch/arm/mach-armadaxp/config/mvRules.mk b/arch/arm/mach-armadaxp/config/mvRules.mk
-index 4881d57..216f5bc 100644
 --- a/arch/arm/mach-armadaxp/config/mvRules.mk
 +++ b/arch/arm/mach-armadaxp/config/mvRules.mk
 @@ -100,6 +100,7 @@ endif
@@ -46,8 +42,6 @@ index 4881d57..216f5bc 100644
  
  # Environment components
  AXP_FAM_DIR	= armada_xp_family
-diff --git a/arch/arm/plat-armada/Kconfig b/arch/arm/plat-armada/Kconfig
-index 1c44d5a..5710b3b 100644
 --- a/arch/arm/plat-armada/Kconfig
 +++ b/arch/arm/plat-armada/Kconfig
 @@ -462,6 +462,13 @@ config	ERROR_HANDLING
@@ -64,19 +58,14 @@ index 1c44d5a..5710b3b 100644
  
  
  menu "Soc DMA accelerations"
-diff --git a/arch/arm/plat-armada/Makefile b/arch/arm/plat-armada/Makefile
-index ea19ed2..a5caaf7 100644
 --- a/arch/arm/plat-armada/Makefile
 +++ b/arch/arm/plat-armada/Makefile
-@@ -8,5 +8,4 @@ obj-$(CONFIG_SHEEVA_DEEP_IDLE)		+= cpuidle.o armada_suspend.o suspend.o
+@@ -8,5 +8,4 @@ obj-$(CONFIG_SHEEVA_DEEP_IDLE)		+= cpuid
  obj-$(CONFIG_HOTPLUG_CPU)		+= hotplug.o
  obj-$(CONFIG_PLAT_ARMADA)		+= pmu.o
  obj-$(CONFIG_PCI_MSI)			+= msi.o
 -obj-$(CONFIG_ERROR_HANDLING)		+=error_handling.o
  obj-$(CONFIG_CPU_FREQ_ARMADA_XP)	+= cpufreq.o
-diff --git a/arch/arm/plat-armada/error_handling.c b/arch/arm/plat-armada/error_handling.c
-deleted file mode 100644
-index b38dd13..0000000
 --- a/arch/arm/plat-armada/error_handling.c
 +++ /dev/null
 @@ -1,276 +0,0 @@
@@ -356,9 +345,6 @@ index b38dd13..0000000
 -        return 0;
 -}
 -postcore_initcall(errorhandling_notification_setup);
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_error/mv_error.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_error/mv_error.c
-new file mode 100644
-index 0000000..cd3c5a1
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_error/mv_error.c
 @@ -0,0 +1,452 @@
@@ -814,9 +800,6 @@ index 0000000..cd3c5a1
 +	netlink_unicast(nl_sk, skb, listener_pid, MSG_DONTWAIT);
 +}
 +#endif
-diff --git a/tools/error_handling/README b/tools/error_handling/README
-new file mode 100644
-index 0000000..ebb57eb
 --- /dev/null
 +++ b/tools/error_handling/README
 @@ -0,0 +1,10 @@
@@ -830,9 +813,6 @@ index 0000000..ebb57eb
 +2. Wait for messages from armadaxp_error_event in kernel.
 +3. Get the message, cast it to appropriate structure and analize the data sent from kernel.
 +.
-diff --git a/tools/error_handling/netlink-user.c b/tools/error_handling/netlink-user.c
-new file mode 100755
-index 0000000..5e1aba3
 --- /dev/null
 +++ b/tools/error_handling/netlink-user.c
 @@ -0,0 +1,105 @@
@@ -941,6 +921,3 @@ index 0000000..5e1aba3
 +}
 +    close(sock_fd);
 +}
--- 
-1.7.9.5
-

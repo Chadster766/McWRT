@@ -19,8 +19,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/plat-armada/mv_hal/uart/mvUart.h          |    6 +-
  12 files changed, 207 insertions(+), 69 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
-index 0090672..2d95e70 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
 @@ -625,7 +625,14 @@ MV_VOID mvBoardReset(MV_VOID)
@@ -53,7 +51,7 @@ index 0090672..2d95e70 100644
  }
  
  /*******************************************************************************/
-@@ -1806,6 +1818,11 @@ MV_STATUS mvBoardCpuCoresNumSet(MV_U8 val)
+@@ -1806,6 +1818,11 @@ MV_STATUS mvBoardCpuCoresNumSet(MV_U8 va
  	sar = mvBoardTwsiSatRGet(3, 0);
  	if ((MV_8)MV_ERROR == (MV_8)sar)
  		return MV_ERROR;
@@ -123,7 +121,7 @@ index 0090672..2d95e70 100644
  MV_STATUS mvBoardDramEccSet(MV_U16 conf)
  {
  	if (MV_OK != mvBoardTwsiSatRSet(2, 1, conf)) {
-@@ -2066,7 +2125,7 @@ MV_BOOL mvBoardIsPexModuleConnected(void)
+@@ -2066,7 +2125,7 @@ MV_BOOL mvBoardIsPexModuleConnected(void
  {
  	MV_U32 boardId = mvBoardIdGet();
  
@@ -132,7 +130,7 @@ index 0090672..2d95e70 100644
  		DB(mvOsPrintf("mvBoardIsPexModuleConnected: Unsupported board!\n"));
  	else if (BOARD_INFO(boardId)->pBoardModTypeValue->boardOtherMod & MV_BOARD_PEX)
  		return MV_TRUE;
-@@ -2094,7 +2153,7 @@ MV_BOOL mvBoardIsLvdsModuleConnected(void)
+@@ -2094,7 +2153,7 @@ MV_BOOL mvBoardIsLvdsModuleConnected(voi
  {
  	MV_U32 boardId = mvBoardIdGet();
  
@@ -141,7 +139,7 @@ index 0090672..2d95e70 100644
  		DB(mvOsPrintf("mvBoardIsLvdsModuleConnected: Unsupported board!\n"));
  	else if (BOARD_INFO(boardId)->pBoardModTypeValue->boardOtherMod & MV_BOARD_LVDS)
  		return MV_TRUE;
-@@ -2122,7 +2181,7 @@ MV_BOOL mvBoardIsLcdDviModuleConnected(void)
+@@ -2122,7 +2181,7 @@ MV_BOOL mvBoardIsLcdDviModuleConnected(v
  {
  	MV_U32 boardId = mvBoardIdGet();
  
@@ -150,7 +148,7 @@ index 0090672..2d95e70 100644
  		DB(mvOsPrintf("mvBoardIsLcdDviModuleConnected: Unsupported board!\n"));
  	else if (BOARD_INFO(boardId)->pBoardModTypeValue->boardMppMod == MV_BOARD_LCD_DVI)
  		return MV_TRUE;
-@@ -2151,7 +2210,7 @@ MV_BOOL mvBoardIsGMIIModuleConnected(void)
+@@ -2151,7 +2210,7 @@ MV_BOOL mvBoardIsGMIIModuleConnected(voi
  {
  	MV_U32 boardId = mvBoardIdGet();
  
@@ -222,8 +220,6 @@ index 0090672..2d95e70 100644
  	}
  
  	return &BOARD_INFO(boardId)->pBoardSerdesConfigValue[serdesCfg];
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
-index cd86135..8b652f5 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.c
 @@ -268,9 +268,9 @@ MV_BOARD_INFO db88f78XX0Info = {
@@ -238,7 +234,7 @@ index cd86135..8b652f5 100644
  	/* {{MV_BOARD_DEV_CLASS	devClass, MV_U8	twsiDevAddr, MV_U8 twsiDevAddrType}} */
  	{BOARD_DEV_TWSI_SATR, 0x4C, ADDR7_BIT},
  	{BOARD_DEV_TWSI_SATR, 0x4D, ADDR7_BIT},
-@@ -286,7 +286,7 @@ MV_BOARD_MAC_INFO db88f78XX0rev2InfoBoardMacInfo[] = {
+@@ -286,7 +286,7 @@ MV_BOARD_MAC_INFO db88f78XX0rev2InfoBoar
  	{BOARD_MAC_SPEED_AUTO, 0x1B,0x1800}  /* Port 3 */
  };
  
@@ -247,7 +243,7 @@ index cd86135..8b652f5 100644
  	{
  		.boardMppMod		= MV_BOARD_AUTO,
  		.boardOtherMod		= MV_BOARD_NONE
-@@ -367,13 +367,14 @@ MV_BOARD_MPP_INFO db88f78XX0rev2InfoBoardMppConfigValue[] = {
+@@ -367,13 +367,14 @@ MV_BOARD_MPP_INFO db88f78XX0rev2InfoBoar
  	} },
  };
  
@@ -280,7 +276,7 @@ index cd86135..8b652f5 100644
  	.ledsPolarity			= 0,
  
  	/* PMU Power */
-@@ -497,7 +498,7 @@ MV_BOARD_MPP_INFO rd78460nasInfoBoardMppConfigValue[] = {
+@@ -497,7 +498,7 @@ MV_BOARD_MPP_INFO rd78460nasInfoBoardMpp
  	} }
  };
  
@@ -289,8 +285,6 @@ index cd86135..8b652f5 100644
  	{MV_TRUE, 0x00226001, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED, PEX_BUS_MODE_X4, 0x00000030},	/* Default */
  	{MV_TRUE, 0x43320301, 0x11111111, PEX_BUS_MODE_X1, PEX_BUS_DISABLED, PEX_BUS_MODE_X4, 0x00000030},	/* Switch module */
  
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
-index 197a352..d4c268f 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvSpec.h
 @@ -147,7 +147,7 @@ MPP#	NAME			IN/OUT
@@ -302,8 +296,6 @@ index 197a352..d4c268f 100644
  #define DB_88F78XX0_REV2_MPP56_63		0x11111101 /* bits[7:4] = 0x1 to enable PM for CPU2/3 */
  #define DB_88F78XX0_REV2_MPP64_67		0x00002111
  
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
-index 183ad32..0e1a026 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
 @@ -1,3 +1,10 @@
@@ -317,7 +309,7 @@ index 183ad32..0e1a026 100644
  /*******************************************************************************
  Copyright (C) Marvell International Ltd. and its affiliates
  
-@@ -123,15 +130,16 @@ MV_BIOS_MODE bios_modes[BIOS_MODES_NUM] = {
+@@ -123,15 +130,16 @@ MV_BIOS_MODE bios_modes[BIOS_MODES_NUM]
         {"78480", 0x16, 0x7846, 0x3, 0x2, 0x0, 0x5, 0x0, 0x3, 0x2, 0x0}
  };
  #else
@@ -355,7 +347,7 @@ index 183ad32..0e1a026 100644
  #ifndef MV88F78X60_Z1
  	MV_REG_BIT_SET(PUP_EN_REG,0x17); /* Enable GBE0, GBE1, LCD and NFC PUP */
  #endif
-@@ -1010,6 +1025,23 @@ MV_STATUS mvCtrlModelRevNameGet(char *pNameBuff)
+@@ -1010,6 +1025,23 @@ MV_STATUS mvCtrlModelRevNameGet(char *pN
  	case MV_78460_Z1_ID:
  		mvOsSPrintf(pNameBuff, "%s", MV_78460_Z1_NAME);
  		break;
@@ -462,8 +454,6 @@ index 183ad32..0e1a026 100644
  		}
  
  		/*Step 9 - Init additional registers */
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
-index 8025060..4ce9ca3 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
 @@ -161,6 +161,8 @@ typedef struct _boardSerdesConf {
@@ -484,8 +474,6 @@ index 8025060..4ce9ca3 100644
  } MV_BIOS_MODE;
  
  extern MV_BIOS_MODE bios_modes[];
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
-index 19a85e2..ebc21ac 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
 @@ -343,7 +343,6 @@ extern "C" {
@@ -496,8 +484,6 @@ index 19a85e2..ebc21ac 100644
  
  /* SYSRSTn Length Counter */
  #define SYSRST_LENGTH_COUNTER_REG		0x18250
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
-index afe68b1..f5e3b51 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
 @@ -233,14 +233,14 @@ extern "C" {
@@ -517,11 +503,9 @@ index afe68b1..f5e3b51 100644
  #define MV_78130_ETH_MAX_PORT			3
  #define MV_78460_ETH_MAX_PORT			4
  
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
-index d3d0398..6a6caa3 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
-@@ -264,6 +264,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -264,6 +264,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #define SCR_PEX1_4BY1_OFFS			8
  #define SCR_PEX1_4BY1_MASK			(1 << SCR_PEX1_4BY1_OFFS)
  
@@ -534,11 +518,9 @@ index d3d0398..6a6caa3 100644
  /* LVDS_PADS_CTRL_REG fields */
  #define LVDS_PADS_CONF_PD_OFFS(idx)		(16 + idx)
  #define LVDS_PADS_CONF_PD_MASK(idx)		(1 << (16 + idx))
-diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
-index cbf855a..7322744 100644
 --- a/arch/arm/mach-armadaxp/core.c
 +++ b/arch/arm/mach-armadaxp/core.c
-@@ -315,15 +315,6 @@ static int __init noWFI_setup(char *__unused)
+@@ -315,15 +315,6 @@ static int __init noWFI_setup(char *__un
  
  __setup("noWFI", noWFI_setup);
  
@@ -593,8 +575,6 @@ index cbf855a..7322744 100644
          /* init the Board environment */
         	mvBoardEnvInit();
  
-diff --git a/arch/arm/plat-armada/common/mvDeviceId.h b/arch/arm/plat-armada/common/mvDeviceId.h
-index a5b9fe1..90e9b56 100644
 --- a/arch/arm/plat-armada/common/mvDeviceId.h
 +++ b/arch/arm/plat-armada/common/mvDeviceId.h
 @@ -286,6 +286,23 @@ extern "C" {
@@ -621,8 +601,6 @@ index a5b9fe1..90e9b56 100644
  #ifdef __cplusplus
  }
  #endif	/* __cplusplus */
-diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h b/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h
-index 73a4a3d..f883d84 100644
 --- a/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h
 +++ b/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h
 @@ -173,7 +173,7 @@ extern "C" {
@@ -644,8 +622,6 @@ index 73a4a3d..f883d84 100644
  /* PCI Express Control Register */
  
  /* PEX_CTRL_REG (PXCR) */
-diff --git a/arch/arm/plat-armada/mv_hal/uart/mvUart.h b/arch/arm/plat-armada/mv_hal/uart/mvUart.h
-index 07cb5fb..b5ce5af 100644
 --- a/arch/arm/plat-armada/mv_hal/uart/mvUart.h
 +++ b/arch/arm/plat-armada/mv_hal/uart/mvUart.h
 @@ -100,13 +100,9 @@ extern "C" {
@@ -663,6 +639,3 @@ index 07cb5fb..b5ce5af 100644
  
  /* aliases - for registers which has the same offsets */
  #define thr rbr
--- 
-1.7.9.5
-

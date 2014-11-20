@@ -8,8 +8,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  .../mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c      |  159 +++++++++-----------
  1 file changed, 75 insertions(+), 84 deletions(-)
 
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c
-index 69e5171..308fa1b 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c
 @@ -16,11 +16,9 @@
@@ -26,7 +24,7 @@ index 69e5171..308fa1b 100644
  #define CESA_1    1
  /* for future - handle by CPU */
  #define CESA_NONE 2
-@@ -106,15 +104,6 @@ INLINE void  nfp_sec_pkt_info_free(struct eth_pbuf *pkt, int inPort)
+@@ -106,15 +104,6 @@ INLINE void  nfp_sec_pkt_info_free(struc
  
  }
  
@@ -42,7 +40,7 @@ index 69e5171..308fa1b 100644
  void printBufVirtPtr(MV_BUF_INFO *pBuf)
  {
  	int i;
-@@ -273,9 +262,9 @@ static L2FW_RULE *l2fw_lookup(MV_U32 srcIP, MV_U32 dstIP)
+@@ -273,9 +262,9 @@ static L2FW_RULE *l2fw_lookup(MV_U32 src
  int l2fw_set_cesa_chan(int port, int cesaChan)
  {
  	struct eth_port *pp;
@@ -92,7 +90,7 @@ index 69e5171..308fa1b 100644
  
  	MV_U32 hash = mv_jhash_3words(srcIP, dstIP, (MV_U32) 0, l2fw_jhash_iv);
  	hash &= L2FW_HASH_MASK;
-@@ -345,10 +338,13 @@ MV_STATUS l2fw_add(MV_U32 srcIP, MV_U32 dstIP, int port)
+@@ -345,10 +338,13 @@ MV_STATUS l2fw_add(MV_U32 srcIP, MV_U32
  		return MV_ERROR;
  	}
  
@@ -178,7 +176,7 @@ index 69e5171..308fa1b 100644
  static int mv_ctrl_txdone = CONFIG_MV_ETH_TXDONE_COAL_PKTS;
  static void dump_xor(void)
  {
-@@ -555,7 +535,7 @@ static int mv_eth_poll_l2fw(struct napi_struct *napi, int budget)
+@@ -555,7 +535,7 @@ static int mv_eth_poll_l2fw(struct napi_
  	struct eth_port *pp = MV_ETH_PRIV(napi->dev);
  	read_lock(&pp->rwlock);
  
@@ -187,7 +185,7 @@ index 69e5171..308fa1b 100644
  
  	/* Read cause register */
  	causeRxTx = MV_REG_READ(NETA_INTR_NEW_CAUSE_REG(pp->port)) &
-@@ -612,7 +592,7 @@ static int mv_eth_poll_l2fw(struct napi_struct *napi, int budget)
+@@ -612,7 +592,7 @@ static int mv_eth_poll_l2fw(struct napi_
  		causeRxTx = 0;
  
  		napi_complete(napi);
@@ -196,7 +194,7 @@ index 69e5171..308fa1b 100644
  
  		local_irq_save(flags);
  		MV_REG_WRITE(NETA_INTR_NEW_MASK_REG(pp->port),
-@@ -633,44 +613,47 @@ void mv_eth_set_l2fw(int cmd, int rx_port, int out_tx_port)
+@@ -633,44 +613,47 @@ void mv_eth_set_l2fw(int cmd, int rx_por
  {
  	struct eth_port *pp;
  	struct net_device *dev;
@@ -290,7 +288,7 @@ index 69e5171..308fa1b 100644
  	printk(KERN_INFO "MV_16BIT_BE(pIpHdr->totalLength)=%d  in %s\n", MV_16BIT_BE(pIpHdr->totalLength), __func__);
  	printk(KERN_INFO "pIpHdr->protocol=%d \n", pIpHdr->protocol);
  }
-@@ -1098,7 +1085,7 @@ inline MV_STATUS mvSecEspProcess_1(struct eth_pbuf *pPkt, MV_PKT_INFO *pPktInfo,
+@@ -1098,7 +1085,7 @@ inline MV_STATUS mvSecEspProcess_1(struc
  	printCesaMbuf(pCesaMbuf);
  #endif
  	disable_irq(CESA_IRQ(channel));
@@ -299,7 +297,7 @@ index 69e5171..308fa1b 100644
  	status = mvCesaAction(channel, pCesaCmd);
  	enable_irq(CESA_IRQ(channel));
  	if (status != MV_OK) {
-@@ -1337,6 +1324,7 @@ inline int mv_eth_rx_l2f(struct eth_port *pp, int rx_todo, int rxq)
+@@ -1337,6 +1324,7 @@ inline int mv_eth_rx_l2f(struct eth_port
  	MV_IP_HEADER *pIph = NULL;
  	MV_U8 *pData;
  	int	ipOffset;
@@ -307,7 +305,7 @@ index 69e5171..308fa1b 100644
  	rx_done = mvNetaRxqBusyDescNumGet(pp->port, rxq);
  	mvOsCacheIoSync();
  	if (rx_todo > rx_done)
-@@ -1392,7 +1380,10 @@ inline int mv_eth_rx_l2f(struct eth_port *pp, int rx_todo, int rxq)
+@@ -1392,7 +1380,10 @@ inline int mv_eth_rx_l2f(struct eth_port
  		}
  #ifdef CONFIG_MV_ETH_L2FW_DEBUG
  		if (pIph) {
@@ -319,7 +317,7 @@ index 69e5171..308fa1b 100644
  		} else
  			printk(KERN_INFO "pIph is NULL in %s\n", __func__);
  #endif
-@@ -1419,8 +1410,8 @@ inline int mv_eth_rx_l2f(struct eth_port *pp, int rx_todo, int rxq)
+@@ -1419,8 +1410,8 @@ inline int mv_eth_rx_l2f(struct eth_port
  		case TX_AS_IS:
  					if (espEnabled) {
  						spin_lock(&cesa_lock[pp->cesaChan]);
@@ -330,7 +328,7 @@ index 69e5171..308fa1b 100644
  					}
  				else
  					status = mv_eth_l2fw_tx(pkt, new_pp, 0, rx_desc);
-@@ -1488,7 +1479,7 @@ static irqreturn_t nfp_sec_interrupt_handler_0(int irq, void *arg)
+@@ -1488,7 +1479,7 @@ static irqreturn_t nfp_sec_interrupt_han
  	status = mvCesaReadyGet(chan, &result);
  	if (status != MV_OK)
  		break;
@@ -339,7 +337,7 @@ index 69e5171..308fa1b 100644
  	nfp_sec_complete_out((unsigned long)((MV_NFP_SEC_CESA_PRIV_L2FW *)result.pReqPrv));
  	}
  	return IRQ_HANDLED;
-@@ -1505,7 +1496,7 @@ static irqreturn_t nfp_sec_interrupt_handler_1(int irq, void *arg)
+@@ -1505,7 +1496,7 @@ static irqreturn_t nfp_sec_interrupt_han
  	status = mvCesaReadyGet(chan, &result);
  	if (status != MV_OK)
  		break;
@@ -348,6 +346,3 @@ index 69e5171..308fa1b 100644
  	nfp_sec_complete_out((unsigned long)((MV_NFP_SEC_CESA_PRIV_L2FW *)result.pReqPrv));
  	}
  
--- 
-1.7.9.5
-

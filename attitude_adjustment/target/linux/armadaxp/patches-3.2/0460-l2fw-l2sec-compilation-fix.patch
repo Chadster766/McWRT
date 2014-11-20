@@ -14,8 +14,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  .../mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.h     |   29 +++++++++++-
  5 files changed, 157 insertions(+), 19 deletions(-)
 
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/l2fw_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/l2fw_sysfs.c
-index 4e8c2b7..cddfac5 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/l2fw_sysfs.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/l2fw_sysfs.c
 @@ -1,4 +1,30 @@
@@ -50,8 +48,6 @@ index 4e8c2b7..cddfac5 100644
  #include <linux/module.h>
  #include <linux/kernel.h>
  #include <linux/types.h>
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c
-index 3a51ff9..4439578 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.c
 @@ -1,5 +1,33 @@
@@ -89,7 +85,7 @@ index 3a51ff9..4439578 100644
  
  #include "xor/mvXor.h"
  #include "xor/mvXorRegs.h"
-@@ -373,7 +401,7 @@ static int mv_eth_poll_l2fw(struct napi_struct *napi, int budget)
+@@ -373,7 +401,7 @@ static int mv_eth_poll_l2fw(struct napi_
  		MV_REG_WRITE(NETA_INTR_MISC_CAUSE_REG(pp->port), 0);
  	}
  
@@ -98,7 +94,7 @@ index 3a51ff9..4439578 100644
  #ifdef CONFIG_MV_ETH_TXDONE_ISR
  	if (causeRxTx & MV_ETH_TXDONE_INTR_MASK) {
  		/* TX_DONE process */
-@@ -420,7 +448,7 @@ static int mv_eth_poll_l2fw(struct napi_struct *napi, int budget)
+@@ -420,7 +448,7 @@ static int mv_eth_poll_l2fw(struct napi_
  
  		local_irq_restore(flags);
  	}
@@ -107,7 +103,7 @@ index 3a51ff9..4439578 100644
  
  	read_unlock(&pp->rwlock);
  
-@@ -666,14 +694,16 @@ static inline MV_STATUS mv_eth_l2fw_tx(struct eth_pbuf *pkt, struct eth_port *pp
+@@ -666,14 +694,16 @@ static inline MV_STATUS mv_eth_l2fw_tx(s
  	struct neta_tx_desc *tx_desc;
  	u32 tx_cmd = 0;
  	struct tx_queue *txq_ctrl;
@@ -126,7 +122,7 @@ index 3a51ff9..4439578 100644
  
  	if (txq_ctrl->txq_count >= mv_ctrl_txdone)
  		mv_eth_txq_done(pp, txq_ctrl);
-@@ -681,7 +711,7 @@ static inline MV_STATUS mv_eth_l2fw_tx(struct eth_pbuf *pkt, struct eth_port *pp
+@@ -681,7 +711,7 @@ static inline MV_STATUS mv_eth_l2fw_tx(s
  	tx_desc = mv_eth_tx_desc_get(txq_ctrl, 1);
  	if (tx_desc == NULL) {
  
@@ -135,7 +131,7 @@ index 3a51ff9..4439578 100644
  
  		read_unlock(&pp->rwlock);
  		/* No resources: Drop */
-@@ -710,7 +740,7 @@ static inline MV_STATUS mv_eth_l2fw_tx(struct eth_pbuf *pkt, struct eth_port *pp
+@@ -710,7 +740,7 @@ static inline MV_STATUS mv_eth_l2fw_tx(s
  		if (!xorReady()) {
  			mvOsPrintf("MV_DROPPED in %s\n", __func__);
  
@@ -144,7 +140,7 @@ index 3a51ff9..4439578 100644
  
  			read_unlock(&pp->rwlock);
  			return MV_DROPPED;
-@@ -718,7 +748,7 @@ static inline MV_STATUS mv_eth_l2fw_tx(struct eth_pbuf *pkt, struct eth_port *pp
+@@ -718,7 +748,7 @@ static inline MV_STATUS mv_eth_l2fw_tx(s
  	}
  	mvNetaTxqPendDescAdd(pp->port, pp->txp, txq, 1);
  
@@ -153,8 +149,6 @@ index 3a51ff9..4439578 100644
  
  	read_unlock(&pp->rwlock);
  
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h
-index c25ef58..f2836ce 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2fw.h
 @@ -1,4 +1,30 @@
@@ -189,8 +183,6 @@ index c25ef58..f2836ce 100644
  
  #ifndef L2FW_MV_ETH_L2FW_H
  #define L2FW_MV_ETH_L2FW_H
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.c
-index 09ab2e7..09148eb 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.c
 @@ -1,4 +1,30 @@
@@ -225,7 +217,7 @@ index 09ab2e7..09148eb 100644
  
  #include "mv_eth_l2sec.h"
  
-@@ -7,6 +33,7 @@ static inline MV_STATUS mv_eth_cesa_l2fw_tx(struct eth_pbuf *pkt, struct eth_por
+@@ -7,6 +33,7 @@ static inline MV_STATUS mv_eth_cesa_l2fw
  	struct neta_tx_desc *tx_desc;
  	u32 tx_cmd = 0;
  	struct tx_queue *txq_ctrl;
@@ -233,7 +225,7 @@ index 09ab2e7..09148eb 100644
  
  	/* assigning different txq for each rx port , to avoid waiting on the
  	same txq lock when traffic on several rx ports are destined to the same
-@@ -14,7 +41,7 @@ static inline MV_STATUS mv_eth_cesa_l2fw_tx(struct eth_pbuf *pkt, struct eth_por
+@@ -14,7 +41,7 @@ static inline MV_STATUS mv_eth_cesa_l2fw
  	int txq = 0;
  	txq_ctrl = &pp->txq_ctrl[pp->txp * CONFIG_MV_ETH_TXQ + txq];
  
@@ -242,7 +234,7 @@ index 09ab2e7..09148eb 100644
  
  	if (txq_ctrl->txq_count >= mv_ctrl_txdone)
  		mv_eth_txq_done(pp, txq_ctrl);
-@@ -23,7 +50,7 @@ static inline MV_STATUS mv_eth_cesa_l2fw_tx(struct eth_pbuf *pkt, struct eth_por
+@@ -23,7 +50,7 @@ static inline MV_STATUS mv_eth_cesa_l2fw
  	if (tx_desc == NULL) {
  		/* printk("tx_desc == NULL pp->port=%d in %s\n", pp->port, ,__func__); */
  
@@ -251,7 +243,7 @@ index 09ab2e7..09148eb 100644
  
  		/* No resources: Drop */
  		pp->dev->stats.tx_dropped++;
-@@ -45,7 +72,7 @@ static inline MV_STATUS mv_eth_cesa_l2fw_tx(struct eth_pbuf *pkt, struct eth_por
+@@ -45,7 +72,7 @@ static inline MV_STATUS mv_eth_cesa_l2fw
  	mv_eth_tx_desc_flush(tx_desc);
  	mvNetaTxqPendDescAdd(pp->port, pp->txp, 0, 1);
  
@@ -260,7 +252,7 @@ index 09ab2e7..09148eb 100644
  
  	return MV_OK;
  }
-@@ -98,15 +125,17 @@ static inline void nfp_sec_complete_out(unsigned long data)
+@@ -98,15 +125,17 @@ static inline void nfp_sec_complete_out(
  
  int l2fw_set_cesa_chan(int port, int cesaChan)
  {
@@ -282,8 +274,6 @@ index 09ab2e7..09148eb 100644
  	cesaChanPort[port] = cesaChan;
  	return 0;
  }
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.h
-index f77e7fe..81b0ec2 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.h
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/l2fw/mv_eth_l2sec.h
 @@ -1,9 +1,36 @@
@@ -324,6 +314,3 @@ index f77e7fe..81b0ec2 100644
  #include "cesa/mvCesa.h"
  
  #include "mv_neta/l2fw/mv_eth_l2fw.h"
--- 
-1.7.9.5
-

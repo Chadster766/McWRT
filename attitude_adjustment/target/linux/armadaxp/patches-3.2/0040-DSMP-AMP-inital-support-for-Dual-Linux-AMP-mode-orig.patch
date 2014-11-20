@@ -35,11 +35,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  create mode 100644 include/linux/mv_neta.h
  create mode 100644 tools/amp/amp_make.pl
 
-diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
-index 7a5d0d2..650de5d 100644
 --- a/arch/arm/mach-armadaxp/Makefile
 +++ b/arch/arm/mach-armadaxp/Makefile
-@@ -217,6 +217,8 @@ armadaxp-$(CONFIG_MV_INCLUDE_PEX)	+= pex.o
+@@ -217,6 +217,8 @@ armadaxp-$(CONFIG_MV_INCLUDE_PEX)	+= pex
  armadaxp-$(CONFIG_FEROCEON_PROC) 	+= $(PLAT_DRIVERS)/mv_proc/proc.o
  armadaxp-$(CONFIG_MV_DBG_TRACE) 	+= dbg-trace.o
  armadaxp-$(CONFIG_SMP)			+= platsmp.o headsmp.o
@@ -48,9 +46,6 @@ index 7a5d0d2..650de5d 100644
  armadaxp-$(CONFIG_PROC_FS)		+= dump_cp15_regs.o
  obj-$(CONFIG_FB_DOVE_CLCD)		+= clcd.o
  obj-$(CONFIG_PM)			+= pm.o
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
-new file mode 100644
-index 0000000..264d4f1
 --- /dev/null
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.c
 @@ -0,0 +1,114 @@
@@ -168,9 +163,6 @@ index 0000000..264d4f1
 +	MV_REG_BYTE_WRITE(MV_SEMA_REG_BASE+(num), 0xFF);
 +	return MV_TRUE;
 +}
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h
-new file mode 100644
-index 0000000..ff002dd
 --- /dev/null
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvSemaphore.h
 @@ -0,0 +1,84 @@
@@ -258,9 +250,6 @@ index 0000000..ff002dd
 +MV_BOOL mvSemaUnlock(MV_32 num);
 +
 +#endif
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.c
-new file mode 100644
-index 0000000..8500a1f
 --- /dev/null
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.c
 @@ -0,0 +1,273 @@
@@ -538,9 +527,6 @@ index 0000000..8500a1f
 +	mvOsPrintf("\n");
 +}
 \ No newline at end of file
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.h
-new file mode 100644
-index 0000000..87ffb6b
 --- /dev/null
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvUnitMap.h
 @@ -0,0 +1,150 @@
@@ -694,10 +680,6 @@ index 0000000..87ffb6b
 +#endif //CONFIG_MV_AMP_ENABLE
 +
 +#endif //mvUnitMap_h
-diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
-old mode 100644
-new mode 100755
-index ae73ddb..aab118b
 --- a/arch/arm/mach-armadaxp/core.c
 +++ b/arch/arm/mach-armadaxp/core.c
 @@ -15,6 +15,7 @@
@@ -724,7 +706,7 @@ index ae73ddb..aab118b
  
  /* for debug putstr */
  static char arr[256];
-@@ -118,6 +121,7 @@ MV_U8 mvMacAddr[CONFIG_MV_ETH_PORTS_NUM][6];
+@@ -118,6 +121,7 @@ MV_U8 mvMacAddr[CONFIG_MV_ETH_PORTS_NUM]
  MV_U16 mvMtu[CONFIG_MV_ETH_PORTS_NUM] = {0};
  #endif
  
@@ -732,7 +714,7 @@ index ae73ddb..aab118b
  /*
   * Helpers to get DDR bank info
   */
-@@ -338,6 +342,46 @@ static int __init nfcConfig_setup(char *s)
+@@ -338,6 +342,46 @@ static int __init nfcConfig_setup(char *
  }
  __setup("nfcConfig=", nfcConfig_setup);
  
@@ -779,7 +761,7 @@ index ae73ddb..aab118b
  void __init armadaxp_setup_cpu_mbus(void)
  {
  	void __iomem *addr;
-@@ -470,11 +514,61 @@ static struct platform_device aurora_uart0 = {
+@@ -470,11 +514,61 @@ static struct platform_device aurora_uar
  	.num_resources		= ARRAY_SIZE(aurora_uart0_resources),
  };
  
@@ -844,7 +826,7 @@ index ae73ddb..aab118b
  }
  
  /********
-@@ -514,6 +608,27 @@ static struct platform_device mv_sdio_plat = {
+@@ -514,6 +608,27 @@ static struct platform_device mv_sdio_pl
  	.num_resources	= ARRAY_SIZE(mvsdio_resources),
  	.resource	= mvsdio_resources,
  };
@@ -1021,7 +1003,7 @@ index ae73ddb..aab118b
  #endif
  
  	return;
-@@ -1336,7 +1457,7 @@ void __init axp_tag_fixup_mem32(struct machine_desc *mdesc, struct tag *t,
+@@ -1336,7 +1457,7 @@ void __init axp_tag_fixup_mem32(struct m
  
  MACHINE_START(ARMADA_XP_DB, "Marvell Armada XP Development Board")
  	/* MAINTAINER("MARVELL") */
@@ -1048,8 +1030,6 @@ index ae73ddb..aab118b
  
  	/* At this point, the CPU windows are configured according to default definitions in mvSysHwConfig.h */
  	/* and cpuAddrWinMap table in mvCpuIf.c. Now it's time to change defaults for each platform.         */
-diff --git a/arch/arm/mach-armadaxp/flashmap.c b/arch/arm/mach-armadaxp/flashmap.c
-index 3d48279..1169ee3 100644
 --- a/arch/arm/mach-armadaxp/flashmap.c
 +++ b/arch/arm/mach-armadaxp/flashmap.c
 @@ -43,6 +43,7 @@ disclaimer.
@@ -1070,8 +1050,6 @@ index 3d48279..1169ee3 100644
  	mapsNum = flashInfoFill();
  	DB(printk("\nINFO: flash_map_init - detected %d devices\n",  mapsNum));
  
-diff --git a/arch/arm/mach-armadaxp/include/mach/armadaxp.h b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
-index 9fce9a1..22439b2 100644
 --- a/arch/arm/mach-armadaxp/include/mach/armadaxp.h
 +++ b/arch/arm/mach-armadaxp/include/mach/armadaxp.h
 @@ -187,7 +187,7 @@
@@ -1083,8 +1061,6 @@ index 9fce9a1..22439b2 100644
  #define DDR_VIRT_BASE			(INTER_REGS_BASE | 0x00000)
  #define AXP_BRIDGE_VIRT_BASE		(INTER_REGS_BASE | 0x20000)
  #define AXP_BRIDGE_PHYS_BASE		(INTER_REGS_PHYS_BASE | 0x20000)
-diff --git a/arch/arm/mach-armadaxp/include/mach/debug-macro.S b/arch/arm/mach-armadaxp/include/mach/debug-macro.S
-index 2db307c..db547b6 100644
 --- a/arch/arm/mach-armadaxp/include/mach/debug-macro.S
 +++ b/arch/arm/mach-armadaxp/include/mach/debug-macro.S
 @@ -13,7 +13,11 @@
@@ -1100,8 +1076,6 @@ index 2db307c..db547b6 100644
  	.endm
  
  #define UART_SHIFT	2
-diff --git a/arch/arm/mach-armadaxp/include/mach/memory.h b/arch/arm/mach-armadaxp/include/mach/memory.h
-index 4fb5666..fbd93c2 100644
 --- a/arch/arm/mach-armadaxp/include/mach/memory.h
 +++ b/arch/arm/mach-armadaxp/include/mach/memory.h
 @@ -5,7 +5,11 @@
@@ -1116,8 +1090,6 @@ index 4fb5666..fbd93c2 100644
  
  /* #define __virt_to_bus(x)	__virt_to_phys(x) */
  /* #define __bus_to_virt(x)	__phys_to_virt(x) */
-diff --git a/arch/arm/mach-armadaxp/include/mach/smp.h b/arch/arm/mach-armadaxp/include/mach/smp.h
-index 953f741..cc9a141 100644
 --- a/arch/arm/mach-armadaxp/include/mach/smp.h
 +++ b/arch/arm/mach-armadaxp/include/mach/smp.h
 @@ -3,6 +3,10 @@
@@ -1140,8 +1112,6 @@ index 953f741..cc9a141 100644
  
 -#endif
 +#endif //ASMARM_ARCH_SMP_H
-diff --git a/arch/arm/mach-armadaxp/include/mach/uncompress.h b/arch/arm/mach-armadaxp/include/mach/uncompress.h
-index 78b9d08..ca4313f 100644
 --- a/arch/arm/mach-armadaxp/include/mach/uncompress.h
 +++ b/arch/arm/mach-armadaxp/include/mach/uncompress.h
 @@ -8,8 +8,13 @@
@@ -1160,8 +1130,6 @@ index 78b9d08..ca4313f 100644
  
  #define LSR_THRE	0x20
  
-diff --git a/arch/arm/mach-armadaxp/irq.c b/arch/arm/mach-armadaxp/irq.c
-index 223dcf6..15e52c1 100644
 --- a/arch/arm/mach-armadaxp/irq.c
 +++ b/arch/arm/mach-armadaxp/irq.c
 @@ -16,10 +16,12 @@
@@ -1177,7 +1145,7 @@ index 223dcf6..15e52c1 100644
  
  unsigned int  irq_int_type[NR_IRQS];
  static DEFINE_SPINLOCK(irq_controller_lock);
-@@ -60,6 +62,7 @@ MV_REG_WRITE(CPU_CF_LOCAL_MASK_REG(cpu), val);
+@@ -60,6 +62,7 @@ MV_REG_WRITE(CPU_CF_LOCAL_MASK_REG(cpu),
  #ifdef CONFIG_SMP
  if (cpu > 0) { /*disabled for both cpu */
  	val = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_MP));
@@ -1194,7 +1162,7 @@ index 223dcf6..15e52c1 100644
  
  void axp_irq_mask(struct irq_data *d)
  {	
-@@ -139,7 +142,12 @@ if ((irq >= IRQ_AURORA_GPIO_START) && (irq < IRQ_AURORA_MSI_START)) {
+@@ -139,7 +142,12 @@ if ((irq >= IRQ_AURORA_GPIO_START) && (i
  } else
  	addr = CPU_INT_SOURCE_CONTROL_REG(irq);
  
@@ -1208,7 +1176,7 @@ index 223dcf6..15e52c1 100644
  temp = MV_REG_READ(addr);
  
  if ((irq >= IRQ_AURORA_GPIO_START) && (irq < IRQ_AURORA_MSI_START)) {
-@@ -149,13 +157,18 @@ if ((irq >= IRQ_AURORA_GPIO_START) && (irq < IRQ_AURORA_MSI_START)) {
+@@ -149,13 +157,18 @@ if ((irq >= IRQ_AURORA_GPIO_START) && (i
  }
  
  if (irq <= max_per_cpu_irq) // per CPU
@@ -1229,7 +1197,7 @@ index 223dcf6..15e52c1 100644
  }
  
  void axp_irq_unmask(struct irq_data *d)
-@@ -180,8 +193,11 @@ if ((irq >= IRQ_AURORA_GPIO_START) && (irq < IRQ_AURORA_MSI_START)) {
+@@ -180,8 +193,11 @@ if ((irq >= IRQ_AURORA_GPIO_START) && (i
  		addr = CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_IN_DRBL_HIGH);
  } else
  	addr = CPU_INT_SOURCE_CONTROL_REG(irq);
@@ -1267,7 +1235,7 @@ index 223dcf6..15e52c1 100644
  }
  
  
-@@ -308,7 +329,6 @@ for (irq = 0; irq < IRQ_AURORA_MSI_START ; irq++) {
+@@ -308,7 +329,6 @@ for (irq = 0; irq < IRQ_AURORA_MSI_START
  int pmu_request_irq(int irq, irq_handler_t handler)
  {
  	int i;
@@ -1275,8 +1243,6 @@ index 223dcf6..15e52c1 100644
  	int ret = request_irq(irq, handler, IRQF_DISABLED | IRQF_NOBALANCING, "armpmu", NULL);
  	if (!ret) {
  		for_each_online_cpu(i) {
-diff --git a/arch/arm/mach-armadaxp/pex.c b/arch/arm/mach-armadaxp/pex.c
-index f7158c4..6dee482 100644
 --- a/arch/arm/mach-armadaxp/pex.c
 +++ b/arch/arm/mach-armadaxp/pex.c
 @@ -33,6 +33,7 @@
@@ -1300,7 +1266,7 @@ index f7158c4..6dee482 100644
  		{
  			printk("Disabled\n");
  			continue;
-@@ -246,6 +250,9 @@ int __init mv_pex_setup(int nr, struct pci_sys_data *sys)
+@@ -246,6 +250,9 @@ int __init mv_pex_setup(int nr, struct p
  	/* Translate logical interface number to physical */
  	pexHWInf = boardPexInfo->pexMapping[nr];
  
@@ -1310,7 +1276,7 @@ index f7158c4..6dee482 100644
  	/* Check if this interface is used or not */
  	if (MV_FALSE == mvCtrlPwrClckGet(PEX_UNIT_ID, pexHWInf))
  		return 0;
-@@ -315,7 +322,12 @@ struct pci_bus *mv_pex_scan_bus(int nr, struct pci_sys_data *sys)
+@@ -315,7 +322,12 @@ struct pci_bus *mv_pex_scan_bus(int nr,
  
  	/* Set the bus number in the following controller */
  	for (ifnum = (nr+1); ifnum < boardPexInfo->boardPexIfNum; ifnum++) {
@@ -1323,8 +1289,6 @@ index f7158c4..6dee482 100644
  		if (MV_TRUE == mvCtrlPwrClckGet(PEX_UNIT_ID, pexNextHWInf)) {
  			mvPexLocalBusNumSet(pexNextHWInf, (bus->subordinate + 1));
  			break;
-diff --git a/arch/arm/mach-armadaxp/platsmp.c b/arch/arm/mach-armadaxp/platsmp.c
-index 4ae141d..9f95c36 100644
 --- a/arch/arm/mach-armadaxp/platsmp.c
 +++ b/arch/arm/mach-armadaxp/platsmp.c
 @@ -17,15 +17,19 @@
@@ -1348,7 +1312,7 @@ index 4ae141d..9f95c36 100644
  
  /*
   * We use IRQ1 as the IPI
-@@ -35,12 +39,14 @@ static inline void axp_smp_cross_call(const struct cpumask *mask, unsigned int i
+@@ -35,12 +39,14 @@ static inline void axp_smp_cross_call(co
  {
          unsigned long map = *cpus_addr(*mask);
          void __iomem *addr = (void __iomem *)(AXP_SW_TRIG_IRQ);
@@ -1364,7 +1328,7 @@ index 4ae141d..9f95c36 100644
  /*
   * control for which core is the next to come out of the secondary
   * boot "holding pen"
-@@ -52,11 +58,21 @@ static unsigned int __init get_core_count(void)
+@@ -52,11 +58,21 @@ static unsigned int __init get_core_coun
  #ifdef CONFIG_MACH_ARMADA_XP_FPGA
  	return 2;
  #else
@@ -1388,7 +1352,7 @@ index 4ae141d..9f95c36 100644
  static DEFINE_SPINLOCK(boot_lock);
  
  void __cpuinit platform_secondary_init(unsigned int cpu)
-@@ -106,7 +122,7 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
+@@ -106,7 +122,7 @@ int __cpuinit boot_secondary(unsigned in
  	 * "cpu" is Linux's internal ID.
  	 */
  	flush_cache_all();
@@ -1397,7 +1361,7 @@ index 4ae141d..9f95c36 100644
  	flush_cache_all();
  
  	timeout = jiffies + (10 * HZ);
-@@ -125,7 +141,6 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
+@@ -125,7 +141,6 @@ int __cpuinit boot_secondary(unsigned in
  	 */
  	spin_unlock(&boot_lock);
  
@@ -1516,7 +1480,7 @@ index 4ae141d..9f95c36 100644
  
  	mb();
  	udelay(10);
-@@ -229,16 +256,34 @@ static void __init initialize_bridge(void)
+@@ -229,16 +256,34 @@ static void __init initialize_bridge(voi
  {
  	MV_U32 reg;
  	MV_U32 ncores = get_core_count();
@@ -1573,7 +1537,7 @@ index 4ae141d..9f95c36 100644
  	int i;
  
  	printk("SMP: prepare CPUs (%d cores)\n", ncores);
-@@ -287,6 +335,16 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
+@@ -287,6 +335,16 @@ void __init platform_smp_prepare_cpus(un
  		ncores = NR_CPUS;
  	}
  
@@ -1590,11 +1554,9 @@ index 4ae141d..9f95c36 100644
  	/*
  	 * are we trying to boot more cores than exist?
  	 */
-diff --git a/arch/arm/mach-armadaxp/time.c b/arch/arm/mach-armadaxp/time.c
-index 74e58d7..1d1b840 100644
 --- a/arch/arm/mach-armadaxp/time.c
 +++ b/arch/arm/mach-armadaxp/time.c
-@@ -38,21 +38,19 @@ static struct clock_event_device __percpu ** axp_local_clockevent;
+@@ -38,21 +38,19 @@ static struct clock_event_device __percp
  
  extern void axp_irq_mask(struct irq_data *d);
  extern void axp_irq_unmask(struct irq_data *d);
@@ -1625,7 +1587,7 @@ index 74e58d7..1d1b840 100644
  
  #define  LCL_TIMER_BASE		(0x21000 | 0x40)
  #define  LCL_TIMER_CTRL		(LCL_TIMER_BASE + 0x0000)
-@@ -72,15 +70,14 @@ extern void axp_irq_unmask(struct irq_data *d);
+@@ -72,15 +70,14 @@ extern void axp_irq_unmask(struct irq_da
  
  #define LCL_TIMER_TURN_25MHZ	(1 << 11)
  #define BRIDGE_CAUSE		(MV_MBUS_REGS_OFFSET | 0x0260)
@@ -1659,7 +1621,7 @@ index 74e58d7..1d1b840 100644
  	update_sched_clock(&cd, cyc, (u32)~0);
  }
  
-@@ -110,7 +107,7 @@ static void __init setup_sched_clock(unsigned long tclk)
+@@ -110,7 +107,7 @@ static void __init setup_sched_clock(uns
   */
  static cycle_t axp_clksrc_read(struct clocksource *cs)
  {
@@ -1668,7 +1630,7 @@ index 74e58d7..1d1b840 100644
  }
  
  static struct clocksource axp_clksrc = {
-@@ -239,23 +236,25 @@ void __init axp_time_init(unsigned int fabric_clk)
+@@ -239,23 +236,25 @@ void __init axp_time_init(unsigned int f
  {
  	u32 u;
  
@@ -1700,8 +1662,6 @@ index 74e58d7..1d1b840 100644
  #endif
  	MV_REG_WRITE(TIMER_CTRL, u);
  	axp_clksrc.mult = clocksource_hz2mult(fabric_clk, axp_clksrc.shift);
-diff --git a/arch/arm/mach-armadaxp/usb.c b/arch/arm/mach-armadaxp/usb.c
-index 55a4eea..80d8763 100644
 --- a/arch/arm/mach-armadaxp/usb.c
 +++ b/arch/arm/mach-armadaxp/usb.c
 @@ -43,6 +43,7 @@ disclaimer.
@@ -1727,8 +1687,6 @@ index 55a4eea..80d8763 100644
  		}
  
  		isHost = mvIsUsbHost & (1 << dev);
-diff --git a/arch/arm/plat-armada/Kconfig b/arch/arm/plat-armada/Kconfig
-index ea46c73..a6a7da9 100644
 --- a/arch/arm/plat-armada/Kconfig
 +++ b/arch/arm/plat-armada/Kconfig
 @@ -177,6 +177,49 @@ config MV_INCLUDE_SWITCH
@@ -1781,9 +1739,6 @@ index ea46c73..a6a7da9 100644
  config MV_GPP_MAX_PINS
  	int
  	default 32 if MV78XX0
-diff --git a/include/linux/mv_neta.h b/include/linux/mv_neta.h
-new file mode 100644
-index 0000000..c1e55d8
 --- /dev/null
 +++ b/include/linux/mv_neta.h
 @@ -0,0 +1,12 @@
@@ -1799,9 +1754,6 @@ index 0000000..c1e55d8
 +
 +
 +#endif
-diff --git a/tools/amp/amp_make.pl b/tools/amp/amp_make.pl
-new file mode 100644
-index 0000000..bf1a738
 --- /dev/null
 +++ b/tools/amp/amp_make.pl
 @@ -0,0 +1,140 @@
@@ -1945,6 +1897,3 @@ index 0000000..bf1a738
 +
 +close cfg_file;
 +close boot_file;
--- 
-1.7.9.5
-

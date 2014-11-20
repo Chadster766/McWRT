@@ -14,8 +14,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  6 files changed, 104 insertions(+), 37 deletions(-)
  mode change 100644 => 100755 arch/arm/plat-armada/cpuidle.c
 
-diff --git a/arch/arm/configs/armada_xp_defconfig b/arch/arm/configs/armada_xp_defconfig
-index 1d3d99a..b9d2a48 100644
 --- a/arch/arm/configs/armada_xp_defconfig
 +++ b/arch/arm/configs/armada_xp_defconfig
 @@ -67,7 +67,6 @@ CONFIG_GENERIC_IRQ_CHIP=y
@@ -83,8 +81,6 @@ index 1d3d99a..b9d2a48 100644
  # CONFIG_ISCSI_TCP is not set
  # CONFIG_ISCSI_BOOT_SYSFS is not set
  # CONFIG_SCSI_CXGB3_ISCSI is not set
-diff --git a/arch/arm/mach-armadaxp/pm.c b/arch/arm/mach-armadaxp/pm.c
-index e0a0ec5..63b98e3 100644
 --- a/arch/arm/mach-armadaxp/pm.c
 +++ b/arch/arm/mach-armadaxp/pm.c
 @@ -20,7 +20,15 @@
@@ -104,7 +100,7 @@ index e0a0ec5..63b98e3 100644
  /*
   * Logical check for Armada XP valid PM states
   */
-@@ -34,17 +42,22 @@ static int armadaxp_pm_valid(suspend_state_t state)
+@@ -34,17 +42,22 @@ static int armadaxp_pm_valid(suspend_sta
   */
  static int armadaxp_pm_enter(suspend_state_t state)
  {
@@ -132,7 +128,7 @@ index e0a0ec5..63b98e3 100644
  #if 0
  		printk(KERN_INFO "Entering Wol Mode (Neta IRQs 8,10,12,14 are enabled now)...\n");
  
-@@ -65,14 +78,19 @@ static int armadaxp_pm_enter(suspend_state_t state)
+@@ -65,14 +78,19 @@ static int armadaxp_pm_enter(suspend_sta
  		reg |= 0x1;
  		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE3_FIC), reg);
  #endif
@@ -158,8 +154,6 @@ index e0a0ec5..63b98e3 100644
  		reg = MV_REG_READ(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE0_FIC));
  		reg &= ~0x1;
  		MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(IRQ_AURORA_GBE0_FIC), reg);
-diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
-index ee42804..dbfaf05 100644
 --- a/arch/arm/mm/Kconfig
 +++ b/arch/arm/mm/Kconfig
 @@ -1066,6 +1066,10 @@ config SHEEVA_DEEP_IDLE
@@ -173,13 +167,9 @@ index ee42804..dbfaf05 100644
  config ARMADA_XP_DEEP_IDLE_L2_WA
          bool "Manage Aurora L2 on deepIdle"
          depends on SHEEVA_DEEP_IDLE && CACHE_AURORA_L2
-diff --git a/arch/arm/plat-armada/cpuidle.c b/arch/arm/plat-armada/cpuidle.c
-old mode 100644
-new mode 100755
-index 9a62b0f..fc062cf
 --- a/arch/arm/plat-armada/cpuidle.c
 +++ b/arch/arm/plat-armada/cpuidle.c
-@@ -86,24 +86,26 @@ static int build_identity_page_table(void)
+@@ -86,24 +86,26 @@ static int build_identity_page_table(voi
  	return 0;
  }
  
@@ -214,7 +204,7 @@ index 9a62b0f..fc062cf
  
  #define ARMADAXP_IDLE_STATES	3
  
-@@ -193,7 +195,7 @@ void armadaxp_fabric_prepare_deepIdle(void)
+@@ -193,7 +195,7 @@ void armadaxp_fabric_prepare_deepIdle(vo
  	 */
  	/* TODO */
  #ifdef CONFIG_CACHE_AURORA_L2
@@ -223,7 +213,7 @@ index 9a62b0f..fc062cf
  		/* ask HW to power down the L2 Cache if possible */
  		reg = MV_REG_READ(PM_CONTROL_AND_CONFIG_REG(processor_id));
  		reg |= PM_CONTROL_AND_CONFIG_L2_PWDDN;
-@@ -252,10 +254,11 @@ void armadaxp_fabric_restore_deepIdle(void)
+@@ -252,10 +254,11 @@ void armadaxp_fabric_restore_deepIdle(vo
  /*
   * Enter the DEEP IDLE mode (power off CPU only)
   */
@@ -254,7 +244,7 @@ index 9a62b0f..fc062cf
  	pr_debug("armadaxp_deepidle: Exiting DEEP IDLE.\n");
  }
  
-@@ -294,17 +299,20 @@ static int armadaxp_enter_idle(struct cpuidle_device *dev,
+@@ -294,17 +299,20 @@ static int armadaxp_enter_idle(struct cp
  //		printk(KERN_ERR "armadaxp_enter_idle: WFI \n");
  #ifdef CONFIG_SHEEVA_ERRATA_ARM_CPU_BTS61
  		/* Deep Idle */
@@ -290,7 +280,7 @@ index 9a62b0f..fc062cf
  
  	struct cpuidle_device *	device = &per_cpu(armadaxp_cpuidle_device, smp_processor_id());
  
-@@ -353,11 +361,11 @@ static int mv_cpu_idle_write(struct file *file, const char *buffer,
+@@ -353,11 +361,11 @@ static int mv_cpu_idle_write(struct file
  	} else if (!strncmp (buffer, "deep", strlen("deep")) || !strncmp (buffer, "snooze", strlen("snooze")) ||
  				   !strncmp (buffer, "wfi", strlen("wfi"))) {
  		if (!strncmp (buffer, "deep", strlen("deep")))
@@ -305,7 +295,7 @@ index 9a62b0f..fc062cf
  
  		for (i=0; i<IRQ_MAIN_INTS_NUM; i++) {
  			if (i == IRQ_AURORA_UART0)
-@@ -369,8 +377,8 @@ static int mv_cpu_idle_write(struct file *file, const char *buffer,
+@@ -369,8 +377,8 @@ static int mv_cpu_idle_write(struct file
  
  		printk(KERN_INFO "Processor id = %d, Press any key to leave deep idle:",smp_processor_id());
  
@@ -316,7 +306,7 @@ index 9a62b0f..fc062cf
  		else
  			cpu_do_idle();
  
-@@ -380,7 +388,7 @@ static int mv_cpu_idle_write(struct file *file, const char *buffer,
+@@ -380,7 +388,7 @@ static int mv_cpu_idle_write(struct file
  			MV_REG_WRITE(CPU_INT_SOURCE_CONTROL_REG(i), backup[i]);
  		}
  
@@ -325,11 +315,9 @@ index 9a62b0f..fc062cf
  	}
  
  	return count;
-diff --git a/arch/arm/plat-armada/cpuidle.h b/arch/arm/plat-armada/cpuidle.h
-index e15d842..e13ea15 100644
 --- a/arch/arm/plat-armada/cpuidle.h
 +++ b/arch/arm/plat-armada/cpuidle.h
-@@ -16,9 +16,15 @@ void armadaxp_fabric_setup_deepIdle(void);
+@@ -16,9 +16,15 @@ void armadaxp_fabric_setup_deepIdle(void
  void armadaxp_fabric_prepare_deepIdle(void);
  void armadaxp_fabric_prepare_hotplug(void);
  void armadaxp_fabric_restore_deepIdle(void);
@@ -346,11 +334,9 @@ index e15d842..e13ea15 100644
 +} MV_PM_STATES;
  
  #endif /* __PLAT_ARMADA_CPUIDLE_H*/
-diff --git a/drivers/tty/serial/serial_core.c b/drivers/tty/serial/serial_core.c
-index af5ffb9..14bcf03 100644
 --- a/drivers/tty/serial/serial_core.c
 +++ b/drivers/tty/serial/serial_core.c
-@@ -1884,6 +1884,16 @@ static int serial_match_port(struct device *dev, void *data)
+@@ -1884,6 +1884,16 @@ static int serial_match_port(struct devi
  	return dev->devt == devt; /* Actually, only one tty per port */
  }
  
@@ -367,7 +353,7 @@ index af5ffb9..14bcf03 100644
  int uart_suspend_port(struct uart_driver *drv, struct uart_port *uport)
  {
  	struct uart_state *state = drv->state + uport->line;
-@@ -1934,6 +1944,7 @@ int uart_suspend_port(struct uart_driver *drv, struct uart_port *uport)
+@@ -1934,6 +1944,7 @@ int uart_suspend_port(struct uart_driver
  
  		if (console_suspend_enabled || !uart_console(uport))
  			ops->shutdown(uport);
@@ -375,7 +361,7 @@ index af5ffb9..14bcf03 100644
  	}
  
  	/*
-@@ -1952,6 +1963,7 @@ int uart_suspend_port(struct uart_driver *drv, struct uart_port *uport)
+@@ -1952,6 +1963,7 @@ int uart_suspend_port(struct uart_driver
  
  int uart_resume_port(struct uart_driver *drv, struct uart_port *uport)
  {
@@ -383,7 +369,7 @@ index af5ffb9..14bcf03 100644
  	struct uart_state *state = drv->state + uport->line;
  	struct tty_port *port = &state->port;
  	struct device *tty_dev;
-@@ -2031,6 +2043,7 @@ int uart_resume_port(struct uart_driver *drv, struct uart_port *uport)
+@@ -2031,6 +2043,7 @@ int uart_resume_port(struct uart_driver
  
  	return 0;
  }
@@ -391,6 +377,3 @@ index af5ffb9..14bcf03 100644
  
  static inline void
  uart_report_port(struct uart_driver *drv, struct uart_port *port)
--- 
-1.7.9.5
-

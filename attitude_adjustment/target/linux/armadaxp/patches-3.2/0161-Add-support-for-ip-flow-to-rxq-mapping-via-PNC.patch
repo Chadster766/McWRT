@@ -18,8 +18,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  create mode 100755 arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/rxq_map_sysfs.c
  create mode 100755 arch/arm/plat-armada/mv_hal/neta/pnc/mvPncRxq.c
 
-diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
-index 8356fe8..6df4c8a 100644
 --- a/arch/arm/mach-armadaxp/Makefile
 +++ b/arch/arm/mach-armadaxp/Makefile
 @@ -147,7 +147,8 @@ ifeq ($(CONFIG_MV_ETH_NETA),y)
@@ -40,10 +38,6 @@ index 8356fe8..6df4c8a 100644
  obj-$(CONFIG_MV_ETH_BM)                 += $(LSP_BM_DIR)/bm_sysfs.o  $(LSP_BM_DIR)/mv_eth_bm.o
  obj-$(CONFIG_MV_ETH_PNC_WOL)            += $(LSP_PNC_DIR)/wol_sysfs.o
  obj-$(CONFIG_MV_ETH_PMT)		+= $(LSP_PMT_DIR)/pmt_sysfs.o
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c
-old mode 100644
-new mode 100755
-index 0351f3e..2dc9973
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_tool.c
 @@ -49,7 +49,6 @@ disclaimer.
@@ -66,7 +60,7 @@ index 0351f3e..2dc9973
  #define MV_ETH_TOOL_AN_TIMEOUT	5000
  
  
-@@ -812,6 +816,61 @@ static int mv_eth_tool_get_rxnfc(struct net_device *dev, struct ethtool_rxnfc *i
+@@ -812,6 +816,61 @@ static int mv_eth_tool_get_rxnfc(struct
  	return 0;
  }
  
@@ -128,15 +122,13 @@ index 0351f3e..2dc9973
  
  /******************************************************************************
  * mv_eth_tool_get_ethtool_stats
-@@ -861,5 +920,6 @@ const struct ethtool_ops mv_eth_tool_ops = {
+@@ -861,5 +920,6 @@ const struct ethtool_ops mv_eth_tool_ops
  	.get_rxfh_indir				= mv_eth_tool_get_rxfh_indir,
  	.set_rxfh_indir				= mv_eth_tool_set_rxfh_indir,
  	.get_rxnfc                  = mv_eth_tool_get_rxnfc,
 +	.set_rx_ntuple				= mv_eth_tool_set_rx_ntuple,
  };
  
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-index b69182d..9d1c50f 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 @@ -3604,7 +3604,7 @@ void mv_eth_config_show(void)
@@ -148,8 +140,6 @@ index b69182d..9d1c50f 100755
  	dev->hw_features = NETIF_F_IP_CSUM | NETIF_F_SG;
  
  #if defined(MV_ETH_PNC_LB) && defined(CONFIG_MV_ETH_PNC)
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c
-index dd3fe7e..c333ef3 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/pnc_sysfs.c
 @@ -41,7 +41,12 @@ disclaimer.
@@ -197,9 +187,6 @@ index dd3fe7e..c333ef3 100755
  out:
  	return err;
  }
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/rxq_map_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/rxq_map_sysfs.c
-new file mode 100755
-index 0000000..f8dad73
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/pnc/rxq_map_sysfs.c
 @@ -0,0 +1,193 @@
@@ -396,11 +383,9 @@ index 0000000..f8dad73
 +MODULE_AUTHOR("Yoni Farhadian");
 +MODULE_DESCRIPTION("PNC rule to rxq map for Marvell NetA");
 +MODULE_LICENSE("GPL");
-diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
-index eace9d7..6cf6bef 100755
 --- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
 +++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.c
-@@ -801,7 +801,7 @@ static void pnc_ip4_flow_next_lookup_set(struct tcam_entry *te)
+@@ -801,7 +801,7 @@ static void pnc_ip4_flow_next_lookup_set
  }
  
  /*
@@ -409,11 +394,9 @@ index eace9d7..6cf6bef 100755
   */
  int pnc_ip4_dscp(int port, unsigned char dscp, unsigned char mask, int rxq)
  {
-diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
-index 82e5ebd..9498a23 100755
 --- a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
 +++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPnc.h
-@@ -126,6 +126,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -126,6 +126,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #define NETA_PNC_DA_UC      (RI_DA_ME >> 9)
  #define NETA_PNC_PPPOE      (RI_PPPOE >> 9)
  #define NETA_PNC_RX_SPECIAL (RI_RX_SPECIAL >> 9)
@@ -422,7 +405,7 @@ index 82e5ebd..9498a23 100755
  /*---------------------------------------------------------------------------*/
  
  MV_STATUS   mvPncInit(MV_U8 *pncVirtBase);
-@@ -307,6 +309,13 @@ int pnc_mcast_all(unsigned int port, int en);
+@@ -307,6 +309,13 @@ int pnc_mcast_all(unsigned int port, int
  
  void    pnc_mac_show(void);
  
@@ -436,9 +419,6 @@ index 82e5ebd..9498a23 100755
  /* Add TOS priority rule */
  int     pnc_ip4_dscp(int port, unsigned char dscp, unsigned char mask, int rxq);
  void    pnc_ipv4_dscp_show(int port);
-diff --git a/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncRxq.c b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncRxq.c
-new file mode 100755
-index 0000000..d9f0cdc
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_hal/neta/pnc/mvPncRxq.c
 @@ -0,0 +1,412 @@
@@ -854,6 +834,3 @@ index 0000000..d9f0cdc
 +	return -1;
 +#endif /* CONFIG_MV_ETH_PNC_L3_FLOW */
 +}
--- 
-1.7.9.5
-

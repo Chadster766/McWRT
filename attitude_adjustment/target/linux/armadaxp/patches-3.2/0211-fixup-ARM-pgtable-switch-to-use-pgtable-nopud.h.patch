@@ -9,11 +9,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/mm/ioremap.c |   31 +++++++++++++++++++------------
  1 file changed, 19 insertions(+), 12 deletions(-)
 
-diff --git a/arch/arm/mm/ioremap.c b/arch/arm/mm/ioremap.c
-index bdb248c..c3fa40d 100644
 --- a/arch/arm/mm/ioremap.c
 +++ b/arch/arm/mm/ioremap.c
-@@ -79,13 +79,16 @@ static void unmap_area_sections(unsigned long virt, unsigned long size)
+@@ -79,13 +79,16 @@ static void unmap_area_sections(unsigned
  {
  	unsigned long addr = virt, end = virt + (size & ~(SZ_1M - 1));
  	pgd_t *pgd;
@@ -32,7 +30,7 @@ index bdb248c..c3fa40d 100644
  		if (!pmd_none(pmd)) {
  			/*
  			 * Clear the PMD from the page table, and
-@@ -104,8 +107,8 @@ static void unmap_area_sections(unsigned long virt, unsigned long size)
+@@ -104,8 +107,8 @@ static void unmap_area_sections(unsigned
  				pte_free_kernel(&init_mm, pmd_page_vaddr(pmd));
  		}
  
@@ -43,7 +41,7 @@ index bdb248c..c3fa40d 100644
  	} while (addr < end);
  
  	/*
-@@ -124,6 +127,8 @@ remap_area_sections(unsigned long virt, unsigned long pfn,
+@@ -124,6 +127,8 @@ remap_area_sections(unsigned long virt,
  {
  	unsigned long addr = virt, end = virt + size;
  	pgd_t *pgd;
@@ -52,7 +50,7 @@ index bdb248c..c3fa40d 100644
  
  	/*
  	 * Remove and free any PTE-based mapping, and
-@@ -132,17 +137,17 @@ remap_area_sections(unsigned long virt, unsigned long pfn,
+@@ -132,17 +137,17 @@ remap_area_sections(unsigned long virt,
  	unmap_area_sections(virt, size);
  
  	pgd = pgd_offset_k(addr);
@@ -74,7 +72,7 @@ index bdb248c..c3fa40d 100644
  	} while (addr < end);
  
  	return 0;
-@@ -154,6 +159,8 @@ remap_area_supersections(unsigned long virt, unsigned long pfn,
+@@ -154,6 +159,8 @@ remap_area_supersections(unsigned long v
  {
  	unsigned long addr = virt, end = virt + size;
  	pgd_t *pgd;
@@ -83,7 +81,7 @@ index bdb248c..c3fa40d 100644
  
  	/*
  	 * Remove and free any PTE-based mapping, and
-@@ -162,6 +169,8 @@ remap_area_supersections(unsigned long virt, unsigned long pfn,
+@@ -162,6 +169,8 @@ remap_area_supersections(unsigned long v
  	unmap_area_sections(virt, size);
  
  	pgd = pgd_offset_k(virt);
@@ -92,7 +90,7 @@ index bdb248c..c3fa40d 100644
  	do {
  		unsigned long super_pmd_val, i;
  
-@@ -170,14 +179,12 @@ remap_area_supersections(unsigned long virt, unsigned long pfn,
+@@ -170,14 +179,12 @@ remap_area_supersections(unsigned long v
  		super_pmd_val |= ((pfn >> (32 - PAGE_SHIFT)) & 0xf) << 20;
  
  		for (i = 0; i < 8; i++) {
@@ -109,6 +107,3 @@ index bdb248c..c3fa40d 100644
  		}
  
  		pfn += SUPERSECTION_SIZE >> PAGE_SHIFT;
--- 
-1.7.9.5
-

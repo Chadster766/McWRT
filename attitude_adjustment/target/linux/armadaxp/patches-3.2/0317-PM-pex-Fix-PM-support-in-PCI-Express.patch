@@ -20,8 +20,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/mach-armadaxp/pex.c  |   90 +++++++++++++++++++++++++++++++++++------
  2 files changed, 77 insertions(+), 20 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/core.c b/arch/arm/mach-armadaxp/core.c
-index 300e5d4..99a56ca 100755
 --- a/arch/arm/mach-armadaxp/core.c
 +++ b/arch/arm/mach-armadaxp/core.c
 @@ -1450,9 +1450,6 @@ static int mvAmpInitCpuIf()
@@ -45,8 +43,6 @@ index 300e5d4..99a56ca 100755
  
  	/* TODO - timer should be restored by kernel hook */
  	axp_timer_resume();
-diff --git a/arch/arm/mach-armadaxp/pex.c b/arch/arm/mach-armadaxp/pex.c
-index f1ee02c..ff84320 100644
 --- a/arch/arm/mach-armadaxp/pex.c
 +++ b/arch/arm/mach-armadaxp/pex.c
 @@ -21,7 +21,9 @@
@@ -60,7 +56,7 @@ index f1ee02c..ff84320 100644
  #include <mach/hardware.h>
  #include <asm/io.h>
  #include <asm/irq.h>
-@@ -63,6 +65,12 @@ extern u32 mv_pci_mem_base_get(int ifNum);
+@@ -63,6 +65,12 @@ extern u32 mv_pci_mem_base_get(int ifNum
  extern int mv_is_pci_io_mapped(int ifNum);
  extern MV_TARGET mv_pci_io_target_get(int ifNum);
  
@@ -73,7 +69,7 @@ index f1ee02c..ff84320 100644
  static void* mv_get_irqmap_func[] __initdata =
  {
  	mv_map_irq_0,
-@@ -442,23 +450,79 @@ static struct hw_pci mv_pci __initdata = {
+@@ -442,23 +450,79 @@ static struct hw_pci mv_pci __initdata =
          .preinit                = mv_pex_preinit,
  };
  
@@ -81,11 +77,11 @@ index f1ee02c..ff84320 100644
 +{
 +	return 0;
 +}
- 
--static int __init mv_pci_init(void)
++
 +static int pex_status[MV_PEX_MAX_IF];
 +static int pex_ifnum;
-+
+ 
+-static int __init mv_pci_init(void)
 +static int mv_pex_suspend(struct platform_device *dev, pm_message_t state)
  {
 -    /* WA - Disable PEX on RD-SERVER board */
@@ -147,7 +143,7 @@ index f1ee02c..ff84320 100644
 +	/* WA - Disable PEX on RD-SERVER board */
 +	if (mvBoardIdGet() == RD_78460_SERVER_ID)
 +		return 0;
-+
+ 
 +	mv_pci.nr_controllers = (mvBoardPexInfoGet())->boardPexIfNum;
 +	mv_pci.swizzle        = pci_std_swizzle;
 +	mv_pci.map_irq         = mv_map_irq_0;
@@ -161,10 +157,7 @@ index f1ee02c..ff84320 100644
 +
 +	return platform_driver_register(&mv_pex_driver);
 +}
- 
++
 +module_init(mv_pex_init_module);
 +MODULE_DESCRIPTION("Marvell PEX Driver");
 +MODULE_LICENSE("GPL");
--- 
-1.7.9.5
-

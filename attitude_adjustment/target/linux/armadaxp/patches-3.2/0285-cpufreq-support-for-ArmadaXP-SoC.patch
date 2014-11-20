@@ -17,8 +17,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  9 files changed, 399 insertions(+), 50 deletions(-)
  create mode 100644 arch/arm/plat-armada/cpufreq.c
 
-diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-index 6c7c60c..5319779 100644
 --- a/arch/arm/Kconfig
 +++ b/arch/arm/Kconfig
 @@ -567,6 +567,7 @@ config ARCH_LPC32XX
@@ -29,8 +27,6 @@ index 6c7c60c..5319779 100644
  	select ARCH_SUPPORTS_MSI
  	select ARCH_REQUIRE_GPIOLIB
  	select GENERIC_GPIO
-diff --git a/arch/arm/configs/armada_xp_defconfig b/arch/arm/configs/armada_xp_defconfig
-index d25c3b2..793070e 100644
 --- a/arch/arm/configs/armada_xp_defconfig
 +++ b/arch/arm/configs/armada_xp_defconfig
 @@ -195,7 +195,6 @@ CONFIG_RTC_DRV_MV=y
@@ -41,8 +37,6 @@ index d25c3b2..793070e 100644
  CONFIG_ASYNC_TX_DMA=y
  CONFIG_EXT2_FS=y
  CONFIG_EXT3_FS=y
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
-index 53c7044..cdf83ec 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
 @@ -97,6 +97,7 @@ extern "C" {
@@ -77,8 +71,6 @@ index 53c7044..cdf83ec 100644
  #define PMC_TDMSTOPCLOCK_OFFS			25
  #define PMC_TDMSTOPCLOCK_MASK			(1 << PMC_TDMSTOPCLOCK_OFFS)
  #define PMC_TDMSTOPCLOCK_EN			(1 << PMC_TDMSTOPCLOCK_OFFS)
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
-index 1c05c74..eae4081 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
 @@ -100,6 +100,7 @@ extern "C" {
@@ -89,11 +81,9 @@ index 1c05c74..eae4081 100644
  #define MV_MBUS_REGS_OFFSET			(0x20000)
  #define MV_COHERENCY_FABRIC_OFFSET		(0x20200)
  #define MV_CIB_CTRL_STATUS_OFFSET		(0x20280)
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
-index 11f3025..096b076 100755
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/sys/mvCpuIfRegs.h
-@@ -74,6 +74,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -74,6 +74,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  
  #define MV_CPUIF_REGS_BASE(cpu)			(MV_CPUIF_REGS_OFFSET(cpu))
  #define MV_MISC_REGS_BASE			(MV_MISC_REGS_OFFSET)
@@ -101,7 +91,7 @@ index 11f3025..096b076 100755
  #define MV_L2C_REGS_BASE			(MV_AURORA_L2_REGS_OFFSET)
  #define MV_CPUIF_SHARED_REGS_BASE		(MV_MBUS_REGS_OFFSET)
  #define MV_COHERENCY_FABRIC_REGS_BASE		(MV_COHERENCY_FABRIC_OFFSET)
-@@ -300,6 +301,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -300,6 +301,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #define CPU_MAIN_INT_CAUSE_TWSI(i)			(31 + i)
  
  #define CPU_CF_LOCAL_MASK_REG(cpu)			(MV_CPUIF_REGS_BASE(cpu) + 0xc4)
@@ -109,7 +99,7 @@ index 11f3025..096b076 100755
  #define CPU_INT_SOURCE_CONTROL_REG(i)		(MV_CPUIF_SHARED_REGS_BASE + 0xB00 + (i * 0x4))
  
  #define CPU_INT_SOURCE_CONTROL_ENA_OFFS		28
-@@ -329,6 +331,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -329,6 +331,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #define CPU_ARM_TO_HOST_DRBL_REG(cpu)		(MV_CPUIF_REGS_BASE(cpu) + 0x70)
  #define CPU_ARM_TO_HOST_MASK_REG(cpu)		(MV_CPUIF_REGS_BASE(cpu) + 0x74)
  
@@ -126,8 +116,6 @@ index 11f3025..096b076 100755
  
  /* CPU control register map */
  /* Set bits means value is about to change according to new value */
-diff --git a/arch/arm/mach-armadaxp/platsmp.c b/arch/arm/mach-armadaxp/platsmp.c
-index e82bf48..ce6ec1d 100644
 --- a/arch/arm/mach-armadaxp/platsmp.c
 +++ b/arch/arm/mach-armadaxp/platsmp.c
 @@ -25,7 +25,7 @@
@@ -139,7 +127,7 @@ index e82bf48..ce6ec1d 100644
  extern unsigned long mv_cpu_count;
  extern void armadaxp_fabric_restore_deepIdle(void);
  
-@@ -37,14 +37,14 @@ unsigned int group_cpu_mask = ((1 << NR_CPUS) - 1);
+@@ -37,14 +37,14 @@ unsigned int group_cpu_mask = ((1 << NR_
   */
  static inline void axp_smp_cross_call(const struct cpumask *mask, unsigned int irqnr)
  {
@@ -158,7 +146,7 @@ index e82bf48..ce6ec1d 100644
  }
  
  
-@@ -159,10 +159,6 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
+@@ -159,10 +159,6 @@ int __cpuinit boot_secondary(unsigned in
  	return pen_release != -1 ? -ENOSYS : 0;
  }
  
@@ -295,7 +283,7 @@ index e82bf48..ce6ec1d 100644
  		return;
  	}
  	/*mvCpuIfAddDecShow();*/
-@@ -346,13 +339,13 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
+@@ -346,13 +339,13 @@ void __init platform_smp_prepare_cpus(un
  
  	if ((ncores + master_cpu_id) > NR_CPUS) {
  		printk(KERN_WARNING
@@ -313,7 +301,7 @@ index e82bf48..ce6ec1d 100644
  
  	/* Adjust core count in case fixing was done */
  	set_core_count(ncores);
-@@ -363,21 +356,21 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
+@@ -363,21 +356,21 @@ void __init platform_smp_prepare_cpus(un
  	if (max_cpus > ncores)
  		max_cpus = ncores;
  
@@ -341,8 +329,6 @@ index e82bf48..ce6ec1d 100644
  	}
  	initialize_bridge();
  }
-diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
-index e0b8df0..4c41984 100644
 --- a/arch/arm/mm/Kconfig
 +++ b/arch/arm/mm/Kconfig
 @@ -1100,6 +1100,10 @@ config SHEEVA_DEEP_IDLE
@@ -356,19 +342,14 @@ index e0b8df0..4c41984 100644
  config STANDBY_UART_WAKE
  	bool "Enable wake up from standby by UART"
  	depends on ARCH_ARMADA_XP && CPU_IDLE && HOTPLUG_CPU
-diff --git a/arch/arm/plat-armada/Makefile b/arch/arm/plat-armada/Makefile
-index e0a9ec5..19b86f5 100644
 --- a/arch/arm/plat-armada/Makefile
 +++ b/arch/arm/plat-armada/Makefile
-@@ -14,3 +14,4 @@ obj-$(CONFIG_HOTPLUG_CPU)               += hotplug.o
+@@ -14,3 +14,4 @@ obj-$(CONFIG_HOTPLUG_CPU)
  obj-$(CONFIG_ARCH_ARMADA_XP)		+= pmu.o
  obj-$(CONFIG_PCI_MSI)			+= msi.o
  obj-$(CONFIG_ERROR_HANDLING)		+=error_handling.o
 +obj-$(CONFIG_CPU_FREQ_ARMADA_XP)	+= cpufreq.o
 \ No newline at end of file
-diff --git a/arch/arm/plat-armada/cpufreq.c b/arch/arm/plat-armada/cpufreq.c
-new file mode 100644
-index 0000000..c75b5f9
 --- /dev/null
 +++ b/arch/arm/plat-armada/cpufreq.c
 @@ -0,0 +1,327 @@
@@ -699,6 +680,3 @@ index 0000000..c75b5f9
 +device_initcall(armadaxp_cpufreq_init);
 +
 +
--- 
-1.7.9.5
-

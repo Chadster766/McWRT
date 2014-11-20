@@ -18,11 +18,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  delete mode 100644 arch/arm/plat-armada/mv_hal/pex/mvVrtBrgPex.c
  delete mode 100644 arch/arm/plat-armada/mv_hal/pex/mvVrtBrgPex.h
 
-diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPex.c b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
-index 82629fa..6bf8647 100755
 --- a/arch/arm/plat-armada/mv_hal/pex/mvPex.c
 +++ b/arch/arm/plat-armada/mv_hal/pex/mvPex.c
-@@ -86,10 +86,8 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+@@ -86,10 +86,8 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX
  	MV_PEX_MODE pexMode;
  	MV_U32 regVal;
  	MV_U32 status;
@@ -33,7 +31,7 @@ index 82629fa..6bf8647 100755
  
  	if (mvPexModeGet(pexIf, &pexMode) != MV_OK) {
  		mvOsPrintf("PEX init ERR. mvPexModeGet failed (pexType=%d)\n", pexMode.pexType);
-@@ -128,9 +126,7 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX_TYPE pexType, MV_PEX_HAL_DATA *halData)
+@@ -128,9 +126,7 @@ MV_STATUS mvPexInit(MV_U32 pexIf, MV_PEX
  			MV_REG_WRITE(PEX_DBG_CTRL_REG(pexIf), regVal);
  
  	}
@@ -44,7 +42,7 @@ index 82629fa..6bf8647 100755
  	return MV_OK;
  }
  
-@@ -218,13 +214,6 @@ MV_U32 mvPexModeGet(MV_U32 pexIf, MV_PEX_MODE *pexMode)
+@@ -218,13 +214,6 @@ MV_U32 mvPexModeGet(MV_U32 pexIf, MV_PEX
  *******************************************************************************/
  MV_U32 mvPexConfigRead(MV_U32 pexIf, MV_U32 bus, MV_U32 dev, MV_U32 func, MV_U32 regOff)
  {
@@ -58,7 +56,7 @@ index 82629fa..6bf8647 100755
  	MV_U32 pexData = 0;
  	MV_U32 localDev, localBus;
  
-@@ -251,7 +240,7 @@ MV_U32 mvPexHwConfigRead(MV_U32 pexIf, MV_U32 bus, MV_U32 dev, MV_U32 func, MV_U
+@@ -251,7 +240,7 @@ MV_U32 mvPexHwConfigRead(MV_U32 pexIf, M
  
  	if (bus >= MAX_PEX_BUSSES) {
  		DB(mvOsPrintf("mvPexConfigRead: ERR. bus number illigal %d\n", bus));
@@ -67,7 +65,7 @@ index 82629fa..6bf8647 100755
  	}
  
  	DB(mvOsPrintf("mvPexConfigRead: pexIf %d, bus %d, dev %d, func %d, regOff 0x%x\n",
-@@ -265,7 +254,7 @@ MV_U32 mvPexHwConfigRead(MV_U32 pexIf, MV_U32 bus, MV_U32 dev, MV_U32 func, MV_U
+@@ -265,7 +254,7 @@ MV_U32 mvPexHwConfigRead(MV_U32 pexIf, M
  		pexData = MV_REG_READ(PEX_STATUS_REG(pexIf));
  
  		if ((pexData & PXSR_DL_DOWN))
@@ -76,7 +74,7 @@ index 82629fa..6bf8647 100755
  	}
  
  	/* in PCI Express we have only one device number */
-@@ -277,13 +266,13 @@ MV_U32 mvPexHwConfigRead(MV_U32 pexIf, MV_U32 bus, MV_U32 dev, MV_U32 func, MV_U
+@@ -277,13 +266,13 @@ MV_U32 mvPexHwConfigRead(MV_U32 pexIf, M
  			/* if local dev is 0 then the first number we encounter
  			   after 0 is 1 */
  			if ((dev != 1) && (dev != localDev))
@@ -92,7 +90,7 @@ index 82629fa..6bf8647 100755
  		}
  	}
  	/* Creating PEX address to be passed */
-@@ -344,13 +333,6 @@ MV_U32 mvPexHwConfigRead(MV_U32 pexIf, MV_U32 bus, MV_U32 dev, MV_U32 func, MV_U
+@@ -344,13 +333,6 @@ MV_U32 mvPexHwConfigRead(MV_U32 pexIf, M
  *******************************************************************************/
  MV_STATUS mvPexConfigWrite(MV_U32 pexIf, MV_U32 bus, MV_U32 dev, MV_U32 func, MV_U32 regOff, MV_U32 data)
  {
@@ -106,9 +104,6 @@ index 82629fa..6bf8647 100755
  	MV_U32 pexData = 0;
  	MV_U32 localDev, localBus;
  
-diff --git a/arch/arm/plat-armada/mv_hal/pex/mvVrtBrgPex.c b/arch/arm/plat-armada/mv_hal/pex/mvVrtBrgPex.c
-deleted file mode 100644
-index 08b8eaf..0000000
 --- a/arch/arm/plat-armada/mv_hal/pex/mvVrtBrgPex.c
 +++ /dev/null
 @@ -1,267 +0,0 @@
@@ -379,9 +374,6 @@ index 08b8eaf..0000000
 -		}
 -	}
 -}
-diff --git a/arch/arm/plat-armada/mv_hal/pex/mvVrtBrgPex.h b/arch/arm/plat-armada/mv_hal/pex/mvVrtBrgPex.h
-deleted file mode 100644
-index 6969db4..0000000
 --- a/arch/arm/plat-armada/mv_hal/pex/mvVrtBrgPex.h
 +++ /dev/null
 @@ -1,86 +0,0 @@
@@ -471,6 +463,3 @@ index 6969db4..0000000
 -}
 -#endif
 -#endif				/* #ifndef __INCPEXH */
--- 
-1.7.9.5
-

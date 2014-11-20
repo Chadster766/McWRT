@@ -11,8 +11,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/vfp/vfpmodule.c         |   17 +++++++++++++++++
  3 files changed, 22 insertions(+), 33 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/platsmp.c b/arch/arm/mach-armadaxp/platsmp.c
-index ea88dc3..aac4314 100644
 --- a/arch/arm/mach-armadaxp/platsmp.c
 +++ b/arch/arm/mach-armadaxp/platsmp.c
 @@ -27,7 +27,7 @@ extern void second_cpu_init(void);
@@ -33,11 +31,9 @@ index ea88dc3..aac4314 100644
  
  	/*
  	 * if any interrupts are already enabled for the primary
-diff --git a/arch/arm/plat-armada/cpuidle.c b/arch/arm/plat-armada/cpuidle.c
-index ba43611..b52ba33 100644
 --- a/arch/arm/plat-armada/cpuidle.c
 +++ b/arch/arm/plat-armada/cpuidle.c
-@@ -123,18 +123,7 @@ void armadaxp_fabric_setup_deepIdle(void)
+@@ -123,18 +123,7 @@ void armadaxp_fabric_setup_deepIdle(void
  	reg = MV_REG_READ(MV_L2C_NFABRIC_PM_CTRL_CFG_REG);
  	reg |= MV_L2C_NFABRIC_PM_CTRL_CFG_PWR_DOWN;
  	MV_REG_WRITE(MV_L2C_NFABRIC_PM_CTRL_CFG_REG, reg);
@@ -57,7 +53,7 @@ index ba43611..b52ba33 100644
  	/* Set the resume control registers to do nothing */
  	MV_REG_WRITE(0x20980, 0);
  	MV_REG_WRITE(0x20988, 0);
-@@ -257,24 +246,7 @@ void armadaxp_fabric_restore_deepIdle(void)
+@@ -257,24 +246,7 @@ void armadaxp_fabric_restore_deepIdle(vo
  	MV_REG_READ(MV_COHERENCY_FABRIC_CTRL_REG);
  	hw_sem_unlock();
  #endif
@@ -107,11 +103,9 @@ index ba43611..b52ba33 100644
                                  printk(KERN_ERR "armadaxp_init_cpuidle: Failed registering\n");
                                  return -EIO;
                          }
-diff --git a/arch/arm/vfp/vfpmodule.c b/arch/arm/vfp/vfpmodule.c
-index 9a9ebeb..2a5bd12 100644
 --- a/arch/arm/vfp/vfpmodule.c
 +++ b/arch/arm/vfp/vfpmodule.c
-@@ -561,6 +561,23 @@ static int vfp_hotplug(struct notifier_block *b, unsigned long action,
+@@ -561,6 +561,23 @@ static int vfp_hotplug(struct notifier_b
  	return NOTIFY_OK;
  }
  
@@ -135,6 +129,3 @@ index 9a9ebeb..2a5bd12 100644
  /*
   * VFP support code initialisation.
   */
--- 
-1.7.9.5
-

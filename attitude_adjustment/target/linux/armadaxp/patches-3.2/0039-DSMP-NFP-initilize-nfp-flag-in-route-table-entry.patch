@@ -9,8 +9,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  net/ipv6/route.c |    4 ++++
  2 files changed, 22 insertions(+), 4 deletions(-)
 
-diff --git a/net/ipv4/route.c b/net/ipv4/route.c
-index 270c661..8c35e76 100644
 --- a/net/ipv4/route.c
 +++ b/net/ipv4/route.c
 @@ -839,9 +839,9 @@ void nfp_fib_sync(void)
@@ -32,7 +30,7 @@ index 270c661..8c35e76 100644
  			next = rth->dst.rt_next;
  			if (!(rth->rt_flags & (RTCF_MULTICAST | RTCF_BROADCAST | RTCF_LOCAL | RTCF_REJECT))) {
  				if (!nfp_hook_fib_rule_add(AF_INET, (u8*)(&rth->rt_src), (u8*)(&rth->rt_dst),
-@@ -2121,7 +2122,9 @@ static int ip_route_input_mc(struct sk_buff *skb, __be32 daddr, __be32 saddr,
+@@ -2121,7 +2122,9 @@ static int ip_route_input_mc(struct sk_b
  			   IN_DEV_CONF_GET(in_dev, NOPOLICY), false);
  	if (!rth)
  		goto e_nobufs;
@@ -43,7 +41,7 @@ index 270c661..8c35e76 100644
  #ifdef CONFIG_IP_ROUTE_CLASSID
  	rth->dst.tclassid = itag;
  #endif
-@@ -2261,6 +2264,9 @@ static int __mkroute_input(struct sk_buff *skb,
+@@ -2261,6 +2264,9 @@ static int __mkroute_input(struct sk_buf
  		err = -ENOBUFS;
  		goto cleanup;
  	}
@@ -64,7 +62,7 @@ index 270c661..8c35e76 100644
  	rth->dst.input= ip_local_deliver;
  	rth->dst.output= ip_rt_bug;
  #ifdef CONFIG_IP_ROUTE_CLASSID
-@@ -2657,6 +2665,10 @@ static struct rtable *__mkroute_output(const struct fib_result *res,
+@@ -2657,6 +2665,10 @@ static struct rtable *__mkroute_output(c
  	if (!rth)
  		return ERR_PTR(-ENOBUFS);
  
@@ -75,7 +73,7 @@ index 270c661..8c35e76 100644
  	rth->dst.output = ip_output;
  
  	rth->rt_key_dst	= orig_daddr;
-@@ -2995,7 +3007,9 @@ struct dst_entry *ipv4_blackhole_route(struct net *net, struct dst_entry *dst_or
+@@ -2995,7 +3007,9 @@ struct dst_entry *ipv4_blackhole_route(s
  		new->dev = ort->dst.dev;
  		if (new->dev)
  			dev_hold(new->dev);
@@ -86,11 +84,9 @@ index 270c661..8c35e76 100644
  		rt->rt_key_dst = ort->rt_key_dst;
  		rt->rt_key_src = ort->rt_key_src;
  		rt->rt_key_tos = ort->rt_key_tos;
-diff --git a/net/ipv6/route.c b/net/ipv6/route.c
-index 491b34b..532c4d7 100644
 --- a/net/ipv6/route.c
 +++ b/net/ipv6/route.c
-@@ -251,6 +251,10 @@ static inline struct rt6_info *ip6_dst_alloc(struct dst_ops *ops,
+@@ -251,6 +251,10 @@ static inline struct rt6_info *ip6_dst_a
  		memset(&rt->rt6i_table, 0,
  			sizeof(*rt) - sizeof(struct dst_entry));
  
@@ -101,6 +97,3 @@ index 491b34b..532c4d7 100644
  	return rt;
  }
  
--- 
-1.7.9.5
-

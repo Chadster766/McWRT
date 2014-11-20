@@ -15,8 +15,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  .../mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h     |   13 +
  4 files changed, 203 insertions(+), 80 deletions(-)
 
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
-index 34b447a..92dd921 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_sysfs.c
 @@ -92,6 +92,7 @@ static ssize_t mv_eth_help(char *buf)
@@ -27,7 +25,7 @@ index 34b447a..92dd921 100644
  	return off;
  }
  
-@@ -226,6 +227,8 @@ static ssize_t mv_eth_port_store(struct device *dev,
+@@ -226,6 +227,8 @@ static ssize_t mv_eth_port_store(struct
  		printk(KERN_INFO "\n");
  		mvEthPortRegs(p);
  		mvNetaPortRegs(p);
@@ -36,7 +34,7 @@ index 34b447a..92dd921 100644
  #ifdef MV_ETH_GMAC_NEW
  	} else if (!strcmp(name, "gmac_regs")) {
  		mvNetaGmacRegs(p);
-@@ -451,7 +454,7 @@ static DEVICE_ATTR(rxq_group,   S_IWUSR, mv_eth_show, mv_eth_3_hex_store);
+@@ -451,7 +454,7 @@ static DEVICE_ATTR(rxq_group,   S_IWUSR,
  static DEVICE_ATTR(napi,        S_IWUSR, mv_eth_show, mv_eth_port_store);
  static DEVICE_ATTR(txq_mask,    S_IWUSR, mv_eth_show, mv_eth_3_hex_store);
  static DEVICE_ATTR(txq_shared,  S_IWUSR, mv_eth_show, mv_eth_4_store);
@@ -45,7 +43,7 @@ index 34b447a..92dd921 100644
  
  static struct attribute *mv_eth_attrs[] = {
  
-@@ -506,6 +509,7 @@ static struct attribute *mv_eth_attrs[] = {
+@@ -506,6 +509,7 @@ static struct attribute *mv_eth_attrs[]
  	&dev_attr_napi.attr,
  	&dev_attr_txq_mask.attr,
  	&dev_attr_txq_shared.attr,
@@ -53,11 +51,9 @@ index 34b447a..92dd921 100644
  	NULL
  };
  
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c
-index 5bee482..1c0cb11 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_ethernet.c
-@@ -115,7 +115,6 @@ static int mv_eth_start(struct net_device *dev)
+@@ -115,7 +115,6 @@ static int mv_eth_start(struct net_devic
  		printk(KERN_NOTICE "%s: started\n", dev->name);
  	}
  	return 0;
@@ -65,11 +61,9 @@ index 5bee482..1c0cb11 100644
  error:
  	printk(KERN_ERR "%s: start failed\n", dev->name);
  	return -1;
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-index f9e10ab..f71f7fc 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-@@ -3079,7 +3079,7 @@ int mv_eth_resume_network_interfaces(struct eth_port *pp)
+@@ -3079,7 +3079,7 @@ int mv_eth_resume_network_interfaces(str
  int mv_eth_port_resume(int port)
  {
  	struct eth_port *pp;
@@ -197,7 +191,7 @@ index f9e10ab..f71f7fc 100755
  
  /***********************************************************
   * mv_eth_probe --                                         *
-@@ -4387,18 +4408,62 @@ int mv_eth_start_internals(struct eth_port *pp, int mtu)
+@@ -4387,18 +4408,62 @@ int mv_eth_start_internals(struct eth_po
  	return err;
  }
  
@@ -266,7 +260,7 @@ index f9e10ab..f71f7fc 100755
  #ifdef CONFIG_MV_ETH_BM_CPU
  	if (pp->pool_long != NULL) {
  		mvNetaBmPoolBufSizeSet(pp->port, pp->pool_long->pool, RX_BUF_SIZE(pp->pool_long->pkt_size));
-@@ -4464,33 +4529,10 @@ int mv_eth_resume_internals(struct eth_port *pp, int mtu)
+@@ -4464,33 +4529,10 @@ int mv_eth_resume_internals(struct eth_p
  		mvNetaTxpMaxTxSizeSet(pp->port, txp, RX_PKT_SIZE(mtu));
  	}
  
@@ -301,7 +295,7 @@ index f9e10ab..f71f7fc 100755
  /***********************************************************
   * mv_eth_suspend_internals --                                *
   *   stop port rx/tx activity. free skb's from rx/tx rings.*
-@@ -4512,6 +4554,7 @@ int mv_eth_suspend_internals(struct eth_port *pp)
+@@ -4512,6 +4554,7 @@ int mv_eth_suspend_internals(struct eth_
  	for_each_possible_cpu(cpu) {
  		pp->cpu_config[cpu]->causeRxTx = 0;
  		if (pp->cpu_config[cpu]->napi)
@@ -309,7 +303,7 @@ index f9e10ab..f71f7fc 100755
  			if (test_bit(MV_ETH_F_STARTED_OLD_BIT, &(pp->flags)))
  				napi_synchronize(pp->cpu_config[cpu]->napi);
  	}
-@@ -4521,6 +4564,7 @@ int mv_eth_suspend_internals(struct eth_port *pp)
+@@ -4521,6 +4564,7 @@ int mv_eth_suspend_internals(struct eth_
  #ifdef CONFIG_MV_ETH_HWF
  	mvNetaHwfEnable(pp->port, 0);
  #endif /* !CONFIG_MV_ETH_HWF */
@@ -317,7 +311,7 @@ index f9e10ab..f71f7fc 100755
  	/* Reset TX port here. If HWF is supported reset must be called externally */
  	for (txp = 0; txp < pp->txp_num; txp++)
  		mv_eth_txp_reset(pp->port, txp);
-@@ -4529,9 +4573,6 @@ int mv_eth_suspend_internals(struct eth_port *pp)
+@@ -4529,9 +4573,6 @@ int mv_eth_suspend_internals(struct eth_
  	for (queue = 0; queue < CONFIG_MV_ETH_RXQ; queue++)
  		mv_eth_rxq_drop_pkts(pp, queue);
  
@@ -327,7 +321,7 @@ index f9e10ab..f71f7fc 100755
  	return 0;
  error:
  	printk(KERN_ERR "GbE port %d: suspend internals failed\n", pp->port);
-@@ -5004,6 +5045,7 @@ static int mv_eth_priv_init(struct eth_port *pp, int port)
+@@ -5004,6 +5045,7 @@ static int mv_eth_priv_init(struct eth_p
  	pp->port = port;
  	pp->txp_num = 1;
  	pp->txp = 0;
@@ -335,7 +329,7 @@ index f9e10ab..f71f7fc 100755
  	for_each_possible_cpu(cpu) {
  		cpuCtrl = pp->cpu_config[cpu];
  		cpuCtrl->txq = CONFIG_MV_ETH_TXQ_DEF;
-@@ -5236,6 +5278,12 @@ void mv_eth_port_status_print(unsigned int port)
+@@ -5236,6 +5278,12 @@ void mv_eth_port_status_print(unsigned i
  	else
  		printk(KERN_CONT "Disabled\n");
  #endif /* CONFIG_MV_ETH_NFP */
@@ -395,8 +389,8 @@ index f9e10ab..f71f7fc 100755
 +		if (pp->pm_mode == MV_ETH_PM_CLOCK) {
 +			if (mv_eth_suspend_clock(pp->port)) {
 +				printk(KERN_ERR "%s: Error, port %d clock suspend failed.\n", __func__, port);
- 				return -1;
- 			}
++				return -1;
++			}
 +		}
 +#ifdef CONFIG_MV_ETH_PNC_WOL
 +		else if (pp->pm_mode == MV_ETH_PM_WOL) {
@@ -404,8 +398,8 @@ index f9e10ab..f71f7fc 100755
 +			/*Configure ETH port to be in WoL mode*/
 +			if (mv_eth_wol_sleep(port)) {
 +				printk(KERN_ERR "%s: Error, port %d wol suspend failed.\n", __func__, port);
-+				return -1;
-+			}
+ 				return -1;
+ 			}
 +		}
 +#endif	/*CONFIG_MV_ETH_PNC_WOL*/
 +		else
@@ -481,8 +475,6 @@ index f9e10ab..f71f7fc 100755
  #endif	/*CONFIG_CPU_IDLE*/
  
  static int mv_eth_remove(struct platform_device *pdev)
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
-index 2ae439b..bdf0c95 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
 @@ -394,6 +394,14 @@ struct eth_port {
@@ -500,7 +492,7 @@ index 2ae439b..bdf0c95 100755
  };
  
  struct eth_netdev {
-@@ -718,10 +726,15 @@ void        mv_eth_set_multicast_list(struct net_device *dev);
+@@ -718,10 +726,15 @@ void        mv_eth_set_multicast_list(st
  int         mv_eth_open(struct net_device *dev);
  int         mv_eth_port_suspend(int port);
  int         mv_eth_port_resume(int port);
@@ -516,6 +508,3 @@ index 2ae439b..bdf0c95 100755
  
  int	    mv_eth_cpu_txq_mask_set(int port, int cpu, int txqMask);
  
--- 
-1.7.9.5
-

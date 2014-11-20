@@ -28,8 +28,6 @@ Subject: [PATCH 1/1] Armada300,crypto: Indentation and white space fixes for
  crypto/ocf/talitos/talitos_dev.h             |   18 +--
  21 files changed, 312 insertions(+), 312 deletions(-)
 
-diff --git a/cesa/openswan/README b/cesa/openswan/README
-index 71c85f3..829cbfa 100644
 --- a/cesa/openswan/README
 +++ b/cesa/openswan/README
 @@ -3,7 +3,7 @@ OpenSWAN
@@ -41,11 +39,9 @@ index 71c85f3..829cbfa 100644
  2. Apply the patch:
  	- 0001-marvell-patch-for-openswan-2.6.38.patch:
  		> Disable default DEBUG support.
-diff --git a/crypto/ocf/crypto.c b/crypto/ocf/crypto.c
-index 6ef6ae8..39489ed 100644
 --- a/crypto/ocf/crypto.c
 +++ b/crypto/ocf/crypto.c
-@@ -779,7 +779,7 @@ crypto_unblock(u_int32_t driverid, int what)
+@@ -779,7 +779,7 @@ crypto_unblock(u_int32_t driverid, int w
  			cap->cc_unkqblocked = 0;
  			crypto_all_kqblocked = 0;
  		}
@@ -129,8 +125,6 @@ index 6ef6ae8..39489ed 100644
  		kthread_bind(cryptoretproc[cpu], cpu);
  		wake_up_process(cryptoretproc[cpu]);
  	}
-diff --git a/crypto/ocf/cryptodev.c b/crypto/ocf/cryptodev.c
-index e168e78..8f7a771 100644
 --- a/crypto/ocf/cryptodev.c
 +++ b/crypto/ocf/cryptodev.c
 @@ -131,7 +131,7 @@ checkcrid(int crid)
@@ -160,7 +154,7 @@ index e168e78..8f7a771 100644
  	kop->crk_crid = krp->krp_crid;		/* device that did the work */
  	if (krp->krp_status != 0) {
  		error = krp->krp_status;
-@@ -561,7 +561,7 @@ csedelete(struct fcrypt *fcr, struct csession *cse_del)
+@@ -561,7 +561,7 @@ csedelete(struct fcrypt *fcr, struct cse
  	}
  	return (0);
  }
@@ -169,8 +163,6 @@ index e168e78..8f7a771 100644
  static struct csession *
  cseadd(struct fcrypt *fcr, struct csession *cse)
  {
-diff --git a/crypto/ocf/cryptodev.h b/crypto/ocf/cryptodev.h
-index 3ec926d..2e686ea 100644
 --- a/crypto/ocf/cryptodev.h
 +++ b/crypto/ocf/cryptodev.h
 @@ -184,7 +184,7 @@ struct session_op {
@@ -191,11 +183,9 @@ index 3ec926d..2e686ea 100644
  	int		crid;		/* driver id + flags (rw) */
  	int		pad[4];		/* for future expansion */
  };
-diff --git a/crypto/ocf/cryptosoft.c b/crypto/ocf/cryptosoft.c
-index e570688..b413f29 100644
 --- a/crypto/ocf/cryptosoft.c
 +++ b/crypto/ocf/cryptosoft.c
-@@ -319,14 +319,14 @@ swcr_newsession(device_t dev, u_int32_t *sid, struct cryptoini *cri)
+@@ -319,14 +319,14 @@ swcr_newsession(device_t dev, u_int32_t
  				dprintk("%s %s cipher is async\n", __FUNCTION__, algo);
  				(*swd)->sw_type |= SW_TYPE_ASYNC;
  			} else {
@@ -212,7 +202,7 @@ index e570688..b413f29 100644
  						algo,mode);
  				err = IS_ERR((*swd)->sw_tfm) ? -(PTR_ERR((*swd)->sw_tfm)) : EINVAL;
  				(*swd)->sw_tfm = NULL; /* ensure NULL */
-@@ -336,7 +336,7 @@ swcr_newsession(device_t dev, u_int32_t *sid, struct cryptoini *cri)
+@@ -336,7 +336,7 @@ swcr_newsession(device_t dev, u_int32_t
  
  			if (debug) {
  				dprintk("%s key:cri->cri_klen=%d,(cri->cri_klen + 7)/8=%d",
@@ -221,7 +211,7 @@ index e570688..b413f29 100644
  				for (i = 0; i < (cri->cri_klen + 7) / 8; i++)
  					dprintk("%s0x%x", (i % 8) ? " " : "\n    ",
  							cri->cri_key[i] & 0xff);
-@@ -355,7 +355,7 @@ swcr_newsession(device_t dev, u_int32_t *sid, struct cryptoini *cri)
+@@ -355,7 +355,7 @@ swcr_newsession(device_t dev, u_int32_t
  				crypto_blkcipher_set_flags(
  						crypto_blkcipher_cast((*swd)->sw_tfm),
  							CRYPTO_TFM_REQ_WEAK_KEY);
@@ -230,7 +220,7 @@ index e570688..b413f29 100644
  							crypto_blkcipher_cast((*swd)->sw_tfm),
  								cri->cri_key, (cri->cri_klen + 7) / 8);
  			}
-@@ -377,8 +377,8 @@ swcr_newsession(device_t dev, u_int32_t *sid, struct cryptoini *cri)
+@@ -377,8 +377,8 @@ swcr_newsession(device_t dev, u_int32_t
  				(*swd)->sw_type |= SW_TYPE_ASYNC;
  			} else {
  				dprintk("%s %s hash is sync\n", __FUNCTION__, algo);
@@ -241,7 +231,7 @@ index e570688..b413f29 100644
  			}
  
  			if (!(*swd)->sw_tfm) {
-@@ -390,7 +390,7 @@ swcr_newsession(device_t dev, u_int32_t *sid, struct cryptoini *cri)
+@@ -390,7 +390,7 @@ swcr_newsession(device_t dev, u_int32_t
  
  			(*swd)->u.hmac.sw_klen = (cri->cri_klen + 7) / 8;
  			(*swd)->u.hmac.sw_key = (char *)kmalloc((*swd)->u.hmac.sw_klen,
@@ -250,7 +240,7 @@ index e570688..b413f29 100644
  			if ((*swd)->u.hmac.sw_key == NULL) {
  				swcr_freesession(NULL, i);
  				dprintk("%s,%d: ENOBUFS\n", __FILE__, __LINE__);
-@@ -402,9 +402,9 @@ swcr_newsession(device_t dev, u_int32_t *sid, struct cryptoini *cri)
+@@ -402,9 +402,9 @@ swcr_newsession(device_t dev, u_int32_t
  			} else if ((*swd)->sw_type & SW_TYPE_ASYNC) {
  				(*swd)->u.hmac.sw_mlen = crypto_ahash_digestsize(
  						__crypto_ahash_cast((*swd)->sw_tfm));
@@ -262,7 +252,7 @@ index e570688..b413f29 100644
  			}
  		} else if ((*swd)->sw_type & SW_TYPE_COMP) {
  			(*swd)->sw_tfm = crypto_comp_tfm(
-@@ -485,7 +485,7 @@ swcr_freesession(device_t dev, u_int64_t tid)
+@@ -485,7 +485,7 @@ swcr_freesession(device_t dev, u_int64_t
  					crypto_free_comp(crypto_comp_cast(swd->sw_tfm));
  				break;
  			default:
@@ -280,7 +270,7 @@ index e570688..b413f29 100644
  
  #if defined(HAVE_ABLKCIPHER) || defined(HAVE_AHASH)
  static void swcr_process_callback(struct crypto_async_request *creq, int err)
-@@ -564,10 +564,10 @@ static void swcr_process_callback(struct crypto_async_request *creq, int err)
+@@ -564,10 +564,10 @@ static void swcr_process_callback(struct
  			return;
  		dprintk("%s() fail %d\n", __FUNCTION__, -err);
  		req->crp->crp_etype = -err;
@@ -293,7 +283,7 @@ index e570688..b413f29 100644
  #endif /* defined(HAVE_ABLKCIPHER) || defined(HAVE_AHASH) */
  
  
-@@ -582,25 +582,25 @@ static void swcr_process_req(struct swcr_req *req)
+@@ -582,25 +582,25 @@ static void swcr_process_req(struct swcr
  
  	dprintk("%s()\n", __FUNCTION__);
  
@@ -373,8 +363,6 @@ index e570688..b413f29 100644
  		} else {
  			dprintk("%s:Algorithm Type %d not supported (algorithm %d:'%s')\n",
  					__FUNCTION__, sw_type, i, algo);
-diff --git a/crypto/ocf/ep80579/environment.mk b/crypto/ocf/ep80579/environment.mk
-index a674b45..4b96d36 100644
 --- a/crypto/ocf/ep80579/environment.mk
 +++ b/crypto/ocf/ep80579/environment.mk
 @@ -1,62 +1,62 @@
@@ -480,11 +468,9 @@ index a674b45..4b96d36 100644
  #  version: Security.L.1.0.130
   #
   ###########################################################################
-diff --git a/crypto/ocf/ep80579/icp_common.c b/crypto/ocf/ep80579/icp_common.c
-index fa824a6..2b2da6b 100644
 --- a/crypto/ocf/ep80579/icp_common.c
 +++ b/crypto/ocf/ep80579/icp_common.c
-@@ -129,7 +129,7 @@ int32_t icp_ocfDrvDriverId = INVALID_DRIVER_ID;
+@@ -129,7 +129,7 @@ int32_t icp_ocfDrvDriverId = INVALID_DRI
     re-tried */
  int num_dereg_retries = DEFAULT_DEREG_RETRIES;
  
@@ -520,7 +506,7 @@ index fa824a6..2b2da6b 100644
  				 * this task is set to TASK_INTERRUPTIBLE */
  				remaining_delay_time_in_jiffies =
  				    dereg_retry_delay_in_jiffies;
-@@ -607,9 +607,9 @@ static void icp_ocfDrvDeferedFreeLacSessionProcess(void *arg)
+@@ -607,9 +607,9 @@ static void icp_ocfDrvDeferedFreeLacSess
  		atomic_read(&lac_session_failed_dereg_count));
  }
  
@@ -532,7 +518,7 @@ index fa824a6..2b2da6b 100644
   * structure to Fredericksburg Flat Buffer (CpaFlatBuffer) format.
   *
   * This function assumes that the data passed in are valid.
-@@ -780,8 +780,8 @@ icp_ocfDrvBufferListToPtrAndLen(CpaBufferList * pBufferList,
+@@ -780,8 +780,8 @@ icp_ocfDrvBufferListToPtrAndLen(CpaBuffe
  
  /* Name        : icp_ocfDrvBufferListMemInfo
   *
@@ -543,8 +529,6 @@ index fa824a6..2b2da6b 100644
   * member of the CpaBufferList.
   */
  int
-diff --git a/crypto/ocf/ep80579/icp_sym.c b/crypto/ocf/ep80579/icp_sym.c
-index 9374be6..ffdfe84 100644
 --- a/crypto/ocf/ep80579/icp_sym.c
 +++ b/crypto/ocf/ep80579/icp_sym.c
 @@ -71,7 +71,7 @@
@@ -556,7 +540,7 @@ index 9374be6..ffdfe84 100644
    call back to OCF*/
  static void
  icp_ocfDrvSymCallBack(void *callbackTag,
-@@ -137,7 +137,7 @@ static void icp_ocfDrvFreeOCFSession(struct icp_drvSessionData *sessionData);
+@@ -137,7 +137,7 @@ static void icp_ocfDrvFreeOCFSession(str
  /* Name        : icp_ocfDrvSymCallBack
   *
   * Description : When this function returns it signifies that the LAC
@@ -574,7 +558,7 @@ index 9374be6..ffdfe84 100644
   *
   * Description : This function will create a new Driver<->OCF session
   *
-@@ -618,7 +618,7 @@ int icp_ocfDrvFreeLACSession(device_t dev, uint64_t sid)
+@@ -618,7 +618,7 @@ int icp_ocfDrvFreeLACSession(device_t de
  		if (CPA_STATUS_RETRY == lacStatus) {
  			if (ICP_OCF_DRV_STATUS_SUCCESS !=
  			    icp_ocfDrvDeregRetry(&sessionToDeregister)) {
@@ -583,7 +567,7 @@ index 9374be6..ffdfe84 100644
  				   dereg failed count */
  				DPRINTK("%s(): LAC failed to deregister the "
  					"session. (localSessionId= %p)\n",
-@@ -640,7 +640,7 @@ int icp_ocfDrvFreeLACSession(device_t dev, uint64_t sid)
+@@ -640,7 +640,7 @@ int icp_ocfDrvFreeLACSession(device_t de
  
  }
  
@@ -592,7 +576,7 @@ index 9374be6..ffdfe84 100644
   *
   * Description : This function checks whether the cryptodesc argument pertains
   * to a sym or hash function
-@@ -659,11 +659,11 @@ static int icp_ocfDrvAlgCheck(struct cryptodesc *crp_desc)
+@@ -659,11 +659,11 @@ static int icp_ocfDrvAlgCheck(struct cry
  	return ICP_OCF_DRV_ALG_HASH;
  }
  
@@ -606,7 +590,7 @@ index 9374be6..ffdfe84 100644
   * Notes: If it is the first perform call for a given session, then a LAC
   * session is registered. After the session is registered, no checks as
   * to whether session paramaters have changed (e.g. alg chain order) are
-@@ -721,7 +721,7 @@ int icp_ocfDrvSymProcess(device_t dev, struct cryptop *crp, int hint)
+@@ -721,7 +721,7 @@ int icp_ocfDrvSymProcess(device_t dev, s
  
  /*If none of the session states are set, then the session structure was either
    not initialised properly or we are reading from a freed memory area (possible
@@ -615,7 +599,7 @@ index 9374be6..ffdfe84 100644
    sessions*/
  	if (ICP_SESSION_INITIALISED != sessionData->inUse &&
  	    ICP_SESSION_RUNNING != sessionData->inUse) {
-@@ -851,7 +851,7 @@ int icp_ocfDrvSymProcess(device_t dev, struct cryptop *crp, int hint)
+@@ -851,7 +851,7 @@ int icp_ocfDrvSymProcess(device_t dev, s
  
  	}
  
@@ -624,8 +608,6 @@ index 9374be6..ffdfe84 100644
  	 * Allocate buffer list array memory if the data fragment is more than
  	 * the default number (ICP_OCF_DRV_DEFAULT_BUFFLIST_ARRAYS) and not 
  	 * calculated already
-diff --git a/crypto/ocf/ep80579/linux_2.6_kernel_space.mk b/crypto/ocf/ep80579/linux_2.6_kernel_space.mk
-index 96afa9a..4c92922 100644
 --- a/crypto/ocf/ep80579/linux_2.6_kernel_space.mk
 +++ b/crypto/ocf/ep80579/linux_2.6_kernel_space.mk
 @@ -1,62 +1,62 @@
@@ -731,8 +713,6 @@ index 96afa9a..4c92922 100644
  #  version: Security.L.1.0.130
  ###################
  
-diff --git a/crypto/ocf/hifn/hifn7751.c b/crypto/ocf/hifn/hifn7751.c
-index 6459f35..cf61477 100644
 --- a/crypto/ocf/hifn/hifn7751.c
 +++ b/crypto/ocf/hifn/hifn7751.c
 @@ -759,7 +759,7 @@ hifn_init_pubrng(struct hifn_softc *sc)
@@ -744,7 +724,7 @@ index 6459f35..cf61477 100644
  					UID_ROOT, GID_WHEEL, 0666,
  					"vulcanpk");
  		sc->sc_pkdev->si_drv1 = sc;
-@@ -958,7 +958,7 @@ hifn_next_signature(u_int32_t a, u_int cnt)
+@@ -958,7 +958,7 @@ hifn_next_signature(u_int32_t a, u_int c
   * "hifn_enable_crypto" is called to enable it.  The check is important,
   * as enabling crypto twice will lock the board.
   */
@@ -762,7 +742,7 @@ index 6459f35..cf61477 100644
  hifn_init_pci_registers(struct hifn_softc *sc)
  {
  	DPRINTF("%s()\n", __FUNCTION__);
-@@ -1435,7 +1435,7 @@ hifn_readramaddr(struct hifn_softc *sc, int addr, u_int8_t *data)
+@@ -1435,7 +1435,7 @@ hifn_readramaddr(struct hifn_softc *sc,
  /*
   * Initialize the descriptor rings.
   */
@@ -771,7 +751,7 @@ index 6459f35..cf61477 100644
  hifn_init_dma(struct hifn_softc *sc)
  {
  	struct hifn_dma *dma = sc->sc_dma;
-@@ -1723,10 +1723,10 @@ hifn_dmamap_load_src(struct hifn_softc *sc, struct hifn_command *cmd)
+@@ -1723,10 +1723,10 @@ hifn_dmamap_load_src(struct hifn_softc *
  	dma->srci = idx;
  	dma->srcu += src->nsegs;
  	return (idx);
@@ -784,7 +764,7 @@ index 6459f35..cf61477 100644
  hifn_crypto(
  	struct hifn_softc *sc,
  	struct hifn_command *cmd,
-@@ -2595,7 +2595,7 @@ hifn_process(device_t dev, struct cryptop *crp, int hint)
+@@ -2595,7 +2595,7 @@ hifn_process(device_t dev, struct crypto
  		cmd->cklen = enccrd->crd_klen >> 3;
  		cmd->cry_masks |= HIFN_CRYPT_CMD_NEW_KEY;
  
@@ -793,8 +773,6 @@ index 6459f35..cf61477 100644
  		 * Need to specify the size for the AES key in the masks.
  		 */
  		if ((cmd->cry_masks & HIFN_CRYPT_CMD_ALG_MASK) ==
-diff --git a/crypto/ocf/hifn/hifn7751reg.h b/crypto/ocf/hifn/hifn7751reg.h
-index ccf54f9..5a3d5aa 100644
 --- a/crypto/ocf/hifn/hifn7751reg.h
 +++ b/crypto/ocf/hifn/hifn7751reg.h
 @@ -78,7 +78,7 @@
@@ -815,8 +793,6 @@ index ccf54f9..5a3d5aa 100644
   *
   *********************************************************************/
  
-diff --git a/crypto/ocf/hifn/hifn7751var.h b/crypto/ocf/hifn/hifn7751var.h
-index 9a5f231..6146bfb 100644
 --- a/crypto/ocf/hifn/hifn7751var.h
 +++ b/crypto/ocf/hifn/hifn7751var.h
 @@ -103,7 +103,7 @@ struct hifn_dma {
@@ -855,8 +831,6 @@ index 9a5f231..6146bfb 100644
   *    HIFN_CRYPTO_BAD_INPUT  :  The passed in command had invalid settings.
   *    HIFN_CRYPTO_RINGS_FULL :  All DMA rings were full and non-blocking
   *                              behaviour was requested.
-diff --git a/crypto/ocf/hifn/hifnHIPP.c b/crypto/ocf/hifn/hifnHIPP.c
-index cf55a0f..454b8ea 100644
 --- a/crypto/ocf/hifn/hifnHIPP.c
 +++ b/crypto/ocf/hifn/hifnHIPP.c
 @@ -179,9 +179,9 @@ struct hipp_fs_entry {
@@ -888,8 +862,6 @@ index cf55a0f..454b8ea 100644
  		pci_free_consistent(sc->sc_pcidev,
  				    sizeof(*sc->sc_dma),
  				    sc->sc_dma, sc->sc_dma_physaddr);
-diff --git a/crypto/ocf/hifn/hifnHIPPvar.h b/crypto/ocf/hifn/hifnHIPPvar.h
-index 61d292f..dde47f7 100644
 --- a/crypto/ocf/hifn/hifnHIPPvar.h
 +++ b/crypto/ocf/hifn/hifnHIPPvar.h
 @@ -1,6 +1,6 @@
@@ -900,8 +872,6 @@ index 61d292f..dde47f7 100644
   *
   * Redistribution and use in source and binary forms, with or without
   * modification, are permitted provided that the following conditions
-diff --git a/crypto/ocf/ixp4xx/ixp4xx.c b/crypto/ocf/ixp4xx/ixp4xx.c
-index d83d8cc..936eaeb 100644
 --- a/crypto/ocf/ixp4xx/ixp4xx.c
 +++ b/crypto/ocf/ixp4xx/ixp4xx.c
 @@ -449,10 +449,10 @@ ixp_q_process(struct ixp_q *q)
@@ -936,8 +906,6 @@ index d83d8cc..936eaeb 100644
  		}
  
  		if (q->ixp_q_acrd) {
-diff --git a/crypto/ocf/random.c b/crypto/ocf/random.c
-index 118575a..85a961c 100644
 --- a/crypto/ocf/random.c
 +++ b/crypto/ocf/random.c
 @@ -303,7 +303,7 @@ random_proc(void *arg)
@@ -949,11 +917,9 @@ index 118575a..85a961c 100644
  	kfree(buf);
  
  bad_alloc:
-diff --git a/crypto/ocf/safe/md5.c b/crypto/ocf/safe/md5.c
-index 077c42e..8c6ded4 100644
 --- a/crypto/ocf/safe/md5.c
 +++ b/crypto/ocf/safe/md5.c
-@@ -127,7 +127,7 @@ static const u_int8_t md5_paddat[MD5_BUFLEN] = {
+@@ -127,7 +127,7 @@ static const u_int8_t md5_paddat[MD5_BUF
  	0,	0,	0,	0,	0,	0,	0,	0,
  	0,	0,	0,	0,	0,	0,	0,	0,
  	0,	0,	0,	0,	0,	0,	0,	0,
@@ -1030,11 +996,9 @@ index 077c42e..8c6ded4 100644
  	ROUND4(C, D, A, B,  2, So, 63); ROUND4(B, C, D, A,  9, Sp, 64);
  
  	ctxt->md5_sta += A;
-diff --git a/crypto/ocf/safe/safe.c b/crypto/ocf/safe/safe.c
-index a77e3a2..7f81177 100644
 --- a/crypto/ocf/safe/safe.c
 +++ b/crypto/ocf/safe/safe.c
-@@ -367,7 +367,7 @@ safe_intr(int irq, void *arg, struct pt_regs *regs)
+@@ -367,7 +367,7 @@ safe_intr(int irq, void *arg, struct pt_
  		sc->sc_needwakeup &= ~wakeup;
  		crypto_unblock(sc->sc_cid, wakeup);
  	}
@@ -1043,7 +1007,7 @@ index a77e3a2..7f81177 100644
  	return IRQ_HANDLED;
  }
  
-@@ -903,7 +903,7 @@ safe_process(device_t dev, struct cryptop *crp, int hint)
+@@ -903,7 +903,7 @@ safe_process(device_t dev, struct crypto
  		/*
  		 * Tell the hardware to copy the header to the output.
  		 * The header is defined as the data from the end of
@@ -1052,7 +1016,7 @@ index a77e3a2..7f81177 100644
  		 * Typically this is the inline IV.  Note that you need
  		 * to do this even if src+dst are the same; it appears
  		 * that w/o this bit the crypted data is written
-@@ -1002,7 +1002,7 @@ safe_process(device_t dev, struct cryptop *crp, int hint)
+@@ -1002,7 +1002,7 @@ safe_process(device_t dev, struct crypto
  					 * destination wil result in a
  					 * destination particle list that does
  					 * the necessary scatter DMA.
@@ -1061,7 +1025,7 @@ index a77e3a2..7f81177 100644
  					safestats.st_iovnotuniform++;
  					err = EINVAL;
  					goto errout;
-@@ -1115,7 +1115,7 @@ safe_callback(struct safe_softc *sc, struct safe_ringentry *re)
+@@ -1115,7 +1115,7 @@ safe_callback(struct safe_softc *sc, str
  		pci_unmap_operand(sc, &re->re_dst);
  	pci_unmap_operand(sc, &re->re_src);
  
@@ -1070,7 +1034,7 @@ index a77e3a2..7f81177 100644
  	 * If result was written to a differet mbuf chain, swap
  	 * it in as the return value and reclaim the original.
  	 */
-@@ -1165,14 +1165,14 @@ safe_callback(struct safe_softc *sc, struct safe_ringentry *re)
+@@ -1165,14 +1165,14 @@ safe_callback(struct safe_softc *sc, str
  				 */
  				re->re_sastate.sa_saved_indigest[0] =
  					cpu_to_be32(re->re_sastate.sa_saved_indigest[0]);
@@ -1096,7 +1060,7 @@ index a77e3a2..7f81177 100644
  	 * This could take between 750ms - 1000ms in time.
  	 */
  	i = 0;
-@@ -1252,7 +1252,7 @@ safe_rng_enable_short_cycle(struct safe_softc *sc)
+@@ -1252,7 +1252,7 @@ safe_rng_enable_short_cycle(struct safe_
  {
  	DPRINTF(("%s()\n", __FUNCTION__));
  
@@ -1105,7 +1069,7 @@ index a77e3a2..7f81177 100644
  		READ_REG(sc, SAFE_RNG_CTRL) | SAFE_RNG_CTRL_SHORTEN);
  }
  
-@@ -1274,7 +1274,7 @@ safe_read_random(void *arg, u_int32_t *buf, int maxwords)
+@@ -1274,7 +1274,7 @@ safe_read_random(void *arg, u_int32_t *b
  	int i, rc;
  
  	DPRINTF(("%s()\n", __FUNCTION__));
@@ -1114,7 +1078,7 @@ index a77e3a2..7f81177 100644
  	safestats.st_rng++;
  	/*
  	 * Fetch the next block of data.
-@@ -1494,9 +1494,9 @@ safe_free_entry(struct safe_softc *sc, struct safe_ringentry *re)
+@@ -1494,9 +1494,9 @@ safe_free_entry(struct safe_softc *sc, s
  #endif
  
  	crp = (struct cryptop *)re->re_crp;
@@ -1135,8 +1099,6 @@ index a77e3a2..7f81177 100644
  		for (i = 0; i < (mod_bits + 7) / 8; i++, basep--, modp--) {
  			if (*modp < *basep)
  				goto too_small;
-diff --git a/crypto/ocf/safe/safereg.h b/crypto/ocf/safe/safereg.h
-index dbaf98f..d3461f9 100644
 --- a/crypto/ocf/safe/safereg.h
 +++ b/crypto/ocf/safe/safereg.h
 @@ -410,7 +410,7 @@ struct safe_sarec {
@@ -1148,8 +1110,6 @@ index dbaf98f..d3461f9 100644
   * Security Associate State Record (Rev 1).
   */
  struct safe_sastate {
-diff --git a/crypto/ocf/talitos/talitos.c b/crypto/ocf/talitos/talitos.c
-index eaf3f30..6e09d1b 100644
 --- a/crypto/ocf/talitos/talitos.c
 +++ b/crypto/ocf/talitos/talitos.c
 @@ -40,12 +40,12 @@
@@ -1196,7 +1156,7 @@ index eaf3f30..6e09d1b 100644
  
  #include "talitos_dev.h"
  #include "talitos_soft.h"
-@@ -147,7 +147,7 @@ static int talitos_newsession(device_t dev, u_int32_t *sidp,
+@@ -147,7 +147,7 @@ static int talitos_newsession(device_t d
  static int talitos_freesession(device_t dev, u_int64_t tid);
  static int talitos_process(device_t dev, struct cryptop *crp, int hint);
  static void dump_talitos_status(struct talitos_softc *sc);
@@ -1205,7 +1165,7 @@ index eaf3f30..6e09d1b 100644
  								int chsel);
  static void talitos_doneprocessing(struct talitos_softc *sc);
  static void talitos_init_device(struct talitos_softc *sc);
-@@ -205,26 +205,26 @@ static void dump_talitos_status(struct talitos_softc *sc)
+@@ -205,26 +205,26 @@ static void dump_talitos_status(struct t
  	v_hi = talitos_read(sc->sc_base_addr + TALITOS_ISR_HI);
  	printk(KERN_INFO "%s: ISR          0x%08x_%08x\n",
  			device_get_nameunit(sc->sc_cdev), v, v_hi);
@@ -1242,7 +1202,7 @@ index eaf3f30..6e09d1b 100644
  				device_get_nameunit(sc->sc_cdev), v, v_hi, i);
  	}
  	return;
-@@ -232,7 +232,7 @@ static void dump_talitos_status(struct talitos_softc *sc)
+@@ -232,7 +232,7 @@ static void dump_talitos_status(struct t
  
  
  #ifdef CONFIG_OCF_RANDOMHARVEST
@@ -1251,7 +1211,7 @@ index eaf3f30..6e09d1b 100644
   * pull random numbers off the RNG FIFO, not exceeding amount available
   */
  static int
-@@ -252,7 +252,7 @@ talitos_read_random(void *arg, u_int32_t *buf, int maxwords)
+@@ -252,7 +252,7 @@ talitos_read_random(void *arg, u_int32_t
  		return 0;
  	}
  	/*
@@ -1260,7 +1220,7 @@ index eaf3f30..6e09d1b 100644
  	 * shift and convert to a 32-bit word count
  	 */
  	v = talitos_read(sc->sc_base_addr + TALITOS_RNGSR_HI);
-@@ -260,16 +260,16 @@ talitos_read_random(void *arg, u_int32_t *buf, int maxwords)
+@@ -260,16 +260,16 @@ talitos_read_random(void *arg, u_int32_t
  	if (maxwords > v)
  		maxwords = v;
  	for (rc = 0; rc < maxwords; rc++) {
@@ -1280,7 +1240,7 @@ index eaf3f30..6e09d1b 100644
  			TALITOS_RNG_FIFO + rc*sizeof(u_int32_t));
  	}
  
-@@ -286,18 +286,18 @@ talitos_rng_init(struct talitos_softc *sc)
+@@ -286,18 +286,18 @@ talitos_rng_init(struct talitos_softc *s
  	v = talitos_read(sc->sc_base_addr + TALITOS_RNGRCR_HI);
  	v |= TALITOS_RNGRCR_HI_SR;
  	talitos_write(sc->sc_base_addr + TALITOS_RNGRCR_HI, v);
@@ -1303,7 +1263,7 @@ index eaf3f30..6e09d1b 100644
  	 * attempts to keep the FIFO full.
  	 */
  	v = talitos_read(sc->sc_base_addr + TALITOS_RNGISR_HI);
-@@ -307,7 +307,7 @@ talitos_rng_init(struct talitos_softc *sc)
+@@ -307,7 +307,7 @@ talitos_rng_init(struct talitos_softc *s
  		return;
  	}
  	/*
@@ -1312,7 +1272,7 @@ index eaf3f30..6e09d1b 100644
  	 * to fail, it's going to fail at reset time
  	 */
  	return;
-@@ -353,7 +353,7 @@ talitos_newsession(device_t dev, u_int32_t *sidp, struct cryptoini *cri)
+@@ -353,7 +353,7 @@ talitos_newsession(device_t dev, u_int32
  	}
  	if (encini == NULL && macini == NULL)
  		return EINVAL;
@@ -1321,7 +1281,7 @@ index eaf3f30..6e09d1b 100644
  		/* validate key length */
  		switch (encini->cri_alg) {
  		case CRYPTO_DES_CBC:
-@@ -372,7 +372,7 @@ talitos_newsession(device_t dev, u_int32_t *sidp, struct cryptoini *cri)
+@@ -372,7 +372,7 @@ talitos_newsession(device_t dev, u_int32
  				return EINVAL;
  			break;
  		default:
@@ -1330,7 +1290,7 @@ index eaf3f30..6e09d1b 100644
  				encini->cri_alg);
  			return EINVAL;
  		}
-@@ -398,13 +398,13 @@ talitos_newsession(device_t dev, u_int32_t *sidp, struct cryptoini *cri)
+@@ -398,13 +398,13 @@ talitos_newsession(device_t dev, u_int32
  			/* allocating session */
  			sesn = sc->sc_nsessions;
  			ses = (struct talitos_session *) kmalloc(
@@ -1346,7 +1306,7 @@ index eaf3f30..6e09d1b 100644
  				sesn * sizeof(struct talitos_session));
  			memset(sc->sc_sessions, 0,
  				sesn * sizeof(struct talitos_session));
-@@ -447,7 +447,7 @@ talitos_newsession(device_t dev, u_int32_t *sidp, struct cryptoini *cri)
+@@ -447,7 +447,7 @@ talitos_newsession(device_t dev, u_int32
  		}
  	}
  
@@ -1355,7 +1315,7 @@ index eaf3f30..6e09d1b 100644
  	 * and only fill things like i/o and direction in process() */
  
  	/* assign session ID */
-@@ -478,10 +478,10 @@ talitos_freesession(device_t dev, u_int64_t tid)
+@@ -478,10 +478,10 @@ talitos_freesession(device_t dev, u_int6
  }
  
  /*
@@ -1381,7 +1341,7 @@ index eaf3f30..6e09d1b 100644
  		chsel*TALITOS_CH_OFFSET + TALITOS_CH_FF_HI, v);
  	return 0;
  }
-@@ -508,7 +508,7 @@ talitos_process(device_t dev, struct cryptop *crp, int hint)
+@@ -508,7 +508,7 @@ talitos_process(device_t dev, struct cry
  	struct talitos_desc *td;
  	unsigned long flags;
  	/* descriptor mappings */
@@ -1390,7 +1350,7 @@ index eaf3f30..6e09d1b 100644
  		in_fifo, out_fifo, cipher_iv_out;
  	static int chsel = -1;
  
-@@ -524,7 +524,7 @@ talitos_process(device_t dev, struct cryptop *crp, int hint)
+@@ -524,7 +524,7 @@ talitos_process(device_t dev, struct cry
  
  	ses = &sc->sc_sessions[TALITOS_SESSION(crp->crp_sid)];
  
@@ -1399,7 +1359,7 @@ index eaf3f30..6e09d1b 100644
  	spin_lock_irqsave(&sc->sc_chnfifolock[sc->sc_num_channels], flags);
  
  	/* reuse channel that already had/has requests for the required EU */
-@@ -536,19 +536,19 @@ talitos_process(device_t dev, struct cryptop *crp, int hint)
+@@ -536,19 +536,19 @@ talitos_process(device_t dev, struct cry
  		/*
  		 * haven't seen this algo the last sc_num_channels or more
  		 * use round robin in this case
@@ -1422,7 +1382,7 @@ index eaf3f30..6e09d1b 100644
  	spin_unlock_irqrestore(&sc->sc_chnfifolock[sc->sc_num_channels], flags);
  
  	/* acquire the selected channel fifo lock */
-@@ -557,7 +557,7 @@ talitos_process(device_t dev, struct cryptop *crp, int hint)
+@@ -557,7 +557,7 @@ talitos_process(device_t dev, struct cry
  	/* find and reserve next available descriptor-cryptop pair */
  	for (i = 0; i < sc->sc_chfifo_len; i++) {
  		if (sc->sc_chnfifo[chsel][i].cf_desc.hdr == 0) {
@@ -1431,7 +1391,7 @@ index eaf3f30..6e09d1b 100644
  			 * ensure correct descriptor formation by
  			 * avoiding inadvertently setting "optional" entries
  			 * e.g. not using "optional" dptr2 for MD/HMAC descs
-@@ -565,7 +565,7 @@ talitos_process(device_t dev, struct cryptop *crp, int hint)
+@@ -565,7 +565,7 @@ talitos_process(device_t dev, struct cry
  			memset(&sc->sc_chnfifo[chsel][i].cf_desc,
  				0, sizeof(*td));
  			/* reserve it with done notification request bit */
@@ -1440,7 +1400,7 @@ index eaf3f30..6e09d1b 100644
  				TALITOS_DONE_NOTIFY;
  			break;
  		}
-@@ -577,7 +577,7 @@ talitos_process(device_t dev, struct cryptop *crp, int hint)
+@@ -577,7 +577,7 @@ talitos_process(device_t dev, struct cry
  		err = ERESTART;
  		goto errout;
  	}
@@ -1449,7 +1409,7 @@ index eaf3f30..6e09d1b 100644
  	td = &sc->sc_chnfifo[chsel][i].cf_desc;
  	sc->sc_chnfifo[chsel][i].cf_crp = crp;
  
-@@ -672,10 +672,10 @@ talitos_process(device_t dev, struct cryptop *crp, int hint)
+@@ -672,10 +672,10 @@ talitos_process(device_t dev, struct cry
  			err = EINVAL;
  			goto errout;
  		}
@@ -1462,7 +1422,7 @@ index eaf3f30..6e09d1b 100644
  			skb->len, DMA_TO_DEVICE);
  		td->ptr[out_fifo].len = skb->len;
  		td->ptr[hmac_data].ptr = dma_map_single(NULL, skb->data,
-@@ -748,7 +748,7 @@ talitos_process(device_t dev, struct cryptop *crp, int hint)
+@@ -748,7 +748,7 @@ talitos_process(device_t dev, struct cry
  		 * copy both the header+IV.
  		 */
  		if (enccrd->crd_flags & CRD_F_ENCRYPT) {
@@ -1471,7 +1431,7 @@ index eaf3f30..6e09d1b 100644
  			if (enccrd->crd_flags & CRD_F_IV_EXPLICIT)
  				iv = enccrd->crd_iv;
  			else
-@@ -758,7 +758,7 @@ talitos_process(device_t dev, struct cryptop *crp, int hint)
+@@ -758,7 +758,7 @@ talitos_process(device_t dev, struct cry
  				    enccrd->crd_inject, ivsize, iv);
  			}
  		} else {
@@ -1480,7 +1440,7 @@ index eaf3f30..6e09d1b 100644
  			if (enccrd->crd_flags & CRD_F_IV_EXPLICIT) {
  				iv = enccrd->crd_iv;
  				bcopy(enccrd->crd_iv, iv, ivsize);
-@@ -768,7 +768,7 @@ talitos_process(device_t dev, struct cryptop *crp, int hint)
+@@ -768,7 +768,7 @@ talitos_process(device_t dev, struct cry
  				    enccrd->crd_inject, ivsize, iv);
  			}
  		}
@@ -1489,7 +1449,7 @@ index eaf3f30..6e09d1b 100644
  			DMA_TO_DEVICE);
  		td->ptr[cipher_iv].len = ivsize;
  		/*
-@@ -786,16 +786,16 @@ talitos_process(device_t dev, struct cryptop *crp, int hint)
+@@ -786,16 +786,16 @@ talitos_process(device_t dev, struct cry
  			|  TALITOS_MODE1_MDEU_INIT
  			|  TALITOS_MODE1_MDEU_PAD;
  		switch (maccrd->crd_alg) {
@@ -1510,7 +1470,7 @@ index eaf3f30..6e09d1b 100644
  				td->hdr |= TALITOS_MODE1_MDEU_SHA1_HMAC;
  				break;
  			default:
-@@ -812,7 +812,7 @@ talitos_process(device_t dev, struct cryptop *crp, int hint)
+@@ -812,7 +812,7 @@ talitos_process(device_t dev, struct cry
  			 * crypt data is the difference in the skips.
  			 */
  			/* ipsec only for now */
@@ -1519,7 +1479,7 @@ index eaf3f30..6e09d1b 100644
  				ses->ses_hmac, ses->ses_hmac_len, DMA_TO_DEVICE);
  			td->ptr[hmac_key].len = ses->ses_hmac_len;
  			td->ptr[in_fifo].ptr  += enccrd->crd_skip;
-@@ -821,7 +821,7 @@ talitos_process(device_t dev, struct cryptop *crp, int hint)
+@@ -821,7 +821,7 @@ talitos_process(device_t dev, struct cry
  			td->ptr[out_fifo].len =  enccrd->crd_len;
  			/* bytes of HMAC to postpend to ciphertext */
  			td->ptr[out_fifo].extent =  ses->ses_mlen;
@@ -1528,7 +1488,7 @@ index eaf3f30..6e09d1b 100644
  			td->ptr[hmac_data].len = enccrd->crd_skip - maccrd->crd_skip;
  		}
  		if (enccrd->crd_flags & CRD_F_KEY_EXPLICIT) {
-@@ -835,22 +835,22 @@ talitos_process(device_t dev, struct cryptop *crp, int hint)
+@@ -835,22 +835,22 @@ talitos_process(device_t dev, struct cry
  				|  TALITOS_MODE0_MDEU_INIT
  				|  TALITOS_MODE0_MDEU_PAD;
  		switch (maccrd->crd_alg) {
@@ -1557,7 +1517,7 @@ index eaf3f30..6e09d1b 100644
  				td->hdr |= TALITOS_MODE0_MDEU_SHA1_HMAC;
  				break;
  			default:
-@@ -865,16 +865,16 @@ talitos_process(device_t dev, struct cryptop *crp, int hint)
+@@ -865,16 +865,16 @@ talitos_process(device_t dev, struct cry
  
  		if ((maccrd->crd_alg == CRYPTO_MD5_HMAC) ||
  		   (maccrd->crd_alg == CRYPTO_SHA1_HMAC)) {
@@ -1590,7 +1550,7 @@ index eaf3f30..6e09d1b 100644
   * (otherwise it's up to decoding desc hdrs!)
   */
  static void talitos_errorprocessing(struct talitos_softc *sc)
-@@ -902,19 +902,19 @@ static void talitos_errorprocessing(struct talitos_softc *sc)
+@@ -902,19 +902,19 @@ static void talitos_errorprocessing(stru
  	spin_lock_irqsave(&sc->sc_chnfifolock[sc->sc_num_channels], flags);
  
  	if (debug) dump_talitos_status(sc);
@@ -1614,7 +1574,7 @@ index eaf3f30..6e09d1b 100644
  						= EIO;
  				}
  			} else
-@@ -957,8 +957,8 @@ static void talitos_doneprocessing(struct talitos_softc *sc)
+@@ -957,8 +957,8 @@ static void talitos_doneprocessing(struc
  		spin_lock_irqsave(&sc->sc_chnfifolock[i], flags);
  		for (j = 0; j < sc->sc_chfifo_len; j++) {
  			/* descriptor has done bits set? */
@@ -1625,7 +1585,7 @@ index eaf3f30..6e09d1b 100644
  				== TALITOS_HDR_DONE_BITS) {
  				/* notify ocf */
  				crypto_done(sc->sc_chnfifo[i][j].cf_crp);
-@@ -986,7 +986,7 @@ talitos_intr(int irq, void *arg, struct pt_regs *regs)
+@@ -986,7 +986,7 @@ talitos_intr(int irq, void *arg, struct
  {
  	struct talitos_softc *sc = arg;
  	u_int32_t v, v_hi;
@@ -1634,7 +1594,7 @@ index eaf3f30..6e09d1b 100644
  	/* ack */
  	v = talitos_read(sc->sc_base_addr + TALITOS_ISR);
  	v_hi = talitos_read(sc->sc_base_addr + TALITOS_ISR_HI);
-@@ -1018,11 +1018,11 @@ talitos_init_device(struct talitos_softc *sc)
+@@ -1018,11 +1018,11 @@ talitos_init_device(struct talitos_softc
  
  	/* init all channels */
  	for (i = 0; i < sc->sc_num_channels; i++) {
@@ -1648,7 +1608,7 @@ index eaf3f30..6e09d1b 100644
  			i*TALITOS_CH_OFFSET + TALITOS_CH_CCCR_HI, v);
  	}
  	/* enable all interrupts */
-@@ -1067,13 +1067,13 @@ talitos_reset_device(struct talitos_softc *sc)
+@@ -1067,13 +1067,13 @@ talitos_reset_device(struct talitos_soft
  
  	/*
  	 * Master reset
@@ -1666,7 +1626,7 @@ index eaf3f30..6e09d1b 100644
  	/* reset all channels */
  	for (i = 0; i < sc->sc_num_channels; i++) {
  		v = talitos_read(sc->sc_base_addr + i*TALITOS_CH_OFFSET +
-@@ -1143,7 +1143,7 @@ static int talitos_probe(struct platform_device *pdev)
+@@ -1143,7 +1143,7 @@ static int talitos_probe(struct platform
  	rc = request_irq(sc->sc_irq, talitos_intr, 0,
  			device_get_nameunit(sc->sc_cdev), sc);
  	if (rc) {
@@ -1675,7 +1635,7 @@ index eaf3f30..6e09d1b 100644
  				device_get_nameunit(sc->sc_cdev), sc->sc_irq);
  		sc->sc_irq = -1;
  		goto out;
-@@ -1205,17 +1205,17 @@ static int talitos_probe(struct platform_device *pdev)
+@@ -1205,17 +1205,17 @@ static int talitos_probe(struct platform
  	memset(sc->sc_chnlastalg, 0, sc->sc_num_channels * sizeof(int));
  
  	sc->sc_chnfifo = (struct desc_cryptop_pair **) kmalloc(
@@ -1696,8 +1656,6 @@ index eaf3f30..6e09d1b 100644
  			sc->sc_chfifo_len * sizeof(struct desc_cryptop_pair));
  	}
  
-diff --git a/crypto/ocf/talitos/talitos_dev.h b/crypto/ocf/talitos/talitos_dev.h
-index a8b0479..86bb57c 100644
 --- a/crypto/ocf/talitos/talitos_dev.h
 +++ b/crypto/ocf/talitos/talitos_dev.h
 @@ -33,7 +33,7 @@
@@ -1762,6 +1720,3 @@ index a8b0479..86bb57c 100644
  					 * Descriptor Buffer (debug) */
  
  /* execution unit register offset addresses and bits */
--- 
-1.7.9.5
-

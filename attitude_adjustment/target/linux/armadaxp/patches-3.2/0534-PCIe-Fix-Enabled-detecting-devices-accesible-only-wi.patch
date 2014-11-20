@@ -1,5 +1,3 @@
-diff --git a/arch/arm/mach-armadaxp/pex.c b/arch/arm/mach-armadaxp/pex.c
-index 70ebe9e..fe74c48 100644
 --- a/arch/arm/mach-armadaxp/pex.c
 +++ b/arch/arm/mach-armadaxp/pex.c
 @@ -47,16 +47,16 @@
@@ -116,7 +114,7 @@ index 70ebe9e..fe74c48 100644
  	u32 pciIf = sysdata->mv_controller_num;
  
  	*val = 0xffffffff;
-@@ -208,20 +253,18 @@ static int mv_pci_read_config(struct pci_bus *bus,
+@@ -208,20 +253,18 @@ static int mv_pci_read_config(struct pci
  	bus_num = bus->number;
  	dev_no = PCI_SLOT(devfn);
  
@@ -144,7 +142,7 @@ index 70ebe9e..fe74c48 100644
  	switch (size) {
  		case 1:
  			temp = (temp >>  (8*(where & 0x3))) & 0xff;
-@@ -234,46 +277,46 @@ static int mv_pci_read_config(struct pci_bus *bus,
+@@ -234,46 +277,46 @@ static int mv_pci_read_config(struct pci
  		default:
  			break;
  	}
@@ -207,7 +205,7 @@ index 70ebe9e..fe74c48 100644
  			mask = 0xffff;
  			break;
  
-@@ -283,15 +326,45 @@ static int mv_pci_write_config(struct pci_bus *bus, unsigned int devfn, int wher
+@@ -283,15 +326,45 @@ static int mv_pci_write_config(struct pc
  			break;
  	}
  
@@ -257,7 +255,7 @@ index 70ebe9e..fe74c48 100644
  };
  
  
-@@ -319,7 +392,7 @@ int __init mv_pex_setup(int nr, struct pci_sys_data *sys)
+@@ -319,7 +392,7 @@ int __init mv_pex_setup(int nr, struct p
  		panic("PCI: unable to alloc resources");
  		return 0;
  	}
@@ -266,7 +264,7 @@ index 70ebe9e..fe74c48 100644
  	memset(res, 0, sizeof(struct resource) * 2);
  
  	/* Save the H/W if number for this PEX bus */
-@@ -385,6 +458,7 @@ struct pci_bus *mv_pex_scan_bus(int nr, struct pci_sys_data *sys)
+@@ -385,6 +458,7 @@ struct pci_bus *mv_pex_scan_bus(int nr,
  
  		if (MV_TRUE == mvCtrlPwrClckGet(PEX_UNIT_ID, pexNextHWInf)) {
  			mvPexLocalBusNumSet(pexNextHWInf, (bus->subordinate + 1));
@@ -274,7 +272,7 @@ index 70ebe9e..fe74c48 100644
  			break;
  		}
  	}
-@@ -393,52 +467,52 @@ struct pci_bus *mv_pex_scan_bus(int nr, struct pci_sys_data *sys)
+@@ -393,52 +467,52 @@ struct pci_bus *mv_pex_scan_bus(int nr,
  }
  
  
@@ -337,8 +335,6 @@ index 70ebe9e..fe74c48 100644
  {
  	return IRQ_AURORA_PCIE9;
  }
-diff --git a/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h b/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h
-index 040c9dd..2387108 100755
 --- a/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h
 +++ b/arch/arm/plat-armada/mv_hal/pex/mvPexRegs.h
 @@ -179,6 +179,7 @@ extern "C" {
@@ -349,6 +345,3 @@ index 040c9dd..2387108 100755
  #define PEX_DYNMC_WIDTH_MNG_REG(pexIf)			((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A30)
  #define PEX_ROOT_CMPLX_SSPL_REG(pexif)			((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A0C)
  #define PEX_ACK_TMR_1X_REG(pexIf)			((MV_PEX_IF_REGS_BASE(pexIf)) + 0x1A40)
--- 
-1.7.9.5
-

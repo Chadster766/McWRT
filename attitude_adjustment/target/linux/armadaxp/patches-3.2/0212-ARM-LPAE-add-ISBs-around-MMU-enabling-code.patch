@@ -21,8 +21,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  arch/arm/kernel/sleep.S          |    2 ++
  4 files changed, 16 insertions(+)
 
-diff --git a/arch/arm/boot/compressed/head.S b/arch/arm/boot/compressed/head.S
-index 13eb723..fb74626 100644
 --- a/arch/arm/boot/compressed/head.S
 +++ b/arch/arm/boot/compressed/head.S
 @@ -663,6 +663,7 @@ __armv7_mmu_cache_on:
@@ -33,8 +31,6 @@ index 13eb723..fb74626 100644
  		mcr	p15, 0, r0, c1, c0, 0	@ load control register
  		mrc	p15, 0, r0, c1, c0, 0	@ and read it back
  		mov	r0, #0
-diff --git a/arch/arm/include/asm/assembler.h b/arch/arm/include/asm/assembler.h
-index 757f9cb..3eae32e 100644
 --- a/arch/arm/include/asm/assembler.h
 +++ b/arch/arm/include/asm/assembler.h
 @@ -192,6 +192,17 @@
@@ -55,8 +51,6 @@ index 757f9cb..3eae32e 100644
   * SMP data memory barrier
   */
  	.macro	smp_dmb mode
-diff --git a/arch/arm/kernel/head.S b/arch/arm/kernel/head.S
-index f30a1a8..b108193 100644
 --- a/arch/arm/kernel/head.S
 +++ b/arch/arm/kernel/head.S
 @@ -405,8 +405,10 @@ ENDPROC(__enable_mmu)
@@ -70,8 +64,6 @@ index f30a1a8..b108193 100644
  	mov	r3, r3
  	mov	r3, r13
  	mov	pc, r3
-diff --git a/arch/arm/kernel/sleep.S b/arch/arm/kernel/sleep.S
-index 020e99c..4ac45fe 100644
 --- a/arch/arm/kernel/sleep.S
 +++ b/arch/arm/kernel/sleep.S
 @@ -56,8 +56,10 @@ ENDPROC(cpu_suspend_abort)
@@ -85,6 +77,3 @@ index 020e99c..4ac45fe 100644
  	mov	r0, r0
  	mov	r0, r0
  	mov	pc, r3			@ jump to virtual address
--- 
-1.7.9.5
-

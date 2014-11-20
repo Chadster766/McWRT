@@ -1,6 +1,6 @@
 --- a/net/bridge/br_private.h
 +++ b/net/bridge/br_private.h
-@@ -139,6 +139,7 @@ struct net_bridge_port
+@@ -135,6 +135,7 @@ struct net_bridge_port
  
  	unsigned long 			flags;
  #define BR_HAIRPIN_MODE		0x00000001
@@ -55,7 +55,7 @@
  		skb = NULL;
 --- a/net/bridge/br_forward.c
 +++ b/net/bridge/br_forward.c
-@@ -109,7 +109,7 @@ void br_deliver(const struct net_bridge_
+@@ -110,7 +110,7 @@ void br_deliver(const struct net_bridge_
  /* called with rcu_read_lock */
  void br_forward(const struct net_bridge_port *to, struct sk_buff *skb, struct sk_buff *skb0)
  {
@@ -64,7 +64,7 @@
  		if (skb0)
  			deliver_clone(to, skb, __br_forward);
  		else
-@@ -164,7 +164,8 @@ out:
+@@ -165,7 +165,8 @@ out:
  static void br_flood(struct net_bridge *br, struct sk_buff *skb,
  		     struct sk_buff *skb0,
  		     void (*__packet_hook)(const struct net_bridge_port *p,
@@ -74,7 +74,7 @@
  {
  	struct net_bridge_port *p;
  	struct net_bridge_port *prev;
-@@ -172,6 +173,9 @@ static void br_flood(struct net_bridge *
+@@ -173,6 +174,9 @@ static void br_flood(struct net_bridge *
  	prev = NULL;
  
  	list_for_each_entry_rcu(p, &br->port_list, list) {
@@ -84,7 +84,7 @@
  		prev = maybe_deliver(prev, p, skb, __packet_hook);
  		if (IS_ERR(prev))
  			goto out;
-@@ -195,14 +199,14 @@ out:
+@@ -196,14 +200,14 @@ out:
  /* called with rcu_read_lock */
  void br_flood_deliver(struct net_bridge *br, struct sk_buff *skb)
  {
@@ -101,4 +101,3 @@
  }
  
  #ifdef CONFIG_BRIDGE_IGMP_SNOOPING
- 

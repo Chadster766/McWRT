@@ -48,8 +48,6 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  create mode 100644 net/ipv4/netfilter/ipt_NFP.c
  create mode 100644 net/ipv6/netfilter/ip6t_NFP.c
 
-diff --git a/arch/arm/mach-armadaxp/Makefile b/arch/arm/mach-armadaxp/Makefile
-index 3c357f1..de803f4 100644
 --- a/arch/arm/mach-armadaxp/Makefile
 +++ b/arch/arm/mach-armadaxp/Makefile
 @@ -153,51 +153,3 @@ obj-$(CONFIG_FB_DOVE_CLCD)		+= clcd.o
@@ -104,8 +102,6 @@ index 3c357f1..de803f4 100644
 -
 -nfp_learn-objs = $(LSP_NFP_MGR_DIR)/mv_nfp_hooks.o
 -obj-$(CONFIG_MV_ETH_NFP_LEARN) += nfp_learn.o
-diff --git a/arch/arm/mach-armadaxp/export.c b/arch/arm/mach-armadaxp/export.c
-index 1d01e61..9f74008 100644
 --- a/arch/arm/mach-armadaxp/export.c
 +++ b/arch/arm/mach-armadaxp/export.c
 @@ -206,12 +206,11 @@ EXPORT_SYMBOL(TRC_START);
@@ -122,8 +118,6 @@ index 1d01e61..9f74008 100644
  EXPORT_SYMBOL(mvListCreate);
  EXPORT_SYMBOL(mvListDestroy);
 -#endif
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
-index dfba7c2..5d90b81 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/Kconfig
 @@ -668,213 +668,37 @@ config MV_ETH_EXTRA_BUF_NUM
@@ -365,8 +359,6 @@ index dfba7c2..5d90b81 100644
  
  menu "PON support for Network driver"
  
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile
-index 4b9d12d..9c090ff 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/Makefile
 @@ -6,16 +6,9 @@ ifneq ($(MACHINE),)
@@ -391,9 +383,6 @@ index 4b9d12d..9c090ff 100644
 +obj-$(CONFIG_MV_ETH_SWITCH) +=  mv_eth_switch.o
 +obj-$(CONFIG_MV_ETH_TOOL) += mv_eth_tool.o
  
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_nfp.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_nfp.c
-new file mode 100755
-index 0000000..698c147
 --- /dev/null
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_eth_nfp.c
 @@ -0,0 +1,1067 @@
@@ -1464,11 +1453,9 @@ index 0000000..698c147
 +	return err;
 +}
 +#endif /* CONFIG_MV_ETH_NFP_EXT */
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-index 689cfb9..7605582 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.c
-@@ -166,27 +166,6 @@ __setup("mv_port2_config=", mv_eth_cmdline_port2_config);
+@@ -166,27 +166,6 @@ __setup("mv_port2_config=", mv_eth_cmdli
  int mv_eth_cmdline_port3_config(char *s);
  __setup("mv_port3_config=", mv_eth_cmdline_port3_config);
  
@@ -1496,7 +1483,7 @@ index 689cfb9..7605582 100755
  
  int mv_eth_cmdline_port0_config(char *s)
  {
-@@ -1672,14 +1651,14 @@ static inline int mv_eth_rx(struct eth_port *pp, int rx_todo, int rxq)
+@@ -1672,14 +1651,14 @@ static inline int mv_eth_rx(struct eth_p
  		}
  #endif /* CONFIG_MV_ETH_PNC && CONFIG_MV_ETH_RX_SPECIAL */
  
@@ -1513,7 +1500,7 @@ index 689cfb9..7605582 100755
  			if (status == MV_OK)
  				continue;
  			if (status == MV_FAIL) {
-@@ -1688,7 +1667,7 @@ static inline int mv_eth_rx(struct eth_port *pp, int rx_todo, int rxq)
+@@ -1688,7 +1667,7 @@ static inline int mv_eth_rx(struct eth_p
  			}
  			/* MV_TERMINATE - packet returned to slow path */
  		}
@@ -1543,7 +1530,7 @@ index 689cfb9..7605582 100755
  
  #ifdef CONFIG_MV_ETH_STAT_ERR
  	printk(KERN_ERR "  o Driver ERROR statistics enabled\n");
-@@ -4268,6 +4255,7 @@ int mv_eth_start_internals(struct eth_port *pp, int mtu)
+@@ -4268,6 +4255,7 @@ int mv_eth_start_internals(struct eth_po
  				err = -EINVAL;
  				goto out;
  			}
@@ -1551,7 +1538,7 @@ index 689cfb9..7605582 100755
  			if (mv_eth_ctrl_txq_cpu_own(pp->port, pp->txp, cpuCtrl->txq, 1, cpu) < 0) {
  				err = -EINVAL;
  				goto out;
-@@ -4312,6 +4300,7 @@ int mv_eth_start_internals(struct eth_port *pp, int mtu)
+@@ -4312,6 +4300,7 @@ int mv_eth_start_internals(struct eth_po
  
  #ifdef CONFIG_MV_ETH_BM_CPU
  	mvNetaBmPoolBufSizeSet(pp->port, pp->pool_long->pool, RX_BUF_SIZE(pp->pool_long->pkt_size));
@@ -1559,11 +1546,9 @@ index 689cfb9..7605582 100755
  	if (pp->pool_short == NULL) {
  		int short_pool = mv_eth_bm_config_short_pool_get(pp->port);
  
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
-index 955e9d1..809ae64 100755
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_neta/net_dev/mv_netdev.h
-@@ -95,8 +95,6 @@ int mv_eth_skb_recycle(struct sk_buff *skb);
+@@ -95,8 +95,6 @@ int mv_eth_skb_recycle(struct sk_buff *s
  #define mv_eth_is_recycle()     0
  #endif /* CONFIG_NET_SKB_RECYCLE */
  
@@ -1572,7 +1557,7 @@ index 955e9d1..809ae64 100755
  /******************************************************
   * interrupt control --                               *
   ******************************************************/
-@@ -738,17 +736,6 @@ int         mv_eth_pm_mode_set(int port, int mode);
+@@ -738,17 +736,6 @@ int         mv_eth_pm_mode_set(int port,
  
  int	    mv_eth_cpu_txq_mask_set(int port, int cpu, int txqMask);
  
@@ -1604,8 +1589,6 @@ index 955e9d1..809ae64 100755
 +#endif /* CONFIG_MV_ETH_NFP */
  
  #endif /* __mv_netdev_h__ */
-diff --git a/arch/arm/plat-armada/mv_drivers_lsp/mv_network/Kconfig b/arch/arm/plat-armada/mv_drivers_lsp/mv_network/Kconfig
-index a67f8c2..102412b 100644
 --- a/arch/arm/plat-armada/mv_drivers_lsp/mv_network/Kconfig
 +++ b/arch/arm/plat-armada/mv_drivers_lsp/mv_network/Kconfig
 @@ -196,7 +196,7 @@ config NET_SKB_RECYCLE_DEF
@@ -1617,8 +1600,6 @@ index a67f8c2..102412b 100644
  	default y
          ---help---
          Choosing this option will include NFP support in the image.
-diff --git a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
-index 35dccc5..03ca62f 100755
 --- a/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
 +++ b/arch/arm/plat-armada/mv_hal/neta/gbe/mvNeta.h
 @@ -80,15 +80,50 @@ extern "C" {
@@ -1715,11 +1696,9 @@ index 35dccc5..03ca62f 100755
  } MV_NETA_HAL_DATA;
  
  typedef struct eth_pbuf {
-diff --git a/drivers/net/ppp/pppoe.c b/drivers/net/ppp/pppoe.c
-index 1108867..dfaba34 100644
 --- a/drivers/net/ppp/pppoe.c
 +++ b/drivers/net/ppp/pppoe.c
-@@ -351,7 +351,7 @@ static int pppoe_device_event(struct notifier_block *this,
+@@ -351,7 +351,7 @@ static int pppoe_device_event(struct not
  
  	/* Only look at sockets that are using this specific device. */
  	switch (event) {
@@ -1728,7 +1707,7 @@ index 1108867..dfaba34 100644
  	case NETDEV_UP: {
  		struct net_device *ppp_netdev;
  		struct pppoe_net *pn;
-@@ -382,7 +382,7 @@ static int pppoe_device_event(struct notifier_block *this,
+@@ -382,7 +382,7 @@ static int pppoe_device_event(struct not
  		write_unlock_bh(&pn->hash_lock);
  	}
  	break;
@@ -1737,7 +1716,7 @@ index 1108867..dfaba34 100644
  
  	case NETDEV_CHANGEADDR:
  	case NETDEV_CHANGEMTU:
-@@ -617,7 +617,7 @@ static int pppoe_release(struct socket *sock)
+@@ -617,7 +617,7 @@ static int pppoe_release(struct socket *
  		po->pppoe_dev = NULL;
  	}
  
@@ -1746,7 +1725,7 @@ index 1108867..dfaba34 100644
  	if (ppp_dev_name(&po->chan)) {
  		struct net_device *ppp_netdev = NULL;
  		int ppp_netdev_ifindex = 0;
-@@ -629,7 +629,7 @@ static int pppoe_release(struct socket *sock)
+@@ -629,7 +629,7 @@ static int pppoe_release(struct socket *
  			nfp_mgr_p->nfp_hook_ppp_del(ppp_netdev_ifindex);
  	}
  
@@ -1755,7 +1734,7 @@ index 1108867..dfaba34 100644
  
  	pppox_unbind_sock(sk);
  
-@@ -1183,7 +1183,7 @@ static const struct pppox_proto pppoe_proto = {
+@@ -1183,7 +1183,7 @@ static const struct pppox_proto pppoe_pr
  	.owner	= THIS_MODULE,
  };
  
@@ -1773,11 +1752,9 @@ index 1108867..dfaba34 100644
  
  static __net_init int pppoe_init_net(struct net *net)
  {
-diff --git a/include/linux/mv_nfp.h b/include/linux/mv_nfp.h
-index eec1405..7cc7144 100644
 --- a/include/linux/mv_nfp.h
 +++ b/include/linux/mv_nfp.h
-@@ -73,8 +73,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -73,8 +73,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #include <linux/types.h>
  #include <linux/netdevice.h>
  
@@ -1817,11 +1794,9 @@ index eec1405..7cc7144 100644
 +
  
  #endif /* LINUX_MV_NFP_H */
-diff --git a/include/linux/netfilter/ipt_NFP.h b/include/linux/netfilter/ipt_NFP.h
-index 6e0e11d..b1831e1 100644
 --- a/include/linux/netfilter/ipt_NFP.h
 +++ b/include/linux/netfilter/ipt_NFP.h
-@@ -121,8 +121,8 @@ static inline void nfp_update_tuple_info(struct ipt_nfp_info *dst, struct ipt_nf
+@@ -121,8 +121,8 @@ static inline void nfp_update_tuple_info
  	}
  
  	if (src->flags & IPT_NFP_F_SET_TXQ) {
@@ -1832,8 +1807,6 @@ index 6e0e11d..b1831e1 100644
  	}
  
  	if (src->flags & IPT_NFP_F_SET_TXQ_DEF) {
-diff --git a/include/net/ip6_fib.h b/include/net/ip6_fib.h
-index 5de0af5..1b7485d 100644
 --- a/include/net/ip6_fib.h
 +++ b/include/net/ip6_fib.h
 @@ -120,10 +120,10 @@ struct rt6_info {
@@ -1849,8 +1822,6 @@ index 5de0af5..1b7485d 100644
  };
  
  static inline struct inet6_dev *ip6_dst_idev(struct dst_entry *dst)
-diff --git a/include/net/neighbour.h b/include/net/neighbour.h
-index 8a842e3..bcae018 100644
 --- a/include/net/neighbour.h
 +++ b/include/net/neighbour.h
 @@ -113,9 +113,9 @@ struct neighbour {
@@ -1865,8 +1836,6 @@ index 8a842e3..bcae018 100644
  	u8			primary_key[0];
  };
  
-diff --git a/include/net/netfilter/nf_conntrack_tuple.h b/include/net/netfilter/nf_conntrack_tuple.h
-index 5bb729b..0443678 100644
 --- a/include/net/netfilter/nf_conntrack_tuple.h
 +++ b/include/net/netfilter/nf_conntrack_tuple.h
 @@ -71,14 +71,14 @@ struct nf_conntrack_tuple {
@@ -1886,8 +1855,6 @@ index 5bb729b..0443678 100644
  };
  
  struct nf_conntrack_tuple_mask {
-diff --git a/include/net/route.h b/include/net/route.h
-index fc0ff7a..33e4958 100644
 --- a/include/net/route.h
 +++ b/include/net/route.h
 @@ -70,9 +70,9 @@ struct rtable {
@@ -1902,11 +1869,9 @@ index fc0ff7a..33e4958 100644
  };
  
  static inline bool rt_is_input_route(const struct rtable *rt)
-diff --git a/net/8021q/vlan.c b/net/8021q/vlan.c
-index 39d713f..7991a07 100644
 --- a/net/8021q/vlan.c
 +++ b/net/8021q/vlan.c
-@@ -123,10 +123,12 @@ void unregister_vlan_dev(struct net_device *dev, struct list_head *head)
+@@ -123,10 +123,12 @@ void unregister_vlan_dev(struct net_devi
  
  	if (vlan->flags & VLAN_FLAG_GVRP)
  		vlan_gvrp_request_leave(dev);
@@ -1921,7 +1886,7 @@ index 39d713f..7991a07 100644
  	vlan_group_set_device(grp, vlan_id, NULL);
  	/* Because unregister_netdevice_queue() makes sure at least one rcu
  	 * grace period is respected before device freeing,
-@@ -292,10 +294,12 @@ static int register_vlan_device(struct net_device *real_dev, u16 vlan_id)
+@@ -292,10 +294,12 @@ static int register_vlan_device(struct n
  	err = register_vlan_dev(new_dev);
  	if (err < 0)
  		goto out_free_newdev;
@@ -1936,7 +1901,7 @@ index 39d713f..7991a07 100644
  	return 0;
  
  out_free_newdev:
-@@ -720,7 +724,7 @@ static void __exit vlan_cleanup_module(void)
+@@ -720,7 +724,7 @@ static void __exit vlan_cleanup_module(v
  	vlan_gvrp_uninit();
  }
  
@@ -1954,11 +1919,9 @@ index 39d713f..7991a07 100644
  
  
  module_init(vlan_proto_init);
-diff --git a/net/bridge/br_fdb.c b/net/bridge/br_fdb.c
-index 043aaef..47e4d28 100644
 --- a/net/bridge/br_fdb.c
 +++ b/net/bridge/br_fdb.c
-@@ -66,14 +66,15 @@ static inline int has_expired(const struct net_bridge *br,
+@@ -66,14 +66,15 @@ static inline int has_expired(const stru
  {
  	if (fdb->is_static)
  		return 0;
@@ -1977,7 +1940,7 @@ index 043aaef..47e4d28 100644
  
  	return time_before_eq(fdb->updated + hold_time(br), jiffies);
  }
-@@ -94,13 +95,13 @@ static void fdb_rcu_free(struct rcu_head *head)
+@@ -94,13 +95,13 @@ static void fdb_rcu_free(struct rcu_head
  
  static inline void fdb_delete(struct net_bridge_fdb_entry *f)
  {
@@ -2010,7 +1973,7 @@ index 043aaef..47e4d28 100644
  
  			this_timer = f->updated + delay;
  			if (time_before_eq(this_timer, jiffies))
-@@ -378,12 +379,12 @@ static struct net_bridge_fdb_entry *fdb_create(struct hlist_head *head,
+@@ -378,12 +379,12 @@ static struct net_bridge_fdb_entry *fdb_
  		fdb->updated = fdb->used = jiffies;
  		hlist_add_head_rcu(&fdb->hlist, head);
  
@@ -2025,7 +1988,7 @@ index 043aaef..47e4d28 100644
  	}
  	return fdb;
  }
-@@ -740,7 +741,7 @@ int br_fdb_delete(struct sk_buff *skb, struct nlmsghdr *nlh, void *arg)
+@@ -740,7 +741,7 @@ int br_fdb_delete(struct sk_buff *skb, s
  	return err;
  }
  
@@ -2040,11 +2003,9 @@ index 043aaef..47e4d28 100644
  
 -#endif /* CONFIG_MV_ETH_NFP_LEARN */
 +#endif /* CONFIG_MV_ETH_NFP_HOOKS */
-diff --git a/net/bridge/br_if.c b/net/bridge/br_if.c
-index 425e7a4..2588abb 100644
 --- a/net/bridge/br_if.c
 +++ b/net/bridge/br_if.c
-@@ -169,20 +169,20 @@ void br_dev_delete(struct net_device *dev, struct list_head *head)
+@@ -169,20 +169,20 @@ void br_dev_delete(struct net_device *de
  
  	list_for_each_entry_safe(p, n, &br->port_list, list) {
  
@@ -2069,7 +2030,7 @@ index 425e7a4..2588abb 100644
  
  	br_sysfs_delbr(br->dev);
  	unregister_netdevice_queue(br->dev, head);
-@@ -438,10 +438,10 @@ int br_del_if(struct net_bridge *br, struct net_device *dev)
+@@ -438,10 +438,10 @@ int br_del_if(struct net_bridge *br, str
  	if (!p || p->br != br)
  		return -EINVAL;
  
@@ -2082,8 +2043,6 @@ index 425e7a4..2588abb 100644
  
  	del_nbp(p);
  
-diff --git a/net/bridge/br_private.h b/net/bridge/br_private.h
-index 2043387..58518d5 100644
 --- a/net/bridge/br_private.h
 +++ b/net/bridge/br_private.h
 @@ -75,9 +75,9 @@ struct net_bridge_fdb_entry
@@ -2098,19 +2057,15 @@ index 2043387..58518d5 100644
  };
  
  struct net_bridge_port_group {
-diff --git a/net/core/Makefile b/net/core/Makefile
-index 4609e29..93d81b7 100644
 --- a/net/core/Makefile
 +++ b/net/core/Makefile
-@@ -23,6 +23,3 @@ obj-$(CONFIG_NETWORK_PHY_TIMESTAMPING) += timestamping.o
+@@ -23,6 +23,3 @@ obj-$(CONFIG_NETWORK_PHY_TIMESTAMPING) +
  ifeq ($(CONFIG_MV_ETH_NFP),y)
  obj-y += mv_nfp.o
  endif
 -ifeq ($(CONFIG_MV_ETH_NFP),m)
 -obj-y += mv_nfp.o
 -endif
-diff --git a/net/core/dev.c b/net/core/dev.c
-index f75d3b6..354ecea 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
 @@ -139,9 +139,9 @@
@@ -2125,7 +2080,7 @@ index f75d3b6..354ecea 100644
  
  /* Instead of increasing this, you should create a hash table. */
  #define MAX_GRO_SKBS 8
-@@ -3223,16 +3223,15 @@ EXPORT_SYMBOL_GPL(netdev_rx_handler_unregister);
+@@ -3223,16 +3223,15 @@ EXPORT_SYMBOL_GPL(netdev_rx_handler_unre
  #ifdef CONFIG_MV_ETH_NFP_EXT
  static struct sk_buff *handle_nfp_extrcv(struct sk_buff *skb, struct net_device *dev)
  {
@@ -2165,11 +2120,9 @@ index f75d3b6..354ecea 100644
  
  out:
  	return rc;
-diff --git a/net/core/mv_nfp.c b/net/core/mv_nfp.c
-index 3b44107..8ce1ff5 100644
 --- a/net/core/mv_nfp.c
 +++ b/net/core/mv_nfp.c
-@@ -67,7 +67,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -67,7 +67,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #include <linux/mv_nfp.h>
  
  struct nfp_core_ops *nfp_core_p = NULL;
@@ -2191,11 +2144,9 @@ index 3b44107..8ce1ff5 100644
  }
  EXPORT_SYMBOL(nfp_mgr_p);
 +#endif /* CONFIG_MV_ETH_NFP_HOOKS */
-diff --git a/net/core/neighbour.c b/net/core/neighbour.c
-index 42b457d..a4a3a82 100644
 --- a/net/core/neighbour.c
 +++ b/net/core/neighbour.c
-@@ -701,14 +701,16 @@ void neigh_destroy(struct neighbour *neigh)
+@@ -701,14 +701,16 @@ void neigh_destroy(struct neighbour *nei
  	if (neigh_del_timer(neigh))
  		printk(KERN_WARNING "Impossible event.\n");
  
@@ -2218,7 +2169,7 @@ index 42b457d..a4a3a82 100644
  
  	skb_queue_purge(&neigh->arp_queue);
  
-@@ -741,15 +743,18 @@ static void neigh_suspect(struct neighbour *neigh)
+@@ -741,15 +743,18 @@ static void neigh_suspect(struct neighbo
   */
  static void neigh_connect(struct neighbour *neigh)
  {
@@ -2242,7 +2193,7 @@ index 42b457d..a4a3a82 100644
  	neigh->output = neigh->ops->connected_output;
  }
  
-@@ -796,7 +801,8 @@ static void neigh_periodic_work(struct work_struct *work)
+@@ -796,7 +801,8 @@ static void neigh_periodic_work(struct w
  
  			if (time_before(n->used, n->confirmed))
  				n->used = n->confirmed;
@@ -2252,7 +2203,7 @@ index 42b457d..a4a3a82 100644
  			if ((atomic_read(&n->refcnt) == 1) && (state != NUD_FAILED) &&
  				time_after(jiffies, n->used + n->parms->gc_staletime)) {
  				if (n->nfp) {
-@@ -808,7 +814,8 @@ static void neigh_periodic_work(struct work_struct *work)
+@@ -808,7 +814,8 @@ static void neigh_periodic_work(struct w
  						jiffies, n, atomic_read(&n->refcnt), n->nud_state, __func__);
  				}
  			}
@@ -2280,8 +2231,6 @@ index 42b457d..a4a3a82 100644
  
  static int __init neigh_init(void)
  {
-diff --git a/net/ipv4/netfilter/Kconfig b/net/ipv4/netfilter/Kconfig
-index 713cb58..4922c4d 100644
 --- a/net/ipv4/netfilter/Kconfig
 +++ b/net/ipv4/netfilter/Kconfig
 @@ -185,9 +185,10 @@ config IP_NF_TARGET_NETMAP
@@ -2296,9 +2245,6 @@ index 713cb58..4922c4d 100644
  	  To compile it as a module, choose M here.  If unsure, say N.
  
  config IP_NF_TARGET_REDIRECT
-diff --git a/net/ipv4/netfilter/ipt_NFP.c b/net/ipv4/netfilter/ipt_NFP.c
-new file mode 100644
-index 0000000..9fbc24a
 --- /dev/null
 +++ b/net/ipv4/netfilter/ipt_NFP.c
 @@ -0,0 +1,217 @@
@@ -2519,11 +2465,9 @@ index 0000000..9fbc24a
 +
 +module_init(xt_nfp_init);
 +module_exit(xt_nfp_fini);
-diff --git a/net/ipv4/netfilter/nf_conntrack_l3proto_ipv4_compat.c b/net/ipv4/netfilter/nf_conntrack_l3proto_ipv4_compat.c
-index 94ae40b..6f2a4dd 100644
 --- a/net/ipv4/netfilter/nf_conntrack_l3proto_ipv4_compat.c
 +++ b/net/ipv4/netfilter/nf_conntrack_l3proto_ipv4_compat.c
-@@ -179,7 +179,7 @@ static int ct_seq_show(struct seq_file *s, void *v)
+@@ -179,7 +179,7 @@ static int ct_seq_show(struct seq_file *
  	if (ct_show_secctx(s, ct))
  		goto release;
  
@@ -2532,7 +2476,7 @@ index 94ae40b..6f2a4dd 100644
  	if ((ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple.nfp) && (ct->tuplehash[IP_CT_DIR_REPLY].tuple.nfp)) {
  		if (seq_printf(s, "[NFP (both)] "))
  			goto release;
-@@ -190,7 +190,7 @@ static int ct_seq_show(struct seq_file *s, void *v)
+@@ -190,7 +190,7 @@ static int ct_seq_show(struct seq_file *
  		if (seq_printf(s, "[NFP (reply)] "))
  			goto release;
  	}
@@ -2541,8 +2485,6 @@ index 94ae40b..6f2a4dd 100644
  
  	if (seq_printf(s, "use=%u\n", atomic_read(&ct->ct_general.use)))
  		goto release;
-diff --git a/net/ipv4/route.c b/net/ipv4/route.c
-index 0ac50fa..720d252 100644
 --- a/net/ipv4/route.c
 +++ b/net/ipv4/route.c
 @@ -661,12 +661,13 @@ static inline int ip_rt_proc_init(void)
@@ -2565,7 +2507,7 @@ index 0ac50fa..720d252 100644
  	call_rcu_bh(&rt->dst.rcu_head, dst_rcu_free);
  }
  
-@@ -694,16 +695,19 @@ static int rt_may_expire(struct rtable *rth, unsigned long tmo1, unsigned long t
+@@ -694,16 +695,19 @@ static int rt_may_expire(struct rtable *
  {
  	unsigned long age;
  	int ret = 0;
@@ -2588,7 +2530,7 @@ index 0ac50fa..720d252 100644
  	age = jiffies - rth->dst.lastuse;
  	if ((age <= tmo1 && !rt_fast_clean(rth)) ||
  	    (age <= tmo2 && rt_valuable(rth)))
-@@ -818,7 +822,7 @@ static void rt_do_flush(struct net *net, int process_context)
+@@ -818,7 +822,7 @@ static void rt_do_flush(struct net *net,
  	}
  }
  
@@ -2606,7 +2548,7 @@ index 0ac50fa..720d252 100644
  
  /*
   * While freeing expired entries, we compute average chain length
-@@ -2095,9 +2099,11 @@ static int ip_route_input_mc(struct sk_buff *skb, __be32 daddr, __be32 saddr,
+@@ -2095,9 +2099,11 @@ static int ip_route_input_mc(struct sk_b
  			   IN_DEV_CONF_GET(in_dev, NOPOLICY), false);
  	if (!rth)
  		goto e_nobufs;
@@ -2620,7 +2562,7 @@ index 0ac50fa..720d252 100644
  #ifdef CONFIG_IP_ROUTE_CLASSID
  	rth->dst.tclassid = itag;
  #endif
-@@ -2260,15 +2266,16 @@ static int __mkroute_input(struct sk_buff *skb,
+@@ -2260,15 +2266,16 @@ static int __mkroute_input(struct sk_buf
  	rth->dst.output = ip_output;
  
  	rt_set_nexthop(rth, NULL, res, res->fi, res->type, itag);
@@ -2654,7 +2596,7 @@ index 0ac50fa..720d252 100644
  	rth->dst.input= ip_local_deliver;
  	rth->dst.output= ip_rt_bug;
  #ifdef CONFIG_IP_ROUTE_CLASSID
-@@ -2633,9 +2642,11 @@ static struct rtable *__mkroute_output(const struct fib_result *res,
+@@ -2633,9 +2642,11 @@ static struct rtable *__mkroute_output(c
  			   IN_DEV_CONF_GET(in_dev, NOXFRM));
  	if (!rth)
  		return ERR_PTR(-ENOBUFS);
@@ -2668,7 +2610,7 @@ index 0ac50fa..720d252 100644
  	rth->dst.output = ip_output;
  
  	rth->rt_key_dst	= orig_daddr;
-@@ -2974,9 +2985,11 @@ struct dst_entry *ipv4_blackhole_route(struct net *net, struct dst_entry *dst_or
+@@ -2974,9 +2985,11 @@ struct dst_entry *ipv4_blackhole_route(s
  		new->dev = ort->dst.dev;
  		if (new->dev)
  			dev_hold(new->dev);
@@ -2682,8 +2624,6 @@ index 0ac50fa..720d252 100644
  		rt->rt_key_dst = ort->rt_key_dst;
  		rt->rt_key_src = ort->rt_key_src;
  		rt->rt_key_tos = ort->rt_key_tos;
-diff --git a/net/ipv6/ip6_fib.c b/net/ipv6/ip6_fib.c
-index 87eefc3..9488909 100644
 --- a/net/ipv6/ip6_fib.c
 +++ b/net/ipv6/ip6_fib.c
 @@ -418,7 +418,7 @@ out:
@@ -2705,7 +2645,7 @@ index 87eefc3..9488909 100644
  
  /*
   *	Routing Table
-@@ -720,7 +719,7 @@ static int fib6_add_rt2node(struct fib6_node *fn, struct rt6_info *rt,
+@@ -720,7 +719,7 @@ static int fib6_add_rt2node(struct fib6_
  		fn->fn_flags |= RTN_RTINFO;
  	}
  
@@ -2714,7 +2654,7 @@ index 87eefc3..9488909 100644
  	rt->nfp = false;
  	if (rt->rt6i_flags & RTF_CACHE)	{
  		if (nfp_mgr_p->nfp_hook_fib_rule_add)
-@@ -729,7 +728,8 @@ static int fib6_add_rt2node(struct fib6_node *fn, struct rt6_info *rt,
+@@ -729,7 +728,8 @@ static int fib6_add_rt2node(struct fib6_
  					rt->rt6i_iifindex, rt->rt6i_dev->ifindex))
  				rt->nfp = true;
  	}
@@ -2724,7 +2664,7 @@ index 87eefc3..9488909 100644
  	return 0;
  }
  
-@@ -1218,13 +1218,15 @@ static void fib6_del_route(struct fib6_node *fn, struct rt6_info **rtp,
+@@ -1218,13 +1218,15 @@ static void fib6_del_route(struct fib6_n
  	}
  
  	inet6_rt_notify(RTM_DELROUTE, rt, info);
@@ -2742,7 +2682,7 @@ index 87eefc3..9488909 100644
  	rt6_release(rt);
  }
  
-@@ -1525,14 +1527,15 @@ static int fib6_age(struct rt6_info *rt, void *arg)
+@@ -1525,14 +1527,15 @@ static int fib6_age(struct rt6_info *rt,
  				  rt);
  			return -1;
  		}
@@ -2760,8 +2700,6 @@ index 87eefc3..9488909 100644
  		gc_args.more++;
  	}
  
-diff --git a/net/ipv6/netfilter/Kconfig b/net/ipv6/netfilter/Kconfig
-index 0381a24..8352210 100644
 --- a/net/ipv6/netfilter/Kconfig
 +++ b/net/ipv6/netfilter/Kconfig
 @@ -197,7 +197,7 @@ config IP6_NF_RAW
@@ -2773,9 +2711,6 @@ index 0381a24..8352210 100644
  	help
  	  This target allows to process selected connections in NFP.
  
-diff --git a/net/ipv6/netfilter/ip6t_NFP.c b/net/ipv6/netfilter/ip6t_NFP.c
-new file mode 100644
-index 0000000..bb0ecd5
 --- /dev/null
 +++ b/net/ipv6/netfilter/ip6t_NFP.c
 @@ -0,0 +1,152 @@
@@ -2931,11 +2866,9 @@ index 0000000..bb0ecd5
 +
 +module_init(xt_nfp6_init);
 +module_exit(xt_nfp6_fini);
-diff --git a/net/ipv6/route.c b/net/ipv6/route.c
-index 532c4d7..a518fc7 100644
 --- a/net/ipv6/route.c
 +++ b/net/ipv6/route.c
-@@ -251,9 +251,9 @@ static inline struct rt6_info *ip6_dst_alloc(struct dst_ops *ops,
+@@ -251,9 +251,9 @@ static inline struct rt6_info *ip6_dst_a
  		memset(&rt->rt6i_table, 0,
  			sizeof(*rt) - sizeof(struct dst_entry));
  
@@ -2963,11 +2896,9 @@ index 532c4d7..a518fc7 100644
  
  		err = ip6_ins_rt(nrt);
  		if (!err)
-diff --git a/net/netfilter/nf_conntrack_core.c b/net/netfilter/nf_conntrack_core.c
-index ce06147..d45357e 100644
 --- a/net/netfilter/nf_conntrack_core.c
 +++ b/net/netfilter/nf_conntrack_core.c
-@@ -307,7 +307,7 @@ static void death_by_timeout(unsigned long ul_conntrack)
+@@ -300,7 +300,7 @@ static void death_by_timeout(unsigned lo
  	struct nf_conn *ct = (void *)ul_conntrack;
  	struct nf_conn_tstamp *tstamp;
  
@@ -2976,7 +2907,7 @@ index ce06147..d45357e 100644
  	struct nf_conntrack_tuple *t0 = &ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple;
  	struct nf_conntrack_tuple *t1 = &ct->tuplehash[IP_CT_DIR_REPLY].tuple;
  	int confirmed_org = 0, confirmed_reply = 0;
-@@ -388,7 +388,7 @@ static void death_by_timeout(unsigned long ul_conntrack)
+@@ -381,7 +381,7 @@ static void death_by_timeout(unsigned lo
  					ntohs(t1->dst.u.all),
  					t1->dst.protonum);
  	}
@@ -2985,7 +2916,7 @@ index ce06147..d45357e 100644
  
  	tstamp = nf_conn_tstamp_find(ct);
  	if (tstamp && tstamp->stop == 0)
-@@ -796,7 +796,7 @@ __nf_conntrack_alloc(struct net *net, u16 zone,
+@@ -789,7 +789,7 @@ __nf_conntrack_alloc(struct net *net, u1
  	}
  #endif
  
@@ -2994,7 +2925,7 @@ index ce06147..d45357e 100644
  	ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple.nfp = false;
  	ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple.ifindex = -1;
  	ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple.nfpCapable = false;
-@@ -806,7 +806,7 @@ __nf_conntrack_alloc(struct net *net, u16 zone,
+@@ -799,7 +799,7 @@ __nf_conntrack_alloc(struct net *net, u1
  	ct->tuplehash[IP_CT_DIR_REPLY].tuple.ifindex = -1;
  	ct->tuplehash[IP_CT_DIR_REPLY].tuple.nfpCapable = false;
  	ct->tuplehash[IP_CT_DIR_REPLY].tuple.info = NULL;
@@ -3003,7 +2934,7 @@ index ce06147..d45357e 100644
  
  	/*
  	 * changes to lookup keys must be done before setting refcnt to 1
-@@ -835,13 +835,13 @@ void nf_conntrack_free(struct nf_conn *ct)
+@@ -828,13 +828,13 @@ void nf_conntrack_free(struct nf_conn *c
  {
  	struct net *net = nf_ct_net(ct);
  
@@ -3019,7 +2950,7 @@ index ce06147..d45357e 100644
  
  	nf_ct_ext_destroy(ct);
  	atomic_dec(&net->ct.count);
-@@ -1544,7 +1544,7 @@ void nf_ct_untracked_status_or(unsigned long bits)
+@@ -1537,7 +1537,7 @@ void nf_ct_untracked_status_or(unsigned
  }
  EXPORT_SYMBOL_GPL(nf_ct_untracked_status_or);
  
@@ -3028,7 +2959,7 @@ index ce06147..d45357e 100644
  void nfp_ct_sync(int family)
  {
  	struct nf_conntrack_tuple_hash *h;
-@@ -1585,8 +1585,7 @@ void nfp_ct_sync(int family)
+@@ -1578,8 +1578,7 @@ void nfp_ct_sync(int family)
  
  			status = ct->status;
  
@@ -3038,7 +2969,7 @@ index ce06147..d45357e 100644
  				/* NFP NAT is supported only in IPv4 */
  				if (tuple->src.l3num == AF_INET) {
  					/* status says if the original direction requires SNAT or DNAT (or both) */
-@@ -1598,17 +1597,13 @@ void nfp_ct_sync(int family)
+@@ -1591,17 +1590,13 @@ void nfp_ct_sync(int family)
  					nf_ct_invert_tuplepr(&target_tuple, &ct->tuplehash[!dir].tuple);
  
  					if ((status & IPS_NAT_MASK) == IPS_DST_NAT) {
@@ -3060,7 +2991,7 @@ index ce06147..d45357e 100644
  					continue;
  				} else {
  					/* NFP does not support NAT for IPv6, so nothing to do with this tuple */
-@@ -1616,17 +1611,15 @@ void nfp_ct_sync(int family)
+@@ -1609,17 +1604,15 @@ void nfp_ct_sync(int family)
  					continue;
  				}
  			}
@@ -3079,11 +3010,9 @@ index ce06147..d45357e 100644
  
  static int nf_conntrack_init_init_net(void)
  {
-diff --git a/net/netfilter/nf_conntrack_proto_tcp.c b/net/netfilter/nf_conntrack_proto_tcp.c
-index 1f3ba7d..051e6da 100644
 --- a/net/netfilter/nf_conntrack_proto_tcp.c
 +++ b/net/netfilter/nf_conntrack_proto_tcp.c
-@@ -821,9 +821,6 @@ static int tcp_packet(struct nf_conn *ct,
+@@ -821,9 +821,6 @@ static int tcp_packet(struct nf_conn *ct
  {
  	struct net *net = nf_ct_net(ct);
  	struct nf_conntrack_tuple *tuple;
@@ -3093,7 +3022,7 @@ index 1f3ba7d..051e6da 100644
  	enum tcp_conntrack new_state, old_state;
  	enum ip_conntrack_dir dir;
  	const struct tcphdr *th;
-@@ -840,9 +837,7 @@ static int tcp_packet(struct nf_conn *ct,
+@@ -840,9 +837,7 @@ static int tcp_packet(struct nf_conn *ct
  	index = get_conntrack_index(th);
  	new_state = tcp_conntracks[dir][index][old_state];
  	tuple = &ct->tuplehash[dir].tuple;
@@ -3104,7 +3033,7 @@ index 1f3ba7d..051e6da 100644
  	switch (new_state) {
  	case TCP_CONNTRACK_SYN_SENT:
  		if (old_state < TCP_CONNTRACK_TIME_WAIT)
-@@ -994,14 +989,19 @@ static int tcp_packet(struct nf_conn *ct,
+@@ -994,14 +989,19 @@ static int tcp_packet(struct nf_conn *ct
  		break;
  	}
  
@@ -3128,11 +3057,9 @@ index 1f3ba7d..051e6da 100644
  
  	if (!tcp_in_window(ct, &ct->proto.tcp, dir, index,
  			   skb, dataoff, th, pf)) {
-diff --git a/net/netfilter/nf_conntrack_standalone.c b/net/netfilter/nf_conntrack_standalone.c
-index 4f4c9d1..c95fc7c 100644
 --- a/net/netfilter/nf_conntrack_standalone.c
 +++ b/net/netfilter/nf_conntrack_standalone.c
-@@ -251,7 +251,7 @@ static int ct_seq_show(struct seq_file *s, void *v)
+@@ -251,7 +251,7 @@ static int ct_seq_show(struct seq_file *
  		goto release;
  #endif
  
@@ -3141,7 +3068,7 @@ index 4f4c9d1..c95fc7c 100644
  	if ((ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple.nfp) && (ct->tuplehash[IP_CT_DIR_REPLY].tuple.nfp)) {
  		if (seq_printf(s, "[NFP (both)] "))
  			goto release;
-@@ -262,7 +262,7 @@ static int ct_seq_show(struct seq_file *s, void *v)
+@@ -262,7 +262,7 @@ static int ct_seq_show(struct seq_file *
  		if (seq_printf(s, "[NFP (reply)] "))
  			goto release;
  	}
@@ -3150,6 +3077,3 @@ index 4f4c9d1..c95fc7c 100644
  
  	if (seq_printf(s, "use=%u\n", atomic_read(&ct->ct_general.use)))
  		goto release;
--- 
-1.7.9.5
-

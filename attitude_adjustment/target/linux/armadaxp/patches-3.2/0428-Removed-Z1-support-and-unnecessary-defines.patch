@@ -15,11 +15,9 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  .../armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h       |   13 +-----------
  6 files changed, 5 insertions(+), 83 deletions(-)
 
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
-index 8ed9b60..3d7b42c 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.c
-@@ -1788,11 +1788,7 @@ MV_STATUS mvBoardBootDevWidthSet(MV_U8 val)
+@@ -1788,11 +1788,7 @@ MV_STATUS mvBoardBootDevWidthSet(MV_U8 v
  	return MV_OK;
  }
  /*******************************************************************************/
@@ -50,7 +48,7 @@ index 8ed9b60..3d7b42c 100644
  {
  	MV_U8 sar;
  	if (DB_784MP_GP_ID == mvBoardIdGet())
-@@ -1821,13 +1809,8 @@ MV_STATUS mvBoardCpu0EndianessSet(MV_U8 val)
+@@ -1821,13 +1809,8 @@ MV_STATUS mvBoardCpu0EndianessSet(MV_U8
  	sar = mvBoardTwsiSatRGet(3, 0);
  	if ((MV_8)MV_ERROR == (MV_8)sar)
  		return MV_ERROR;
@@ -64,8 +62,6 @@ index 8ed9b60..3d7b42c 100644
  	if (MV_OK != mvBoardTwsiSatRSet(3, 0, sar)) {
  		DB1(mvOsPrintf("Board: Write Cpu0CoreMode S@R fail\n"));
  		return MV_ERROR;
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
-index 6fff1fe..75ebb8d 100755
 --- a/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/boardEnv/mvBoardEnvLib.h
 @@ -413,13 +413,8 @@ MV_U8 mvBoardBootDevGet(MV_VOID);
@@ -82,11 +78,9 @@ index 6fff1fe..75ebb8d 100755
  MV_U8 mvBoardL2SizeGet(MV_VOID);
  MV_STATUS mvBoardL2SizeSet(MV_U8 val);
  MV_U8 mvBoardCpuCoresNumGet(MV_VOID);
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
-index 395d442..7d3f9af 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.c
-@@ -109,18 +109,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -109,18 +109,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
  #endif
  MV_U32 dummyFlavour = 0;
  MV_BIOS_MODE bios_modes[BIOS_MODES_NUM] = {
@@ -105,7 +99,7 @@ index 395d442..7d3f9af 100644
  /*DBConf ConfID Code L2Size CPUFreq CpuFreqMode FabricFreq  Altfabricfreq     FabricFreqMode CPU1/2/3Enable cpuEndianess dramBusWidth BootSRC BootWidth */
  /*	                       0x4d/[1:0]  0x4d/[4:2]  0x4e[0]      0x4e/[4:1]  	0x4f[0]   0x4f/[2:1]      0x4f/[3]   	  */
  {"78130",0x10, 0x7813, 0x1,  0x3,      0x0,  0x1a,		0x5,		0x1,	     0x0,	    0x1,	0x1, 	     0x3,	0x1},
-@@ -132,7 +120,7 @@ MV_BIOS_MODE bios_modes[BIOS_MODES_NUM] = {
+@@ -132,7 +120,7 @@ MV_BIOS_MODE bios_modes[BIOS_MODES_NUM]
  
  /*	{"6710" ,0x11, 0x6710,	0x0,	   0x3,		0x0,	      0x5, 		0x0,		0x0,		0x1,		0x0},     */
  };
@@ -140,8 +134,6 @@ index 395d442..7d3f9af 100644
  	/*apply clock gatting*/
  	MV_REG_WRITE(POWER_MNG_CTRL_REG, MV_REG_READ(POWER_MNG_CTRL_REG) & powermngmntctrlregmap);
  	/*the Sata driver doesn't support clock gating at this point so we enable the logic to the block*/
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
-index f497e3c..59baf1d 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvLib.h
 @@ -174,12 +174,7 @@ typedef struct _boardSerdesConf {
@@ -174,8 +166,6 @@ index f497e3c..59baf1d 100644
  	MV_U8 dramBusWidth;
  	MV_U8 bootSource;
  	MV_U8 bootWidth;
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
-index cdf83ec..67dd2de 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvRegs.h
 @@ -520,7 +520,7 @@ typedef enum {
@@ -214,8 +204,6 @@ index cdf83ec..67dd2de 100644
  
  /*
  	This enum should reflect the units numbers in register
-diff --git a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
-index dd5c77e..ec29890 100644
 --- a/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
 +++ b/arch/arm/mach-armadaxp/armada_xp_family/ctrlEnv/mvCtrlEnvSpec.h
 @@ -85,20 +85,12 @@ extern "C" {
@@ -252,6 +240,3 @@ index dd5c77e..ec29890 100644
  /*
  	MV88F78X60_Z1								MV88F78X60_A0
  	-------------------------------             -------------------------------
--- 
-1.7.9.5
-
