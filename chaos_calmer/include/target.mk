@@ -13,6 +13,8 @@ DEVICE_TYPE?=router
 
 # Default packages - the really basic set
 DEFAULT_PACKAGES:=base-files libc libgcc busybox dropbear mtd uci opkg netifd fstools
+# For nas targets
+DEFAULT_PACKAGES.nas:=block-mount fdisk lvm2 lsblk mdadm
 # For router targets
 DEFAULT_PACKAGES.router:=dnsmasq iptables ip6tables ppp ppp-mod-pppoe kmod-nf-nathelper firewall odhcpd odhcp6c
 DEFAULT_PACKAGES.bootloader:=
@@ -251,6 +253,10 @@ ifeq ($(DUMP),1)
   ifeq ($(ARCH),sparc)
     CPU_TYPE = sparc
     CPU_CFLAGS_ultrasparc = -mcpu=ultrasparc
+  endif
+  ifeq ($(ARCH),aarch64)
+    CPU_TYPE ?= armv8-a
+    CPU_CFLAGS_armv8-a = -mcpu=armv8-a
   endif
   DEFAULT_CFLAGS=$(strip $(CPU_CFLAGS) $(CPU_CFLAGS_$(CPU_TYPE)) $(CPU_CFLAGS_$(CPU_SUBTYPE)))
 endif

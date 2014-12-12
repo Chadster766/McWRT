@@ -11,7 +11,7 @@ include $(INCLUDE_DIR)/version.mk
 include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=base-files
-PKG_RELEASE:=156
+PKG_RELEASE:=157
 
 PKG_FILE_DEPENDS:=$(PLATFORM_DIR)/ $(GENERIC_PLATFORM_DIR)/base-files/
 PKG_BUILD_DEPENDS:=opkg/host
@@ -133,11 +133,11 @@ define Package/base-files/install
 	mkdir -p $(1)/sys
 	mkdir -p $(1)/www
 	mkdir -p $(1)/root
-	ln -sf /proc/mounts $(1)/etc/mtab
+	$(LN) /proc/mounts $(1)/etc/mtab
 	rm -f $(1)/var
-	ln -sf /tmp $(1)/var
+	$(LN) /tmp $(1)/var
 	mkdir -p $(1)/etc
-	ln -sf /tmp/resolv.conf /tmp/fstab /tmp/TZ $(1)/etc/
+	$(LN) /tmp/resolv.conf /tmp/fstab /tmp/TZ $(1)/etc/
 
 	chmod 0600 $(1)/etc/shadow
 	chmod 1777 $(1)/tmp

@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2007-2012 OpenWrt.org
+# Copyright (C) 2007-2014 OpenWrt.org
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -402,7 +402,7 @@ ifeq ($(CONFIG_EXTERNAL_TOOLCHAIN),)
 
   define Package/libatomic/install
 	$(INSTALL_DIR) $(1)/lib
-	$(if $(CONFIG_TARGET_avr32)$(CONFIG_TARGET_coldfire),,$(CP) $(TOOLCHAIN_DIR)/lib/libatomic.so.* $(1)/lib/)
+	$(if $(CONFIG_GCC_VERSION_4_6)$(CONFIG_TARGET_avr32)$(CONFIG_TARGET_coldfire),,$(CP) $(TOOLCHAIN_DIR)/lib/libatomic.so.* $(1)/lib/)
   endef
 
   define Package/libgfortran/install
@@ -427,7 +427,7 @@ ifeq ($(CONFIG_EXTERNAL_TOOLCHAIN),)
   define Package/eglibc/install
 	$(CP) ./eglibc-files/* $(1)/
 	rm -f $(1)/etc/localtime
-	ln -sf /tmp/localtime $(1)/etc/localtime
+	$(LN) /tmp/localtime $(1)/etc/localtime
 	$(INSTALL_DIR) $(1)/lib
 	$(CP) \
 		$(TOOLCHAIN_DIR)/lib/ld*.so.* \
@@ -466,7 +466,7 @@ ifeq ($(CONFIG_EXTERNAL_TOOLCHAIN),)
 		$(1)/lib/
   endef
 
-  LD_MUSL_NAME = $(notdir $(firstword $(wildcard $(TOOLCHAIN_DIR)/lib/ld-musl-*.so*)))
+  LD_MUSL_NAME = $(notdir $(firstword $(wildcard $(TOOLCHAIN_DIR)/lib/libc.so*)))
 
   define Package/musl/install
 	$(INSTALL_DIR) $(1)/lib $(1)/usr/bin
@@ -476,7 +476,7 @@ ifeq ($(CONFIG_EXTERNAL_TOOLCHAIN),)
 	$(CP) \
 		$(TOOLCHAIN_DIR)/lib/libc.so* \
 		$(1)/lib/
-	ln -s ../../lib/$(LD_MUSL_NAME) $(1)/usr/bin/ldd
+	$(LN) ../../lib/$(LD_MUSL_NAME) $(1)/usr/bin/ldd
   endef
 
   define Package/libc/install

@@ -66,7 +66,7 @@ ifneq (,$(findstring uml,$(BOARD)))
   LINUX_KARCH=um
 else
   ifeq (,$(LINUX_KARCH))
-    LINUX_KARCH=$(strip $(subst i386,x86,$(subst armeb,arm,$(subst mipsel,mips,$(subst mips64,mips,$(subst mips64el,mips,$(subst sh2,sh,$(subst sh3,sh,$(subst sh4,sh,$(ARCH))))))))))
+    LINUX_KARCH=$(strip $(subst i386,x86,$(subst armeb,arm,$(subst mipsel,mips,$(subst mips64,mips,$(subst mips64el,mips,$(subst sh2,sh,$(subst sh3,sh,$(subst sh4,sh,$(subst aarch64,arm64,$(subst aarch64_be,arm64,$(ARCH))))))))))))
   endif
 endif
 
@@ -84,10 +84,8 @@ define ModuleAutoLoad
 		boot="$$$$$$$$2"; \
 		shift 2; \
 		for mod in $$$$$$$$mods; do \
-			if [ -e $(2)/$(MODULES_SUBDIR)/$$$$$$$$mod.ko ]; then \
-				mkdir -p $(2)/etc/modules.d; \
-				echo "$$$$$$$$mod" >> $(2)/etc/modules.d/$(1); \
-			fi; \
+			mkdir -p $(2)/etc/modules.d; \
+			echo "$$$$$$$$mod" >> $(2)/etc/modules.d/$(1); \
 		done; \
 		if [ -e $(2)/etc/modules.d/$(1) ]; then \
 			if [ "$$$$$$$$boot" = "1" ]; then \
@@ -103,10 +101,8 @@ define ModuleAutoLoad
 		boot="$$$$$$$$3"; \
 		shift 3; \
 		for mod in $$$$$$$$mods; do \
-			if [ -e $(2)/$(MODULES_SUBDIR)/$$$$$$$$mod.ko ]; then \
-				mkdir -p $(2)/etc/modules.d; \
-				echo "$$$$$$$$mod" >> $(2)/etc/modules.d/$$$$$$$$priority-$(1); \
-			fi; \
+			mkdir -p $(2)/etc/modules.d; \
+			echo "$$$$$$$$mod" >> $(2)/etc/modules.d/$$$$$$$$priority-$(1); \
 		done; \
 		if [ -e $(2)/etc/modules.d/$$$$$$$$priority-$(1) ]; then \
 			if [ "$$$$$$$$boot" = "1" ]; then \
@@ -171,7 +167,7 @@ $(call KernelPackage/$(1)/config)
   $(call KernelPackage/depends)
 
   ifneq ($(if $(filter-out %=y %=n %=m,$(KCONFIG)),$(filter m y,$(foreach c,$(filter-out %=y %=n %=m,$(KCONFIG)),$($(c)))),.),)
-    ifneq ($(strip $(FILES)),)
+    ifneq ($(if $(SDK),$(filter-out $(LINUX_DIR)/%.ko,$(FILES)),$(strip $(FILES))),)
       define Package/kmod-$(1)/install
 		  @for mod in $$(FILES); do \
 			if [ -e $$$$$$$$mod ]; then \

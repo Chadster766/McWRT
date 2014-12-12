@@ -509,22 +509,6 @@ endef
 $(eval $(call KernelPackage,pwm))
 
 
-define KernelPackage/pwm-gpio
-  SUBMENU:=$(OTHER_MENU)
-  TITLE:=PWM over GPIO
-  DEPENDS:=+kmod-pwm
-  KCONFIG:=CONFIG_GPIO_PWM
-  FILES:=$(LINUX_DIR)/drivers/pwm/gpio-pwm.ko
-  AUTOLOAD:=$(call AutoProbe,gpio-pwm)
-endef
-
-define KernelPackage/pwm-gpio/description
- Kernel module to models a single-channel PWM device using a timer and a GPIO pin
-endef
-
-$(eval $(call KernelPackage,pwm-gpio))
-
-
 define KernelPackage/rtc-ds1307
   SUBMENU:=$(OTHER_MENU)
   TITLE:=Dallas/Maxim DS1307 (and compatible) RTC support
@@ -966,3 +950,22 @@ define KernelPackage/thermal-kirkwood/description
 endef
 
 $(eval $(call KernelPackage,thermal-kirkwood))
+
+
+define KernelPackage/gpio-beeper
+  SUBMENU:=$(OTHER_MENU)
+  TITLE:=GPIO beeper support
+  KCONFIG:= \
+	CONFIG_INPUT_MISC=y \
+	CONFIG_INPUT_GPIO_BEEPER
+  FILES:= \
+	$(LINUX_DIR)/drivers/input/misc/gpio-beeper.ko
+  AUTOLOAD:=$(call AutoLoad,50,gpio-beeper)
+  $(call AddDepends/input)
+endef
+
+define KernelPackage/gpio-beeper/description
+ This enables playing beeps through an GPIO-connected buzzer
+endef
+
+$(eval $(call KernelPackage,gpio-beeper))

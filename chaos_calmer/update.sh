@@ -10,5 +10,3 @@
 ./scripts/feeds install -a -p telephony
 ./scripts/feeds install -a -p management
 
-#Apply feed fixes:
-cp ./feed-fixes/170-use-supported-pagers.patch ./feeds/routing/quagga/patches/170-use-supported-pagers.patch

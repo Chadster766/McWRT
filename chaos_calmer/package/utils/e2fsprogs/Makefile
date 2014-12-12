@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2006-2012 OpenWrt.org
+# Copyright (C) 2006-2014 OpenWrt.org
 # Copyright 2010 Vertical Communications
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -102,13 +102,28 @@ define Build/Compile
 		all
 endef
 
+define Build/InstallDev
+	$(INSTALL_DIR) $(1)/usr/lib/pkgconfig
+	$(CP) $(PKG_BUILD_DIR)/lib/ext2fs/ext2fs.pc $(1)/usr/lib/pkgconfig
+	$(CP) $(PKG_BUILD_DIR)/lib/et/com_err.pc $(1)/usr/lib/pkgconfig
+
+	$(INSTALL_DIR) $(1)/usr/lib
+	$(CP) $(PKG_BUILD_DIR)/lib/libext2fs.{so,a}* $(1)/usr/lib
+	$(CP) $(PKG_BUILD_DIR)/lib/libcom_err.{so,a}* $(1)/usr/lib
+
+	$(INSTALL_DIR) $(1)/usr/include/ext2fs
+	$(CP) $(PKG_BUILD_DIR)/lib/ext2fs/*.h $(1)/usr/include/ext2fs
+	$(INSTALL_DIR) $(1)/usr/include/et
+	$(CP) $(PKG_BUILD_DIR)/lib/et/*.h $(1)/usr/include/et
+endef
+
 define Package/e2fsprogs/install
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/e2fsck $(1)/usr/sbin/
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/mke2fs $(1)/usr/sbin/
-	ln -sf mke2fs $(1)/usr/sbin/mkfs.ext2
-	ln -sf mke2fs $(1)/usr/sbin/mkfs.ext3
-	ln -sf mke2fs $(1)/usr/sbin/mkfs.ext4
+	$(LN) mke2fs $(1)/usr/sbin/mkfs.ext2
+	$(LN) mke2fs $(1)/usr/sbin/mkfs.ext3
+	$(LN) mke2fs $(1)/usr/sbin/mkfs.ext4
 	$(INSTALL_DIR) $(1)/usr/lib
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libe2p.so.* $(1)/usr/lib/
 	$(INSTALL_DIR) $(1)/etc/init.d
