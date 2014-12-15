@@ -342,8 +342,8 @@ hostapd_setup_vif() {
 	hostapd_set_bss_options hostapd_cfg "$vif"
 
 	case "$hwmode" in
-		*bg|*gdt|*gst|*fh) hwmode=g;;
-		*adt|*ast) hwmode=a;;
+		*b|*g|*bg|*n|*gn|*bgn|*NG) hwmode=g;;
+		*a|*an|*NA|*ac) hwmode=a;;
 	esac
 	[ "$channel" = auto ] && channel=
 	[ -n "$channel" -a -z "$hwmode" ] && wifi_fixup_hwmode "$device"
