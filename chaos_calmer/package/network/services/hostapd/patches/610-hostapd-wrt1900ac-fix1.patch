@@ -567,7 +567,7 @@
 +     	wpa_printf(MSG_DEBUG,"%s: STA addr %s RSN IE Length is zero\n", __func__, ether_sprintf(addr));
 +	}
 +
-+	drv_event_assoc(hapd, addr, ie.IE, ie.IELen);
++	drv_event_assoc(hapd, addr, ie.IE, ie.IELen, 0);
 +
 +	if (memcmp(addr, drv->acct_mac, ETH_ALEN) == 0) {
 +		/* Cached accounting data is not valid anymore. */
@@ -1135,14 +1135,33 @@
    DRV_LIBS += -lnl-genl-3
 --- a/src/drivers/priv_netlink.h
 +++ b/src/drivers/priv_netlink.h
-@@ -32,8 +32,8 @@
+@@ -32,8 +32,13 @@
  #endif
  #ifndef IFLA_LINKMODE
  #define IFLA_LINKMODE 17
 -#define IF_OPER_DORMANT 5
 -#define IF_OPER_UP 6
-+//#define IF_OPER_DORMANT 5
-+//#define IF_OPER_UP 6
++#endif
++
++#ifndef C_IF_OPER_DORMANT
++#define C_IF_OPER_DORMANT 5
++#endif
++#ifndef C_IF_OPER_UP
++#define C_IF_OPER_UP 6
  #endif
  
  #define NLM_F_REQUEST 1
+--- a/src/drivers/netlink.c
++++ b/src/drivers/netlink.c
+@@ -157,9 +157,9 @@ static const char * operstate_str(int st
+ 	switch (state) {
+ 	case -1:
+ 		return "no change";
+-	case IF_OPER_DORMANT:
++	case C_IF_OPER_DORMANT:
+ 		return "IF_OPER_DORMANT";
+-	case IF_OPER_UP:
++	case C_IF_OPER_UP:
+ 		return "IF_OPER_UP";
+ 	}
+ 	return "?";
