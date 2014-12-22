@@ -29,6 +29,7 @@ endef
 define Build/Prepare
 	mkdir -p $(PKG_BUILD_DIR)
 	$(CP) ./src/* $(PKG_BUILD_DIR)/
+	$(call Build/Prepare/Default)
 endef
 
 TARGET_CFLAGS += $(FPIC)
@@ -41,6 +42,7 @@ define Build/Compile
 endef
 
 define Build/InstallDev
+	$(call Package/libnl-tiny/Default)
 	$(INSTALL_DIR) $(1)/usr/lib/pkgconfig $(1)/usr/include/libnl-tiny
 	$(CP) $(PKG_BUILD_DIR)/include/* $(1)/usr/include/libnl-tiny
 	$(CP) $(PKG_BUILD_DIR)/libnl-tiny.so $(1)/usr/lib/
