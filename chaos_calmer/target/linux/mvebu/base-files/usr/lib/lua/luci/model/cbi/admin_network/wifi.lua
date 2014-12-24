@@ -172,7 +172,7 @@ else
 if hwtype == "marvell" then
 --US_CH_LIST_2G="1,2,3,4,5,6,7,8,9,10,11"
 --US_CH_LIST_5G="36,40,44,48,149,153,157,161"
-	ch = s:taboption("general", Value, "channel", translate("Channel")
+	ch = s:taboption("general", Value, "channel", translate("Channel"))
 	ch:value("1", translate("Channe 1 - 2.412GHz"))
 	ch:value("2", translate("Channe 2 - 2.417GHz"))
 	ch:value("3", translate("Channe 3 - 2.422GHz"))
