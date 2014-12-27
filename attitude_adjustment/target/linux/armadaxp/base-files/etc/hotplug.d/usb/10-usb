@@ -1,0 +1,49 @@
+#!/bin/sh
+
+# Copyright (C) 2009 OpenWrt.org
+
+case "$PRODUCT" in
+        '1d6b'*)
+		# Ignore base USB hardware
+        ;;
+        *)
+		case "$ACTION" in
+			add)
+				# update LEDs
+				case "$DEVPATH" in
+					*'usb1'*)
+						# USB 1.1 or 2.0 device added to USB 1
+						/usr/sbin/ledctrl led_usb2 on
+					;;
+					*'usb3'*)
+						# USB 1.1 or 2.0 device added to USB 2
+						/usr/sbin/ledctrl led_usb31 on
+					;;
+					*'usb4'*)
+						# USB 3.0 device added to USB 2
+						/usr/sbin/ledctrl led_usb31 on
+						/usr/sbin/ledctrl led_usb32 on
+					;;
+				esac
+			;;
+			remove)
+				# update LEDs
+				case "$DEVPATH" in
+					*'usb1'*)
+						# USB 1.1 or 2.0 device removed from USB 1
+						/usr/sbin/ledctrl led_usb2 off
+					;;
+					*'usb3'*)
+						# USB 1.1 or 2.0 device removed from USB 2
+						/usr/sbin/ledctrl led_usb31 off
+					;;
+					*'usb4'*)
+						# USB 3.0 device removed from USB 2
+						/usr/sbin/ledctrl led_usb31 off
+						/usr/sbin/ledctrl led_usb32 off
+					;;
+				esac
+			;;
+		esac
+	;;
+esac

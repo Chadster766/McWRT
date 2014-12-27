@@ -28,7 +28,7 @@ wan_white() {
 
 ping_host() {
 	local host count timeout error
-	host="heartbeat.belkin.com"
+	host=$(/usr/sbin/ip route | awk '/default/ { print $3 }')
 	count=3
 	timeout=5
 	error="$(/bin/ping -q -c $count -w $timeout $host 2>&1 > /dev/null)"
