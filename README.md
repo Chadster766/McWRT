@@ -1,9 +1,9 @@
 McWRT
 =====
-OpenWRT McWRT Chaos Calmer is under development. Unless you have a USB to TTL cable Attitude Adjustment Release v1.0.5 should be used.
+Unless you have a USB to TTL cable Attitude Adjustment Release AAv1.0.8 should be used.
 ===
 
-###An OpenWRT project for the Linksys WRT1900AC router.
+###An OpenWRT project initially for the Linksys WRT1900AC router. With the release of the Marvell supported wireless driver and the successful stimulation of OpenWRT development for the WRT1900AC. McWRT is now looking to expand to include other routers for it's use and continued development.
 
 **Original source of Marvell 88W8864 Linux Driver/Firmware**
 
@@ -17,12 +17,10 @@ https://github.com/jimmychungbelkin/Mamba
 
 You need to have installed gcc, binutils, patch, bzip2, flex, make, gettext, pkg-config, unzip, libz-dev, libc headers and Subversion 1.7.
 
-For the Feeds to update (update.sh) from packages_12.09 you will need to have Subversion 1.7 installed.
-http://sagar.se/svn-1.7-on-wheezy.html
 
 -
 
-**To build the image run "update.sh", "make V=s" and then when prompted press enter a lot of times :-) If successful the image should be in the "bin" directory.**
+**To build the image run "make V=s" and then when prompted press enter a lot of times :-) If successful the image should be in the "bin" directory.**
 
 **Flashing firmware should be done connect to the router with an Ethernet cable.**
 
