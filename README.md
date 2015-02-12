@@ -3,7 +3,7 @@ McWRT
 Unless you have a USB to TTL cable Attitude Adjustment Release AAv1.0.8 should be used.
 ===
 
-###An OpenWRT project initially for the Linksys WRT1900AC router. With the release of the Marvell supported wireless driver and the successful stimulation of OpenWRT development for the WRT1900AC. McWRT is now looking to expand to include other routers for it's use and continued development.
+###An OpenWRT project for the Linksys WRT1900AC router. With the release of the Marvell supported wireless driver and the successful stimulation of OpenWRT development for the WRT1900AC. McWRT has served it's purpose and will still be available for download. Merge requests will be evaluated for inclusion if and when the occur.
 
 **Original source of Marvell 88W8864 Linux Driver/Firmware**
 
