@@ -4,7 +4,7 @@ EXPECTED_ARGS=1
 E_BADARGS=65
 
 usage() {
-	echo "Usage: `basename $0` off|low|high"
+	echo "Usage: `basename $0` off|low|medium|high"
 
 	exit $E_BADARGS
 }
@@ -17,7 +17,7 @@ fi
 mode=$1
 
 do_fan() {
-	mode=$1
+#	mode=$1
 
 	if [ ! -e "/sys/class/gpio/gpio24/" ] 
 	then
@@ -39,6 +39,15 @@ do_fan() {
 		# Set ON & OFF duration for low speed
 		/sbin/devmem 0xf10181c8 32 0x00001770
 		/sbin/devmem 0xf10181cc 32 0x00000FA0
+	elif [ $mode = "medium" ]
+	then
+		# Enable blink register for GPIO24
+		/sbin/devmem 0xf1018108 32 0x01000000
+		#Set blink counter B for GPIO24
+		/sbin/devmem 0xf1018120 32 0x01000000
+		# Set ON & OFF duration for medium speed
+		/sbin/devmem 0xf10181c8 32 0x00001F40
+		/sbin/devmem 0xf10181cc 32 0x000007D0
 	elif [ $mode = "high" ]
 	then
 		# Enable blink register for GPIO24
@@ -51,4 +60,4 @@ do_fan() {
 	fi
 }
 
-do_fan $1
+do_fan mode
