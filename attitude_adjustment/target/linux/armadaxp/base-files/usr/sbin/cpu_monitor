@@ -1,0 +1,6 @@
+#!/bin/sh
+
+/sbin/logread -f|grep -qi 'rcu_sched self-detected stall'
+logger "cpu-monitor detected stall, rebooting router"
+echo b > /proc/sysrq-trigger
+

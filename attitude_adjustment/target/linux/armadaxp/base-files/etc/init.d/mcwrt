@@ -1,0 +1,19 @@
+#!/bin/sh /etc/rc.common
+
+START=12
+start() {
+	echo 33 > /sys/class/gpio/unexport
+	sleep 1
+	echo 40 > /sys/class/gpio/export
+	echo 24 > /sys/class/gpio/export
+	sleep 1
+	echo 2 > /proc/irq/10/smp_affinity
+	echo 2 > /proc/irq/60/smp_affinity
+	echo 2 > /proc/irq/46/smp_affinity
+	sleep 1
+	ifconfig eth1 txqueuelen 1000
+	ifconfig eth0 txqueuelen 1000
+	/usr/sbin/app_reset start /usr/sbin/leds_monitor
+	/usr/sbin/fancontrol &
+	/usr/sbin/cpu_monitor &
+}
