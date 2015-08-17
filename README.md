@@ -32,7 +32,7 @@ You need to have installed gcc, binutils, patch, bzip2, flex, make, gettext, pkg
 5. Select Update firmware
 
 After the firmware is updated, the unit will reboot, and the default ip address will be 192.168.200.1. 
-The default SSID's will be MAMBA_2G4, and MAMBA_5G2.
+The default SSID's will be MCWRT-WPA2-2.4 and MCWRT-WPA2-5.0.
 The default username for OpwnWrt is 'root', and there is no default password set.
 The unit will ask you to set a default password after you login to the UI.
 
