@@ -11,7 +11,7 @@ BOARD:=armadaxp
 BOARDNAME:=Marvell Armada XP
 FEATURES:=targz usb jffs2 squashfs
 
-LINUX_VERSION:=3.2.36
+LINUX_VERSION:=3.2.40
 
 CFLAGS:=-Os -pipe -march=armv7-a -mfpu=vfpv3 -mfloat-abi=soft
 
