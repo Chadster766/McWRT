@@ -571,35 +571,7 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  
  	return ret;
  }
-@@ -700,17 +698,19 @@ static int pipe_to_sendpage(struct pipe_
- {
- 	struct file *file = sd->u.file;
- 	loff_t pos = sd->pos;
--	int more;
-+	int ret, more;
- 
--	if (!likely(file->f_op && file->f_op->sendpage))
--		return -EINVAL;
-+	ret = buf->ops->confirm(pipe, buf);
-+	if (!ret) {
-+		more = (sd->flags & SPLICE_F_MORE) ? MSG_MORE : 0;
-+		if (sd->len < sd->total_len)
-+			more |= MSG_SENDPAGE_NOTLAST;
- 
--	more = (sd->flags & SPLICE_F_MORE) ? MSG_MORE : 0;
--	if (sd->len < sd->total_len)
--		more |= MSG_SENDPAGE_NOTLAST;
-+		ret = file->f_op->sendpage(file, buf->page, buf->offset,
-+					   sd->len, &pos, more);
-+	}
- 
--	return file->f_op->sendpage(file, buf->page, buf->offset,
--				    sd->len, &pos, more);
-+	return ret;
- }
- 
- /*
-@@ -1020,10 +1020,8 @@ generic_file_splice_write(struct pipe_in
+@@ -1021,10 +1019,8 @@ generic_file_splice_write(struct pipe_in
  
  		mutex_lock_nested(&inode->i_mutex, I_MUTEX_CHILD);
  		ret = file_remove_suid(out);
@@ -611,7 +583,7 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  		mutex_unlock(&inode->i_mutex);
  	} while (ret > 0);
  	splice_from_pipe_end(pipe, &sd);
-@@ -1119,9 +1117,8 @@ static long do_splice_from(struct pipe_i
+@@ -1120,9 +1116,8 @@ static long do_splice_from(struct pipe_i
  	if (unlikely(ret < 0))
  		return ret;
  
@@ -623,7 +595,7 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  		splice_write = default_file_splice_write;
  
  	return splice_write(pipe, out, ppos, len, flags);
-@@ -1145,9 +1142,8 @@ static long do_splice_to(struct file *in
+@@ -1146,9 +1141,8 @@ static long do_splice_to(struct file *in
  	if (unlikely(ret < 0))
  		return ret;
  
@@ -635,7 +607,7 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  		splice_read = default_file_splice_read;
  
  	return splice_read(in, ppos, pipe, len, flags);
-@@ -1398,6 +1394,402 @@ static long do_splice(struct file *in, l
+@@ -1399,6 +1393,402 @@ static long do_splice(struct file *in, l
  	return -EINVAL;
  }
  
@@ -1038,7 +1010,7 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  /*
   * Map an iov into an array of pages and offset/length tupples. With the
   * partial_page structure, we can map several non-contiguous ranges into
-@@ -1703,66 +2095,54 @@ SYSCALL_DEFINE6(splice, int, fd_in, loff
+@@ -1704,66 +2094,54 @@ SYSCALL_DEFINE6(splice, int, fd_in, loff
  		int, fd_out, loff_t __user *, off_out,
  		size_t, len, unsigned int, flags)
  {
@@ -1140,7 +1112,7 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  	return error;
  	
  	}
-@@ -2098,3 +2478,23 @@ SYSCALL_DEFINE4(tee, int, fdin, int, fdo
+@@ -2099,3 +2477,23 @@ SYSCALL_DEFINE4(tee, int, fdin, int, fdo
  
  	return error;
  }
@@ -1278,7 +1250,7 @@ Signed-off-by: Seif Mazareeb <seif@marvell.com>
  	int (*setlease)(struct file *, long, struct file_lock **);
  	long (*fallocate)(struct file *file, int mode, loff_t offset,
  			  loff_t len);
-@@ -2451,6 +2456,8 @@ extern ssize_t generic_splice_sendpage(s
+@@ -2453,6 +2458,8 @@ extern ssize_t generic_splice_sendpage(s
  		struct file *out, loff_t *, size_t len, unsigned int flags);
  extern long do_splice_direct(struct file *in, loff_t *ppos, struct file *out,
  		size_t len, unsigned int flags);

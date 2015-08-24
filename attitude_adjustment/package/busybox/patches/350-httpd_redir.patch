@@ -1,6 +1,6 @@
 --- a/networking/httpd.c
 +++ b/networking/httpd.c
-@@ -105,6 +105,7 @@
+@@ -107,6 +107,7 @@
  //usage:	IF_FEATURE_HTTPD_BASIC_AUTH(" [-r REALM]")
  //usage:       " [-h HOME]\n"
  //usage:       "or httpd -d/-e" IF_FEATURE_HTTPD_AUTH_MD5("/-m") " STRING"
@@ -8,7 +8,7 @@
  //usage:#define httpd_full_usage "\n\n"
  //usage:       "Listen for incoming HTTP requests\n"
  //usage:     "\n	-i		Inetd mode"
-@@ -121,6 +122,8 @@
+@@ -123,6 +124,8 @@
  //usage:     "\n	-m STRING	MD5 crypt STRING")
  //usage:     "\n	-e STRING	HTML encode STRING"
  //usage:     "\n	-d STRING	URL decode STRING"
@@ -16,8 +16,8 @@
 +//usage:     "\n	-H HOST		Redirect target host"
  
  #include "libbb.h"
- #if ENABLE_FEATURE_HTTPD_USE_SENDFILE
-@@ -272,6 +275,8 @@ struct globals {
+ #if ENABLE_PAM
+@@ -282,6 +285,8 @@ struct globals {
  
  	const char *found_mime_type;
  	const char *found_moved_temporarily;
@@ -26,7 +26,7 @@
  	Htaccess_IP *ip_a_d;    /* config allow/deny lines */
  
  	IF_FEATURE_HTTPD_BASIC_AUTH(const char *g_realm;)
-@@ -322,6 +327,8 @@ struct globals {
+@@ -332,6 +337,8 @@ struct globals {
  #define index_page        (G.index_page       )
  #define found_mime_type   (G.found_mime_type  )
  #define found_moved_temporarily (G.found_moved_temporarily)
@@ -35,7 +35,7 @@
  #define last_mod          (G.last_mod         )
  #define ip_a_d            (G.ip_a_d           )
  #define g_realm           (G.g_realm          )
-@@ -956,8 +963,11 @@ static void send_headers(int responseNum
+@@ -967,8 +974,11 @@ static void send_headers(int responseNum
  	}
  #endif
  	if (responseNum == HTTP_MOVED_TEMPORARILY) {
@@ -48,21 +48,7 @@
  				(g_query ? "?" : ""),
  				(g_query ? g_query : ""));
  	}
-@@ -1925,8 +1935,12 @@ static void handle_incoming_and_exit(con
- 	} while (*++tptr);
- 	*++urlp = '\0';       /* terminate after last character */
- 
-+	/* redirect active */
-+	if (redirect_path && (strncmp(urlcopy, redirect_path, strlen(redirect_path)) != 0))
-+		found_moved_temporarily = redirect_path;
-+
- 	/* If URL is a directory, add '/' */
--	if (urlp[-1] != '/') {
-+	if (!redirect_path && (urlp[-1] != '/')) {
- 		if (is_directory(urlcopy + 1, 1, NULL)) {
- 			found_moved_temporarily = urlcopy;
- 		}
-@@ -2283,7 +2297,9 @@ static void sighup_handler(int sig UNUSE
+@@ -2438,7 +2448,9 @@ static void sighup_handler(int sig UNUSE
  }
  
  enum {
@@ -73,7 +59,7 @@
  	d_opt_decode_url,
  	h_opt_home_httpd,
  	IF_FEATURE_HTTPD_ENCODE_URL_STR(e_opt_encode_url,)
-@@ -2332,12 +2348,13 @@ int httpd_main(int argc UNUSED_PARAM, ch
+@@ -2487,12 +2499,13 @@ int httpd_main(int argc UNUSED_PARAM, ch
  	/* We do not "absolutize" path given by -h (home) opt.
  	 * If user gives relative path in -h,
  	 * $SCRIPT_FILENAME will not be set. */
