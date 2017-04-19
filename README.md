@@ -1,6 +1,6 @@
-#McWRT
+# McWRT
 
-###An OpenWRT project for the Linksys WRT1900AC V1 router.
+### An OpenWRT project for the Linksys WRT1900AC V1 router.
 
 **Original source of Marvell 88W8864 Linux Driver/Firmware**
 
@@ -16,13 +16,13 @@ https://github.com/jimmychungbelkin/Mamba
 
 -
 
-##Warning!
+## Warning!
 
 **Flashing the firmware should always be done over a wired (Ethernet) connection. Not doing so could render your device unusable.**
 
 -
 
-###Install instructions:
+### Install instructions:
 
 **Flashing McWRT from the stock firmware**
 
@@ -44,7 +44,7 @@ https://github.com/jimmychungbelkin/Mamba
 
 -
 
-###Install instructions:
+### Install instructions:
 
 **Reverting to the stock Linksys firmware**
 
@@ -62,7 +62,7 @@ https://github.com/jimmychungbelkin/Mamba
 2. Do not unplug your router while flashing the firmware. The update is in progress if the power button is blinking.
 3. In the unhappy case of a power shortage while flashing new firmware, the guide located at 'http://wiki.openwrt.org/toh/linksys/wrt1900ac' can assist you. (Instructions can be found at the: 'Corrupt Bootloader Recovery' Tab.) (Bottom of the page)
 
-##Compiling instructions
+## Compiling instructions
 
 **Compiling McWRT**
 
@@ -75,7 +75,7 @@ https://github.com/jimmychungbelkin/Mamba
 1. Libtool 2.4 version mismatch error:
 2. Change line 20 of file attitude_adjustment/package/feeds/packages/cyrus-sasl/Makefile to 'PKG_FIXUP:=autoreconf libtool'.
 
-###Requirements
+### Requirements
 
 **Packages that needs to be installed**
 
