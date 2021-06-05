@@ -1,3 +1,6 @@
+# New forum community available for Linksys and other networking products
+http://chadster766.com/forums/index.php
+
 # McWRT
 
 ### An OpenWRT project for the Linksys WRT1900AC V1 router.
